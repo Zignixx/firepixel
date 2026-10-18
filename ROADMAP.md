@@ -15,47 +15,38 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Measurement quota, all 48 units | **85.0 %** (1042 / 1226 steps; was 84.8 %) |
 | Canvas image pairs within 1 % | about 177 / 201 |
 | Tests | 2510 green, 0 red, 133 ignored |
-| Latest release | v0.2.0 pre-release (17 Oct 2026, Windows x64, macOS arm64); CI now builds a universal macOS bundle |
-| Open findings | 5 fixable · 20 deferred · 17 informational · 830+ closed |
+| Latest release | v0.2.1 pre-release (18 Oct 2026, Windows x64, macOS universal arm64 + x86_64) |
+| Open findings | 1 fixable · 13 deferred · 17 informational · 840+ closed |
 
 ## Next (in order)
 
-1. **Runner R-12:** probe and read back Firepixel's swatches at the 9 px pitch (TW-115); serialise objects over the
-   bridge, read panel pop-up menus instead of the panel, reference-safe read-back scripts (no `Array.map`), allow
-   drag end points outside the view, guide double-click and export-area dialog in the reference (TW-124).
-2. **Behaviour description** of text style shortcuts on a selected text object (TW-122, Q-54), then a small
-   package with the fix and the Optimize colour-table context menu width (TW-123).
-3. **Questions** Q-49 (hex field), Q-51 (inspector tab), Q-55 (caret after a text-tool click) and Q-56 (Snap to
-   Pixel without a selection).
-4. **Comparison run 17** for `xs-shortcuts`, `xs-canvas`, `panel-swatches-mixer` and `panel-optimize`; one review
-   of the `xs-canvas` canvas pairs.
-5. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
-   paths, brush strokes with a real mouse, drag and drop between windows, the run-15/16 checks in section A2).
-6. **Deferred expansion block** (see below), then a new full parity run over all 48 units and Linux builds.
+1. **Full parity run over all 48 units** (in progress tonight) with runner R-12 and the Firepixel shortcut set in
+   the runner profile; it also checks the fixes after run 16 (TW-122, TW-123 including the app-wide 33 px menu arrow
+   column, TW-115/124, Q-49, Q-55, Q-56).
+2. **Evaluation** of that run: new tweaks and questions, a review of the `xs-canvas` canvas pairs, updated figures.
+3. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
+   paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2).
+4. **Remaining deferred items** (see below): missing batch steps (being implemented), batch metadata, batch UI
+   conveniences, PDF/PSD export details, HTML setup, CMD-1, AI mask preview; then Linux builds.
 
 ## What remains
 
-### Fixable remnants (`[F]`, small, mostly need a measurement first)
+### Fixable remnants (`[F]`)
 
-- Text style shortcuts on a selected text object (TW-122, behaviour description first).
-- Optimize panel: colour-table context menu about twice as wide as the original's (TW-123).
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- Runner: swatch cell pitch for Firepixel (TW-115) and the remaining gaps of run 16 (TW-124).
 
 ### Deferred expansion items (`[V]`)
 
-- **Batch studio:** size token after resize/crop, Ctrl+C cancel in the CLI, several outputs per item, streamed long
-  videos, close-window confirmation while a batch runs, remaining UI conveniences (filters, drag sorting,
-  per-file progress), WebP/AVIF alpha options, AVIF/JXL/HEIF/TIFF metadata, missing steps (subject centre, alpha
-  clean-up, vignette, contact sheet), GIF optimiser target (−30 % at equal SSIM).
+- **Batch studio:** streamed long videos, remaining UI conveniences (filters, drag sorting, per-file progress),
+  AVIF/JXL/HEIF/TIFF metadata, the remaining steps of the batch spec (see BA-109 in FINDINGS), GIF optimiser target
+  (−30 % at equal SSIM). Done since run 16: size token after resize, Ctrl+C cancel in the CLI, close confirmation
+  while a batch runs, extra outputs per item (FW-PNG, sprite-sheet atlas), WebP/AVIF alpha options, nine new steps.
 - **PDF/PSD export:** PDF "enable text selection" (invisible text layer), JPEG 2000 in PDF, PSD options for effects,
   vector and text layers.
 - **HTML setup:** "set defaults", external CSS file, navigation bar HTML.
 - **CMD-1:** screenshot command, symbol scripts and the shared web palette currently show notices only.
 - **AI mask preview:** live object-mask preview while hovering with the object selection tool.
-- Inspector tab after the Symbol Properties panel (TW-111, Q-51; the runner works around it).
 - Brush pressure and speed from a real tablet; resampler golden hashes on other operating systems (needs CI).
-- Internal German test-area identifiers in the i18n QA tests.
 
 ### Not feasible / informational (`[N]`)
 

@@ -27,33 +27,43 @@ Findings are grouped by their state:
 
 ---
 
-## [F] Fixable now (5)
+## [F] Fixable now (1)
 
-Recounted after comparison run 16 (18 Oct 2026). The earlier remnants (sprite padding default,
-Shift-constrain for L-shape/arrow line, import rubber band, New Style defaults, text runs, SVG layers, symbol
-origin, simple brush runner, TW-101 import edge, TW-102/103 export format choice, TW-104 symbol properties
-header, TW-100 library drop, TW-105/106 runner effects, TW-107 start colours, TW-109 Alt rectangle) are closed;
-their history is in the commit log and the archive (see [ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)). Run 15 closed
-TW-97 (Alt-drag duplicates on both sides, 8 vs. 8 objects), TW-110 (symbol properties table look), TW-112 (colour
-pop-up commits on release), TW-114 (animated GIF byte-identical) and TW-116 (runner reaches the size and spiral
-`center` handles). Run 16 (preview `2026-10-18_02-04`, package F31, runner R-11) closed TW-113 and Q-52 (swatch
-loader, colour-cube set, sort by colour and 9 px cells equal in the screenshots), TW-118 and Q-53 (Shift-drag on the
-selected R1 leaves it in place on both sides), TW-119 (grid snap equal at 12,20; Ctrl+wheel point inside both views),
-TW-120 (topmost object drives the inspector) and TW-121 (button instance properties).
+Recounted after comparison run 16 (18 Oct 2026) and the fix wave that followed it. The earlier remnants (sprite
+padding default, Shift-constrain for L-shape/arrow line, import rubber band, New Style defaults, text runs, SVG
+layers, symbol origin, simple brush runner, TW-101 import edge, TW-102/103 export format choice, TW-104 symbol
+properties header, TW-100 library drop, TW-105/106 runner effects, TW-107 start colours, TW-109 Alt rectangle) are
+closed; their history is in the commit log and the archive (see [ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)). Run 15 closed
+TW-97, TW-110, TW-112, TW-114 and TW-116; run 16 (preview `2026-10-18_02-04`, package F31, runner R-11) closed
+TW-113/Q-52, TW-118/Q-53, TW-119, TW-120 and TW-121.
+
+The wave after run 16 closed the rest:
+
+- **TW-122 (Q-54):** in the reference application's own shortcut set Ctrl+Shift+B is Arrange ▸ Send Backward;
+  Firepixel's bindings were right, but the runner profile used the "Web Standard" set (Ctrl+Shift+B = Break Apart).
+  The parity runner now writes the Firepixel shortcut set into its fresh profile. Arrange commands are silent no-ops
+  (no history step, document stays clean) when nothing can move, and faux bold/italic/underline on pointer-selected
+  texts toggle across the whole selection.
+- **TW-123:** the Optimize colour-table context menu is sized to its content (about 270 px); the Frames panel menu
+  and the swatch drop-down were fixed the same way. Menus app-wide gained a 33 px arrow column; to be checked in the
+  next full run.
+- **TW-115 and TW-124 (runner R-12):** 9 px swatch pitch, objects serialised over the bridge, panel pop-up menus
+  read instead of the panel, plain `for` loops in read-back scripts, drag end points allowed outside the view,
+  remeasure or `unsupported` for the guide double-click and the export-area preview, inverted shot regions normalised.
+- **Questions answered:** Q-49 (the colour pop-up HEX field now parses every keystroke like the reference),
+  Q-51 (the reference does not switch the inspector tab back by itself, so Firepixel is right; runner step 04b
+  stays and TW-111 closes as "no deviation"), Q-55 (the text-tool click behaviour was already right; the runner
+  clicked a different point, step `xs-shortcuts/15` fixed), Q-56 (Modify-menu enable rules implemented and pinned by
+  tests; Arrange is grey in bitmap edit mode).
 
 | ID | Area | What is open (expected vs. current) |
 |---|---|---|
-| TW-122 (Q-54) | Text shortcuts on a selected text object | New in run 16 (`xs-shortcuts/06`, measured for the first time). With the text object TX1 selected (pointer tool, not editing), the original keeps TX1 selected after each of Ctrl+Shift+B, Ctrl+Shift+I, Ctrl+Shift+U, Ctrl+Shift+E, Ctrl+Alt+Shift+S, Ctrl+Shift+Period and Ctrl+Shift+Comma, opens no dialog and marks the document changed from Ctrl+Shift+U on. Firepixel opens a warning dialog on Ctrl+Shift+B, selects three other objects on Ctrl+Shift+I (as "select inverse") and leaves a different object selected after Ctrl+Shift+U. The text attributes themselves are not compared yet (runner, TW-124). Needs a behaviour description of the original's shortcut table for these keys with a selected text object first. |
-| TW-123 | Optimize panel, colour-table context menu | New in run 16 (`panel-optimize/13`). Firepixel's context menu of the colour table opens about 600 px wide with mostly empty space (items equal: Rebuild colour table … Save palette…); the original's menu is about 270 px wide. The runner's shot region came out inverted and fell back to the whole window. Small layout fix. |
-| TW-115 (R-12) | Comparison runner, swatches | Run 16 proves the reset itself: both panels start with the same 21-hue colour-cube ramp (#ffbfbf, #ffcfbf, #ffdfbf, #ffefbf, #ffffbf, #efffbf …, screenshot `01`/`06`). The runner still reads and clicks Firepixel's swatches at the old 12 px pitch (cell 5 at x + 60 px), so since F31's 9 px cells its read-back skips cells (#ffbfbf, #ffdfbf, …) and the probes in steps 08, 19 and 20 hit index 7 instead of 5 (#cfffbf vs. #efffbf, #c04040 vs. #4080c0). The runner must take the cell pitch from the panel (9 px). |
-| TW-124 (R-12) | Comparison runner, remaining gaps | From run 16: (a) Firepixel's bridge serialises the `textRuns.initialAttrs` object as "[object Object]", so `xs-shortcuts/06` cannot compare the attributes; (b) for panel pop-up menus the runner reads Firepixel's panel texts instead of the menu (`panel-optimize/13, 15`, `panel-misc/14, 18`); (c) the reference's script engine has no `Array.map` on element lists, so the read-back in `panel-optimize/19` fails there (use a `for` loop); (d) the view check now also blocks drag *end* points outside the view, so dragging a guide onto the ruler (`xs-canvas/10`) is `unsupported`; (e) the guide double-click (`xs-canvas/07`) and the export-area preview (`export-results/13`, Enter and double-click) open no dialog in the reference; (f) an inverted shot region falls back to the whole window (`panel-optimize/13`). |
 | U-1 rest | File ▸ Import, PDF | SVG files now import with their layers; **PDF files still arrive as one layer** because the pure-Rust PDF reader exposes no optional content groups (layers). Library limit; needs either an upstream feature or an own OCG reader. |
 
-## [V] Deferred / expansion items (20)
+## [V] Deferred / expansion items (13)
 
 | ID | Area | What is deferred |
 |---|---|---|
-| TW-111 (Q-51) | Inspector, Symbol Properties tab | After the Symbol Properties panel was opened, Firepixel keeps it in front of Properties for the following steps; the original shows Properties. Unclear whether the original switches back by itself when the selection is no rich symbol (Q-51). The runner workaround (step 04b, R-10) works in runs 15 and 16: steps 05–14 measure the Properties panel on both sides. Firepixel unchanged until Q-51 is answered. |
 | BA-037 | AI object selection | Optional mask preview while hovering with the object-selection tool: when the model cache is warm, compute `select.aiObject` on a copy in the background and show the outline as an overlay. Currently there is no preview. |
 | BA-039 | Bitmap brush | The live brush preview is drawn above all objects: hidden parts appear on top, and the bitmap object's opacity, blend mode and effects are missing in the preview. Needs a rebuild of the live preview in stacking order. Pressure is not available from a mouse (tablet only). |
 | BA-100 | PDF export | "Enable text selection" is stored but has no effect: the PDF writer only stores the flat page image. Expected: invisible text (render mode 3) for text objects. |
@@ -61,17 +71,11 @@ TW-120 (topmost object drives the inspector) and TW-121 (button instance propert
 | BA-102 | PSD export | The options Effects, Vector and Text are stored but do not change the file: the PSD writer always stores rendered pixel layers without layer effects or text layers. "Convert to PSD layers" creates one PSD layer per layer, not per object. |
 | BA-103 | HTML Setup | No "Set defaults", external CSS file or navigation-bar HTML, because neither export nor New Document uses them. HTML style only offers HTML/XHTML (the original's template styles carry brand names and only change a comment in the output). |
 | BA-104 (CMD-1) | Commands menu | Screen capture, "Create symbol script" and Web ▸ Shared Palette only show a message (`fp-script\src\builtin_commands.rs`). Wanted: real screen capture, symbol scripts for graphic symbols, a shared color table across all slices; texts via `fp.t`. |
-| BA-086 | Test infrastructure | German QA area IDs and folders in `crates\fp-ui\tests\i18n_qa_*` (areas, base folder, cache file `dialoge.json`, finding kinds, image prefixes) should become English; existing baseline results must stay readable after the rename. Waiting for a decision. |
-| BA-105 (BATCH-1/4) | Batch Studio | The size token `{w}x{h}` in file names uses the source size; after `resize`/`crop` the output size differs. Needs recalculation after the run (name conflicts may change). |
-| BA-106 (BATCH-1) | Batch CLI | No Ctrl+C cancel in the CLI: the process ends immediately and temp files `.<name>.fptmp` are left behind. |
-| BA-105 (BATCH-7/9) | Batch Studio | Several outputs per item (SVG **and** FW-PNG in one run, atlas `.json` for sprite sheets) need an executor hook for extra files; today this takes two runs. |
 | BA-105 (BATCH-7) | Batch Studio, video | Pass `video.import` parameters to `item::load` (avoid reading twice); streamed `Item::Animation` (blocks of 32 frames) for very long videos. |
-| BA-106 (BATCH-2) | Batch Studio | Ask "Batch is still running – cancel and close?" when the **window** is closed (hook in `actions.rs`/Quit); today `Drop` silently cancels the run. |
 | BA-107 (BATCH-2/7/8/9) | Batch Studio UI | Missing UI: filters by size/pixels/transparency and glob (pro mode), sort by drag, Space/Enter in the file list, "Save as template"/"Help" in the card menu, per-file progress (`ItemProgress`), hint "JPEG fills transparency with white", fields shown per `mode`/`engine`, GIF fields of `output.gif` (`preset`, `quality`, `maxKB`) with the reached size or a "target size not reachable" warning, an ffmpeg row in Preferences and in the video row, and inserting the `video.import` card automatically for videos. |
 | BA-083 (BATCH-4) | Batch tests | Golden hashes of the resampler depend on `f64::sin` (Lanczos) and may need regenerating on other operating systems. Open until CI runs on another OS. |
-| BA-108 (BATCH-5) | Batch export | WebP `alphaQuality`/`method` and AVIF `alphaQuality` are not passed through to `fp-export::write_webp/write_avif`. |
 | BA-108 (BATCH-5) | Batch metadata | Reading/writing metadata of AVIF/JXL/HEIF (box level) is missing; TIFF sources: metadata not read, TIFF output without EXIF IFD; `metadata.set` cannot write GPS/IPTC; `metadata.export` and `format.colorProfile` (to sRGB) are not implemented. |
-| BA-109 (BATCH-6) | Batch steps | Steps from the batch spec are missing: `background.subjectCenter`, `background.alphaCleanup`, `overlay.roundCorners` (already possible with `overlay.border` width 0 + radius), `overlay.vignette`, `overlay.contactSheet`. Minor: `fp_raster::Mask` has no `is_empty()`. |
+| BA-109 (BATCH-6) | Batch steps | Nine steps were added (`background.subjectCenter`, `background.alphaCleanup`, `overlay.roundCorners`, `overlay.vignette`, `adjust.posterize`, `adjust.threshold`, `filter.pixelate`, `canvas.pad`, `anim.firstFrame`). Still missing from the batch spec: `file.organize`, `file.filterSkip`, `file.dedupe`, `file.timestamps`, `format.colorDepth`, `format.colorProfile`, `format.multiPage`, `perspective`, `tile.split`, `filter.noise`, `effect.style`, `adjust.lut`, `ai.upscale`, `ai.faceBlur`, `overlay.contactSheet`, `metadata.export`, `anim.stabilize`, `anim.boomerang`, `anim.crossfade`, `document.findReplace`, `document.pages`, `document.layers`, `document.slices`, `optimize.jpeg`, `optimize.webSafe`, `script.code`, `script.condition`, `script.external` (in progress). Minor: `fp_raster::Mask` has no `is_empty()`. |
 | BA-110 (BATCH-8) | Batch GIF optimizer | The spec target of −30 % size at equal SSIM is not reached (ideas: optimal instead of greedy LZW parsing, perceptual palette, a corpus of real clips); no per-frame parallelism; no cancel inside one encode (encoder hook without `CancelToken`). |
 
 ## [N] Not feasible / informational (17)

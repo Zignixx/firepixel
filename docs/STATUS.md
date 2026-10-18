@@ -8,9 +8,10 @@ came about is kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)).
 Firepixel is feature-complete as a preview: all menus, tools, panels, the property inspector and the dialogs of
 the reference application exist and work, FW-PNG files round-trip, and everything is drivable over CLI, JSF and
 MCP. Work is now parity polishing: a scripted comparison runner measures Firepixel against the reference
-application unit by unit, and the remaining differences are tracked as findings. Release **v0.2.0** (Windows x64,
-macOS arm64) was published as a pre-release on 17 Oct 2026; further preview builds are made on request. Since
-18 Oct 2026 the macOS CI job builds a **universal** app bundle (arm64 + x86_64, macOS 10.15 or later).
+application unit by unit, and the remaining differences are tracked as findings. Release **v0.2.1** (Windows x64,
+macOS universal arm64 + x86_64, macOS 10.15 or later) was published as a pre-release on 18 Oct 2026; further
+preview builds are made on request. The Intel slice of the macOS bundle is verified with `lipo` only, not yet run
+on Intel hardware.
 
 ## Figures
 
@@ -23,16 +24,17 @@ macOS arm64) was published as a pre-release on 17 Oct 2026; further preview buil
 | Measurement quota, all 48 units | **85.0 %** (1042 / 1226 measurable steps both `ok`; was 84.8 %) | newest run per unit |
 | Measurement quota of run 16 | 86.3 % (126 / 146, 7 units; the same units before: 84.5 %); 0 Firepixel-side errors | run 16 |
 | Workspace tests | **2510 green, 0 red, 133 ignored** | full workspace run on `main` at `666c15c6`, 18 Oct 2026 |
-| Open findings | 5 fixable `[F]` (TW-122 text shortcuts on a selected text object, TW-123 Optimize context menu width, PDF layers, runner TW-115/124), 20 deferred `[V]` (incl. TW-111), 17 informational `[N]` | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | none from the runs; unclear: text shortcuts on a selected text object (TW-122) and the remaining `xs-canvas` canvas pairs | [PARITY.md](PARITY.md) |
-| Closed findings (history) | 830+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
+| Open findings | 1 fixable `[F]` (PDF layers), 13 deferred `[V]`, 17 informational `[N]`; TW-122/123/115/124 and TW-111 closed after run 16, to be confirmed by the next full run | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | none from the runs; unclear: the remaining `xs-canvas` canvas pairs (TW-122 was a shortcut-set mismatch in the runner profile) | [PARITY.md](PARITY.md) |
+| Closed findings (history) | 840+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
 ## Last test build
 
-Release **v0.2.0** (17 Oct 2026, pre-release on GitHub, Windows x64 and macOS arm64) from commit `2c54845`
-plus the version bump `10bbd8f`; it contains package F28 (symbol properties panel rectangle, animated GIF
-transparency slot, pointer log). Full workspace test run on that snapshot: 2486 passed, 0 failed, 133 ignored.
+Release **v0.2.1** (18 Oct 2026, pre-release on GitHub, Windows x64 and macOS universal) with version bump
+`b3919cb6`; the macOS bundle is built by `macos-preview.yml` as one universal app (arm64 + x86_64; the x86_64
+slice checked with `lipo`, not run on Intel hardware). The previous release was v0.2.0 (17 Oct 2026, Windows x64,
+macOS arm64).
 
 Latest test build: preview build **`2026-10-18_02-04`** (release profile, single `firepixel.exe` plus
 `firepixel-cli.exe`) from `main` at `788f4fa1`, with package F31 (swatch file loader with 257 entries, built-in
@@ -68,14 +70,12 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Runner **R-12**: probe and read back Firepixel's swatches at the 9 px pitch (TW-115); serialise objects over the
-   bridge, read panel pop-up menus, reference-safe read-back scripts, drag end points outside the view, guide
-   double-click and export-area dialog in the reference (TW-124).
-2. Behaviour description of text style shortcuts on a selected text object (TW-122, Q-54), then the fix; the
-   Optimize colour-table context menu width (TW-123).
-3. Questions Q-49 (hex field), Q-51 (inspector tab), Q-55 (caret after a text-tool click) and Q-56 (Snap to Pixel
-   without a selection).
-4. Comparison run 17 for `xs-shortcuts`, `xs-canvas`, `panel-swatches-mixer` and `panel-optimize`, then the human
-   click-test of [VERIFICATION.md](VERIFICATION.md).
+1. Full parity run over all 48 units (in progress tonight; runner R-12, Firepixel shortcut set in the runner
+   profile); it also checks the fixes made after run 16 (TW-122, TW-123 and the app-wide menu arrow column,
+   TW-115/124, Q-49, Q-55, Q-56).
+2. Evaluation of that run, including a review of the `xs-canvas` canvas pairs.
+3. Human click-test of [VERIFICATION.md](VERIFICATION.md).
+4. Remaining deferred items: missing batch steps (being implemented), batch metadata and UI conveniences, PDF/PSD
+   export details, HTML setup, CMD-1, AI mask preview.
 
 See [ROADMAP.md](../ROADMAP.md) for the complete list.

@@ -78,7 +78,8 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
 them; they stay listed here, ticked, so the history of each check is clear. Run 15 (17/18 Oct 2026) resolved
 TW-97, TW-110, TW-112, TW-114 and TW-116; run 16 (18 Oct 2026) resolved TW-113, TW-118, TW-119, TW-120 and TW-121.
-The open checks below come from runs 15 and 16.
+The open checks below come from runs 15 and 16; the fixes made after run 16 are confirmed by the full run
+that follows it.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -98,27 +99,25 @@ The open checks below come from runs 15 and 16.
 - [x] **TW-119** (`xs-canvas/02, 12`) – resolved in run 16: grid snap ends at 12,20–2412,1620 in both programs; the Ctrl+wheel point lies inside both views and the zoom-centre pair differs by 1.6 % (was 6.3 %).
 - [x] **TW-120** (`inspector-group-symbol/11, 12`) – resolved in run 16: with two objects selected both programs show the topmost object's fill and stroke (black fill; red 1 px stroke).
 - [x] **TW-121** (`inspector-group-symbol/05`) – resolved in run 16: the button instance shows the symbol name, a disabled text field, "PNG32" and "Add filter…" in both programs.
-- [ ] **TW-115** (`panel-swatches-mixer/00a, 19, 20`; needs: real window)
+- [x] **TW-111 / Q-51** (`inspector-group-symbol/04–05`) – resolved without a change: the reference does not bring Properties back to the front by itself either; Firepixel is right and runner step 04b stays.
+- [ ] **TW-115** (`panel-swatches-mixer/00a, 19, 20`; needs: next full run, else real window)
   **Steps:** Swatches panel menu ▸ Colour cubes in both programs; hover the first and the sixth swatch; click the sixth swatch with a rectangle selected.
-  **Expected:** Both show #ffbfbf and #efffbf and the rectangle gets #efffbf (run 16 screenshots show equal sets; the runner still probes Firepixel at 12 px instead of 9 px and hits #cfffbf).
-- [ ] **TW-111 / Q-51** (`inspector-group-symbol/04–05`; needs: real window, original)
-  **Steps:** Select a rich symbol instance and open the Symbol Properties panel; then select a plain rectangle.
-  **Expected:** Note whether the original brings Properties back to the front by itself when the selection is no rich symbol; Firepixel keeps Symbol Properties in front.
-- [ ] **TW-122 / Q-54** (`xs-shortcuts/06`; needs: real keyboard, original)
+  **Expected:** Both show #ffbfbf and #efffbf and the rectangle gets #efffbf. Runner R-12 now probes Firepixel at the 9 px pitch; tick when the full run measures this equal.
+- [ ] **TW-122 / Q-54** (`xs-shortcuts/06`; needs: next full run, else real keyboard)
   **Steps:** Open the text test file, select the text object with the pointer tool (do not edit it); press Ctrl+Shift+B, Escape, reselect; repeat with Ctrl+Shift+I, Ctrl+Shift+U, Ctrl+Shift+E, Ctrl+Alt+Shift+S, Ctrl+Shift+Period and Ctrl+Shift+Comma.
-  **Expected:** Note for each key what the original does (no dialog, text stays selected in run 16; the document is changed from Ctrl+Shift+U on) and which text attribute changes. Firepixel currently opens a warning on Ctrl+Shift+B and changes the selection on Ctrl+Shift+I and Ctrl+Shift+U.
-- [ ] **TW-123** (`panel-optimize/13`; needs: real window)
-  **Steps:** Optimize panel with GIF; right-click the colour table.
-  **Expected:** The context menu is about as wide as its longest item (original about 270 px); Firepixel currently opens it about 600 px wide.
+  **Expected:** With the Firepixel shortcut set (now written into the runner profile) Ctrl+Shift+B is Arrange ▸ Send Backward and, with nothing to move, changes nothing; no dialog opens, the text stays selected and the style shortcuts toggle bold/italic/underline across the whole selection. Tick when the full run measures this equal.
+- [ ] **TW-123** (`panel-optimize/13`; also the Frames panel menu and the swatch drop-down; needs: next full run, else real window)
+  **Steps:** Optimize panel with GIF; right-click the colour table. Open the Frames panel menu and the swatch drop-down.
+  **Expected:** Each menu is about as wide as its longest item (Optimize context menu about 270 px, was about 600 px). Also check the new 33 px arrow column in menus app-wide against the reference.
 - [ ] **xs-canvas pairs** (`xs-canvas/03, 11, 13, 14, 16`; needs: eyes on the image pairs)
   **Steps:** Open the run-16 gallery for `xs-canvas` and compare the canvas pairs at the fit zoom 0.42833.
   **Expected:** Decide whether the remaining 1.6–12.7 % come only from page phase and view size (then the unit counts as equal) or from rendering (grid colour, pixel grid, edges).
 
-Related open questions: **Q-49** when does the original accept a hex value in the color pop-up (Enter, another key,
-or closing)? **Q-55** (`xs-shortcuts/15`): after a click into the text object with the text tool, typing "V" and
-"R" gives "Vrc" in the original and "Vr" in Firepixel – where does the original place the caret? **Q-56**
-(`xs-canvas/15`): Modify ▸ Snap to Pixel is disabled in the original without a selection; Firepixel runs it –
-check Firepixel's menu state with nothing selected. Grid snapping at low zoom stays in VER-10.28.
+Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the
+reference), **Q-51** (see TW-111 above), **Q-55** (`xs-shortcuts/15`: Firepixel's text-tool click was already right;
+the runner clicked a different point, the step now clicks document 62,62), **Q-56** (`xs-canvas/15`: Modify-menu
+enable rules implemented and pinned by tests; Snap to Pixel is grey without a path object; Arrange is grey in bitmap
+edit mode). The next full run confirms them. Grid snapping at low zoom stays in VER-10.28.
 
 ## A3. Spot checks of the fixes from 2026-10-17
 
