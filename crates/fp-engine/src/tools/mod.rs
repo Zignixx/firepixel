@@ -31,7 +31,7 @@ use fp_model::{Contour, Document};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub use ai_select::{AiClickTool, AiObjectTool};
+pub use ai_select::{AiClickTool, AiObjectTool, object_click_params};
 pub use bitmap::{BrushTool, EyedropperTool, FillTool, LassoTool, MarqueeTool, WandTool};
 pub use draw::{
     FreehandTool, LineTool, PenTool, ShapeTool, WebShapeTool, freehand_contour, refit_freehand,

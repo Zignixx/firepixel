@@ -87,6 +87,7 @@ dlg-pref-cap-pointer = Zeiger und Teilauswahl:
 dlg-pref-selectionmouseoverpreview = Mausaktivierte Hervorhebung
 dlg-pref-pointertoolpainthandles = Füllungsgriffe anzeigen
 dlg-pref-previewdrag = Vorschau beim Ziehen
+dlg-pref-aiobjecthoverpreview = Auswahlvorschau beim Überfahren anzeigen
 dlg-pref-pickdistance = Markierungsabstand (Pixel):
 dlg-pref-ungroupautoshapes = Gruppierung automatischer Formen bei 9-Slice aufheben
 dlg-pref-cap-guides = Hilfslinien:

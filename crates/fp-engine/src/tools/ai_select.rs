@@ -25,6 +25,16 @@ fn view_rect(ctx: &ToolContext) -> Value {
     json!([r.left, r.top, r.right, r.bottom])
 }
 
+/// Parameters of a plain object-selection click at `pos` (also what the hover preview computes,
+/// BA-037): one positive point and the visible rect `view` for the automatic region.
+pub fn object_click_params(pos: Point, mode: SelectMode, view: Rect) -> Value {
+    json!({
+        "mode": mode.name(),
+        "view": [view.left, view.top, view.right, view.bottom],
+        "points": [[pos.x, pos.y, 1]],
+    })
+}
+
 fn request(cmd: &str, params: Value) -> ToolResponse {
     ToolResponse {
         ui_request: Some(Invocation::new(cmd, params)),
@@ -103,13 +113,16 @@ impl ToolMachine for AiObjectTool {
                         return ToolResponse::default();
                     }
                     // jeder Klick ist eine eigene Objektauswahl (keine Fortsetzung des vorigen Objekts)
-                    let mut p = json!({"mode": self.mode.name(), "view": view_rect(ctx)});
-                    if self.dragging {
+                    let p = if self.dragging {
                         let r = Rect::new(start.x, start.y, pos.x, pos.y).normalized();
-                        p["box"] = json!([r.left, r.top, r.right, r.bottom]);
+                        json!({
+                            "mode": self.mode.name(),
+                            "view": view_rect(ctx),
+                            "box": [r.left, r.top, r.right, r.bottom],
+                        })
                     } else {
-                        p["points"] = json!([[pos.x, pos.y, 1]]);
-                    }
+                        object_click_params(*pos, self.mode, ctx.view.visible_rect())
+                    };
                     self.dragging = false;
                     request("select.aiObject", p)
                 }

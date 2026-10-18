@@ -73,6 +73,8 @@ pub struct AiDialogs {
     pub fading: Option<super::ai_progress::Fading>,
     /// Zahl der Bilder, in denen die Fortschrittsanzeige sichtbar war (Tests: kein Aufblitzen).
     pub progress_frames: u64,
+    /// Object selection: mask preview while hovering (BA-037).
+    pub hover: crate::canvas::tools::ai_object::ObjectHover,
 }
 
 impl AiDialogs {

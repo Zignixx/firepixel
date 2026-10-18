@@ -87,6 +87,7 @@ dlg-pref-cap-pointer = Pointer and Subselection:
 dlg-pref-selectionmouseoverpreview = Mouse highlight
 dlg-pref-pointertoolpainthandles = Show fill handles
 dlg-pref-previewdrag = Preview drag
+dlg-pref-aiobjecthoverpreview = Show selection preview while hovering
 dlg-pref-pickdistance = Pick distance (pixels):
 dlg-pref-ungroupautoshapes = Ungroup auto shapes for 9-slice
 dlg-pref-cap-guides = Guides:

@@ -75,6 +75,17 @@ fn sync_folder(s: &Session) {
 /// Bildquelle bestimmen: `source` = `auto` (ausgewählte Bitmap, sonst Bitmap unter `at`, sonst die
 /// sichtbare Seite), `bitmap` (nur Bitmap) oder `page` (gerenderte Seite mit allen sichtbaren Ebenen).
 pub fn resolve_source(s: &Session, source: &str, at: Option<Point>) -> Result<AiSource> {
+    source_for(s, source, at, true)?.ok_or(EngineError::BackendMissing("err-backend-renderer-page"))
+}
+
+/// Like [`resolve_source`]; with `render == false` a page that is not rendered yet yields
+/// `Ok(None)` instead of rendering it (the hover preview never renders on the UI thread).
+fn source_for(
+    s: &Session,
+    source: &str,
+    at: Option<Point>,
+    render: bool,
+) -> Result<Option<AiSource>> {
     let d = s.doc()?;
     if source != "page" {
         let geo = crate::geometry::BasicGeometry;
@@ -84,11 +95,11 @@ pub fn resolve_source(s: &Session, source: &str, at: Option<Point>) -> Result<Ai
         {
             let img = docops::bitmap_image(b)
                 .ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable")))?;
-            return Ok(AiSource {
+            return Ok(Some(AiSource {
                 image: Arc::new(img),
                 target: Some(e.id),
                 kind: "bitmap",
-            });
+            }));
         }
         if source == "bitmap" {
             return Err(sel_err("err-sel-no-bitmap-at-point"));
@@ -99,11 +110,14 @@ pub fn resolve_source(s: &Session, source: &str, at: Option<Point>) -> Result<Ai
         && let Some((k, img)) = c.as_ref()
         && *k == key
     {
-        return Ok(AiSource {
+        return Ok(Some(AiSource {
             image: Arc::clone(img),
             target: None,
             kind: "page",
-        });
+        }));
+    }
+    if !render {
+        return Ok(None);
     }
     let r = s
         .renderer()
@@ -115,11 +129,11 @@ pub fn resolve_source(s: &Session, source: &str, at: Option<Point>) -> Result<Ai
     if let Ok(mut c) = page_cache().lock() {
         *c = Some((key, Arc::clone(&img)));
     }
-    Ok(AiSource {
+    Ok(Some(AiSource {
         image: img,
         target: None,
         kind: "page",
-    })
+    }))
 }
 
 fn source_param(s: &Session, p: &Params) -> Result<String> {
@@ -348,6 +362,11 @@ struct ObjectPlan {
 }
 
 fn object_plan(s: &Session, p: &Params) -> Result<ObjectPlan> {
+    object_plan_with(s, p, true)?.ok_or(EngineError::BackendMissing("err-backend-renderer-page"))
+}
+
+/// [`object_plan`]; `render == false` yields `Ok(None)` when the page would have to be rendered.
+fn object_plan_with(s: &Session, p: &Params, render: bool) -> Result<Option<ObjectPlan>> {
     let new_points = parse_points(p)?;
     let boxx = p.opt_rect("box")?.map(|r| {
         let r = r.normalized();
@@ -434,14 +453,16 @@ fn object_plan(s: &Session, p: &Params) -> Result<ObjectPlan> {
                 .boxx
                 .map(|b| Point::new((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0))
         });
-    let src = resolve_source(s, &source, at)?;
+    let Some(src) = source_for(s, &source, at, render)? else {
+        return Ok(None);
+    };
     if is_new
         && region.is_none()
         && let Some(v) = p.opt_rect("view")?
     {
         region = auto_region(src.image.bounds(), v);
     }
-    Ok(ObjectPlan {
+    Ok(Some(ObjectPlan {
         src,
         region,
         model,
@@ -450,7 +471,7 @@ fn object_plan(s: &Session, p: &Params) -> Result<ObjectPlan> {
         mode,
         token,
         source,
-    })
+    }))
 }
 
 /// Ausschnitt für stark vergrößerte Ansichten: Ist das Bild in beiden Richtungen mehr als doppelt
@@ -649,17 +670,28 @@ fn run_object(s: &mut Session, p: &Params) -> Result<CommandOutput> {
         return run_retune(s, p, Task::Object);
     }
     let plan = object_plan(s, p)?;
-    ensure_model(plan.model)?;
+    let stub = object_stub();
+    if stub.is_none() {
+        ensure_model(plan.model)?;
+    }
     let t = tuning_for(s, p, Task::Object)?;
-    let raw = pipeline::object_raw(
-        &plan.src.image,
-        plan.region,
-        &plan.prompt,
-        plan.model,
-        &Progress::new(),
-    )
-    .map_err(ai_err)?;
-    fp_ai::nn::trim();
+    // the hover preview may already have decoded exactly this prompt (BA-037): reuse it
+    let raw = match hover_raw(&plan.src.image, plan.region, &plan.prompt, plan.model) {
+        Some(raw) => raw,
+        None => {
+            let raw = decode_object(
+                &plan.src.image,
+                plan.region,
+                &plan.prompt,
+                plan.model,
+                &Progress::new(),
+                stub,
+            )
+            .map_err(ai_err)?;
+            fp_ai::nn::trim();
+            raw
+        }
+    };
     let r = pipeline::object_from_raw(&raw, &plan.src.image, &t).map_err(ai_err)?;
     let result = nonempty(combine(plan.base.clone(), r.mask, plan.mode));
     let hash = mask_hash(result.as_ref());
@@ -868,6 +900,9 @@ pub fn prepare(s: &Session, name: &str, params: &Value) -> Result<Option<Prepare
     match name {
         "select.aiObject" => {
             let plan = object_plan(s, &p)?;
+            if object_stub().is_some() {
+                return Ok(None);
+            }
             ensure_model(plan.model)?;
             if pipeline::object_ready(&plan.src.image, plan.region, plan.model) {
                 return Ok(None);
@@ -946,6 +981,157 @@ pub fn is_ai_command(name: &str) -> bool {
         name,
         "select.aiObject" | "select.aiSubject" | "select.aiRefineEdge"
     )
+}
+
+// ------------------------------------------------------------------ Hover preview (BA-037)
+
+/// Stand-in for the SAM decoder (tests only): gets the image, the clipped region and the prompt
+/// and returns the raw decoder output. Set per thread with [`set_object_stub`]; a hover plan
+/// captures the stub of the thread that built it.
+pub type ObjectStub = fn(&RgbaImage, IRect, &ObjectPrompt) -> fp_ai::Result<pipeline::ObjectRaw>;
+
+thread_local! {
+    static OBJECT_STUB: std::cell::Cell<Option<ObjectStub>> = const { std::cell::Cell::new(None) };
+}
+
+/// Tests only: replace the object-selection model on this thread (`None` = real model).
+pub fn set_object_stub(f: Option<ObjectStub>) {
+    OBJECT_STUB.with(|c| c.set(f));
+}
+
+fn object_stub() -> Option<ObjectStub> {
+    OBJECT_STUB.with(|c| c.get())
+}
+
+/// Decoder run (model or stub).
+fn decode_object(
+    img: &RgbaImage,
+    region: Option<IRect>,
+    prompt: &ObjectPrompt,
+    model: ModelId,
+    prog: &Progress,
+    stub: Option<ObjectStub>,
+) -> fp_ai::Result<pipeline::ObjectRaw> {
+    match stub {
+        Some(f) => f(img, pipeline::clip_region(img, region)?, prompt),
+        None => pipeline::object_raw(img, region, prompt, model, prog),
+    }
+}
+
+/// Key of a decoder run: image content, region, model and the prompt (points rounded to whole
+/// pixels, so a click on the pixel the pointer rested on reuses the hover result).
+fn hover_key(
+    img: &RgbaImage,
+    region: Option<IRect>,
+    prompt: &ObjectPrompt,
+    model: ModelId,
+) -> Option<u64> {
+    let r = pipeline::clip_region(img, region).ok()?;
+    let mut extra = vec![pipeline::image_key(img, r, model)];
+    for q in &prompt.points {
+        extra.extend([
+            q.x.floor() as i64 as u64,
+            q.y.floor() as i64 as u64,
+            q.positive as u64,
+        ]);
+    }
+    if let Some(b) = prompt.boxx {
+        extra.extend(b.iter().map(|v| v.to_bits() as u64));
+    }
+    Some(fp_ai::cache::hash_bytes(&[], &extra))
+}
+
+/// Last decoder output of the hover preview (key, raw output).
+type HoverSlot = Mutex<Option<(u64, pipeline::ObjectRaw)>>;
+
+fn hover_slot() -> &'static HoverSlot {
+    static H: OnceLock<HoverSlot> = OnceLock::new();
+    H.get_or_init(|| Mutex::new(None))
+}
+
+fn hover_raw(
+    img: &RgbaImage,
+    region: Option<IRect>,
+    prompt: &ObjectPrompt,
+    model: ModelId,
+) -> Option<pipeline::ObjectRaw> {
+    let slot = hover_slot().lock().ok()?;
+    let (k, raw) = slot.as_ref()?;
+    if Some(*k) != hover_key(img, region, prompt, model) {
+        return None;
+    }
+    let mut raw = raw.clone();
+    raw.cached = true;
+    Some(raw)
+}
+
+/// Hover preview of `select.aiObject`: runs off the UI thread on its own copy of the pixels.
+pub struct HoverPlan {
+    image: Arc<RgbaImage>,
+    region: Option<IRect>,
+    prompt: ObjectPrompt,
+    model: ModelId,
+    tuning: Tuning,
+    stub: Option<ObjectStub>,
+}
+
+/// Plans the hover preview of `select.aiObject` with `params` (exactly what the click would send).
+/// `Ok(None)` = no cheap preview: the model is missing or not loaded, or the page would have to
+/// be rendered first. Never loads a model and never renders.
+pub fn hover_plan(s: &Session, params: &Value) -> Result<Option<HoverPlan>> {
+    sync_folder(s);
+    let p = Params::new("select.aiObject", params.clone());
+    let stub = object_stub();
+    let model = model_for(s, Some(&p), Task::Object)?;
+    if stub.is_none() && !(models::available(model) && fp_ai::cache::is_loaded(model)) {
+        return Ok(None);
+    }
+    let Some(plan) = object_plan_with(s, &p, false)? else {
+        return Ok(None);
+    };
+    Ok(Some(HoverPlan {
+        image: plan.src.image,
+        region: plan.region,
+        prompt: plan.prompt,
+        model: plan.model,
+        tuning: tuning_for(s, &p, Task::Object)?,
+        stub,
+    }))
+}
+
+impl HoverPlan {
+    /// Object mask under the pointer (call on a background thread). `Ok(None)` = the image
+    /// embedding is not cached (cold cache: no preview). Keeps the decoder output, so a click with
+    /// the same prompt is instant and yields exactly this mask.
+    pub fn compute(&self, prog: &Progress) -> fp_ai::Result<Option<Mask>> {
+        if self.stub.is_none()
+            && !(fp_ai::cache::is_loaded(self.model)
+                && pipeline::object_ready(&self.image, self.region, self.model))
+        {
+            return Ok(None);
+        }
+        prog.cancel.check()?;
+        let key = hover_key(&self.image, self.region, &self.prompt, self.model);
+        let raw = decode_object(
+            &self.image,
+            self.region,
+            &self.prompt,
+            self.model,
+            prog,
+            self.stub,
+        )?;
+        if self.stub.is_none() {
+            fp_ai::nn::trim();
+        }
+        prog.cancel.check()?;
+        let o = pipeline::object_from_raw(&raw, &self.image, &self.tuning)?;
+        if let Some(k) = key
+            && let Ok(mut slot) = hover_slot().lock()
+        {
+            *slot = Some((k, raw));
+        }
+        Ok(Some(o.mask))
+    }
 }
 
 // ------------------------------------------------------------------ Registrierung

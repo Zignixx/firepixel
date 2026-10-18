@@ -154,6 +154,12 @@ fn page_items(cat: usize) -> &'static [Item] {
             Check("PreviewDrag", "dlg-pref-previewdrag", true),
             Int("PickDistance", "dlg-pref-pickdistance", 5, 1, 10),
             Check("UngroupAutoshapes", "dlg-pref-ungroupautoshapes", false),
+            // object selection: preview while hovering (BA-037, own option)
+            Check(
+                crate::canvas::tools::ai_object::PREF_KEY,
+                "dlg-pref-aiobjecthoverpreview",
+                false,
+            ),
         ],
         2 => &[
             Caption("dlg-pref-cap-guides"),
@@ -1305,7 +1311,9 @@ mod tests {
                     assert!(
                         fp_engine::prefs::definition(k).is_some()
                             || p.get(k).is_some()
-                            || *k == crate::language::DEV_PREF_KEY,
+                            || *k == crate::language::DEV_PREF_KEY
+                            // own key (no counterpart in the original's preference list)
+                            || *k == crate::canvas::tools::ai_object::PREF_KEY,
                         "unbekannter Schlüssel {k}"
                     );
                 }

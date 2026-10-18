@@ -15,6 +15,7 @@ pub mod stack;
 #[cfg(test)]
 mod tests;
 pub mod textedit;
+pub mod tools;
 pub mod web;
 
 use crate::app_state::{Action, AppState};
@@ -961,6 +962,8 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 .filter(|o| !matches!(o, Overlay::Highlight { .. }))
                 .collect()
         };
+    // object selection: mask preview while hovering (BA-037)
+    tools::ai_object::update(ui.ctx(), st, pointer_here);
     let preview_drag = st.session.prefs.get_bool("PreviewDrag", true);
     // Stapelfolge der Vorschau (N34, BA-039): gezogene bzw. bemalte Objekte bleiben zwischen den
     // Objekten darunter (Hintergrundbild) und darüber (durchsichtige Schichten)
@@ -1237,6 +1240,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         &spp,
     );
     overlays(ui, st, &painter, area, &view, &feedback);
+    tools::ai_object::paint(ui, st, &painter, area, &view);
     if let Some(cc) = st.canvases.get_mut(&id) {
         cc.info = feedback.iter().rev().find_map(|o| match o {
             Overlay::Label { text, .. } => Some(text.clone()),
