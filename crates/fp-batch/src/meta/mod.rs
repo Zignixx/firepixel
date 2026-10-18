@@ -315,18 +315,23 @@ pub fn encode_once(
 ) -> Result<(Vec<u8>, Vec<String>)> {
     let empty = Meta::default();
     let meta = item.meta().unwrap_or(&empty);
-    let (mut bytes, mut warnings) = match fmt {
+    let (mut bytes, warnings) = match fmt {
         OutputFormat::Tiff if !matches!(item, Item::FileOnly(_)) => {
             let mut w = Vec::new();
+            let c = encoders::TiffCompression::parse(
+                options.get("compression").and_then(Value::as_str),
+            );
+            if crate::steps::multipage::is_multi_page(item) {
+                // B-4: every frame is a page
+                let pages = crate::steps::multipage::pages_of(item)?;
+                return finish_plain(encoders::write_tiff_pages(&pages, meta, c)?, fmt, meta, w);
+            }
             if matches!(item, Item::Animation(a) if a.frames.len() > 1) {
                 w.push(fp_i18n::tr!(
                     "batch-warn-first-frame-only",
                     format = fmt.display_name()
                 ));
             }
-            let c = encoders::TiffCompression::parse(
-                options.get("compression").and_then(Value::as_str),
-            );
             (
                 encoders::write_tiff(&encoders::first_image(item)?, meta, c)?,
                 w,
@@ -350,6 +355,16 @@ pub fn encode_once(
             bytes = pngopt::optimize(&bytes, pngopt::PngOptOptions { level, alpha_clean });
         }
     }
+    finish_plain(bytes, fmt, meta, warnings)
+}
+
+/// Embeds the metadata and collects the note.
+fn finish_plain(
+    bytes: Vec<u8>,
+    fmt: OutputFormat,
+    meta: &Meta,
+    mut warnings: Vec<String>,
+) -> Result<(Vec<u8>, Vec<String>)> {
     let (bytes, note) = embed(bytes, fmt, meta);
     warnings.extend(note);
     Ok((bytes, warnings))

@@ -16,6 +16,7 @@ pub mod format; // B-3
 pub mod geometry; // BATCH-4
 pub mod gifopt; // BATCH-8
 pub mod metadata;
+pub mod multipage; // B-4
 pub mod optimize;
 pub mod overlay;
 pub mod pixel; // B-3
@@ -41,4 +42,5 @@ pub fn register_all(r: &mut StepRegistry) {
     pixel::register(r); // B-3
     animfx::register(r); // B-3
     format::register(r); // B-3
+    multipage::register(r); // B-4
 }

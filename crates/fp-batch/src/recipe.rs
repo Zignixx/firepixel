@@ -689,6 +689,7 @@ impl Recipe {
             }
             _ => {}
         }
+        out.extend(crate::steps::multipage::validate_recipe(self)); // B-4
         // „Nur kopieren/verschieben“ verträgt keine Bildschritte und kein anderes Zielformat
         let enabled: Vec<&StepConfig> = self.steps.iter().filter(|s| s.enabled).collect();
         let file_steps = enabled

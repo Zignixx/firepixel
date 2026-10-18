@@ -123,9 +123,46 @@ fn rational(v: f32) -> Vec<u8> {
     b
 }
 
-/// Schreibt ein TIFF (Little Endian, ein Streifen, 8 Bit je Kanal). Liefert Bytes und ob EXIF
-/// verworfen wurde.
+/// Schreibt ein TIFF (Little Endian, ein Streifen, 8 Bit je Kanal).
 pub fn write_tiff(img: &RgbaImage, meta: &Meta, compression: TiffCompression) -> Result<Vec<u8>> {
+    write_tiff_pages(std::slice::from_ref(img), meta, compression)
+}
+
+/// Multi-page TIFF (B-4): one IFD per page, chained through the next-IFD offset. Each page has its
+/// own size, one strip and its own alpha decision; with more than one page every IFD also carries
+/// `NewSubfileType = 2` (page) and `PageNumber`. ICC/XMP go into every IFD. One page gives exactly
+/// the bytes of the single-page writer.
+pub fn write_tiff_pages(
+    pages: &[RgbaImage],
+    meta: &Meta,
+    compression: TiffCompression,
+) -> Result<Vec<u8>> {
+    if pages.is_empty() {
+        return Err(BatchError::Encode(fp_i18n::t("batch-err-empty-page")));
+    }
+    let mut out = b"II".to_vec();
+    out.extend_from_slice(&42u16.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes());
+    let mut next_ptr = 4usize;
+    let total = pages.len();
+    for (i, img) in pages.iter().enumerate() {
+        let page = (total > 1).then_some((i as u16, total.min(u16::MAX as usize) as u16));
+        let ptr = tiff_page(&mut out, next_ptr, img, meta, compression, page)?;
+        next_ptr = ptr;
+    }
+    Ok(out)
+}
+
+/// Appends one page (strip, IFD, IFD data) to `out`, writes the IFD offset at `link_at` and
+/// returns the position of this IFD's next-IFD offset.
+fn tiff_page(
+    out: &mut Vec<u8>,
+    link_at: usize,
+    img: &RgbaImage,
+    meta: &Meta,
+    compression: TiffCompression,
+    page: Option<(u16, u16)>,
+) -> Result<usize> {
     let (w, h) = (img.width(), img.height());
     if w == 0 || h == 0 || w > u32::MAX as usize / 4 {
         return Err(BatchError::Encode(fp_i18n::t("batch-err-empty-page")));
@@ -184,6 +221,10 @@ pub fn write_tiff(img: &RgbaImage, meta: &Meta, compression: TiffCompression) ->
         (284, 3, 1, s16(1)),
         (296, 3, 1, s16(2)),
     ];
+    if let Some((n, total)) = page {
+        tags.push((254, 4, 1, l32(2)));
+        tags.push((297, 3, 2, [s16(n), s16(total)].concat()));
+    }
     if predictor {
         tags.push((317, 3, 1, s16(2)));
     }
@@ -197,18 +238,19 @@ pub fn write_tiff(img: &RgbaImage, meta: &Meta, compression: TiffCompression) ->
         tags.push((34675, 7, icc.len() as u32, icc.clone()));
     }
     tags.sort_by_key(|t| t.0);
-    let mut out = b"II".to_vec();
-    out.extend_from_slice(&42u16.to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes());
+    if out.len() % 2 == 1 {
+        out.push(0);
+    }
     let strip_at = out.len() as u32;
     out.extend_from_slice(&strip);
     if out.len() % 2 == 1 {
         out.push(0);
     }
     let ifd_at = out.len();
-    out[4..8].copy_from_slice(&(ifd_at as u32).to_le_bytes());
+    out[link_at..link_at + 4].copy_from_slice(&(ifd_at as u32).to_le_bytes());
     let n = tags.len();
-    let mut data_at = ifd_at + 2 + 12 * n + 4;
+    let next_at = ifd_at + 2 + 12 * n;
+    let mut data_at = next_at + 4;
     let mut blobs = Vec::new();
     out.extend_from_slice(&(n as u16).to_le_bytes());
     for (tag, ty, count, mut val) in tags {
@@ -234,7 +276,7 @@ pub fn write_tiff(img: &RgbaImage, meta: &Meta, compression: TiffCompression) ->
         out.resize(at, 0);
         out.extend_from_slice(&v);
     }
-    Ok(out)
+    Ok(next_at)
 }
 
 // ------------------------------------------------------------------ TGA

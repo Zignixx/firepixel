@@ -366,3 +366,29 @@ batch-param-overlay-contactSheet-captionColor = Textfarbe
 batch-param-overlay-contactSheet-perPage = Bilder je Bogen
     .tooltip = 0 = alle auf einem Bogen.
 batch-param-overlay-contactSheet-name = Dateiname
+
+## Mehrseitige Datei (B-4)
+batch-step-format-multiPage = Mehrseitige Datei
+    .description = Fasst alle Bilder zu einem mehrseitigen TIFF oder PDF zusammen.
+batch-param-format-multiPage-order = Seitenfolge
+batch-value-format-multiPage-order-list = Reihenfolge der Liste
+batch-value-format-multiPage-order-name = Name A–Z
+batch-value-format-multiPage-order-nameDesc = Name Z–A
+batch-value-format-multiPage-order-reverse = Liste umgekehrt
+batch-param-format-multiPage-pageSize = Seitengröße
+batch-value-format-multiPage-pageSize-each = Jedes Bild in eigener Größe
+batch-value-format-multiPage-pageSize-largest = Größe des größten Bildes
+batch-value-format-multiPage-pageSize-a4 = Auf A4 einpassen
+batch-param-format-multiPage-orientation = Ausrichtung
+batch-value-format-multiPage-orientation-auto = Automatisch
+batch-value-format-multiPage-orientation-portrait = Hochformat
+batch-value-format-multiPage-orientation-landscape = Querformat
+batch-param-format-multiPage-margin = Rand
+batch-param-format-multiPage-dpi = Auflösung
+batch-param-format-multiPage-frames = Animationen
+batch-value-format-multiPage-frames-all = Alle Frames als Seiten
+batch-value-format-multiPage-frames-first = Nur erstes Frame
+batch-param-format-multiPage-background = Seitenfarbe
+batch-param-format-multiPage-name = Dateiname
+    .tooltip = Leer = Name des ersten Bildes.
+batch-issue-multipage-format = Eine mehrseitige Datei braucht „Speichern als“ TIFF oder PDF.
