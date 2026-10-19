@@ -206,6 +206,32 @@ fn pen_badge(p: &Painter, at: Pos2, c: &Palette, kind: Cursor) {
                 );
             }
         }
+        Cursor::PenConvert => {
+            // convert point: a caret "^"
+            let pts = [
+                pos2(o.x - 3.5, o.y + 2.5),
+                pos2(o.x, o.y - 2.5),
+                pos2(o.x + 3.5, o.y + 2.5),
+            ];
+            p.line_segment([pts[0], pts[1]], Stroke::new(3.0, c.cursor_outline));
+            p.line_segment([pts[1], pts[2]], Stroke::new(3.0, c.cursor_outline));
+            p.line_segment([pts[0], pts[1]], Stroke::new(1.0, c.cursor_fill));
+            p.line_segment([pts[1], pts[2]], Stroke::new(1.0, c.cursor_fill));
+        }
+        Cursor::PenJoin => {
+            // join: a small ring with a stub "o-"
+            let ring = pos2(o.x - 1.5, o.y);
+            p.line_segment(
+                [pos2(o.x + 1.0, o.y), pos2(o.x + 5.0, o.y)],
+                Stroke::new(3.0, c.cursor_outline),
+            );
+            p.line_segment(
+                [pos2(o.x + 1.0, o.y), pos2(o.x + 5.0, o.y)],
+                Stroke::new(1.0, c.cursor_fill),
+            );
+            p.circle_stroke(ring, 2.5, Stroke::new(3.0, c.cursor_outline));
+            p.circle_stroke(ring, 2.5, Stroke::new(1.0, c.cursor_fill));
+        }
         Cursor::PenContinue => {
             let r = egui::Rect::from_center_size(o, vec2(5.0, 5.0));
             p.rect_filled(r.expand(1.0), 0.0, c.cursor_outline);
@@ -525,6 +551,8 @@ pub fn has_precision_variant(c: Cursor) -> bool {
             | Cursor::PenAdd
             | Cursor::PenRemove
             | Cursor::PenContinue
+            | Cursor::PenConvert
+            | Cursor::PenJoin
             | Cursor::Pencil
             | Cursor::Eyedropper
             | Cursor::Bucket
@@ -576,7 +604,12 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
         // Stift ohne Zusatz: Federspitze wie im Original (K7)
         Cursor::Pen => nib(p, at, colors),
         Cursor::Crop => crop(p, at, colors),
-        Cursor::PenClose | Cursor::PenAdd | Cursor::PenRemove | Cursor::PenContinue => {
+        Cursor::PenClose
+        | Cursor::PenAdd
+        | Cursor::PenRemove
+        | Cursor::PenContinue
+        | Cursor::PenConvert
+        | Cursor::PenJoin => {
             pen(p, at, colors);
             pen_badge(p, at, colors, c);
         }
@@ -673,6 +706,8 @@ mod tests {
                 Cursor::PenAdd,
                 Cursor::PenRemove,
                 Cursor::PenContinue,
+                Cursor::PenConvert,
+                Cursor::PenJoin,
                 Cursor::ResizeH,
                 Cursor::ResizeV,
                 Cursor::ResizeNeSw,

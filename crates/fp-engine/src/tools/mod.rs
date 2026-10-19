@@ -362,6 +362,10 @@ pub enum Cursor {
     PenAdd,
     PenRemove,
     PenContinue,
+    /// Stift über dem letzten Punkt bzw. einem Kurvenpunkt: Punkt umwandeln („^“, re 52 §1.2).
+    PenConvert,
+    /// Stift über dem Endpunkt eines anderen offenen Pfads beim Zeichnen: verbinden („o-“).
+    PenJoin,
     /// Griffe: waagerecht, senkrecht, diagonal (↗↙).
     ResizeH,
     ResizeV,

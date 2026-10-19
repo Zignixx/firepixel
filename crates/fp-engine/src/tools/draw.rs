@@ -632,14 +632,49 @@ pub struct PenTool {
     /// Nach Esc/Eingabe bleibt der offene Pfad gewählt; der nächste Klick setzt ihn am Endpunkt
     /// fort (Konturindex; PAR 09/07). Doppelklick, Schließen oder Abwählen beenden das.
     resume: Option<usize>,
-    /// Alt-Ziehen auf dem soeben gesetzten Punkt: nur dessen Ausgangshenkel ändern (PAR 09/09).
-    edit_last: bool,
+    /// Klick/Ziehen auf den letzten Punkt des laufenden Pfads: Punkt umwandeln (FB-01, re 52 §1.4).
+    convert: Option<ConvertLast>,
     /// Alt-Ziehen am End- bzw. Anfangspunkt eines gewählten Pfads (Fortsetzen): beide Henkel
     /// symmetrisch wie ein glatter Punkt (B-2b BA-003: 400,200 → 430,200 ergibt 370 · 430).
     smooth_drag: bool,
     /// Alt-Ziehen an einem mittleren Punkt des gewählten Pfads: zieht dort einen glatten Punkt auf,
     /// statt ihn zu löschen (B-2b BA-003: 300,160 → 330,160 ergibt 270 · 330).
     alt_point: Option<AltPoint>,
+}
+
+/// Press on the last anchor of the path being drawn (convert point, re 52 §1.4/§1.5): the outgoing
+/// handle is retracted on press; a drag past 2 screen px pulls the point again as a symmetric curve
+/// point (Alt: only the outgoing handle follows, the incoming one keeps `pred0`; Ctrl: moves it).
+#[derive(Clone, Copy, Debug)]
+struct ConvertLast {
+    /// Incoming handle before the press.
+    pred0: Point,
+    down: Point,
+    last: Point,
+    dragged: bool,
+}
+
+/// What the pen hits on the path being drawn (re 52 §1.3).
+enum DrawHit {
+    /// First point: close.
+    Close,
+    /// Last point: convert (retract the outgoing handle).
+    Last,
+    /// Interior point.
+    Interior(usize),
+    /// Segment (index, t): insert a point.
+    Segment(usize, f64),
+    /// Endpoint of another open path: join.
+    Join {
+        id: ElementId,
+        contour: usize,
+        at_start: bool,
+    },
+}
+
+/// Anchor hit radius of the pen: `SnapDistance` screen pixels (default 5, re 52 §1.3).
+fn pen_tol(ctx: &ToolContext) -> f32 {
+    (ctx.prefs.snap_distance() / ctx.zoom.max(1e-6)) as f32
 }
 
 /// Laufendes Alt-Ziehen an einem vorhandenen Punkt (BA-003).
@@ -730,7 +765,16 @@ impl PenTool {
     /// Endpunkt eines offenen, **nicht** gewählten Pfads unter `p` (oberstes zuerst): der Stift setzt
     /// ihn fort wie im Original (PAR 09/08).
     fn open_end_any(ctx: &ToolContext, p: Point) -> Option<PenHit> {
-        let tol = ctx.pick_tolerance() as f32;
+        Self::open_end_except(ctx, p, None)
+    }
+
+    /// Like [`Self::open_end_any`], skipping one contour (the path being continued).
+    fn open_end_except(
+        ctx: &ToolContext,
+        p: Point,
+        skip: Option<(ElementId, usize)>,
+    ) -> Option<PenHit> {
+        let tol = pen_tol(ctx);
         for id in docops::selectable_ids(ctx.doc, ctx.page, ctx.frame) {
             let Some(e) = docops::element_on_page(ctx.doc, ctx.page, id) else {
                 continue;
@@ -743,7 +787,7 @@ impl PenTool {
             }
             for (ci, c) in pe.contours.iter().enumerate() {
                 let n = c.nodes.len();
-                if c.closed || n < 2 {
+                if c.closed || n < 2 || skip == Some((id, ci)) {
                     continue;
                 }
                 if dist(c.nodes[n - 1].anchor, p) <= tol {
@@ -777,7 +821,7 @@ impl PenTool {
         if pe.primitive.is_some() {
             return None;
         }
-        let tol = ctx.pick_tolerance() as f32;
+        let tol = pen_tol(ctx);
         for (ci, c) in pe.contours.iter().enumerate() {
             let n = c.nodes.len();
             if n == 0 {
@@ -872,6 +916,124 @@ impl PenTool {
         r
     }
 
+    /// Is the node of a document path a curve point (a click retracts its handles)?
+    fn is_curve_point(ctx: &ToolContext, id: ElementId, contour: usize, node: usize) -> bool {
+        docops::element_on_page(ctx.doc, ctx.page, id)
+            .and_then(|e| match &e.kind {
+                ElementKind::Path(pe) => pe.contours.get(contour).map(|c| is_curve_node(c, node)),
+                _ => None,
+            })
+            .unwrap_or(false)
+    }
+
+    /// Classifies `p` against the path being drawn (re 52 §1.3): first point closes, last point
+    /// converts, interior points convert/delete, segments insert, endpoints of other open paths
+    /// join. Shift suppresses interior, segment and join.
+    fn draw_hit(&self, ctx: &ToolContext, p: Point, shift: bool) -> Option<DrawHit> {
+        let n = self.nodes.len();
+        if n == 0 {
+            return None;
+        }
+        let tol = pen_tol(ctx);
+        if n >= 2 && dist(p, self.nodes[0].0) <= tol {
+            return Some(DrawHit::Close);
+        }
+        if dist(p, self.nodes[n - 1].0) <= tol {
+            return Some(DrawHit::Last);
+        }
+        if shift {
+            return None;
+        }
+        if let Some(i) = (1..n - 1).find(|&i| dist(p, self.nodes[i].0) <= tol) {
+            return Some(DrawHit::Interior(i));
+        }
+        if n >= 2 {
+            let bc = geometry::to_bezier(&self.contour(false));
+            if let Some((seg, near)) = bc.nearest(fp_geom::Vec2::from(p))
+                && near.distance <= tol as f64
+                && near.t > 0.001
+                && near.t < 0.999
+            {
+                return Some(DrawHit::Segment(seg, near.t));
+            }
+        }
+        let skip = self.target.as_ref().map(|t| (t.id, t.contour));
+        match Self::open_end_except(ctx, p, skip) {
+            Some(PenHit::End {
+                id,
+                contour,
+                at_start,
+            }) => {
+                // joining with another element than the one being continued is not supported:
+                // the press appends a point instead
+                if self.target.as_ref().is_some_and(|t| t.id != id) {
+                    return None;
+                }
+                Some(DrawHit::Join {
+                    id,
+                    contour,
+                    at_start,
+                })
+            }
+            _ => None,
+        }
+    }
+
+    /// Joins the path being drawn with the open contour `contour` of `id` at the hit endpoint
+    /// (re 52 §1.2 mode 8) and ends drawing. The joined contour keeps the attributes of the hit
+    /// path.
+    fn join(
+        &mut self,
+        ctx: &ToolContext,
+        id: ElementId,
+        contour: usize,
+        at_start: bool,
+    ) -> Option<ToolResponse> {
+        let e = docops::element_on_page(ctx.doc, ctx.page, id)?;
+        let ElementKind::Path(pe) = &e.kind else {
+            return None;
+        };
+        let c = pe.contours.get(contour)?;
+        let mut other: Vec<PenNode> = c.nodes.iter().map(|n| (n.anchor, n.pred, n.succ)).collect();
+        if !at_start {
+            other.reverse();
+            for n in &mut other {
+                *n = (n.0, n.2, n.1);
+            }
+        }
+        let mut merged = self.nodes.clone();
+        merged.extend(other);
+        let joined = geometry::contour_from_nodes(&merged, false);
+        let cs = match &self.target {
+            None => {
+                let mut cs = pe.contours.clone();
+                cs[contour] = joined;
+                cs
+            }
+            Some(t) if t.id == id && t.contour != contour => {
+                let mut cs = t.contours.clone();
+                *cs.get_mut(t.contour)? = joined;
+                cs.remove(contour);
+                cs
+            }
+            Some(_) => return None,
+        };
+        self.nodes.clear();
+        self.target = None;
+        self.closing = false;
+        self.button = false;
+        self.hover = None;
+        self.guides.clear();
+        self.resume = None;
+        Some(ToolResponse::commit(vec![
+            pick_select(id),
+            Invocation::new(
+                "path.setContours",
+                json!({"id": id.0, "contours": contours_json(&cs), "step": "pen"}),
+            ),
+        ]))
+    }
+
     /// Konturen des Pfads mit eingezogenen Henkeln am Knoten (Kurvenpunkt → Eckpunkt).
     fn corner_contours(
         ctx: &ToolContext,
@@ -952,15 +1114,33 @@ impl PenTool {
             })
     }
 
-    fn hover_cursor(&self, ctx: &ToolContext, p: Point) -> Cursor {
+    fn hover_cursor(&self, ctx: &ToolContext, p: Point, shift: bool) -> Cursor {
         if !self.nodes.is_empty() {
-            let close =
-                self.nodes.len() >= 2 && dist(p, self.nodes[0].0) <= ctx.pick_tolerance() as f32;
-            return if close { Cursor::PenClose } else { Cursor::Pen };
+            return match self.draw_hit(ctx, p, shift) {
+                Some(DrawHit::Close) => Cursor::PenClose,
+                Some(DrawHit::Last) => Cursor::PenConvert,
+                Some(DrawHit::Interior(i)) => {
+                    let (a, pr, su) = self.nodes[i];
+                    if pr == a && su == a {
+                        Cursor::PenRemove
+                    } else {
+                        Cursor::PenConvert
+                    }
+                }
+                Some(DrawHit::Segment(..)) => Cursor::PenAdd,
+                Some(DrawHit::Join { .. }) => Cursor::PenJoin,
+                None => Cursor::Pen,
+            };
         }
         match Self::pen_hit(ctx, p) {
             Some(PenHit::End { .. }) => Cursor::PenContinue,
-            Some(PenHit::Point { .. }) => Cursor::PenRemove,
+            Some(PenHit::Point { id, contour, node }) => {
+                if Self::is_curve_point(ctx, id, contour, node) {
+                    Cursor::PenConvert
+                } else {
+                    Cursor::PenRemove
+                }
+            }
             Some(PenHit::Segment { .. }) => Cursor::PenAdd,
             None => Cursor::Pen,
         }
@@ -976,14 +1156,14 @@ impl ToolMachine for PenTool {
         if !ctx.has_document {
             return ToolResponse::default();
         }
-        let tol = ctx.pick_tolerance() as f32;
+        let tol = pen_tol(ctx);
         match &ev.input {
             ToolInput::Pointer {
                 kind: PointerKind::Down,
                 pos,
             } => {
                 self.button = true;
-                self.edit_last = false;
+                self.convert = None;
                 self.smooth_drag = false;
                 self.alt_point = None;
                 if self.nodes.len() >= 2 && dist(*pos, self.nodes[0].0) <= tol {
@@ -993,13 +1173,55 @@ impl ToolMachine for PenTool {
                         ..ToolResponse::default()
                     };
                 }
-                // Alt-Ziehen auf dem soeben gesetzten Punkt: dessen Ausgangshenkel neu (PAR 09/09)
-                if ev.mods.alt
-                    && let Some(last) = self.nodes.last()
-                    && dist(*pos, last.0) <= tol
-                {
-                    self.edit_last = true;
-                    return ToolResponse::with_overlay(self.overlay(), Cursor::Pen);
+                match self.draw_hit(ctx, *pos, ev.mods.shift) {
+                    Some(DrawHit::Last) => {
+                        // convert point: retract the outgoing handle, the incoming one stays; the
+                        // path stays in progress (FB-01, re 52 §1.4)
+                        if let Some(n) = self.nodes.last_mut() {
+                            self.convert = Some(ConvertLast {
+                                pred0: n.1,
+                                down: *pos,
+                                last: *pos,
+                                dragged: false,
+                            });
+                            n.2 = n.0;
+                        }
+                        self.hover = None;
+                        self.guides.clear();
+                        return ToolResponse::with_overlay(self.overlay(), Cursor::PenConvert);
+                    }
+                    Some(DrawHit::Interior(i)) => {
+                        // curve point -> corner (both handles retracted), corner point -> delete
+                        self.button = false;
+                        let (a, pr, su) = self.nodes[i];
+                        if pr == a && su == a {
+                            self.nodes.remove(i);
+                        } else {
+                            self.nodes[i] = (a, a, a);
+                        }
+                        return ToolResponse::with_overlay(self.overlay(), Cursor::Pen);
+                    }
+                    Some(DrawHit::Segment(seg, t)) => {
+                        self.button = false;
+                        if let Some(bc) =
+                            geometry::to_bezier(&self.contour(false)).insert_node(seg, t)
+                        {
+                            let c = geometry::from_bezier(&bc);
+                            self.nodes =
+                                c.nodes.iter().map(|n| (n.anchor, n.pred, n.succ)).collect();
+                        }
+                        return ToolResponse::with_overlay(self.overlay(), Cursor::PenAdd);
+                    }
+                    Some(DrawHit::Join {
+                        id,
+                        contour,
+                        at_start,
+                    }) => {
+                        if let Some(r) = self.join(ctx, id, contour, at_start) {
+                            return r;
+                        }
+                    }
+                    _ => {}
                 }
                 if self.nodes.is_empty() {
                     let resume = self.resume.take();
@@ -1166,6 +1388,51 @@ impl ToolMachine for PenTool {
                     ];
                     return ToolResponse::with_overlay(ov, Cursor::Pen);
                 }
+                if self.button
+                    && let Some(cv) = self.convert.as_mut()
+                {
+                    // drag threshold 2 screen px (re 52 §1.1)
+                    let thr = (2.0 / ctx.zoom.max(1e-6)) as f32;
+                    if !cv.dragged {
+                        if (pos.x - cv.down.x).abs() < thr && (pos.y - cv.down.y).abs() < thr {
+                            return ToolResponse::with_overlay(self.overlay(), Cursor::PenConvert);
+                        }
+                        // first drag step: both handles back onto the anchor, pulled again
+                        cv.dragged = true;
+                        if let Some(n) = self.nodes.last_mut() {
+                            n.1 = n.0;
+                            n.2 = n.0;
+                        }
+                    }
+                    let (dx, dy) = (pos.x - cv.last.x, pos.y - cv.last.y);
+                    cv.last = *pos;
+                    let pred0 = cv.pred0;
+                    if let Some(n) = self.nodes.last_mut() {
+                        if ev.mods.ctrl {
+                            // Ctrl moves the point with its handles
+                            for q in [&mut n.0, &mut n.1, &mut n.2] {
+                                *q = Point::new(q.x + dx, q.y + dy);
+                            }
+                        } else {
+                            let a = n.0;
+                            let q = if ev.mods.shift {
+                                constrain_angle(a, *pos, 45.0)
+                            } else {
+                                *pos
+                            };
+                            n.2 = q;
+                            // Alt decouples: the incoming handle keeps its previous position
+                            n.1 = if ev.mods.alt {
+                                pred0
+                            } else {
+                                Point::new(2.0 * a.x - q.x, 2.0 * a.y - q.y)
+                            };
+                        }
+                    }
+                    self.guides.clear();
+                    self.cursor = Cursor::Pen;
+                    return ToolResponse::with_overlay(self.overlay(), self.cursor);
+                }
                 if self.button {
                     let idx = if self.closing {
                         0
@@ -1179,10 +1446,7 @@ impl ToolMachine for PenTool {
                         } else {
                             *pos
                         };
-                        if self.edit_last {
-                            // nur der Ausgangshenkel, der Eingangshenkel bleibt (PAR 09/09)
-                            n.2 = q;
-                        } else if self.smooth_drag {
+                        if self.smooth_drag {
                             // Alt am Endpunkt eines gewählten Pfads: glatter Punkt (BA-003)
                             n.2 = q;
                             n.1 = Point::new(2.0 * a.x - q.x, 2.0 * a.y - q.y);
@@ -1213,7 +1477,7 @@ impl ToolMachine for PenTool {
                     };
                     self.hover = Some(h);
                     self.guides = sp.guides;
-                    self.cursor = self.hover_cursor(ctx, *pos);
+                    self.cursor = self.hover_cursor(ctx, *pos, ev.mods.shift);
                 }
                 ToolResponse::with_overlay(self.overlay(), self.cursor)
             }
@@ -1222,7 +1486,7 @@ impl ToolMachine for PenTool {
                 ..
             } => {
                 self.button = false;
-                self.edit_last = false;
+                self.convert = None;
                 self.smooth_drag = false;
                 if let Some(ap) = self.alt_point.take() {
                     if ap.moved {
