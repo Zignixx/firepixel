@@ -14,6 +14,9 @@ complete rule set for humans and AI agents is in [AGENTS.md](AGENTS.md).
 - **Fix a finding:** pick an open `[F]` entry from [docs/FINDINGS.md](docs/FINDINGS.md).
 - **Translate:** add a language as `.ftl` files (see `crates/fp-i18n/README.md`).
 
+Testers who report reproducible issues are listed in the README [acknowledgements](README.md#acknowledgements)
+if they wish.
+
 ## Clean room
 
 Firepixel is built from written behaviour descriptions and measurements of the reference application

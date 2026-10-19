@@ -89,6 +89,12 @@ Contributions are welcome — please read [CONTRIBUTING.md](CONTRIBUTING.md) and
 **Parity gap** issue template. Security issues: [SECURITY.md](SECURITY.md). Conduct:
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
+## Acknowledgements
+
+Thanks to the people who contributed testing feedback:
+
+- **E-Man** – hands-on testing feedback on the pen tool and the Select Behind tool (October 2026)
+
 ## License
 
 [Apache License 2.0](LICENSE).

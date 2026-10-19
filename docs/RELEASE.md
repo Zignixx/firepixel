@@ -45,6 +45,10 @@ Steps in the workflow:
    commits left out) if that tag is part of the current history, otherwise
    "Initial public pre-release".
 
+### Release-notes checklist
+
+- Thank testers whose reports were fixed in this release (see README acknowledgements).
+
 ## Versioning
 
 - Previews are released as `0.Y.0`; every run increases only the minor part.
