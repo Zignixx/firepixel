@@ -21,6 +21,11 @@ Speichern-Dialoge laufen über das XDG-Desktop-Portal; `xdg-desktop-portal` und 
 den Desktop (GTK, KDE, …) müssen installiert sein. Der Linux-Build ist neu und noch auf wenigen Desktops
 ausprobiert.
 
+**macOS:** Das Fenster behält die native Titelleiste mit den Ampelknöpfen (Schließen, Minimieren,
+Zoomen); die Menüleiste von Firepixel liegt direkt darunter. Cmd+Q beendet wie Datei ▸ Beenden und
+fragt vorher, ob geänderte Dokumente gespeichert werden sollen; ein Programmmenü von Firepixel in der
+Menüleiste von macOS gibt es nicht.
+
 **Start:**
 
 - Doppelklick auf `firepixel.exe`, oder Dateien auf die exe bzw. das offene Fenster ziehen.

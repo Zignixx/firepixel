@@ -20,6 +20,10 @@ desktops already have. Open and save dialogs go through the XDG desktop portal, 
 `xdg-desktop-portal` and a portal backend for your desktop (GTK, KDE, …) must be installed. The Linux
 build is new and has not yet been tried on many desktops.
 
+**macOS:** the window keeps the native title bar with the traffic-light buttons (close, minimise,
+zoom); Firepixel's menu bar sits directly below it. Cmd+Q quits like File ▸ Exit and asks to save
+changed documents first; there is no Firepixel application menu in the macOS menu bar.
+
 **Starting:**
 
 - Double-click `firepixel.exe`, or drag files onto the exe or the open window.

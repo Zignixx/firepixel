@@ -2,6 +2,7 @@
 //! the platform-independent decisions behind it.
 
 use egui::{ViewportCommand, ViewportId, ViewportInfo};
+use egui_kittest::kittest::Queryable as _;
 
 /// One pass with the given "minimised" flag in the root viewport info; returns whether the flag was
 /// healed, the commands sent to the root viewport and whether a new frame was requested at once.
@@ -90,4 +91,51 @@ fn cmd_q_is_quit_on_macos() {
     // plain Q (tool key), Cmd+W: not Quit and left alone
     assert_eq!(quit_key(egui::Key::Q, egui::Modifiers::NONE), (false, false));
     assert_eq!(quit_key(egui::Key::W, mac_cmd), (false, false));
+}
+
+/// App bar alone, with own window chrome (`native = false`) or below the system title bar.
+fn app_bar(native: bool) -> egui_kittest::Harness<'static, fp_ui::FirepixelApp> {
+    let ctx = egui::Context::default();
+    let app = fp_ui::FirepixelApp::with_session(
+        &ctx,
+        fp_engine::Session::default(),
+        fp_ui::app_state::UiSettings::default(),
+        false,
+    );
+    let mut h = egui_kittest::Harness::builder()
+        .with_size(egui::vec2(1200.0, 31.0))
+        .with_pixels_per_point(1.0)
+        .build_ui_state(
+            move |ui, app: &mut fp_ui::FirepixelApp| {
+                fp_ui::appbar::show_bar(ui, &mut app.state, native)
+            },
+            app,
+        );
+    h.run_steps(2);
+    h
+}
+
+/// FB-03: below the native macOS title bar (traffic lights) the app bar draws no own window
+/// buttons; with own chrome (Windows/Linux) they stay. The window decorations follow the same
+/// switch.
+#[test]
+fn native_title_bar_hides_own_window_buttons() {
+    let labels = ["ui-window-minimize", "ui-window-maximize", "ui-window-close"]
+        .map(fp_i18n::t);
+    let own = app_bar(false);
+    for l in &labels {
+        assert!(own.query_by_label(l).is_some(), "own chrome: {l}");
+    }
+    let native = app_bar(true);
+    for l in &labels {
+        assert!(native.query_by_label(l).is_none(), "native title bar: {l}");
+    }
+    assert_eq!(
+        fp_ui::native_options().viewport.decorations,
+        Some(fp_ui::appbar::native_title_bar())
+    );
+    assert_eq!(
+        fp_ui::appbar::native_title_bar(),
+        cfg!(target_os = "macos")
+    );
 }

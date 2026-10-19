@@ -16,18 +16,33 @@ use serde_json::json;
 /// Menüs und Fensterknöpfe immer; danach der Arbeitsbereich-Umschalter (sonst nur ▾), dann das
 /// Vergrößerungsfeld, zuletzt die Schnellknöpfe.
 pub fn show(ui: &mut Ui, st: &mut AppState) {
+    show_bar(ui, st, native_title_bar());
+}
+
+/// Does the window use the system title bar (FB-03)? On macOS the window keeps its native title
+/// bar with the traffic lights (close/minimise/zoom); the app bar below it then only carries the
+/// menus and has no own window buttons, drag area or resize edges. Windows/Linux: own chrome.
+pub fn native_title_bar() -> bool {
+    cfg!(target_os = "macos")
+}
+
+/// [`show`] with an explicit choice of window chrome: `native` = the system title bar owns the
+/// window buttons, moving and resizing (macOS), so none of them are drawn here.
+pub fn show_bar(ui: &mut Ui, st: &mut AppState, native: bool) {
     let theme = Theme::current(ui.ctx());
     let c = theme.colors.clone();
     let rect = ui.max_rect();
     ui.painter().rect_filled(rect, 0.0, c.app_bar_bg);
     // Hintergrund zum Verschieben (vor allen Knöpfen anlegen, damit diese gewinnen)
-    let drag = ui.interact(rect, Id::new("appbar-drag"), Sense::click_and_drag());
-    if drag.drag_started() {
-        ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
-    }
-    if drag.double_clicked() {
-        let max = ui.ctx().input(|i| i.viewport().maximized.unwrap_or(false));
-        ui.ctx().send_viewport_cmd(ViewportCommand::Maximized(!max));
+    if !native {
+        let drag = ui.interact(rect, Id::new("appbar-drag"), Sense::click_and_drag());
+        if drag.drag_started() {
+            ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
+        }
+        if drag.double_clicked() {
+            let max = ui.ctx().input(|i| i.viewport().maximized.unwrap_or(false));
+            ui.ctx().send_viewport_cmd(ViewportCommand::Maximized(!max));
+        }
     }
     // eigenes App-Icon (24 px pixelgenau), in allen Designs gleich
     let logo = Rect::from_min_size(
@@ -35,8 +50,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         vec2(24.0, 24.0),
     );
     icons::paint_app_logo(ui.painter(), logo);
-    // Fensterknöpfe rechts oben (wie CS6 klein am oberen Rand)
-    let wb = vec2(30.0, 19.0);
+    // Fensterknöpfe rechts oben (wie CS6 klein am oberen Rand); mit Systemtitelleiste keine
+    // (Breite 0, alles rechts davon rückt an den Rand)
+    let wb = if native {
+        vec2(0.0, 19.0)
+    } else {
+        vec2(30.0, 19.0)
+    };
     let close = Rect::from_min_size(
         pos2(rect.right() - wb.x * 1.5 - 4.0, rect.top()),
         vec2(wb.x * 1.5, wb.y),
@@ -202,6 +222,54 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
         }
     }
+    if !native {
+        window_buttons(ui, st, minr, maxr, close);
+    }
+    // Arbeitsbereich-Umschalter („Einen Arbeitsbereich auswählen“), bei Platzmangel nur ▾
+    let wr = Rect::from_min_size(
+        pos2(minr.left() - 14.0 - switcher_w, rect.top() + 5.0),
+        vec2(switcher_w, 21.0),
+    );
+    ui.painter().vline(
+        wr.left() - 8.5,
+        (rect.top() + 7.0)..=(rect.bottom() - 7.0),
+        Stroke::new(1.0, c.line_mid),
+    );
+    let wresp = ui.interact(wr, Id::new("workspace-switcher"), Sense::click());
+    if wresp.hovered() {
+        ui.painter().rect_filled(wr, 0.0, c.app_bar_hover_bg);
+    }
+    if full_switcher {
+        ui.painter().text(
+            pos2(wr.left() + 4.0, wr.center().y),
+            Align2::LEFT_CENTER,
+            &name,
+            font,
+            c.app_bar_text,
+        );
+    }
+    widgets::drop_arrow(
+        ui.painter(),
+        Rect::from_center_size(pos2(wr.right() - 8.0, wr.center().y + 2.0), vec2(8.0, 8.0)),
+        c.text_weak,
+    );
+    let wresp = wresp.on_hover_text(fp_i18n::tr!("ui-workspace-switcher", name = name.as_str()));
+    let nodes = workspace_menu(st);
+    let mut acts = Vec::new();
+    menu::popup_menu(ui, &wresp, &nodes, &mut acts);
+    for a in acts {
+        st.push(a);
+    }
+    ui.painter().hline(
+        rect.x_range(),
+        rect.bottom() - 0.5,
+        Stroke::new(1.0, c.line_dark),
+    );
+}
+
+/// Eigene Fensterknöpfe Minimieren/Maximieren/Schließen (ohne Systemtitelleiste).
+fn window_buttons(ui: &mut Ui, st: &mut AppState, minr: Rect, maxr: Rect, close: Rect) {
+    let c = Theme::current(ui.ctx()).colors.clone();
     let frame = Rect::from_min_max(minr.min, close.max);
     ui.painter().rect_stroke(
         frame,
@@ -271,46 +339,6 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
         }
     }
-    // Arbeitsbereich-Umschalter („Einen Arbeitsbereich auswählen“), bei Platzmangel nur ▾
-    let wr = Rect::from_min_size(
-        pos2(minr.left() - 14.0 - switcher_w, rect.top() + 5.0),
-        vec2(switcher_w, 21.0),
-    );
-    ui.painter().vline(
-        wr.left() - 8.5,
-        (rect.top() + 7.0)..=(rect.bottom() - 7.0),
-        Stroke::new(1.0, c.line_mid),
-    );
-    let wresp = ui.interact(wr, Id::new("workspace-switcher"), Sense::click());
-    if wresp.hovered() {
-        ui.painter().rect_filled(wr, 0.0, c.app_bar_hover_bg);
-    }
-    if full_switcher {
-        ui.painter().text(
-            pos2(wr.left() + 4.0, wr.center().y),
-            Align2::LEFT_CENTER,
-            &name,
-            font,
-            c.app_bar_text,
-        );
-    }
-    widgets::drop_arrow(
-        ui.painter(),
-        Rect::from_center_size(pos2(wr.right() - 8.0, wr.center().y + 2.0), vec2(8.0, 8.0)),
-        c.text_weak,
-    );
-    let wresp = wresp.on_hover_text(fp_i18n::tr!("ui-workspace-switcher", name = name.as_str()));
-    let nodes = workspace_menu(st);
-    let mut acts = Vec::new();
-    menu::popup_menu(ui, &wresp, &nodes, &mut acts);
-    for a in acts {
-        st.push(a);
-    }
-    ui.painter().hline(
-        rect.x_range(),
-        rect.bottom() - 0.5,
-        Stroke::new(1.0, c.line_dark),
-    );
 }
 
 /// Einträge „Arbeitsbereichlayouts“ (Umschalter oben rechts und Fenster-Menü): mitgelieferte Layouts,
@@ -383,6 +411,9 @@ pub fn workspace_display_name(name: &str) -> String {
 
 /// Größenänderung am Fensterrand (ohne Systemrahmen): Mauszeiger setzen und Ziehen starten.
 pub fn resize_edges(ctx: &egui::Context) {
+    if native_title_bar() {
+        return; // the system frame resizes the window (macOS, FB-03)
+    }
     let maximized = ctx.input(|i| {
         i.viewport().maximized.unwrap_or(false) || i.viewport().fullscreen.unwrap_or(false)
     });

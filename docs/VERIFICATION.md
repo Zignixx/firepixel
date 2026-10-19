@@ -261,6 +261,15 @@ VER-10.28.
 - [ ] **A4-18** (TW-148, package F48; needs: real keyboard, original for comparison)
   **Steps:** In both programs: select a rectangle with the Pointer tool and press Shift+Right, Shift+Right, Shift+Down; then plain Right twice; then click another object and press Right. Repeat on a fresh selection with a pause of several seconds between two presses, once with an Undo between two presses, and once with Alt+Right three times. Look at the History panel after each part.
   **Expected:** The three Shift presses and the following plain presses on the first object form one Move row with the summed offset (here 22,10); the press after the selection change starts a new row; an Undo between presses ends the merge. Alt+Right: the first press creates the copy (its own row), the two further presses move the copy and merge into that row. Note whether a long pause starts a new row in the reference (Firepixel has no pause timeout); if it does, report it quoting TW-148.
+- [ ] **A4-19** (FB-04, tester feedback; needs: real Mac)
+  **Steps:** Open a document; minimise the window with the yellow traffic light; restore it by clicking the Dock icon, then again by clicking the minimised window in the Dock. Repeat with `--mcp` and while a batch runs.
+  **Expected:** After each restore the window repaints at once and reacts to clicks, keys and menus; no force-quit is needed.
+- [ ] **A4-20** (FB-05, tester feedback; needs: real Mac)
+  **Steps:** Change a document without saving; press Cmd+Q, also while a text field or the text tool is active. Then use *Quit* from the Dock icon's context menu.
+  **Expected:** Cmd+Q shows the unsaved-changes prompt (Cancel keeps the app open, No quits). Known limit: *Quit* from the Dock menu still quits at once without asking (winit offers no hook for it without Objective-C calls); note it if it happens.
+- [ ] **A4-21** (FB-03, tester feedback; needs: real Mac)
+  **Steps:** Start Firepixel; look at the top of the window; use the three traffic lights, drag the title bar, double-click it, resize at the edges; enter and leave full screen.
+  **Expected:** Native title bar with traffic lights and no own minimise/maximise/close buttons at the top right; Firepixel's menu bar sits directly below the title bar without an extra empty strip; moving, zoom and resizing work through the system frame.
 
 ---
 
