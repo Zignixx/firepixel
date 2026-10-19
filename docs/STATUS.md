@@ -19,14 +19,14 @@ run only in CI, not yet on a real Linux desktop.
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 48 | [PARITY.md](PARITY.md) |
-| Equal except for design | **47** (0 real deviations, 1 unclear, 0 under-measured) | run 22 (7 units) and run 18 (4 units) on top of full run 17, 18/19 Oct 2026 |
-| Proven 1:1 | **97.9 %** (47 / 48; no unit under-measured; run 21: 93.8 %, run 17: 87.5 %) | runs 17–22 |
-| Canvas image pairs within 1 % | **175 / 201** (run 21: 176 / 202; `tool-text/13` has no reference shot in run 22; `tool-text/16` stays above 1 %, TW-145) | runs 17–22 |
-| Measurement quota, all 48 units | **86.9 %** (1066 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the seven units of run 22: 86.8 %, 138 / 159, unchanged: `xs-shortcuts` +1, `tool-text` −1) | runs 17–22 |
-| Errors, newest run per unit | 38 reference-side (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17–22 |
-| Workspace tests | **2740 passed, 0 failed, 134 ignored** at `65db4012` (full workspace run); on top, `fp-script` and `fp-engine` **739 passed, 0 failed, 5 ignored** at `a4c2bf2b` (the commit of preview `2026-10-18_23-25`, package F45) | `main`, 18 Oct 2026 |
-| Open findings | 5 fixable `[F]` (PDF layers; TW-138 rest; TW-145 size of new text after a partial-selection edit; TW-146 reference-side text entry, runner R-20; TW-147 side effects of the reference-side substitutes, runner R-20), 5 deferred `[V]`, 20 informational `[N]`; run 22 closed TW-134, TW-140 and TW-143 | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | None measured in the newest runs. Smaller, from the code: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest). Not yet compared: the size of a new text after a partial-selection edit (TW-145), because text entry failed on the reference side in run 22 (TW-146) | [PARITY.md](PARITY.md) |
+| Equal except for design | **46** (0 real deviations, 2 unclear, 0 under-measured) | run 23 (5 units), run 22 (2 units) and run 18 (4 units) on top of full run 17, 18/19 Oct 2026 |
+| Proven 1:1 | **95.8 %** (46 / 48; no unit under-measured; run 22: 97.9 %, run 17: 87.5 %) | runs 17–23 |
+| Canvas image pairs within 1 % | **175 / 201** (unchanged from run 22; `tool-text/02`, `03`, `07`, `14` now compare against the reference's typed texts; `tool-text/16` stays above 1 %, TW-145) | runs 17–23 |
+| Measurement quota, all 48 units | **86.9 %** (1065 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the five units of run 23: 84.2 %, 101 / 120, run 22: 102 / 120; `xs-shortcuts/08` `slow`) | runs 17–23 |
+| Errors, newest run per unit | 38 reference-side plus one `slow` step (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17–23 |
+| Workspace tests | **2748 passed, 1 failed, 134 ignored** at `cd86ce75` (full workspace run, the commit of preview `2026-10-19_01-32`, package F46); the one failure was an `fp-i18n` check (missing DE/EN text for the `edit.move` nudge parameter), fixed in `bea53d1c` | `main`, 19 Oct 2026 |
+| Open findings | 7 fixable `[F]` (PDF layers; TW-138 rest; TW-145 size of new text after a partial-selection edit; TW-146 rest, reference-side text entry, runner R-21; TW-148 History rows of consecutive nudges, RE spec check; TW-149 text tool font at unit start, runner; TW-150 step limit of `xs-shortcuts/08`, runner), 5 deferred `[V]`, 20 informational `[N]`; run 23 closed TW-147 | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | None proven in the newest runs. Unclear: after three arrow nudges the reference reads 4 History steps, Firepixel 5 (TW-148; F46 follows RE spec 51, one row per press). Smaller, from the code: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest). Not yet compared: the size of a new text after a partial-selection edit (TW-145), because the reference's size edit on the selected characters did not take effect in run 23 | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -46,11 +46,13 @@ the app under Xvfb and checks that the control channel comes up. The first CI ru
 real Linux desktop; file dialogs need `xdg-desktop-portal`. v0.2.2 is the first release with Windows x64, macOS
 universal and Linux x86_64.
 
-Latest test build: preview build **`2026-10-18_23-25`** (release profile, single `firepixel.exe` plus
-`firepixel-cli.exe`) from `main` at `a4c2bf2b` (package F45 on top of `65db4012`: element-list read-backs see the live
-text element while editing, TW-143); `fp-script` and `fp-engine` passed on that commit (739 passed, 0 failed, 5
-ignored), the last full workspace test run is the one on `65db4012` (2740 passed, 0 failed, 134 ignored). The
-previous preview was `2026-10-18_22-05` from `65db4012` (packages F42–F44: panel pop-up menu state, live bounds of an
+Latest test build: preview build **`2026-10-19_01-32`** (release profile, single `firepixel.exe` plus
+`firepixel-cli.exe`) from `main` at `cd86ce75` (package F46 after RE spec 51: Escape keeps the selection and only
+commits text, cancels crop or transform or leaves bitmap mode; one History row per arrow-key nudge). The full
+workspace test run on that commit gave 2748 passed, 1 failed, 134 ignored; the failure was an `fp-i18n` check for
+the DE/EN text of the `edit.move` nudge parameter, fixed in `bea53d1c`. Before that came preview `2026-10-18_23-25`
+from `a4c2bf2b` (package F45: element-list read-backs see the live text element while editing, TW-143). The
+preview before was `2026-10-18_22-05` from `65db4012` (packages F42–F44: panel pop-up menu state, live bounds of an
 edited text, stretched alignment stored as left, text attribute commands writing the text tool defaults, paragraph
 separator tests).
 
@@ -101,6 +103,16 @@ closed). `tool-text` stays unclear: on the reference side texts created by a cli
 fails (TW-146, runner R-20), so the size rule TW-145 is still not compared. Step quota unchanged (138 / 159), one
 canvas pair fewer (`tool-text/13` without reference shot); further runner side effects as TW-147.
 
+Follow-up run 23 (19 Oct 2026, 01:34–02:10, 5 units, 123 steps, 49 image pairs) used preview `2026-10-19_01-32`
+and runner R-20: one class changed, 46 / 0 / 2 / 0. `panel-pages-states-history` became unclear: with real
+Shift+arrows the reference reads 4 History steps after three nudges and a nudge of a second object, Firepixel 5
+(TW-148; the count points to merged nudges in the reference, against RE spec 51 and F46, but the row list is not
+read). `tool-text` stays unclear: R-20 creates 14 of 17 reference texts as typed and verifies drag selections by
+highlight pixels, but the size edit on "123" does not take effect, so TW-145 is still not compared (TW-146 rest).
+Confirmed and closed (TW-147): Escape keeps the selection in both programs, the Pointer tool is reached through the
+flyout, the paste read-back and `MaxUndos` (20) are equal. Step quota 1065 / 1226 (`xs-shortcuts/08` over the 90 s
+step limit, TW-150), canvas pairs unchanged; new runner items TW-149 (text tool font) and TW-150.
+
 ## How tests run
 
 - Every crate has unit tests; `fp-ui` and `fp-engine` bundle their integration tests into one program `all`
@@ -128,14 +140,17 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Runner R-20 (reference-side text entry and drag selection in `tool-text`, TW-146; Pointer tool selection,
-   Escape with a selection, nudge rows in History and the paste read-back, TW-147), then run 23 of `tool-text`,
-   `xs-shortcuts`, `panel-pages-states-history` and `menu-edit`: compares the size rule for new text (TW-145).
-2. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
+1. Nudge rows in History (TW-148): read the reference's History row list in `panel-pages-states-history/21` and
+   check RE spec 51 §2 against it; align F46 if the reference merges consecutive nudges.
+2. Runner R-21: the rest of the reference-side text entry (keys reaching the tool shortcuts in 3 of 17 steps, the
+   "Q" after a double-click) and a size edit that reaches the selected characters (TW-146 rest), the text tool font
+   at unit start (TW-149), the step limit of `xs-shortcuts/08` (TW-150); then a run of `tool-text` and
+   `panel-pages-states-history`, which compares the size rule for new text (TW-145).
+3. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
    typing after a double-click, crop option off, Linux start) and the open A2 checks.
-3. Remaining parity items: the size rule for new text (TW-145, after run 23) and the *Text* menu remnant of the
+4. Remaining parity items: the size rule for new text (TW-145, after R-21) and the *Text* menu remnant of the
    text tool defaults (TW-138 rest).
-4. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
+5. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external
 programs and unsandboxed scripts, opt-in GIF optimiser modes, the remaining Batch Studio UI conveniences, selectable

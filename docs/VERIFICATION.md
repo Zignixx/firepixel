@@ -73,7 +73,7 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
-## A2. Open items from comparison runs 12–22
+## A2. Open items from comparison runs 12–23
 
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
 them; they stay listed here, ticked, so the history of each check is clear. Run 15 (17/18 Oct 2026) resolved
@@ -90,8 +90,9 @@ confirmed TW-137, TW-138, TW-139 and TW-141; it could not confirm TW-134 (the re
 left TW-140 open (runner R-16) and added TW-142 to TW-144. Run 21 (18 Oct 2026, 7 units) confirmed TW-133, TW-142
 and TW-144, did not confirm TW-143 and TW-134, pinned down the mechanism of TW-140 (runner R-19) and added TW-145. Run
 22 (18/19 Oct 2026, 7 units, runner R-19) confirmed TW-134 and TW-143, closed TW-140 (the reference-side substitutes
-work) and added TW-146 and TW-147 (runner R-20); TW-145 is still not compared. The open checks below come from runs
-17 to 22.
+work) and added TW-146 and TW-147 (runner R-20); TW-145 is still not compared. Run 23 (19 Oct 2026, 5 units,
+runner R-20, package F46) closed TW-147, reduced TW-146 to a rest and added TW-148 to TW-150; TW-145 is still not
+compared. The open checks below come from runs 17 to 23.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -149,15 +150,16 @@ work) and added TW-146 and TW-147 (runner R-20); TW-145 is still not compared. T
   **Steps:** Double-click into line 2 of TX2 with the text tool, type "Vr" and read the text objects back through the layer element list before Escape.
   **Expected:** As in the reference: TX2's bounds grow to 50,150–120,194 while the editor is open.
 - [x] **TW-144** (`xs-shortcuts/15_in_text_tx2`, `tool-text/06`) – resolved in run 21: with CR/LF kept in the read-backs (runner R-17b) both programs separate TX2's paragraphs with `\r`; the `\n` of run 20 was the reference-side read-back. Tests pin the separators.
-- [ ] **TW-145** (`tool-text/11, 13, 14, 16`; RE spec check; needs: runner R-19 and the next `tool-text` run)
+- [ ] **TW-145** (`tool-text/11, 13, 14, 16`; RE spec check; needs: runner R-21 and the next `tool-text` run)
   **Steps:** Text tool: type "Abc 123", select "123" by mouse, set a larger size in the inspector, press Escape; click elsewhere and type a new text; read its size in both programs.
-  **Expected:** The same size as the reference. Run 21: Firepixel's new text takes the larger size (F43 rule), the reference's stays 12 pt, but its selection and size edit had failed, so nothing is compared yet. Run 22: the same; the reference's texts in `11` and `13` were never created (TW-146), Firepixel's texts in `14` and `16` are 72 pt.
-- [ ] **TW-146** (`tool-text/02, 03, 06, 07, 11, 13, 14`; runner R-20; needs: the next `tool-text` run) – run 22, reference side: texts created by a click stay empty and are discarded, `02` reads "bc 123 Abc 123 Abc 123 Abc 123", the "Q" after the pointer double-click in `06` does not arrive, the drag selection in `07` reads back nothing and the clipboard read-back's Ctrl+C inserts U+0003 into the text, `11` and `13` find no text to select (Image Size opens instead of the size field; no colour pop-up).
-  **Steps:** Runner R-20: after the text-tool click or drag wait until the editor is open before typing; read the drag selection without Ctrl+C in an empty selection; log the created text. Hands-on: in the reference click with the text tool, type "Abc 123", drag over "123" and set 72 pt.
-  **Expected:** The typed text exists on both sides in every step and the drag selects "123"; then TW-145 can be compared.
-- [ ] **TW-147** (`xs-shortcuts/07, 21`, `panel-pages-states-history/16, 21, 22`, `menu-edit/03`; runner R-20, one RE spec check; needs: the next run of these units) – run 22: the Pointer-click substitute hits Select Behind in `xs-shortcuts/07` (13 runner errors), the do-nothing Escape leaves R1 selected in `xs-shortcuts/21` (reference 1, Firepixel 0), every nudge substitute is a History row of its own (`21`: 6 vs. 3 steps, the merge is not compared), the reference's selection read-back after Ctrl+X, Ctrl+V is empty in `menu-edit/03` (runs 20 and 22), and the history-limit read-back reads `UndoSteps` instead of `MaxUndos`.
-  **Steps:** Hands-on in the reference: select R1 with the Pointer tool and press Escape; nudge R1 three times with the arrow keys and look at the History rows.
-  **Expected:** Firepixel matches what the reference does with real keys (whether Escape deselects, how many History rows the nudges make); the runner then substitutes accordingly.
+  **Expected:** The same size as the reference. Run 21 and 22: Firepixel's new text takes the larger size (F43 rule), the reference's stays 12 pt, but its selection and size edit had failed. Run 23: the reference's text and the drag selection of "123" work, but the 72 pt does not reach the selection (caret before "123", everything 12 pt), so nothing is compared yet; Firepixel's texts in `14` and `16` are 72 pt.
+- [ ] **TW-146 rest** (`tool-text/06, 09, 11, 13, 20`; runner R-21; needs: the next `tool-text` run) – run 23 (R-20): 14 of 17 reference texts are created as typed and drag selections are verified by highlight pixels (no U+0003 any more); left: in `09`, `13` and `20` the editor poll reports an editor but the keys reach the tool shortcuts and the text is discarded, the "Q" after the pointer double-click in `06` does not arrive, and in `11` the size edit does not reach the selected "123".
+  **Steps:** Runner R-21: accept the editor only with a blinking caret and check the first character before typing on; recheck the selection before the size field and read the new size back. Hands-on: in the reference click with the text tool, type "Abc 123", drag over "123" and set 72 pt.
+  **Expected:** The typed text exists on both sides in every step and the size edit changes only "123"; then TW-145 can be compared.
+- [x] **TW-147** (`xs-shortcuts/07, 21`, `panel-pages-states-history/16, 21, 22`, `menu-edit/03`; runner R-20) – resolved in run 23: the Pointer tool is taken from the flyout when the slot holds Select Behind (`xs-shortcuts/07`, no runner error), Escape keeps R1 selected in both programs (`xs-shortcuts/21`, 1 / 1, F46 after RE spec 51), the paste read-back is R1 at 50,50–150,120 on both sides (`menu-edit/03`) and `MaxUndos` reads 20 in both (`panel-pages-states-history/22`). The nudge rows (c) are now compared with real Shift+arrows and continue as TW-148.
+- [ ] **TW-148** (`panel-pages-states-history/21`; RE spec check, runner; needs: a hands-on check or the next run with the History row list) – run 23: after three Shift+arrow nudges of R1 and one of E1 the reference reads 4 History steps, Firepixel 5 (three nudge rows since F46, one Deselect row from the runner's select, the E1 nudge). Counting the reference's runner selects as one script row each, its three presses make only one row, against RE spec 51 §2.
+  **Steps:** In the reference, select a rectangle with the Pointer tool and press Shift+Right, Shift+Right, Shift+Down (also once with plain arrows and once with a pause of several seconds between the presses); look at the History panel.
+  **Expected:** Firepixel makes as many History rows for the same presses as the reference (today one row per press).
 
 Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the
 reference), **Q-51** (see TW-111 above), **Q-55** (`xs-shortcuts/15`: Firepixel's text-tool click was already right;

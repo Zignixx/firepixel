@@ -10,28 +10,31 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **47 / 48** (0 real deviations, 1 unclear, 0 under-measured; runs 22 and 18 on top of full run 17) |
-| Proven 1:1 | **97.9 %** (47 / 48) |
-| Measurement quota, all 48 units | **86.9 %** (1066 / 1226 steps, newest run per unit; run 17 alone: 86.3 %) |
+| Parity units equal except for design | **46 / 48** (0 real deviations, 2 unclear, 0 under-measured; runs 23, 22 and 18 on top of full run 17) |
+| Proven 1:1 | **95.8 %** (46 / 48; run 22: 97.9 %) |
+| Measurement quota, all 48 units | **86.9 %** (1065 / 1226 steps, newest run per unit; run 17 alone: 86.3 %) |
 | Canvas image pairs within 1 % | 175 / 201 |
-| Tests | 2740 passed, 0 failed, 134 ignored at `65db4012`; `fp-script` / `fp-engine` 739 passed, 0 failed, 5 ignored at `a4c2bf2b` (preview `2026-10-18_23-25`) |
+| Tests | 2748 passed, 1 failed (`fp-i18n`, fixed in `bea53d1c`), 134 ignored at `cd86ce75` (preview `2026-10-19_01-32`) |
 | Latest release | **v0.2.2** pre-release (18 Oct 2026, tag from `c031a987`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage; Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 5 fixable · 5 deferred · 20 informational · 850+ closed |
+| Open findings | 7 fixable · 5 deferred · 20 informational · 850+ closed |
 
 ## Next (in order)
 
-1. **Runner R-20 and run 23** of `tool-text`, `xs-shortcuts`, `panel-pages-states-history` and `menu-edit`: on the
-   reference side wait for the text editor before typing and read the drag selection without inserting characters
-   (TW-146), select the Pointer tool reliably, handle Escape with a selection, compare the nudge merge without script
-   rows and wait for the paste before its read-back (TW-147); this lets the size of a new text after a
-   partial-selection edit (TW-145) be compared.
-2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
+1. **Nudge rows in History (TW-148):** run 23 reads 4 History steps in the reference and 5 in Firepixel after three
+   Shift+arrow nudges and a nudge of a second object. Read the reference's row list in
+   `panel-pages-states-history/21` and recheck RE spec 51 §2; if the reference merges consecutive key nudges, align
+   F46.
+2. **Runner R-21 and a run of `tool-text` and `panel-pages-states-history`:** on the reference side accept the text
+   editor only with a blinking caret and make the size edit reach the selected characters (TW-146 rest), reset the
+   text tool font on both sides (TW-149), raise the step limit of `xs-shortcuts/08` (TW-150); this lets the size of a
+   new text after a partial-selection edit (TW-145) be compared.
+3. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
    a double-click, the crop option, the Linux start).
-3. **Remaining parity items:** the *Text* menu remnant of the text tool defaults (TW-138 rest) and the size rule for
-   new text (TW-145, after run 23).
-4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
+4. **Remaining parity items:** the *Text* menu remnant of the text tool defaults (TW-138 rest) and the size rule for
+   new text (TW-145, after R-21).
+5. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
    boxes), BA-110 rest (lossy LZW with an SSIM bound), BA-083 (resampler hashes on another OS), U-1 PDF import
    layers.
 
@@ -41,9 +44,10 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
 - TW-138 rest (*Text* menu commands and the text tool defaults), TW-145 (size of a new text after a
-  partial-selection edit), TW-146 (reference-side text entry, runner R-20) and TW-147 (side effects of the
-  reference-side substitutes, runner R-20). Run 22 confirmed TW-134 (crop option) and TW-143 (live bounds through the
-  element list) and closed TW-140 (reference-side keys, runner R-19).
+  partial-selection edit), TW-146 rest (reference-side text entry, runner R-21), TW-148 (History rows of consecutive
+  nudges, RE spec check), TW-149 (text tool font at unit start, runner) and TW-150 (step limit, runner). Run 23
+  closed TW-147 (Pointer tool through the flyout, Escape keeps the selection in both programs, paste read-back,
+  `MaxUndos`).
 
 ### Deferred expansion items (`[V]`)
 
