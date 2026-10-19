@@ -3,14 +3,14 @@
 Firepixel aims to behave like the reference application button by button. This page explains how that is
 measured, what the figures mean, where the method stops, and gives the current per-unit result.
 
-**Current state (run 26 over 5 units on top of runs 25 and 24, 19 Oct 2026, all 49 units):** **49 equal except
+**Current state (run 27 over 3 units on top of runs 26, 25 and 24, 19 Oct 2026, all 49 units):** **49 equal except
 for design**, 0 real deviations, 0 unclear, 0 under-measured. **Proven 1:1: 100.0 %** (49 / 49; all 49 units are
 sufficiently measured). Measurement quota over all 49 units: **87.3 %** (1077 / 1233 steps). Canvas image pairs within
-1 %: **186 / 211**.
+1 %: **185 / 212**.
 
 **Units: 49.** Over the 48 units classified before run 24 (without the measurement unit `xs-select-behind`, added on
 19 Oct 2026): 48 / 0 / 0 / 0, proven 1:1 100.0 %, quota 87.3 % (1068 / 1224; run 17 alone: 86.3 %), canvas pairs
-177 / 202.
+176 / 203.
 
 ## Method: scripted comparison runs
 
@@ -49,7 +49,7 @@ state for a unit is always its newest run.
 
 **Measurement quota** = steps with both sides `ok` / steps without an `unsupported` or `skipped` side (repeated
 steps count with their second attempt). **Proven 1:1** = units "equal except for design" / sufficiently
-measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after run 26); since
+measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 and 27); since
 run 15 no unit is under-measured, so both figures are the same.
 
 ## Limits
@@ -70,10 +70,15 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images
   cannot be captured.
 
-## Per-unit result (run 26 on top of runs 25 and 24)
+## Per-unit result (run 27 on top of runs 26, 25 and 24)
 
-Each row is the unit's newest run. Five rows come from follow-up run 26 (19 Oct 2026, 16:11–16:55, 5 units, 155
-steps, 72 image pairs), preview build `2026-10-19_16-07` from `main` at `37c0ee81` (package F49: three screen modes,
+Each row is the unit's newest run. Three rows (`tool-path-reshape`, `tool-text`, `toolbox`) come from follow-up run
+27 (19 Oct 2026, 20:49–21:18, 3 units, 106 steps, 62 image pairs) with the same preview build as run 26 and runner
+R-24 at `f7d13d61` (the size on a text selection by three routes: size field, size keys and the Text Editor dialog;
+drags over the glyph box of 72 pt text; the Freeform size keys with the mouse held, a size read-back and a shot while
+the button is held; the reference's Standard screen mode read from the window; Freeform chosen through flyout entry 0
+and read back). Two rows (`menu-text`, `xs-shortcuts`) come from follow-up run 26 (19 Oct 2026, 16:11–16:55, 5 units,
+155 steps, 72 image pairs), preview build `2026-10-19_16-07` from `main` at `37c0ee81` (package F49: three screen modes,
 full screen shows only the canvas on black, TW-158; text preference rules, TW-138 rest), runner R-23 at `5f498cd7`
 (screen mode read back from the screen-mode buttons, the window against the monitor and the application properties;
 Subselection nudges by `moveSelectedBezierPointsBy`; Freeform size keys with the mouse held; the text size reset read
@@ -125,10 +130,10 @@ than 32 levels). "Was" compares with the unit's previous run; the findings of th
 | `preview-options` | preview / export | equal except for design | run 24: 76.9 % (30 / 39), unchanged |
 | `preview-views` | preview / export | equal except for design | run 24: 69.6 % (16 / 23), unchanged |
 | `color-popup-contexts` | colour | equal except for design | run 24: 68.2 % (15 / 22), unchanged |
-| `tool-path-reshape` | tools | equal except for design | run 26: 100.0 % (23 / 23), unchanged; 12 / 13 canvas pairs within 1 % (`11_rect_to_path` as before); `04_freeform_size_keys`: with the mouse held over the canvas the reference's three Up and two ] keys keep the Freeform tool (run 25: Freeform → Pen → Vector Path → Redraw Path), but the step records neither a shot nor the size, so the size keys are still not compared (TW-159 rest). The reference shows the Path Scrubber (subtractive) head in `12_inspector_heads_freeform` (runs 24 to 26, TW-164); the Freeform head is equal in `01` (size 72, Pressure, Preview) |
-| `tool-text` | tools | equal except for design | run 26: 85.2 % (23 / 27), unchanged; 15 / 16 canvas pairs within 1 % (`11_size_live` 2.29 % as before). Text entry on the reference side is complete (TW-146 rest, entry part confirmed): all 15 new texts and the edits in `06`, `08` and `10` arrive with the first character on the first attempt and none is discarded; the second "Hallo Welt" of `07` is complete and the double-click finds the editor with a blinking caret (`07_select_text_double_click` 0.08 %, run 25: 0.13 %). Still runner (TW-146 rest): in `11` the drag highlights "123", but neither the size field nor Text ▸ Size reaches it; in `13` three drags over "123" on the 72 pt text leave only a 1 px caret column. `15` and `19` fail on both sides as before (frame handle not found), `12` Firepixel's font field not found, `17` `unmapped` on both sides |
+| `tool-path-reshape` | tools | equal except for design | run 27: 100.0 % (23 / 23), unchanged; 13 / 14 canvas pairs within 1 % (`11_rect_to_path` 13.7 % as before; the new pair `04_freeform_size_keys_result` 0.46 %). **TW-159 rest confirmed**: with the mouse held the reference's three Up and two ] keys keep the Freeform tool, and the size read while the button is held is 72 in both programs (the reference's Properties panel field and Firepixel's size field; the keys change the size on neither side). **TW-164 confirmed**: R-24 chooses Freeform through flyout entry 0 and reads the tool back before every Freeform step; `12_inspector_heads_freeform` now shows the Freeform head on the reference side, pixel-identical to its own `01` shot (9.7 %, the design difference of `01`; run 26: 10.8 % with the Path Scrubber head) |
+| `tool-text` | tools | equal except for design | run 27: 85.2 % (23 / 27), unchanged; 13 / 16 canvas pairs within 1 % (run 26: 15 / 16): `11_size_live` 2.36 % as before, and `14_bounds` 1.10 % and `16_overflow` 3.82 % (run 26: 0.19 % and 0.27 %), because R-24 resets the reference's text tool to 12 pt after its failed size step while Firepixel's tool keeps 72 pt from its successful selection edit (the F43 rule, equal to the reference in run 25; Firepixel's texts in `14` and `16` read 72 pt as in run 26; TW-165, runner). Text entry stays complete (all new texts arrive on the first attempt). TW-146 rest stays open: in `11` the drag over "123" reads 24 changed pixels (cover 1.0) before each route, but none of the three routes sets 72 pt (`text_size.method` null): the size field with Enter and 60 × Ctrl+Shift+Period leave the runs at "Abc 123" 12 pt, and Ctrl+Shift+E opens no Text Editor (no key in the "Web Standard" set). In `13` the drag finds the highlight (24 px, cover 1.0) on the 12 pt text, so the 72 pt glyph-box drag is not exercised, and the reference's export equals that of `03` (the grey does not reach "123"; pair 0.81 %). `15` and `19` fail on both sides as before (frame handle not found), `12` Firepixel's font field not found, `17` `unmapped` on both sides |
 | `tool-web` | tools | equal except for design | run 25: 96.4 % (27 / 28), unchanged; 14 / 16 canvas pairs within 1 % (`07` guide drag 3.7 % as before); `11` fails on both sides as before |
-| `toolbox` | tools | equal except for design | run 26: 94.6 % (53 / 56), unchanged (run 25 had 53 / 56 too; its row showed run 24's 52); 0 / 3 canvas pairs within 1 % (cursor shots); was real deviation. **TW-158 confirmed**: after the second F both programs show only the canvas, centred on black, without menu bar, tabs, panels and status bar (`13_view_modes_full_normal` 1.97 %, run 25: 77.1 %); after the first F both show menus and panels. Firepixel's read-back gives full_menus, full and standard as wanted; the reference's gives both full screen modes as "full?" from the window covering the monitor (verdict ok), but its screen-mode button reads "full screen with menus" in Standard too, so the Standard reset logs six `runner error` lines and `13_view_modes_standard_normal` reads a mismatch although its shot shows Standard (TW-163). The reference was restarted once after a script access violation (after `05_letter_cycle_k`), without lost steps. Letter cycles follow the "Web Standard" set as before |
+| `toolbox` | tools | equal except for design | run 27: 94.6 % (53 / 56), unchanged; 0 / 3 canvas pairs within 1 % (cursor shots, 2.6 % as before). **TW-163 confirmed**: R-24 reads the reference's Standard mode from the window against the monitor (1600 × 1000, not covering it); the Standard resets from Standard and from full screen with menus and `13_view_modes_standard_normal` read Standard on both sides, although the screen-mode button still reads "full screen with menus". One `runner error` is left (run 26: six): after the second F the Standard reset clicks the screen-mode button at 17,611, which full screen hides (button means 0, 0, 0), and the Window menu does not open without a menu bar; the next step starts in Standard again (TW-166, runner). Mode pairs (window pairs): full 1.97 % (unchanged), full with menus 47.4 % (run 26: 36.8 %), Standard 64.3 % (run 26: 25.5 %; the reference's right panel dock is collapsed to icons in this shot). The Freeform flyout opens on both sides. The reference was restarted once at unit start after a script access violation, without lost steps |
 | `tool-autoshapes` | tools | equal except for design | run 25: 100.0 % (40 / 40), unchanged; **26 / 27** canvas pairs within 1 % (run 24: 7 / 27, run 17: 27 / 27): the reference draws with fill #ffffff and stroke #000000 again, as Firepixel (TW-153 confirmed). The one pair above 1 % is `05_handle_drag_rounded_corner_result` at 1.01 % (run 17: 0.97 %, the same picture: the reference's shot after the handle drag shows the shape without handles and tooltip, Firepixel with both) |
 | `export-results` | preview / export | equal except for design | run 25: 80.0 % (8 / 10), unchanged; 4 / 4 canvas pairs within 1 %; values as in run 24 (animated GIF and PNG 8/24/32 pairs within 1 %); `13_export_area` `unsupported` on the reference side as before |
 | `color-popup` | colour | equal except for design | run 24: 75.0 % (21 / 28), unchanged; 0 / 2 canvas pairs within 1 %; hex field: the reference's pop-up closes without applying the text the runner sets (#80808000), so Q-49 needs a real keyboard; canvas shots differ by capture method only (TW-117) |
@@ -143,18 +148,23 @@ than 32 levels). "Was" compares with the unit's previous run; the findings of th
 | `xs-select-behind` | cross-cutting | equal except for design | run 25: 100.0 % (9 / 9), unchanged; 9 / 9 canvas pairs within 1 % (0.14–0.51 %); was real deviation. TW-157 confirmed by pixel counts: on the vector rectangle FR (`08`) both programs draw 680 px of #E00000 in 398,198–602,302 (run 24: Firepixel 100 px plus an anti-aliased line); right after a click (`05`, `06`) neither shows #E00000 (run 24: Firepixel 100 and 1680 px); the frame on B1 in `02` and `04` is 1680 px at 38,38–522,362 in both, `03` and `07` show none. Whether the blue and the red frame show together stays with the click-test (A4-17) |
 
 Totals over all 49 units (newest run per unit): **49 / 0 / 0 / 0** (proven 1:1 100.0 %). Step level: 1077 of 1233
-measurable steps `ok` on both sides (**87.3 %**); over the 48 units before run 24: 1068 of 1224 (87.3 %). In the 5
-units of run 26: 142 of 153 (92.8 %; the same units in run 25, recounted from its logs: 141 of 152; `toolbox` had
-53 / 56 in run 25 already, its row and the run-25 totals used run 24's 52, which adds one step to the totals).
-`xs-shortcuts` regains `10_nudge_point_result` (+0.3 points, TW-159 b); all other quotas are unchanged.
-Reference-side errors: 33, Firepixel-side errors: 21 (both unchanged; in the five units 3 and 4: `tool-text/15, 19`
-frame handle not found on both sides, `tool-text/12` Firepixel's font field, `menu-text/07` Attach to Path grey in the
-reference, `menu-text/01` Firepixel's scrolled font menu). Canvas image pairs within 1 %: **186 of 211** (unchanged;
-the full screen pair `toolbox/13_view_modes_full_normal` is a window pair, now 1.97 %, run 25: 77.1 %). One class
-changed: `toolbox` real deviation → equal except for design (TW-158 confirmed). The 8 `runner error` lines: six from the
-reference's Standard reset in `toolbox/13` (its screen-mode button reads full screen with menus in Standard, TW-163) and
-two reference-side text selections in `tool-text` (`11`: the size not on "123"; `13`: no drag selection over "123";
-TW-146 rest). The reference was restarted once after a script access violation in `toolbox`, without lost steps.
+measurable steps `ok` on both sides (**87.3 %**); over the 48 units before run 24: 1068 of 1224 (87.3 %). In the 3
+units of run 27: 99 of 106 (93.4 %), the same as in run 26; no quota changed. Reference-side errors: 33,
+Firepixel-side errors: 21 (both unchanged; in the three units 2 and 3: `tool-text/15, 19` frame handle not found on
+both sides, `tool-text/12` Firepixel's font field). Canvas image pairs within 1 %: **185 of 212** (run 26: 186 of
+211): `tool-path-reshape/04_freeform_size_keys_result` adds a pair within 1 % (0.46 %), `tool-text/14_bounds` and
+`/16_overflow` move above 1 % (1.10 % and 3.82 %, runner state, TW-165). No class changed. The 2 `runner error`
+lines (run 26: 8): `tool-text/11` (72 pt not on the selected "123" by field, keys or dialog; TW-146 rest) and
+`toolbox/13` (the Standard reset from full screen; TW-166). The reference was restarted once after a script access
+violation at the start of `toolbox`, without lost steps.
+
+Run 26's own totals, for comparison: 49 / 0 / 0 / 0 over 49 units; 1077 of 1233 steps (87.3 %); in its five units
+142 of 153 (92.8 %; `toolbox` had 53 / 56 in run 25 already, its row and the run-25 totals used run 24's 52, which
+added one step to the totals); `xs-shortcuts` regained `10_nudge_point_result` (+0.3 points, TW-159 b); 33
+reference-side and 21 Firepixel-side errors; 186 of 211 canvas pairs within 1 %. One class changed: `toolbox` real
+deviation → equal except for design (TW-158). 8 `runner error` lines: six from the reference's Standard reset in
+`toolbox/13` (TW-163) and two reference-side text selections in `tool-text/11, 13` (TW-146 rest). The reference was
+restarted once after a script access violation in `toolbox`, without lost steps.
 
 Run 25's own totals, for comparison: 48 / 1 / 0 / 0 over 49 units; 1075 of 1232 steps (87.3 %, with `toolbox` counted
 at 52); 33 reference-side and 21 Firepixel-side errors; 186 of 211 canvas pairs within 1 % (`tool-autoshapes` 26 / 27,
@@ -217,6 +227,19 @@ does not enlarge text, and Ctrl+Shift+E, Ctrl+Alt+Shift+S and Ctrl+Shift+I do ot
 machine (TW-126; the reference machine's active set needs a behaviour description). `panel-optimize` shows one real
 deviation: export formats chosen per slice in the Optimize panel are not stored on the slices (TW-128).
 `xs-preferences` clicks stored settings without a fixed start state (TW-127, runner).
+
+**What run 27 found.** Runner R-24 is confirmed in its Freeform and screen-mode items. **TW-159 rest**: the Freeform size keys
+are compared now; with the mouse held both programs keep the Freeform tool and read size 72 afterwards, and the shot
+pair `tool-path-reshape/04` is 0.46 %. **TW-164**: Freeform through flyout entry 0 with a tool read-back puts the
+Freeform head on the reference side (`12_inspector_heads_freeform` pixel-identical to `01`). **TW-163**: the
+reference's Standard mode is read from the window, so the Standard resets and `toolbox/13_view_modes_standard_normal`
+read Standard on both sides; one `runner error` is left from the reset after full screen, where the screen-mode button
+and the menu bar are hidden (TW-166). Not confirmed: the size on a text selection (**TW-146 rest**): in
+`tool-text/11` the field, the keys and the dialog route all leave "Abc 123" at 12 pt in the reference (the dialog route
+has no key in the "Web Standard" set), and the 24 changed pixels read as the highlight are far fewer than an inverted
+three-glyph block would give, so the selection itself is in doubt; `13` ran on 12 pt text and its grey did not reach
+"123". New: **TW-165** (runner): R-24 resets only the reference's text tool after the failed size step, so its later
+texts are 12 pt while Firepixel's are 72 pt, and `tool-text/14, 16` move above 1 %.
 
 **What run 26 found.** Package F49 and runner R-23 are confirmed in the five units. **TW-158**: after the second F
 both programs show only the canvas on black without bars, tabs and panels (`toolbox/13_view_modes_full_normal` 1.97 %,
@@ -356,7 +379,9 @@ effect, text-tool state carried between units).
 | 24 (full, 49 units) | 19 Oct 2026 | 46 of 49 (0 under-measured; 2 real deviations, 1 unclear) | **93.9 %** (46 / 49); 95.8 % over the 48 old units; step level 87.0 % (86.9 % over the 48 old units) |
 | 25 (20 units) | 19 Oct 2026 | 48 of 49 (0 under-measured; 1 real deviation, 0 unclear) | **98.0 %** (48 / 49); 97.9 % over the 48 old units; step level 87.3 % (87.2 % over the 48 old units) |
 | 26 (5 units) | 19 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.3 % over the 48 old units; one `toolbox` step recounted) |
+| 27 (3 units) | 19 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.3 % over the 48 old units); canvas pairs 185 / 212 |
 
-The next steps are in [ROADMAP.md](../ROADMAP.md): runner R-24 for the reference's screen-mode button (TW-163), the
-Freeform size read-back (TW-159 rest), the Freeform head step (TW-164) and the text selections of the TW-146 rest; the
-human click-test with the macOS checks; and the unmeasured R3 note of the text tool defaults (TW-138 rest).
+The next steps are in [ROADMAP.md](../ROADMAP.md): the human click-test, including the macOS re-test by the tester;
+the remaining runner items (the text selection and size of TW-146 rest, the one-sided text tool reset of TW-165 and
+the Standard reset from full screen of TW-166); U-1 rest; and the unmeasured R3 note of the text tool defaults
+(TW-138 rest).

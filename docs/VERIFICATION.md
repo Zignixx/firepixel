@@ -73,7 +73,7 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
-## A2. Open items from comparison runs 12–26
+## A2. Open items from comparison runs 12–27
 
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
 them; they stay listed here, ticked, so the history of each check is clear. Run 15 (17/18 Oct 2026) resolved
@@ -98,7 +98,9 @@ and added TW-153 to TW-157. Run 25 (19 Oct 2026, 20 units, runner R-22, package 
 TW-157 and the TW-149 leftover, decided TW-145 (the next text is 72 pt in both programs), reduced TW-146 rest to one
 lost text and added TW-158 and TW-159. Run 26 (19 Oct 2026, 5 units, runner R-23, package F49) confirmed TW-158 and
 TW-159 (b, d), confirmed the entry part of TW-146 rest, kept its selection part and TW-159 (c) open as runner items and
-added TW-163 and TW-164. The open checks below come from runs 17 to 26.
+added TW-163 and TW-164. Run 27 (19 Oct 2026, 3 units, runner R-24, the same preview as run 26) confirmed TW-159
+rest, TW-163 and TW-164, kept TW-146 rest open (no size route reaches the selected "123") and added TW-165 and TW-166.
+The open checks below come from runs 17 to 27.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -157,8 +159,8 @@ added TW-163 and TW-164. The open checks below come from runs 17 to 26.
   **Expected:** As in the reference: TX2's bounds grow to 50,150–120,194 while the editor is open.
 - [x] **TW-144** (`xs-shortcuts/15_in_text_tx2`, `tool-text/06`) – resolved in run 21: with CR/LF kept in the read-backs (runner R-17b) both programs separate TX2's paragraphs with `\r`; the `\n` of run 20 was the reference-side read-back. Tests pin the separators.
 - [x] **TW-145** (`tool-text/11, 13, 14, 16`) – decided in run 25: the reference's size field again misses the drag-selected "123" in `11`, but its Text ▸ Size 72 sets the text tool to 72 pt, and its next texts are 72 pt like Firepixel's (`13` text box 100,48–361,101; `14` 0.18 %, `16` 0.27 %; the next unit starts with the reference's tool at 72 pt). The F43 rule gives the same next-text size; earlier runs (21–24) compared nothing because the reference's text or selection failed.
-- [ ] **TW-146 rest** (`tool-text/11, 13`; runner R-24; needs: next `tool-text` run) – run 26 (R-23): all 15 reference texts and the edits in `06`, `08` and `10` arrive as typed with the first character on the first attempt, none is discarded, and in `07` the second "Hallo Welt" is complete and the double-click finds the editor (entry part confirmed). Left: in `11` the drag highlights "123", but the size field and Text ▸ Size 72 leave "Abc 123" at 12 pt; in `13` three drags over "123" on the 72 pt text leave only a 1 px caret column.
-  **Steps:** Runner R-24: take the glyph positions of the 72 pt text from its read-back before the drag, or select "123" by script, before the size and colour edits. Hands-on: in the reference click with the text tool, type "Abc 123", drag over "123" and set 72 pt.
+- [ ] **TW-146 rest** (`tool-text/11, 13`; runner; needs: next `tool-text` run) – entry part confirmed in runs 26 and 27 (all reference texts and the edits in `06`, `08` and `10` arrive as typed on the first attempt). Left (run 27, R-24): in `11` the drag over "123" reads 24 changed pixels (cover 1.0), but the size field with Enter, 60 × Ctrl+Shift+Period and the Text Editor route (Ctrl+Shift+E, no key in the "Web Standard" set) all leave "Abc 123" at 12 pt (`text_size.method` null); 24 px is far fewer than an inverted three-glyph block, so the selection may be only the caret. In `13` the text is 12 pt (TW-165) and the grey does not reach "123".
+  **Steps:** Runner: check the highlight against an inverted block (or read the selection by script) and open the Text Editor through the Text menu. Hands-on: in the reference click with the text tool, type "Abc 123", drag over "123" and set 72 pt.
   **Expected:** The size and colour edits change only "123" on both sides.
 - [x] **TW-147** (`xs-shortcuts/07, 21`, `panel-pages-states-history/16, 21, 22`, `menu-edit/03`; runner R-20) – resolved in run 23: the Pointer tool is taken from the flyout when the slot holds Select Behind (`xs-shortcuts/07`, no runner error), Escape keeps R1 selected in both programs (`xs-shortcuts/21`, 1 / 1, F46 after RE spec 51), the paste read-back is R1 at 50,50–150,120 on both sides (`menu-edit/03`) and `MaxUndos` reads 20 in both (`panel-pages-states-history/22`). The nudge rows (c) are now compared with real Shift+arrows and continue as TW-148.
 - [x] **TW-148** (`panel-pages-states-history/21`; F48 `0419534c`) – confirmed in run 25: the reference lists the select script for R1, `moveSelectionBy({x:20, y:10})`, the select script for E1 and `moveSelectionBy({x:10, y:0})`; Firepixel lists Move, Deselect, Move (run 24: Move, Move, Move, Deselect, Move). One row per selection with the summed offset in both; the pause question stays with the hands-on check A4-18.
@@ -172,12 +174,16 @@ added TW-163 and TW-164. The open checks below come from runs 17 to 26.
 - [x] **TW-157** (`xs-select-behind/05, 06, 08`; F48 `ace7873c`) – confirmed in run 25: on FR with nothing selected both programs draw 680 px of #E00000 in 398,198–602,302 (run 24: Firepixel 100 px plus an anti-aliased line); right after a click neither shows a #E00000 frame (run 24: Firepixel 100 and 1680 px). The blue-and-red question stays with A4-17.
 - [x] **TW-158** (`toolbox/13_view_modes_full_normal`; *RE spec*, F49 `8a9cf670`) – confirmed in run 26: after the second F both programs show only the canvas, centred on black, without menu bar, document tabs, panels and status bar (1.97 %, run 25: 77.1 %); after the first F both show menus and panels; Firepixel's read-back gives full_menus, full and standard. The hands-on check A4-22 (Tab, Escape, the third F) stays.
 - [x] **TW-159** (`toolbox/13`, `xs-shortcuts/10_nudge_point`, `menu-text` unit start; runner R-23 `5f498cd7`) – confirmed in run 26 except (c): `xs-shortcuts/10_nudge_point_result` is `ok` on both sides and the first node reads 201,210 in both; the reference's text reset in `menu-text` reads 72 pt before and 12 pt after; both full screen modes are read on both sides (the reference's Standard read-back continues as TW-163).
-- [ ] **TW-159 rest** (`tool-path-reshape/04_freeform_size_keys`; runner R-24) – run 26: with the mouse held the reference's three Up and two ] keys keep the Freeform tool, but the step records neither a shot nor the Freeform size, so the size keys are not compared.
+- [x] **TW-159 rest** (`tool-path-reshape/04_freeform_size_keys`; runner R-24 `f7d13d61`) – confirmed in run 27: with the mouse held the reference's three Up and two ] keys keep the Freeform tool, the size read while the button is held is 72 in both programs, and the shot pair is 0.46 %.
   **Expected:** `04` reads the Freeform size after the keys on both sides (Properties panel shot or script value).
-- [ ] **TW-163** (`toolbox/13`; runner R-24) – run 26: the reference's screen-mode button reads "full screen with menus" also in Standard (window 1600 × 1000, not covering the monitor; the shot shows Standard), so the Standard reset logs six `runner error` lines and `13_view_modes_standard_normal` reads a mismatch.
+- [x] **TW-163** (`toolbox/13`; runner R-24 `f7d13d61`) – confirmed in run 27: the reference's Standard mode is read from the window against the monitor, the Standard resets from Standard and from full screen with menus succeed and `13_view_modes_standard_normal` reads Standard on both sides (one `runner error` instead of six; the rest continues as TW-166).
   **Expected:** The Standard read-back reads "standard" from the window against the monitor; no `runner error` line in `toolbox/13`.
-- [ ] **TW-164** (`tool-path-reshape/12_inspector_heads_freeform_normal`; runner R-24) – runs 24 to 26: the reference shows the Path Scrubber (subtractive) head after the `tool` action for Freeform, Firepixel the Freeform head.
+- [x] **TW-164** (`tool-path-reshape/12_inspector_heads_freeform_normal`; runner R-24 `f7d13d61`) – confirmed in run 27: Freeform is chosen through flyout entry 0 and read back, and the reference's shot shows the Freeform head, pixel-identical to its `01` shot (9.7 %, run 26: 10.8 % with the Path Scrubber head).
   **Expected:** Both sides show the Freeform head (size, Pressure, Preview), as in `01`.
+- [ ] **TW-165** (`tool-text/12–16`; runner) – run 27: after the failed size step of `11` the runner resets only the reference's text tool to 12 pt; Firepixel's keeps 72 pt from its selection edit (the F43 rule, equal to the reference in run 25), so `14_bounds` (1.10 %) and `16_overflow` (3.82 %) compare 12 pt with 72 pt text (run 26: 0.19 % and 0.27 %).
+  **Expected:** Both text tools are reset, or neither, when the size step fails on one side; `14` and `16` back within 1 %.
+- [ ] **TW-166** (`toolbox/13_view_modes_full_normal`; runner) – run 27: after the second F the reference's Standard reset clicks the hidden screen-mode button (means 0, 0, 0) and the Window menu does not open without a menu bar, so one `runner error` is logged; the next step starts in Standard, with the right panel dock collapsed to icons in the Standard shot.
+  **Expected:** The runner leaves full screen by key before the button; no `runner error` line in `toolbox/13`.
 
 Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the
 reference), **Q-51** (see TW-111 above), **Q-55** (`xs-shortcuts/15`: Firepixel's text-tool click was already right;
