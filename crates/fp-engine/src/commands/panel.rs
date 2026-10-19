@@ -5224,6 +5224,7 @@ pub fn register(r: &mut CommandRegistry) {
                     .as_ref()
                     .and_then(|v| v.iter().find(|x| x.name == name).cloned());
                 let doc = Arc::make_mut(&mut d.doc);
+                let mut on_text = false;
                 for id in ids {
                     docops::edit_by_id(doc, page, id, |e| {
                         if name.is_empty() {
@@ -5231,6 +5232,7 @@ pub fn register(r: &mut CommandRegistry) {
                             return;
                         }
                         let Some(st) = &st else { return };
+                        on_text |= matches!(e.kind, ElementKind::Text(_));
                         e.common.style = Some(name.clone());
                         if let Some(a) = &st.attrs {
                             docops::edit_path_attrs(e, &|x| {
@@ -5274,6 +5276,9 @@ pub fn register(r: &mut CommandRegistry) {
                             t.relaid = true;
                         }
                     });
+                }
+                if on_text && let Some(st) = &st {
+                    store_style_text_defaults(s, st);
                 }
                 Ok(CommandOutput::doc())
             }),
@@ -8896,6 +8901,46 @@ fn register_optimize_menu(r: &mut CommandRegistry) {
         true,
     );
 }
+/// A style applied to text from the Styles panel writes the text defaults like a text attribute
+/// command (TW-138 R4, re 53 section 2.2): bold/italic/underline, the font (`Text_CoolType_Font`),
+/// leading with its mode and the anti-aliasing - not the size.
+fn store_style_text_defaults(s: &mut Session, st: &fp_model::Style) {
+    let ta = &st.text;
+    if st.use_text_styles() {
+        for (v, key) in [
+            (ta.bold, "Text_Bold"),
+            (ta.italic, "Text_Italic"),
+            (ta.underline, "Text_Underline"),
+        ] {
+            if let Some(v) = v {
+                s.prefs.set(key, PrefValue::Bool(v));
+            }
+        }
+    }
+    if st.use_text_font()
+        && let Some(f) = ta
+            .font
+            .as_ref()
+            .or(ta.ps_font.as_ref())
+            .filter(|f| !f.is_empty())
+    {
+        crate::commands::text_store_font_default(s, f);
+    }
+    if let Some(v) = ta.leading {
+        s.prefs.set("Text_Leading", PrefValue::Real(v as f64));
+    }
+    if let Some(v) = ta.leading_mode {
+        s.prefs.set("Text_LeadingMode", PrefValue::Int(v as i64));
+    }
+    if let Some(v) = st.antialias {
+        s.prefs.set("Text_AntiAliasedFill", PrefValue::Bool(v >= 0));
+        if v >= 0 {
+            s.prefs.set("Text_AntiAliasLevel", PrefValue::Int(v as i64));
+        }
+    }
+    s.prefs_changed();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

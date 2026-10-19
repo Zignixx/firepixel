@@ -146,6 +146,59 @@ fn font_family_of(name: &str) -> String {
     }
 }
 
+/// PostScript name for a font name (PostScript or family name; a family gives its regular face);
+/// unknown names stay as they are.
+fn ps_name_of(name: &str) -> String {
+    let db = fp_text::FontDb::shared();
+    let id = db
+        .find_ps(name)
+        .or_else(|| db.find_family(name, false, false).map(|(i, _)| i));
+    match id.and_then(|i| db.faces().get(i)) {
+        Some(f) if !f.names.ps_name.is_empty() => f.names.ps_name.clone(),
+        _ => name.to_string(),
+    }
+}
+
+/// A font change becomes the default of new text (TW-138, re 53 section 2.2): `Text_CoolType_Font`
+/// gets the PostScript name, `Text_Font` keeps the family (read by new text). Both are stored
+/// explicitly, also for the factory font (`prefs.set` would drop the key, MN-2/NZ-3).
+pub(crate) fn store_font_default(s: &mut Session, font: &str) {
+    use crate::prefs::PrefValue;
+    let family = font_family_of(font);
+    s.prefs
+        .values
+        .insert("Text_Font".to_string(), PrefValue::Str(family.clone()));
+    s.prefs.values.insert(
+        "Text_CoolType_Font".to_string(),
+        PrefValue::Str(ps_name_of(font)),
+    );
+    s.tools.options.text_font = family;
+}
+
+/// Puts the family of `font` at the front of the recently used fonts (`RecentFontList`, form
+/// "(A)(B)…", at most `RecentFontLimit` entries) – on every font change from the Text menu, the
+/// Properties panel or the editor (TW-138).
+pub(crate) fn note_recent_font(s: &mut Session, font: &str) {
+    if font.trim().is_empty() {
+        return;
+    }
+    let family = font_family_of(font);
+    let limit = s.prefs.get_int("RecentFontLimit", 5).clamp(1, 50) as usize;
+    let mut list: Vec<String> = s
+        .prefs
+        .get_str("RecentFontList", "")
+        .split(')')
+        .filter_map(|p| p.trim().strip_prefix('('))
+        .filter(|n| !n.is_empty() && *n != family)
+        .map(str::to_string)
+        .collect();
+    list.insert(0, family);
+    list.truncate(limit);
+    let v: String = list.iter().map(|n| format!("({n})")).collect();
+    s.prefs
+        .set("RecentFontList", crate::prefs::PrefValue::Str(v));
+}
+
 fn set_default_size(s: &mut Session, v: f32) {
     s.prefs
         .set("Text_Size", crate::prefs::PrefValue::Real(v as f64));
@@ -449,7 +502,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             )
             .run(|s, p| {
                 use crate::prefs::PrefValue;
-                store_text_tool_defaults(s, p, true)?;
+                store_text_tool_defaults(s, p, true, true)?;
                 if let Some(n) = p.opt_str("antialias")? {
                     let v = antialias_code(&n);
                     s.prefs.set("Text_AntiAliasedFill", PrefValue::Bool(v >= 0));
@@ -494,7 +547,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             )
             .run(|s, p| {
                 let f = p.str("font")?;
-                let family = font_family_of(&f);
+                let font = f.clone();
                 texts_or_defaults(
                     s,
                     move |t| {
@@ -503,14 +556,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         t.initial.ps_font = Some(p_font(&t.initial));
                     },
                     move |s| {
-                        // Ausdrücklich speichern, auch wenn es die Werksvorgabe (Arial) ist: `prefs.set`
-                        // ließe den Schlüssel dann weg, und nach einem Neustart gälte wieder die Vorzugsschrift
-                        // des Textwerkzeugs statt der gewählten (Befund MN-2, NZ-3)
-                        s.prefs.values.insert(
-                            "Text_Font".to_string(),
-                            crate::prefs::PrefValue::Str(family.clone()),
-                        );
-                        s.tools.options.text_font = family;
+                        // TW-138: `Text_CoolType_Font` (PostScript name) + recently used fonts
+                        store_font_default(s, &font);
+                        note_recent_font(s, &font);
                     },
                 )
             }),
@@ -1093,11 +1141,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
         .run(|s, p| {
             if has_text(s) {
                 let out = set_attributes(s, p)?;
-                store_text_tool_defaults(s, p, true)?;
+                store_text_tool_defaults(s, p, true, false)?;
                 s.prefs_changed();
                 return Ok(out);
             }
-            store_text_tool_defaults(s, p, true)?;
+            store_text_tool_defaults(s, p, true, false)?;
             s.prefs_changed();
             Ok(CommandOutput::session())
         }),
@@ -1313,15 +1361,19 @@ fn set_attributes(s: &mut Session, p: &Params) -> Result<CommandOutput> {
 /// New text never reads `Text_FillColor` (re 50 section 2.3): its colour is the current fill colour
 /// of the text tool (`tools.options.text_color`), which `tool_color` also sets - not for a
 /// partial selection in the open editor.
-fn store_text_tool_defaults(s: &mut Session, p: &Params, tool_color: bool) -> Result<()> {
+///
+/// `baseline_shift`: only the explicit default setter (`text.setToolDefaults`) writes
+/// `Text_BaselineShift`; the Properties panel never does (re 53 section 2.2, R1).
+fn store_text_tool_defaults(
+    s: &mut Session,
+    p: &Params,
+    tool_color: bool,
+    baseline_shift: bool,
+) -> Result<()> {
     use crate::prefs::PrefValue;
     if let Some(f) = p.opt_str("font")? {
-        let family = font_family_of(&f);
-        // stored explicitly, also when it is the factory font (see `text.font`)
-        s.prefs
-            .values
-            .insert("Text_Font".to_string(), PrefValue::Str(family.clone()));
-        s.tools.options.text_font = family;
+        store_font_default(s, &f);
+        note_recent_font(s, &f);
     }
     if let Some(v) = p.opt_f64("size")? {
         set_default_size(s, v as f32);
@@ -1351,6 +1403,9 @@ fn store_text_tool_defaults(s: &mut Session, p: &Params, tool_color: bool) -> Re
         }
     }
     for (k, pref) in TEXT_TOOL_REAL_PREFS {
+        if k == "baselineShift" && !baseline_shift {
+            continue;
+        }
         if let Some(v) = p.opt_f64(k)? {
             s.prefs.set(pref, PrefValue::Real(v));
         }
@@ -1384,7 +1439,7 @@ pub(crate) fn store_editor_prefs(
     match name {
         "text.size.larger" | "text.size.smaller" | "text.setAttributes" => return Ok(()),
         "text.applyAttributes" => {
-            store_text_tool_defaults(s, &Params::new(name, params.clone()), false)?;
+            store_text_tool_defaults(s, &Params::new(name, params.clone()), false, false)?;
         }
         _ => {
             if let Some(code) = name
@@ -1396,11 +1451,8 @@ pub(crate) fn store_editor_prefs(
                     .set("Text_Justification", PrefValue::Int(code as i64));
             }
             if let Some(f) = &patch.font {
-                let family = font_family_of(f);
-                s.prefs
-                    .values
-                    .insert("Text_Font".to_string(), PrefValue::Str(family.clone()));
-                s.tools.options.text_font = family;
+                store_font_default(s, f);
+                note_recent_font(s, f);
             }
             if let Some(v) = patch.size {
                 set_default_size(s, v);
