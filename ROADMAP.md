@@ -16,24 +16,26 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Canvas image pairs within 1 % | 175 / 201 |
 | Tests | 2748 passed, 1 failed (`fp-i18n`, fixed in `bea53d1c`), 134 ignored at `cd86ce75` (preview `2026-10-19_01-32`) |
 | Latest release | **v0.2.2** pre-release (18 Oct 2026, tag from `c031a987`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage; Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 7 fixable · 5 deferred · 20 informational · 850+ closed |
+| Open findings | 9 fixable rows (7 open, 2 closed awaiting the click-test) · 5 deferred · 20 informational · 850+ closed |
+
+Unit count: 49 since 19 Oct 2026. The figures above are over the 48 classified units; the new measurement unit
+`xs-select-behind` (9 steps) has its first comparison run pending.
 
 ## Next (in order)
 
-1. **Nudge rows in History (TW-148):** run 23 reads 4 History steps in the reference and 5 in Firepixel after three
-   Shift+arrow nudges and a nudge of a second object. Read the reference's row list in
-   `panel-pages-states-history/21` and recheck RE spec 51 §2; if the reference merges consecutive key nudges, align
-   F46.
-2. **Runner R-21 and a run of `tool-text` and `panel-pages-states-history`:** on the reference side accept the text
-   editor only with a blinking caret and make the size edit reach the selected characters (TW-146 rest), reset the
-   text tool font on both sides (TW-149), raise the step limit of `xs-shortcuts/08` (TW-150); this lets the size of a
-   new text after a partial-selection edit (TW-145) be compared.
+1. **Run 24:** preview build from `main` (pen anchor modes, Select Behind hover frame), then a follow-up run with
+   runner R-21 over `tool-text`, `panel-pages-states-history`, `xs-shortcuts` and the first run of
+   `xs-select-behind`. It confirms TW-146 rest, TW-149, TW-150 and TW-152, decides TW-148 from the logged History row
+   labels (align F46 if the reference merges consecutive key nudges) and compares the size of a new text after a
+   partial-selection edit (TW-145).
+2. **Full run** over all 49 units, then release **v0.2.3**.
 3. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
-   a double-click, the crop option, the Linux start).
+   a double-click, the crop option, the Linux start, the pen anchor modes and the Select Behind hover frame, A4-15 to
+   A4-17).
 4. **Remaining parity items:** the *Text* menu remnant of the text tool defaults (TW-138 rest) and the size rule for
-   new text (TW-145, after R-21).
+   new text (TW-145, after run 24).
 5. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
    boxes), BA-110 rest (lossy LZW with an SSIM bound), BA-083 (resampler hashes on another OS), U-1 PDF import
    layers.
@@ -47,7 +49,11 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
   partial-selection edit), TW-146 rest (reference-side text entry, runner R-21), TW-148 (History rows of consecutive
   nudges, RE spec check), TW-149 (text tool font at unit start, runner) and TW-150 (step limit, runner). Run 23
   closed TW-147 (Pointer tool through the flyout, Escape keeps the selection in both programs, paste read-back,
-  `MaxUndos`).
+  `MaxUndos`). Runner R-21 fixes TW-146 rest, TW-149 and TW-150 (confirm in run 24) and logs the History row labels
+  for TW-148 (decide after run 24).
+- Tester feedback of 19 Oct 2026 (E-Man), fixed after RE spec 52 and kept until the click-test: TW-151 / FB-01 (pen
+  tool anchor modes: the click on the last anchor retracts its outgoing handle) and TW-152 / FB-02 (Select Behind
+  hover frame on the object a click would select).
 
 ### Deferred expansion items (`[V]`)
 

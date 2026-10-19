@@ -1,6 +1,6 @@
 # Manual verification
 
-Last updated: 2026-10-18
+Last updated: 2026-10-19
 
 This file is the human click-checklist for Firepixel. Most of Firepixel is checked automatically: unit and integration tests, headless UI tests with image series, and a scripted comparison runner that drives Firepixel and the reference application side by side through the automation bridge (`--mcp`) and compares the results. Some things cannot be covered that way and stay **manual**:
 
@@ -236,6 +236,15 @@ VER-10.28.
 - [ ] **A4-14** (Linux build; needs: real Linux desktop, X11 and Wayland)
   **Steps:** On Ubuntu 22.04 or later (or Debian 12): `chmod +x Firepixel-x86_64.AppImage` and start it; unpack the tar.gz and start `./firepixel`; open, save and export a file; start `./firepixel-cli --help`.
   **Expected:** The window opens under X11 and Wayland with the GPU renderer; open and save dialogs appear (needs `xdg-desktop-portal`); missing runtime libraries are reported clearly; no OpenSSL is needed.
+- [ ] **A4-15** (TW-151 / FB-01, tester feedback; needs: real mouse)
+  **Steps:** Pen tool: click, then drag out a curve point, then click once more on that last anchor (no drag) and click a new point; undo, press on the last anchor again and drag (also with Alt, Ctrl, Shift held). While drawing, click an interior curve point, an interior corner point and a segment; move over the endpoint of another open path and click it; end the path, then click an endpoint of an open path with no path in progress. Repeat at 200 % zoom and with a changed *Snap distance* preference.
+  **Expected:** The click on the last anchor retracts only its outgoing handle and the path stays in progress: the next segment leaves the point straight, the incoming curve is unchanged. A drag pulls the point again as a symmetric curve point (Alt keeps the previous incoming handle, Ctrl moves the point, Shift snaps to 45°). The interior curve point becomes a corner, the interior corner point is deleted, the segment click inserts a point, the other path is joined, the open path is continued. The cursor shows the pen with "^" over the last anchor and interior curve points and the pen with a ring and stub ("o-") over another path's endpoint; the hit radius follows the snap distance. Known limits: a join across elements appends the other path; no drag after a join, a close or an interior press; a double-click still ends the path.
+- [ ] **A4-16** (TW-152 / FB-02, tester feedback; needs: real mouse, original for comparison)
+  **Steps:** A rectangle partly over a bitmap. Select the rectangle with the Pointer tool, switch to Select Behind (Pointer slot flyout); rest the pointer over the overlap, over the rectangle only and over the bitmap only; click twice on the overlap. Then Edit ▸ Deselect and rest the pointer over the overlap again, in the release or preview build too (not only in a debug build). Compare with the Pointer tool over the overlap.
+  **Expected:** Over the overlap the bitmap behind the selected rectangle gets the red hover frame (#E00000, 1 px on the bounds, filled 5 × 5 px squares on the corners); over the rectangle only no frame; over the bitmap only the bitmap's frame; clicks cycle rectangle → bitmap → rectangle. With nothing selected the topmost object (the rectangle) gets the frame – one preview build showed no frame in this case, which the tests do not reproduce, so check it explicitly. The Pointer tool shows no frame over the selected rectangle.
+- [ ] **A4-17** (TW-152 / FB-02 open item; needs: real window, original, screenshot)
+  **Steps:** In the reference application and in Firepixel: select the rectangle of A4-16, Select Behind, rest the pointer over the overlap; take a screenshot with the system's screenshot tool (not the runner's capture).
+  **Expected:** Note whether the reference draws its blue selection frame of the rectangle together with the red hover frame of the bitmap (the runner's shots never show its selection outline). Firepixel draws both; if the reference hides the selection outline while the hover frame is shown, report it as a parity gap quoting TW-152.
 
 ---
 

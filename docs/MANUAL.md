@@ -97,6 +97,19 @@ While you paint with Brush, Pencil, Eraser or Rubber Stamp, the preview appears 
 in the stacking order, with its opacity, blend mode, effects and masks. A stroke that creates a new
 bitmap, or paints into a bitmap inside a symbol, is previewed on top until you release the mouse.
 
+**Pen:** while you draw a path, a click on its last anchor retracts that point's outgoing handle, so the next
+segment leaves it straight; dragging on it pulls the point out again as a symmetric curve point (Alt moves only the
+outgoing handle, Ctrl moves the point, Shift snaps to 45°). A click on an interior curve point turns it into a
+corner, a click on an interior corner point deletes it, a click on a segment inserts a point, and a click on the
+end of another open path joins it; with no path in progress, a click on the end of an open path continues it. The
+cursor shows the mode: a "^" for converting a point, a ring with a stub for joining. Points are hit within the
+*Snap distance* set in the preferences. A double-click ends the path.
+
+**Select Behind** (in the Pointer slot): resting the pointer over objects frames in red the object a click would
+select – the next object below the selected one under the pointer, also while the pointer is over the selected
+object, or the topmost object when nothing there is selected. The Pointer tool frames only the topmost object and
+shows no frame over the selected one.
+
 **Default stroke:** Line, Pen, Vector Path, Rectangle, Ellipse and Polygon draw with the stroke
 *Basic ▸ Hard Rounded* (1 px), as in the original; a choice of your own in the inspector still applies.
 

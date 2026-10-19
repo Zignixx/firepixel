@@ -100,6 +100,20 @@ Bitmap in der Stapelreihenfolge, mit ihrer Deckkraft, Füllmethode, ihren Effekt
 Strich, der eine neue Bitmap anlegt oder in eine Bitmap in einem Symbol malt, wird bis zum Loslassen
 obenauf angezeigt.
 
+**Stift:** Beim Zeichnen eines Pfads zieht ein Klick auf seinen letzten Ankerpunkt die ausgehende Tangente dieses
+Punkts ein, sodass das nächste Segment ihn gerade verlässt; Ziehen auf dem Punkt zieht ihn wieder als symmetrischen
+Kurvenpunkt auf (Alt bewegt nur die ausgehende Tangente, Strg verschiebt den Punkt, Umschalt rastet auf 45° ein).
+Ein Klick auf einen inneren Kurvenpunkt macht ihn zum Eckpunkt, ein Klick auf einen inneren Eckpunkt löscht ihn,
+ein Klick auf ein Segment fügt einen Punkt ein, und ein Klick auf das Ende eines anderen offenen Pfads verbindet
+ihn; ohne laufenden Pfad setzt ein Klick auf das Ende eines offenen Pfads diesen fort. Der Mauszeiger zeigt den
+Modus: ein „^“ zum Umwandeln eines Punkts, ein Ring mit Strich zum Verbinden. Punkte werden innerhalb des
+*Ausrichtungsabstands* aus den Voreinstellungen getroffen. Ein Doppelklick beendet den Pfad.
+
+**Hintere auswählen** (im Platz des Zeigers): Ruht der Mauszeiger über Objekten, umrahmt ein roter Rahmen das
+Objekt, das ein Klick wählen würde – das nächste Objekt unter dem gewählten unter dem Mauszeiger, auch wenn der
+Mauszeiger über dem gewählten Objekt steht, oder das oberste Objekt, wenn dort nichts gewählt ist. Der Zeiger
+umrahmt nur das oberste Objekt und zeigt über dem gewählten keinen Rahmen.
+
 **Strich ab Werk:** Linie, Stift, Vektorpfad, Rechteck, Ellipse und Polygon zeichnen wie im Original
 mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Inspektor gilt weiter.
 

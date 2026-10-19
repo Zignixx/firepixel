@@ -8,13 +8,18 @@ measured, what the figures mean, where the method stops, and gives the current p
 48 units are sufficiently measured). Measurement quota over all 48 units: **86.9 %** (1065 / 1226 steps, newest run
 per unit). Canvas image pairs within 1 %: **175 / 201**.
 
+**Units: 49.** The 49th unit, `xs-select-behind` (measurement unit, 9 steps, added on 19 Oct 2026), has not had a
+comparison run yet ("first run pending"); the figures above are over the 48 classified units and stay so until run 24
+classifies it.
+
 ## Method: scripted comparison runs
 
 The parity runner (`tools/parity/runner/`, see its README) plays the same step script in **both programs** on
 one Windows machine, unattended:
 
-1. **Units.** The UI is cut into 48 units (one tool group, one panel, one menu, ten dialogs …). Each unit has a
-   JSON script in `tools/parity/scripts/<unit>.json` with about 20–40 steps (1282 steps in total) and a test
+1. **Units.** The UI is cut into 49 units (one tool group, one panel, one menu, ten dialogs …). Each unit has a
+   JSON script in `tools/parity/scripts/<unit>.json` with about 20–40 steps (about 1295 steps in total; the
+   measurement unit `xs-select-behind` has 9) and a test
    document (T01…T10, created for this purpose, not shipped).
 2. **Steps.** A step performs actions (menu, click, drag with modifiers, key, field input, script call) on both
    sides, then records: a screenshot of a defined area (canvas, panel, dialog, menu, popup), values read
@@ -30,7 +35,7 @@ one Windows machine, unattended:
    ([FINDINGS.md](FINDINGS.md)); non-trivial ones are first written down as a behaviour description from
    measurements, then fixed with a test that pins the measured values.
 
-Full runs over all 48 units take about four hours; follow-up runs repeat only the affected units. A run's
+Full runs over all 49 units take about four hours; follow-up runs repeat only the affected units. A run's
 state for a unit is always its newest run.
 
 ## What the classes mean
@@ -44,8 +49,8 @@ state for a unit is always its newest run.
 
 **Measurement quota** = steps with both sides `ok` / steps without an `unsupported` or `skipped` side (repeated
 steps count with their second attempt). **Proven 1:1** = units "equal except for design" / sufficiently
-measured units. The headline figure is the strict one over all 48 units (95.8 %); since run 15 no unit is
-under-measured, so both figures are the same.
+measured units. The headline figure is the strict one over all classified units (48 of 49 until `xs-select-behind`
+has its first run; 95.8 %); since run 15 no unit is under-measured, so both figures are the same.
 
 ## Limits
 
@@ -162,8 +167,9 @@ violation and three times as planned. "Was" compares with the unit's previous ne
 | `panel-swatches-mixer` | panels | equal except for design | run 18: 96.3 % (26 / 27), was 92.6 % in run 17; the "add swatches" file dialog now opens on the reference side (TW-129 closed); Swatches menu 229 vs. 226 px |
 | `xs-shortcuts` | cross-cutting | equal except for design | run 23: 88.0 % (22 / 25), was 92.0 %: `08_tools` is `slow` on the reference side (94.1 s against the 90 s step limit; run 22: 73.6 s) because about 20 Pointer tool clicks follow the tool letters, one through the flyout (TW-150); its values are as before. `07`: R-20 finds Select Behind in the Pointer slot and takes the Pointer tool from the flyout, no runner error (13 in run 22; TW-147 a closed); `21`: after the Escape chain R1 stays selected in both programs (1 / 1; F46 and `orig.escape_deselects=false`, TW-147 b closed); `10_nudge`, `10_nudge_point` and `15_in_text_tx2` equal as in run 22 |
 | `xs-canvas` | cross-cutting | equal except for design | run 22: 91.7 % (22 / 24), unchanged; 1 / 8 canvas pairs within 1 % (same values as runs 18 to 21); `15_snap_pixels_disabled`: Snap to Pixel reads `enabled: false` in both programs |
+| `xs-select-behind` | cross-cutting | measurement unit, first run pending | added on 19 Oct 2026 (`c7515986`), 9 steps: hover frame and click cycle of Select Behind over two overlapping objects (bitmap B1 under rectangle FR), with the Pointer tool for comparison. Used during development to measure the rule in the reference application (RE spec 52 §2b): the frame marks the object a click would select (B1 behind the selected FR, B1 where only B1 is hit, none where only the selected FR is hit, FR with nothing selected; none with the Pointer tool), #E00000, 1 px on the path or bounds coordinates, filled 5 × 5 px corner squares; clicks cycle FR → B1 → FR. Firepixel's preview `2026-10-19_01-32` showed no frame in `02` and `08` and a #FF0000 frame without corner squares in `04` (TW-152, fixed in `44d7c5f5`). The reference's selection outline is never captured in its shots. Not classified and not counted in the totals until run 24 |
 
-Totals: 46 / 0 / 2 / 0. Step level over all 48 units, newest run per unit: 1065 of 1226 measurable steps `ok` on
+Totals: 46 / 0 / 2 / 0 over the 48 classified units (`xs-select-behind` is the 49th, first run pending). Step level over all 48 units, newest run per unit: 1065 of 1226 measurable steps `ok` on
 both sides (**86.9 %**; run 22: 1066; run 17 alone: 86.3 %). In the five units of run 23: 101 of 120 (84.2 %; the
 same units in run 22: 102 of 120); `xs-shortcuts` lost `08_tools` (`slow`, −4.0 points), the other four are
 unchanged. Reference-side errors in the five units: 7 (unchanged) plus the `slow` step; Firepixel-side errors: 5
@@ -312,8 +318,9 @@ effect, text-tool state carried between units).
 | 22 (7 units) | 18/19 Oct 2026 | 47 of 48 (0 under-measured) | 97.9 % (47 / 48); step level 86.9 % |
 | 23 (5 units) | 19 Oct 2026 | 46 of 48 (0 under-measured) | **95.8 %** (46 / 48); step level 86.9 % |
 
-The next steps are in [ROADMAP.md](../ROADMAP.md): read the History rows of `panel-pages-states-history/21` and check
-the nudge rows in the reference (TW-148, RE spec check), runner R-21 for the rest of the reference-side text entry and
-the size edit on a partial selection (TW-146 rest, then TW-145), the text tool font at unit start (TW-149) and the
-step limit of `xs-shortcuts/08` (TW-150); the *Text* menu remnant of the text tool defaults (TW-138 rest); release
-and the human click-test.
+The next steps are in [ROADMAP.md](../ROADMAP.md): follow-up run 24 with runner R-21 (`b1916aa6`: History row labels
+on both sides, caret check before typing, Firepixel's text tool reset to the reference's font, slow limit per
+substitute) over `tool-text`, `panel-pages-states-history`, `xs-shortcuts` and the first run of `xs-select-behind`,
+which confirms TW-146 rest, TW-149, TW-150 and TW-152, decides TW-148 from the row labels and compares the size rule
+for new text (TW-145); then a full run over all 49 units, release v0.2.3 and the human click-test; the *Text* menu
+remnant of the text tool defaults (TW-138 rest).

@@ -18,14 +18,14 @@ run only in CI, not yet on a real Linux desktop.
 
 | Area | Value | Source |
 |---|---|---|
-| Parity units | 48 | [PARITY.md](PARITY.md) |
+| Parity units | 49 (48 classified; the measurement unit `xs-select-behind`, added on 19 Oct 2026, has its first run pending) | [PARITY.md](PARITY.md) |
 | Equal except for design | **46** (0 real deviations, 2 unclear, 0 under-measured) | run 23 (5 units), run 22 (2 units) and run 18 (4 units) on top of full run 17, 18/19 Oct 2026 |
 | Proven 1:1 | **95.8 %** (46 / 48; no unit under-measured; run 22: 97.9 %, run 17: 87.5 %) | runs 17–23 |
 | Canvas image pairs within 1 % | **175 / 201** (unchanged from run 22; `tool-text/02`, `03`, `07`, `14` now compare against the reference's typed texts; `tool-text/16` stays above 1 %, TW-145) | runs 17–23 |
 | Measurement quota, all 48 units | **86.9 %** (1065 / 1226 measurable steps both `ok`, newest run per unit; run 17 alone 86.3 %; the five units of run 23: 84.2 %, 101 / 120, run 22: 102 / 120; `xs-shortcuts/08` `slow`) | runs 17–23 |
 | Errors, newest run per unit | 38 reference-side plus one `slow` step (run 17: 46), 21 Firepixel-side (unchanged, all known) | runs 17–23 |
 | Workspace tests | **2748 passed, 1 failed, 134 ignored** at `cd86ce75` (full workspace run, the commit of preview `2026-10-19_01-32`, package F46); the one failure was an `fp-i18n` check (missing DE/EN text for the `edit.move` nudge parameter), fixed in `bea53d1c` | `main`, 19 Oct 2026 |
-| Open findings | 7 fixable `[F]` (PDF layers; TW-138 rest; TW-145 size of new text after a partial-selection edit; TW-146 rest, reference-side text entry, runner R-21; TW-148 History rows of consecutive nudges, RE spec check; TW-149 text tool font at unit start, runner; TW-150 step limit of `xs-shortcuts/08`, runner), 5 deferred `[V]`, 20 informational `[N]`; run 23 closed TW-147 | [FINDINGS.md](FINDINGS.md) |
+| Open findings | 9 rows in `[F]`, 7 of them open (PDF layers; TW-138 rest; TW-145 size of new text after a partial-selection edit; TW-146 rest, TW-149 and TW-150, fixed in runner R-21, confirm in run 24; TW-148 History rows of consecutive nudges, row labels now logged, decide after run 24) and 2 closed and kept until the click-test (TW-151 / FB-01 pen anchor modes, TW-152 / FB-02 Select Behind hover frame), 5 deferred `[V]`, 20 informational `[N]`; run 23 closed TW-147 | [FINDINGS.md](FINDINGS.md) |
 | Real differences known | None proven in the newest runs. Unclear: after three arrow nudges the reference reads 4 History steps, Firepixel 5 (TW-148; F46 follows RE spec 51, one row per press). Smaller, from the code: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest). Not yet compared: the size of a new text after a partial-selection edit (TW-145), because the reference's size edit on the selected characters did not take effect in run 23 | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
@@ -113,6 +113,26 @@ Confirmed and closed (TW-147): Escape keeps the selection in both programs, the 
 flyout, the paste read-back and `MaxUndos` (20) are equal. Step quota 1065 / 1226 (`xs-shortcuts/08` over the 90 s
 step limit, TW-150), canvas pairs unchanged; new runner items TW-149 (text tool font) and TW-150.
 
+After run 23 (on `main` up to `44d7c5f5`, not yet in a preview build): runner R-21 (`b1916aa6`) reads the History row
+labels on both sides, checks for a caret before typing on the reference side, resets Firepixel's text tool at unit
+start to the reference's font, size, style and colour, allows 2 s more per substitute and fixes the console
+code-page error in the log; TW-146 rest, TW-149 and TW-150 wait for confirmation in run 24, TW-148 is decided from the
+logged row labels after run 24.
+
+**Tester feedback (19 Oct 2026, E-Man, credited in the README):** two reports, both written down as RE spec 52 and
+fixed. FB-01 (TW-151, `c3a9e264`): with the pen tool, clicking the last anchor while drawing now retracts its outgoing
+handle, so the next segment leaves the point straight; a drag re-pulls it as a symmetric curve point (Alt, Ctrl and
+Shift variants), interior points are converted or deleted, a segment click inserts a point, another open path is
+joined or an open path continued, with matching cursors; the hit radius follows the snap distance. Limits: a join
+across elements appends instead of merging, no drag after a join, a close or an interior press, a double-click still
+ends the path. FB-02 (TW-152, `44d7c5f5`): Select Behind shows a hover frame (#E00000, 1 px, filled 5 × 5 px corner
+squares) on the object a click would select, also while the pointer is over the selected object; with nothing
+selected it frames the topmost object; the Pointer tool is unchanged. The rule was measured in the reference
+application with the new parity unit `xs-select-behind` (`c7515986`, 9 steps, the 49th unit). Open: whether the
+reference draws the blue selection frame together with the red one (its runner shots never show a selection
+outline) and one preview-build case without a frame with nothing selected that tests do not reproduce; both are in
+the click-test ([VERIFICATION.md](VERIFICATION.md) A4-15 to A4-17).
+
 ## How tests run
 
 - Every crate has unit tests; `fp-ui` and `fp-engine` bundle their integration tests into one program `all`
@@ -128,7 +148,7 @@ step limit, TW-150), canvas pairs unchanged; new runner items TW-149 (text tool 
 ## How parity runs work
 
 A parity run plays scripted steps in both programs on the same machine and compares screenshots, values, texts and
-exported files ([PARITY.md](PARITY.md)). A full run over 48 units takes about four hours and runs unattended
+exported files ([PARITY.md](PARITY.md)). A full run over 49 units takes about four hours and runs unattended
 (usually overnight); follow-up runs cover only affected units. Each run is evaluated by script into tweaks
 (`TW-…`) and questions (`Q-…`), which become findings or fixes. Runs need a licensed installation of the
 reference application and test files that are not part of this repository.
@@ -140,15 +160,15 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Nudge rows in History (TW-148): read the reference's History row list in `panel-pages-states-history/21` and
-   check RE spec 51 §2 against it; align F46 if the reference merges consecutive nudges.
-2. Runner R-21: the rest of the reference-side text entry (keys reaching the tool shortcuts in 3 of 17 steps, the
-   "Q" after a double-click) and a size edit that reaches the selected characters (TW-146 rest), the text tool font
-   at unit start (TW-149), the step limit of `xs-shortcuts/08` (TW-150); then a run of `tool-text` and
-   `panel-pages-states-history`, which compares the size rule for new text (TW-145).
+1. Run 24: preview build from `main`, then a follow-up run with runner R-21 over `tool-text`,
+   `panel-pages-states-history`, `xs-shortcuts` and the first run of `xs-select-behind`; it confirms TW-146 rest,
+   TW-149, TW-150 and TW-152, decides TW-148 from the logged History row labels (align F46 if the reference merges
+   consecutive nudges) and compares the size rule for new text (TW-145).
+2. A full run over all 49 units, then release **v0.2.3**.
 3. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
-   typing after a double-click, crop option off, Linux start) and the open A2 checks.
-4. Remaining parity items: the size rule for new text (TW-145, after R-21) and the *Text* menu remnant of the
+   typing after a double-click, crop option off, Linux start, pen anchor modes and the Select Behind hover frame)
+   and the open A2 checks.
+4. Remaining parity items: the size rule for new text (TW-145, after run 24) and the *Text* menu remnant of the
    text tool defaults (TW-138 rest).
 5. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 
