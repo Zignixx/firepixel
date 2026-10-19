@@ -73,7 +73,7 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
-## A2. Open items from comparison runs 12–23
+## A2. Open items from comparison runs 12–24
 
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
 them; they stay listed here, ticked, so the history of each check is clear. Run 15 (17/18 Oct 2026) resolved
@@ -92,7 +92,9 @@ and TW-144, did not confirm TW-143 and TW-134, pinned down the mechanism of TW-1
 22 (18/19 Oct 2026, 7 units, runner R-19) confirmed TW-134 and TW-143, closed TW-140 (the reference-side substitutes
 work) and added TW-146 and TW-147 (runner R-20); TW-145 is still not compared. Run 23 (19 Oct 2026, 5 units,
 runner R-20, package F46) closed TW-147, reduced TW-146 to a rest and added TW-148 to TW-150; TW-145 is still not
-compared. The open checks below come from runs 17 to 23.
+compared. Full run 24 (19 Oct 2026, all 49 units, runner R-21, packages F46 and F47) closed TW-149, TW-150 and TW-152,
+decided TW-148 (the reference merges consecutive key nudges; now a Firepixel fix), left TW-145 and TW-146 rest open
+and added TW-153 to TW-157. The open checks below come from runs 17 to 24.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -150,16 +152,34 @@ compared. The open checks below come from runs 17 to 23.
   **Steps:** Double-click into line 2 of TX2 with the text tool, type "Vr" and read the text objects back through the layer element list before Escape.
   **Expected:** As in the reference: TX2's bounds grow to 50,150–120,194 while the editor is open.
 - [x] **TW-144** (`xs-shortcuts/15_in_text_tx2`, `tool-text/06`) – resolved in run 21: with CR/LF kept in the read-backs (runner R-17b) both programs separate TX2's paragraphs with `\r`; the `\n` of run 20 was the reference-side read-back. Tests pin the separators.
-- [ ] **TW-145** (`tool-text/11, 13, 14, 16`; RE spec check; needs: runner R-21 and the next `tool-text` run)
+- [ ] **TW-145** (`tool-text/11, 13, 14, 16`; RE spec check; needs: runner R-22 and the next `tool-text` run)
   **Steps:** Text tool: type "Abc 123", select "123" by mouse, set a larger size in the inspector, press Escape; click elsewhere and type a new text; read its size in both programs.
-  **Expected:** The same size as the reference. Run 21 and 22: Firepixel's new text takes the larger size (F43 rule), the reference's stays 12 pt, but its selection and size edit had failed. Run 23: the reference's text and the drag selection of "123" work, but the 72 pt does not reach the selection (caret before "123", everything 12 pt), so nothing is compared yet; Firepixel's texts in `14` and `16` are 72 pt.
-- [ ] **TW-146 rest** (`tool-text/06, 09, 11, 13, 20`; runner R-21; needs: the next `tool-text` run) – run 23 (R-20): 14 of 17 reference texts are created as typed and drag selections are verified by highlight pixels (no U+0003 any more); left: in `09`, `13` and `20` the editor poll reports an editor but the keys reach the tool shortcuts and the text is discarded, the "Q" after the pointer double-click in `06` does not arrive, and in `11` the size edit does not reach the selected "123".
-  **Steps:** Runner R-21: accept the editor only with a blinking caret and check the first character before typing on; recheck the selection before the size field and read the new size back. Hands-on: in the reference click with the text tool, type "Abc 123", drag over "123" and set 72 pt.
+  **Expected:** The same size as the reference. Run 21 and 22: Firepixel's new text takes the larger size (F43 rule), the reference's stays 12 pt, but its selection and size edit had failed. Run 23: the reference's text and the drag selection of "123" work, but the 72 pt does not reach the selection (caret before "123", everything 12 pt), so nothing is compared yet; Firepixel's texts in `14` and `16` are 72 pt. Run 24: the reference's text in `11` was not created (only "Ab" arrived, TW-146 rest), so again nothing is compared; Firepixel's texts in `14` and `16` are 72 pt, the reference's 12 pt.
+- [ ] **TW-146 rest** (`tool-text/11, 12, 13, 17`; runner R-22; needs: the next `tool-text` run) – run 24 (R-21): the caret check passes before every entry, 12 of 16 reference texts are created as typed and the "Q" after the pointer double-click in `06` now arrives ("ZeilQe eins" in both programs); left: `11` receives only "Ab" (the Ctrl+A retry leaves nothing), `12`, `13` and `17` nothing, three texts are discarded at the commit (run 23: `09`, `13`, `20`, so the losses move between steps), and `17` opens a combo with export formats instead of the orientation.
+  **Steps:** Runner R-22: after a lost first character click into the text frame again and wait for the caret instead of Ctrl+A; give the first click after the previous commit more settle time; locate the orientation control by its entries. Hands-on: in the reference click with the text tool, type "Abc 123", drag over "123" and set 72 pt.
   **Expected:** The typed text exists on both sides in every step and the size edit changes only "123"; then TW-145 can be compared.
 - [x] **TW-147** (`xs-shortcuts/07, 21`, `panel-pages-states-history/16, 21, 22`, `menu-edit/03`; runner R-20) – resolved in run 23: the Pointer tool is taken from the flyout when the slot holds Select Behind (`xs-shortcuts/07`, no runner error), Escape keeps R1 selected in both programs (`xs-shortcuts/21`, 1 / 1, F46 after RE spec 51), the paste read-back is R1 at 50,50–150,120 on both sides (`menu-edit/03`) and `MaxUndos` reads 20 in both (`panel-pages-states-history/22`). The nudge rows (c) are now compared with real Shift+arrows and continue as TW-148.
-- [ ] **TW-148** (`panel-pages-states-history/21`; RE spec check, runner; needs: a hands-on check or the next run with the History row list) – run 23: after three Shift+arrow nudges of R1 and one of E1 the reference reads 4 History steps, Firepixel 5 (three nudge rows since F46, one Deselect row from the runner's select, the E1 nudge). Counting the reference's runner selects as one script row each, its three presses make only one row, against RE spec 51 §2.
-  **Steps:** In the reference, select a rectangle with the Pointer tool and press Shift+Right, Shift+Right, Shift+Down (also once with plain arrows and once with a pause of several seconds between the presses); look at the History panel.
-  **Expected:** Firepixel makes as many History rows for the same presses as the reference (today one row per press).
+- [ ] **TW-148** (`panel-pages-states-history/21`; decided by run 24, Firepixel fix pending; needs: the fix, then the next run and a hands-on check of pauses) – run 24, History row labels: after Shift+Right, Shift+Right, Shift+Down on R1 the reference lists one row `moveSelectionBy({x:20, y:10})`, then one row `moveSelectionBy({x:10, y:0})` for the Shift+Right on E1 after the selection change (4 rows with the two runner select scripts); Firepixel lists Move, Move, Move, Deselect, Move. The reference merges consecutive key nudges of one selection across directions; F46's one row per press is wrong.
+  **Steps:** After the fix: in both programs select a rectangle with the Pointer tool and press Shift+Right, Shift+Right, Shift+Down (also once with plain arrows and once with a pause of several seconds between the presses), then click another object and press Shift+Right; look at the History panel.
+  **Expected:** One Move row for the three presses on the first object and a new row after the selection change, as in the reference; note whether a long pause starts a new row in the reference.
+- [x] **TW-149** (runner R-21) – resolved in run 24: Firepixel's text tool is reset at unit start to Arial 12 pt regular black in 46 of 49 units, like the reference (bridge error in three units without new text).
+- [x] **TW-150** (`xs-shortcuts/08`; runner R-21) – resolved in run 24: `08_tools` is `ok` in 92.8 s under the limit of 90 s plus 2 s per substitute; the run-start window list has no code-page error.
+- [x] **TW-152** (FB-02, `xs-select-behind`) – confirmed in run 24: both programs draw the same 1680 px #E00000 frame on B1 in `02` and `04`, none in `03` and `07`, and the click cycle reads B1, then FR. The rest continues as TW-157 and A4-17.
+- [ ] **TW-153** (`tool-autoshapes` and seven more units; runner R-22; needs: the next run) – run 24: the unit-start text reset sets the reference's fill colour to #000000 after the default-colour reset, so its shapes are black-filled (`tool-autoshapes` 7 / 27 canvas pairs within 1 %, run 17: 27 / 27); in eight units the reference's text size stays at 23 pt.
+  **Steps:** Runner: reset the text tool before the default colours and read fill, stroke and text size back after the resets.
+  **Expected:** Fill #ffffff and stroke #000000 in both programs at every unit start; `tool-autoshapes` back to 27 / 27.
+- [ ] **TW-154** (`menu-text/05`, `menu-view/20`; runner R-22; needs: the next run) – run 24: Ctrl+Shift+E (Text Editor) and Ctrl+Alt+Shift+G (Edit Guides) have no key in the "Web Standard" set, so neither program opens the dialog.
+  **Steps:** Runner: open both dialogs through the menu.
+  **Expected:** The dialog opens in both programs.
+- [ ] **TW-155** (`tool-path-reshape/04`, `inspector-stroke/01`, `menu-edit/01, 22`; runner R-22; needs: the next run) – run 24: arrow keys are replaced by `moveSelectionBy` also where they change the Freeform tool size; a real Down key selected the Line tool before the substitute; the reference's History read-back in `menu-edit` reads 0 steps with two documents open.
+  **Steps:** Runner: substitute arrow keys only for nudges with the Pointer or Subselection tool; close other documents before `menu-edit` or read the History of the step's document.
+  **Expected:** The Freeform size keys change the tool size in both programs; no tool switch by a plain arrow; History rows readable in `menu-edit/01, 22`.
+- [ ] **TW-156** (`toolbox/13`; runner R-22, then compare; needs: the next run or a hands-on check) – run 24: the screen-mode steps have no defined start mode; after F Firepixel shows its menu bar without panels and the next step finds no screen-mode button, the reference shows the panels as icons.
+  **Steps:** In both programs start in Standard mode, press F three times and note the mode after each press (menus, panels, Tools panel).
+  **Expected:** The same mode sequence in both programs.
+- [ ] **TW-157** (`xs-select-behind/05, 06, 08`; direct fix; needs: the fix, then the next run) – run 24: on a vector path the reference draws the hover line crisp, 1 px #E00000 on the pixel row and column inside the coordinates; Firepixel's line is anti-aliased over two rows (only the corner squares are #E00000). Right after a Select Behind click with the mouse not moved the reference shows no frame, Firepixel the frame of the next candidate.
+  **Steps:** Select Behind over the rectangle FR with nothing selected; zoom the screenshot on the top edge. Then click once over the overlap without moving the mouse.
+  **Expected:** A crisp #E00000 line on the pixels inside the path coordinates; no frame after the click until the mouse moves, as in the reference.
 
 Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the
 reference), **Q-51** (see TW-111 above), **Q-55** (`xs-shortcuts/15`: Firepixel's text-tool click was already right;
