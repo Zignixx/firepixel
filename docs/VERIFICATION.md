@@ -1,6 +1,6 @@
 # Manual verification
 
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
 This file is the human click-checklist for Firepixel. Most of Firepixel is checked automatically: unit and integration tests, headless UI tests with image series, and a scripted comparison runner that drives Firepixel and the reference application side by side through the automation bridge (`--mcp`) and compares the results. Some things cannot be covered that way and stay **manual**:
 
@@ -302,6 +302,9 @@ VER-10.28.
 - [ ] **A4-22** (TW-158, package F49; needs: real window, original for comparison)
   **Steps:** Without a document press F; open a document and press F three times, also with the screen-mode buttons of the Tools panel; in each mode press Tab and Escape and right-click the canvas; in full screen use *Exit Full Screen Mode* from the canvas context menu; enter full screen again and close the last document.
   **Expected:** Without a document F does nothing. F cycles Standard → Full Screen with Menus (menu bar and toolbar, floating Tools panel at the left, panels as an icon column at the right, no document tabs) → Full Screen (only the canvas, centred on black with a thin grey top/left edge, no bars, panels, tabs, rulers or scroll bars) → Standard. Escape does not leave a mode; the context menu entry returns to Standard; closing the last document returns to Standard. Compare each mode with the reference and note any difference quoting TW-158.
+- [ ] **A4-23** (TW-168 / FB-06, tester feedback; needs: real window, original for comparison)
+  **Steps:** In both programs draw a pen path with curve points, a rectangle, an autoshape, a bitmap and a text. Click each with the Subselection tool; select single anchors and Shift-click a second one; drag a handle of a selected point; turn *Show solid points* on in the preferences and repeat. Select a group and a compound shape as a whole. Compare with the Pointer and Select Behind tools. Take screenshots with the system's screenshot tool (the runner never captures the reference's selection markings).
+  **Expected:** On paths, rectangles and autoshape children no bounding box: a 1 px outline along the path, a hollow 5 × 5 px square on each anchor (filled when selected, reversed with *Show solid points*) and the handles of every segment with a selected end. Bitmaps, text and symbol instances keep the box; Pointer and Select Behind are unchanged. Known limits: a group or autoshape selected as one element and compound shapes keep the box; the facing handles of the neighbouring points are shown but cannot be dragged. Note every difference from the reference (colours, square size, which handles appear) quoting TW-168.
 
 ---
 

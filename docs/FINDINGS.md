@@ -27,7 +27,7 @@ Findings are grouped by their state:
 
 ---
 
-## [F] Fixable now (7)
+## [F] Fixable now (8)
 
 Recounted after F48, runner R-22 and release v0.2.3 (19 Oct 2026); 3 rows open, 8 waiting for confirmation in run 25. The earlier remnants (sprite
 padding default, Shift-constrain for L-shape/arrow line, import rubber band, New Style defaults, text runs, SVG
@@ -292,6 +292,13 @@ the colour. The hands-on check is [VERIFICATION.md](VERIFICATION.md) A1-19. The 
 runner item TW-167; TW-138 rest is closed except the unmeasured R3 note; TW-151 and TW-160 to TW-162 wait for the
 click-test, including the macOS re-test by the tester.
 
+**Tester feedback, third report (20 Oct 2026): TW-168 / FB-06.** With the Subselection tool a selected vector object
+showed the bounding box like the Pointer tool; the reference shows the path itself. Fixed directly on `main`
+(`0b71e6ca`); the runner never captures the reference's selection markings, so the comparison is the hands-on check
+[VERIFICATION.md](VERIFICATION.md) A4-23. The 8 rows: open are U-1 rest and the runner item TW-167; TW-138 rest is
+closed except the unmeasured R3 note; TW-151, TW-160 to TW-162 and TW-168 wait for the click-test, including the
+macOS re-test by the tester.
+
 | ID | Area | What is open (expected vs. current) |
 |---|---|---|
 | TW-138 rest | Text tool defaults, Text menu (*RE spec*, rest) | **Closed except R3** (F49, `439a3ec5`; run 26: `tool-text` and `menu-text` without deviation, quotas and canvas pairs unchanged). The Properties panel (also routed to the open editor) no longer writes the baseline shift default; only the Text tool's own defaults command does (R1). Every font change (Text menu, panel, editor) stores the PostScript name next to the family and puts the family at the front of the recent font list, deduplicated and limited by the preference (R2). Applying a style from the Styles panel to text writes bold/italic/underline, the font, leading and anti-aliasing as text defaults, not the size (R4). Left open: R3, whether indent and paragraph spacing set on pointer-selected text become defaults, is not measured in the reference. |
@@ -300,6 +307,7 @@ click-test, including the macOS re-test by the tester.
 | TW-161 (FB-05) | macOS: Cmd+Q quit without the save prompt (tester feedback, *direct fix*) | **Fixed, pending the Mac check** (`0352e7c9`, only type-checked for macOS; hands-on check A4-20). The default app menu of the windowing library bound Cmd+Q to an immediate terminate, so unsaved changes were lost. Now the default menu is off and Cmd+Q goes through the Quit action with the save prompt. Since `e11f8d1b` the app has its own macOS app menu (About Firepixel, Services, Hide, Hide Others, Show All and Quit Firepixel with the save prompt); the macOS CI build with it is green. |
 | TW-162 (FB-03) | macOS: native title bar (tester feedback, *direct fix*) | **Fixed, pending the Mac check** (`53e08484`, only type-checked for macOS; hands-on check A4-21). On macOS the window uses the system title bar with traffic lights; the app bar keeps the menus but draws no own window buttons, drag area or resize edges. Windows and Linux keep the own chrome. |
 | TW-167 | Reference panel dock width after the screen modes (*runner*) | Run 28 `toolbox`: the reference started the unit with its right panel dock collapsed to icons (left over from run 27; `00_overview_normal` 64.3 %, run 27: 25.9 %). R-25's layout check takes this 110 px dock as the reference width (`dock_ref` 110); after the screen modes of `13` the dock is expanded (276 px), and the restore logs `restored: []` without acting, so `13_view_modes_standard_normal` (25.6 %, run 27: 64.3 %) and the overview have swapped. Window pairs only, no class effect. Take the expanded default layout as the reference (or restore it at unit start) and restore that after `13`. |
+| TW-168 (FB-06) | Subselection tool: selection display on vector objects (tester feedback, *direct fix*) | **Fixed, pending the click-test** (`0b71e6ca`; hands-on comparison A4-23, the runner never captures the reference's selection markings). With the Subselection tool a selected path showed the bounding box with corner squares. Now vector objects (paths, rectangle primitives, autoshape children) show the path outline as a 1 px line through the anchors, a hollow 5 × 5 px square on each anchor (filled when selected; the *Show solid points* preference reverses this) and the control handles of every segment with a selected end, without a bounding box. Bitmaps, text and symbol instances keep the box; the Pointer and Select Behind tools are unchanged. Known limits: a whole autoshape or group selected as one element and compound shapes keep the box; the facing handles of the neighbouring points are shown but cannot be dragged. |
 | U-1 rest | File ▸ Import, PDF | SVG files now import with their layers; **PDF files still arrive as one layer** because the pure-Rust PDF reader exposes no optional content groups (layers). Library limit; needs either an upstream feature or an own OCG reader. |
 
 ## [V] Deferred / expansion items (5)

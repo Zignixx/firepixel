@@ -117,6 +117,10 @@ select – the next object below the selected one under the pointer, also while 
 object, or the topmost object when nothing there is selected. The Pointer tool frames only the topmost object and
 shows no frame over the selected one.
 
+**Subselection:** a selected path, rectangle or autoshape part shows its outline, a small square on each point
+(filled when the point is selected; *Show solid points* in the preferences reverses this) and the handles of the
+selected points instead of a bounding box; bitmaps, text and symbols keep the box.
+
 **Default stroke:** Line, Pen, Vector Path, Rectangle, Ellipse and Polygon draw with the stroke
 *Basic ▸ Hard Rounded* (1 px), as in the original; a choice of your own in the inspector still applies.
 

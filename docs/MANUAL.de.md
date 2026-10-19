@@ -122,6 +122,11 @@ Objekt, das ein Klick wählen würde – das nächste Objekt unter dem gewählte
 Mauszeiger über dem gewählten Objekt steht, oder das oberste Objekt, wenn dort nichts gewählt ist. Der Zeiger
 umrahmt nur das oberste Objekt und zeigt über dem gewählten keinen Rahmen.
 
+**Unterauswahl:** Ein gewählter Pfad, ein Rechteck oder ein Teil einer Autoform zeigt statt eines Begrenzungsrahmens
+seinen Umriss, ein kleines Quadrat auf jedem Punkt (gefüllt, wenn der Punkt gewählt ist; *Einfarbige Punkte anzeigen*
+in den Voreinstellungen kehrt das um) und die Griffe der gewählten Punkte; Bitmaps, Text und Symbole behalten den
+Rahmen.
+
 **Strich ab Werk:** Linie, Stift, Vektorpfad, Rechteck, Ellipse und Polygon zeichnen wie im Original
 mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Inspektor gilt weiter.
 

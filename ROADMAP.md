@@ -1,6 +1,6 @@
 # Roadmap
 
-Where Firepixel stands and what remains. Figures as of **19 Oct 2026**; details in
+Where Firepixel stands and what remains. Figures as of **20 Oct 2026**; details in
 [docs/STATUS.md](docs/STATUS.md), [docs/PARITY.md](docs/PARITY.md) and [docs/FINDINGS.md](docs/FINDINGS.md).
 
 ## Stage
@@ -16,7 +16,7 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Canvas image pairs within 1 % | 185 / 212 (unchanged in run 28; run 26: 186 / 211; `tool-text/14, 16` above 1 % because no text tool is reset after the reference's size step fails, TW-165) |
 | Tests | Last full run: 2776 passed, 0 failed, 134 ignored at `439a3ec5` (the code of preview `2026-10-19_16-07`); macOS CI build with the app menu (`e11f8d1b`) green |
 | Latest release | **v0.2.4** pre-release published on 19 Oct 2026 (tag at `1f26223c`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage, with the three screen modes, the text default rules and the macOS fixes; before: **v0.2.3** (19 Oct 2026); Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 7 fixable rows (2 open: U-1 rest and the runner item TW-167; TW-146 rest and TW-165 moved to the click-test A1-19 as runner measurement gaps; TW-138 rest closed except R3; TW-151 and TW-160 to TW-162 awaiting the click-test and the macOS re-test) · 5 deferred · 20 informational · 850+ closed |
+| Open findings | 8 fixable rows (2 open: U-1 rest and the runner item TW-167; TW-146 rest and TW-165 moved to the click-test A1-19 as runner measurement gaps; TW-138 rest closed except R3; TW-151, TW-160 to TW-162 and TW-168 awaiting the click-test and the macOS re-test) · 5 deferred · 20 informational · 850+ closed |
 
 Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including the measurement unit
 `xs-select-behind` (9 steps); run 25 repeated 20 of them, run 26 five, run 27 three and run 28 two.
@@ -28,7 +28,7 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
    checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
    a double-click, the crop option, the Linux start, the pen anchor modes, the Select Behind hover frame and the
-   History rows of key nudges, A4-15 to A4-18, the screen modes, A4-22), and the **macOS re-test of v0.2.4 by the
+   History rows of key nudges, A4-15 to A4-18, the screen modes, A4-22, the Subselection display, A4-23), and the **macOS re-test of v0.2.4 by the
    tester** (A4-19 to A4-21 on a real Mac).
 2. **Remaining `[F]` items:** U-1 rest (PDF import layers) and the unmeasured R3 note of TW-138 (indent and spacing
    as text defaults).
@@ -64,6 +64,9 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 - Tester feedback of 19 Oct 2026 (E-Man): TW-151 / FB-01 (pen tool anchor modes: the click on the last anchor
   retracts its outgoing handle) is fixed and kept until the click-test; TW-152 / FB-02 (Select Behind hover frame) is
   confirmed by run 24.
+- Tester feedback of 20 Oct 2026 (E-Man): TW-168 / FB-06 (the Subselection tool shows the path outline, the anchors
+  and the handles of selected points on vector objects instead of the bounding box) is fixed and waits for the
+  hands-on comparison A4-23.
 
 ### Deferred expansion items (`[V]`)
 
