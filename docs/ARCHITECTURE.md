@@ -68,7 +68,8 @@ catalogue. The history panel shows agent commands like user actions; the maximum
 Tools are state machines in `fp-engine/src/tools` fed with raw pointer and key events; `fp-ui` only translates
 OS input into these events and draws overlays. This is what makes `tool_event` and `ui_input` over MCP behave
 like a human. UI-side helpers that belong to one tool (for example the background hover preview of the AI
-object selection) live in `fp-ui/src/canvas/tools/`.
+object selection) live in `fp-ui/src/canvas/tools/`. Which parts of the window each screen mode shows (Standard, full screen with
+menus, full screen) is decided in one place, `fp-ui/src/screen_mode.rs`.
 
 Commands that reach outside the document (screen capture through the system's capture tool, the symbol-script
 generator, the shared palette over all open documents) live in `fp-engine/src/commands/extras.rs`.

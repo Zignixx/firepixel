@@ -14,29 +14,27 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Proven 1:1 | **98.0 %** (48 / 49; 97.9 % over the 48 units before run 24; run 24: 93.9 %) |
 | Measurement quota, all 49 units | **87.3 %** (1075 / 1232 steps; 87.2 % over the 48 old units; run 24: 87.0 %; run 17: 86.3 %) |
 | Canvas image pairs within 1 % | 186 / 211 (run 24: 164 / 210; `tool-autoshapes` back to 26 / 27, TW-153) |
-| Tests | 2762 passed, 0 failed, 134 ignored at `a225a01c` (preview `2026-10-19_12-16`) |
+| Tests | Last full run: 2762 passed, 0 failed, 134 ignored at `a225a01c` (preview `2026-10-19_12-16`); run on `439a3ec5` pending |
 | Latest release | **v0.2.3** published on 19 Oct 2026 (state of preview `2026-10-19_06-06`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage, all assets verified; before: **v0.2.2** pre-release (18 Oct 2026, tag from `c031a987`); Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 6 fixable rows (5 open: U-1 rest, TW-138 rest, TW-146 rest, TW-158, TW-159; TW-151 awaiting the click-test) · 5 deferred · 20 informational · 850+ closed |
+| Open findings | 9 fixable rows (2 open: U-1 rest, TW-146 rest; TW-138 rest closed except R3; TW-158, TW-159 fixed, to confirm in run 26; TW-151 and TW-160 to TW-162 awaiting the click-test) · 5 deferred · 20 informational · 850+ closed |
 
 Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including the measurement unit
 `xs-select-behind` (9 steps); run 25 repeated 20 of them.
 
 ## Next (in order)
 
-1. **Full screen mode (TW-158)**, the one real deviation of run 25: write the behaviour of the three screen modes from
-   the reference (which bars and panels each hides, black pasteboard, Tab, Escape and the return to Standard), then
-   fix Firepixel's full screen mode, which keeps the menu bar, the document tab and the status bar.
-2. **Runner R-23** for TW-159 (screen-mode read-back on the reference side, the Subselection arrow in
-   `xs-shortcuts/10_nudge_point`, the Freeform size keys in `tool-path-reshape/04`, the text size reset) and the
-   TW-146 rest (one lost text in `tool-text/07`, selection of "123"), then a follow-up run over `toolbox`,
-   `xs-shortcuts`, `tool-path-reshape`, `tool-text` and `menu-text`.
+1. **Tests and preview:** full workspace test run on `439a3ec5` (runner R-23, package F49 with the three screen modes
+   and the text preference rules, the macOS fixes FB-03 to FB-05), then a new preview build.
+2. **Run 26** over `toolbox`, `xs-shortcuts`, `tool-path-reshape`, `tool-text` and `menu-text` to confirm TW-158,
+   TW-159, TW-146 rest and TW-138.
 3. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
    a double-click, the crop option, the Linux start, the pen anchor modes, the Select Behind hover frame and the
-   History rows of key nudges, A4-15 to A4-18).
-4. **Remaining `[F]` items:** U-1 rest (PDF import layers) and the *Text* menu remnant of the text tool defaults
-   (TW-138 rest).
+   History rows of key nudges, A4-15 to A4-18, the screen modes, A4-22) and the macOS items A4-19 to A4-21 on a real
+   Mac.
+4. **Remaining `[F]` items:** U-1 rest (PDF import layers) and the unmeasured R3 note of TW-138 (indent and spacing
+   as text defaults).
 5. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
    boxes), BA-110 rest (lossy LZW with an SSIM bound) and BA-083 (resampler hashes on another OS).
 
@@ -45,8 +43,13 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 ### Fixable remnants (`[F]`)
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- Open: TW-138 rest (*Text* menu commands and the text tool defaults), TW-158 (full screen mode keeps menu bar, tab
-  and status bar; behaviour description first), runner items TW-146 rest and TW-159.
+- Open: the runner item TW-146 rest (R-23 retries, confirm in run 26) and the unmeasured R3 note of TW-138.
+- Fixed after run 25, to confirm in run 26: TW-158 (three screen modes, full screen shows only the canvas on black,
+  F49), TW-138 rest (inspector never writes the baseline shift default, font changes update the recent font list,
+  a style applied to text writes the text defaults; F49) and the runner item TW-159 (R-23).
+- Tester feedback, second batch (macOS): TW-160 / FB-04 (frozen window after minimise/restore), TW-161 / FB-05 (Cmd+Q
+  through the Quit action with the save prompt; a native app menu is in progress) and TW-162 / FB-03 (native title
+  bar with traffic lights) are fixed, only type-checked for macOS, and wait for A4-19 to A4-21.
 - Confirmed and closed in run 25: TW-148 (consecutive key nudges merge into one History row, F48), TW-157 (Select
   Behind hover line and no frame after a click, F48), TW-145 (the next text after a size edit is 72 pt in both
   programs), the runner items TW-153 to TW-156 and the TW-149 leftover. Full run 24 closed TW-149, TW-150 and TW-152.

@@ -24,9 +24,9 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Measurement quota, all 49 units | **87.3 %** (1075 / 1232 measurable steps both `ok`; over the 48 old units 87.2 %, 1066 / 1223; run 24: 87.0 %; run 17 alone 86.3 %; in the 20 units of run 25: 474 / 537) | run 25 |
 | Errors | 33 reference-side (run 24: 37; `menu-text/05`, `menu-view/20` now unsupported, `tool-text/13` and `/17` gone), 21 Firepixel-side (run 24: 23); 4 `runner error` lines, all reference-side text entry in `tool-text` (TW-146 rest) | run 25 |
 | Latest release | **v0.2.3** (19 Oct 2026; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; all assets verified after publishing; tester thanks in the release notes) | GitHub releases |
-| Workspace tests | **2762 passed, 0 failed, 134 ignored** at `a225a01c` (the commit of preview `2026-10-19_12-16`, package F48 and runner R-22) | `main`, 19 Oct 2026 |
-| Open findings | 6 rows in `[F]`, 5 of them open (PDF layers, U-1 rest; TW-138 rest; TW-146 rest, runner; TW-158 full screen mode, RE spec; TW-159 runner rests) and TW-151 / FB-01 waiting for the click-test, 5 deferred `[V]`, 20 informational `[N]`; run 25 closed TW-145, TW-148 and TW-153 to TW-157 | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | One measured: Firepixel's full screen mode keeps the menu bar, the document tab and the status bar on a grey pasteboard, the reference shows only the document on black (TW-158, `toolbox/13`). Smaller, from the code: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest) | [PARITY.md](PARITY.md) |
+| Workspace tests | Last full run: **2762 passed, 0 failed, 134 ignored** at `a225a01c` (the commit of preview `2026-10-19_12-16`, package F48 and runner R-22); the full run on `439a3ec5` (R-23, F49, macOS fixes) is pending | `main`, 19 Oct 2026 |
+| Open findings | 9 rows in `[F]`: 2 open (PDF layers, U-1 rest; TW-146 rest, runner); TW-138 rest closed except the unmeasured R3 note; TW-158 (F49) and TW-159 (R-23) fixed, to confirm in run 26; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test; 5 deferred `[V]`, 20 informational `[N]`; run 25 closed TW-145, TW-148 and TW-153 to TW-157 | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | None measured open: the one of run 25, full screen mode (TW-158, `toolbox/13`), is fixed by F49 and waits for run 26. Unmeasured: whether indent and paragraph spacing on pointer-selected text become text defaults (TW-138 R3) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -138,6 +138,22 @@ reference draws the blue selection frame together with the red one (its runner s
 outline) and one preview-build case without a frame with nothing selected that tests do not reproduce; both are in
 the click-test ([VERIFICATION.md](VERIFICATION.md) A4-15 to A4-17).
 
+**Tester feedback, second batch (19 Oct 2026, macOS):** three reports, fixed directly on `main`, all only
+type-checked for macOS (no Mac at hand). FB-04 (TW-160, `b9f085f4`): after the app's own minimise and a restore from
+the Dock the window stayed frozen, because the minimised flag was never refreshed; the stale flag is now healed
+against the real window state. FB-05 (TW-161, `0352e7c9`): Cmd+Q quit through the default app menu without the save
+prompt; the default menu is off and Cmd+Q goes through the Quit action with the prompt; a native app menu through a
+safe menu library is in progress in a follow-up. FB-03 (TW-162, `53e08484`): native title bar with traffic lights on
+macOS, without Firepixel's own window buttons. Hands-on checks on a Mac: [VERIFICATION.md](VERIFICATION.md) A4-19
+to A4-21.
+
+After run 25 (on `main` up to `439a3ec5`): runner R-23 (`5f498cd7`) for TW-159 and TW-146 rest; package F49
+(`8a9cf670`, `439a3ec5`) with the three screen modes as in the reference (TW-158: full screen shows only the canvas
+on black, full screen with menus keeps menu bar and toolbar with a floating Tools panel and an icon dock, F needs a
+document, back to Standard when the last document closes) and the text preference rules of TW-138 (the inspector
+never writes the baseline shift default, font changes store the PostScript name and the recent font list, a style
+applied to text writes the text defaults). The full test run on `439a3ec5` and a new preview build are pending.
+
 **Full run 24 (19 Oct 2026, 06:09–11:10, all 49 units, 1295 steps, 698 image pairs)** used preview
 `2026-10-19_06-06` and runner R-21: 46 / 2 / 1 / 0, proven 1:1 93.9 % (46 / 49; 95.8 % over the 48 old units),
 quota 87.0 % (86.9 % over the 48 old units, unchanged in 46 of them). It decided TW-148: the History row labels show
@@ -206,13 +222,12 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Behaviour description of the three screen modes from the reference (TW-158), then the fix; runner R-23 for
-   TW-159 and the TW-146 rest; then a follow-up run over `toolbox`, `xs-shortcuts`, `tool-path-reshape`, `tool-text`
-   and `menu-text`.
+1. Full test run on `439a3ec5` and a new preview build; then follow-up run 26 over `toolbox`, `xs-shortcuts`,
+   `tool-path-reshape`, `tool-text` and `menu-text` to confirm TW-158, TW-159, TW-146 rest and TW-138.
 2. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
-   typing after a double-click, crop option off, Linux start, pen anchor modes, the Select Behind hover frame and
-   the History rows of key nudges) and the open A2 checks.
-3. Remaining parity item: the *Text* menu remnant of the text tool defaults (TW-138 rest).
+   typing after a double-click, crop option off, Linux start, pen anchor modes, the Select Behind hover frame,
+   the History rows of key nudges, the screen modes, and the macOS checks A4-19 to A4-21) and the open A2 checks.
+3. Remaining parity items: U-1 rest and the unmeasured R3 note of TW-138 (indent and spacing as text defaults).
 4. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external

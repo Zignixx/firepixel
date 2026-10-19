@@ -158,6 +158,13 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   dem Pfad. Der Pfad liegt danach oben. Text an einem Pfad zeigt wie im Original nur den ersten Absatz.
 - **Filter auf Vektorobjekten:** Vorher fragt Firepixel „Dieser Vorgang konvertiert Vektoren in Bitmaps.“
   (OK, Abbrechen, „Nicht mehr anzeigen“).
+- **Bildschirmmodi:** F (oder die drei Bildschirmmodus-Schaltflächen im Abschnitt Ansicht des Werkzeugbedienfelds)
+  wechselt *Standard* → *Vollbildmodus mit Menüs* → *Vollbildmodus* → *Standard*; dafür muss ein Dokument
+  offen sein. Der Vollbildmodus mit Menüs behält Menüleiste und Symbolleiste, das Werkzeugbedienfeld
+  schwebt links, die angedockten Bedienfelder erscheinen rechts als Symbolspalte. Der Vollbildmodus zeigt nur die
+  Leinwand, zentriert auf Schwarz, ohne Leisten, Bedienfelder, Register, Lineale und Bildlaufleisten.
+  Zurück mit F oder *Vollbildmodus beenden* im Kontextmenü der Leinwand; wird das letzte Dokument
+  geschlossen, kehrt Firepixel zu Standard zurück.
 - *Ansicht ▸ Gamma 1.8* zeigt die Leinwand heller, wie auf einem Monitor mit Macintosh-Gamma. Dokument und
   Export bleiben unverändert.
 - *Bearbeiten ▸ Einfügen* legt kopierte Objekte direkt über das oberste gewählte Objekt (in dessen Ebene;
@@ -234,6 +241,10 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
 
 - **Textvorgaben:** Attribute, die bei offenem Texteditor gesetzt werden, ändern nur den markierten Text;
   mit dem Zeiger ausgewählter Text oder keine Auswahl macht sie zur Vorgabe für neue Texte.
+  Ein Schriftwechsel setzt die Schrift außerdem an den Anfang der zuletzt verwendeten Schriften; ein Stil
+  aus dem Bedienfeld Stile macht bei Text Schrift, Fett/Kursiv/Unterstrichen, Zeilenabstand und Glättung
+  zur Vorgabe (nicht die Größe). Die Grundlinienverschiebung wird nur über die Einstellungen des
+  Textwerkzeugs zur Vorgabe, nicht über den Inspektor.
 - **Schriftsuche:** Die aufgeklappte Schriftliste (Text-Inspektor, Textwerkzeug, Texteditor) hat oben
   ein Suchfeld. Tippen filtert (Teilwort, ohne Groß-/Kleinschreibung), ↑/↓ wählen, Eingabe
   übernimmt, Esc schließt ohne Änderung.

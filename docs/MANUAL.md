@@ -152,6 +152,12 @@ shows no frame over the selected one.
   the original.
 - **Filters on vector objects:** Firepixel first asks "This operation converts vectors to bitmaps."
   (OK, Cancel, "Don't show again").
+- **Screen modes:** F (or the three screen-mode buttons in the View section of the Tools panel) cycles
+  *Standard* → *Full Screen with Menus* → *Full Screen* → *Standard*; it needs an open document. Full screen
+  with menus keeps the menu bar and the toolbar, floats the Tools panel at the left and shows the docked
+  panels as an icon column at the right. Full screen shows only the canvas, centred on black, without
+  bars, panels, tabs, rulers or scroll bars. Back with F or *Exit Full Screen Mode* in the canvas context
+  menu; when the last document closes, Firepixel returns to Standard.
 - *View ▸ Gamma 1.8* shows the canvas brighter, as on a monitor with Macintosh gamma. The document and
   the export stay unchanged.
 - *Edit ▸ Paste* puts copied objects directly above the topmost selected object (in its layer; if an object
@@ -224,6 +230,9 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
 
 - **Text tool defaults:** attributes set while the text editor is open change only the marked text;
   set with text selected by the pointer, or with nothing selected, they become the defaults for new texts.
+  A font change also puts the font at the top of the recent fonts; applying a style from the Styles panel
+  to text makes its font, bold/italic/underline, leading and anti-aliasing the defaults (not the size). The
+  baseline shift becomes a default only through the Text tool's own settings, not through the inspector.
 - **Font search:** the opened font list (text inspector, Text tool, text editor) has a search field
   at the top. Typing filters (part of a word, case-insensitive), ↑/↓ select, Enter applies, Esc
   closes without a change.
