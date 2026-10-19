@@ -174,12 +174,25 @@
      ]
     },
     {
+     "tool_size_read": {
+      "label": "Größe"
+     }
+    },
+    {
      "record_ui": "inspector.fields"
     }
    ],
    "nudge": false,
-   "note": "R-22 (TW-155 a, run 24: the reference's Up / Down were replaced by moveSelectionBy): `nudge: false` - the arrows are the Freeform tool's size keys, sent as real keys on both sides; a tool switch on the reference side makes the step 'unsupported'; R-23 (TW-159 c, run 25: the real Up switched the reference's tool Freeform -> Pen -> Vector Path -> Redraw Path unnoticed): `nudge: false` checks the tool switch too; `orig_tool_keys: \"held\"` - on the reference side the keys are sent with the mouse button held at the hover point (hypothesis: the size keys work only during a drag); a switch all the same -> Properties fields logged, step 'unsupported' with the reason",
-   "orig_tool_keys": "held"
+   "note": "R-22 (TW-155 a, run 24: the reference's Up / Down were replaced by moveSelectionBy): `nudge: false` - the arrows are the Freeform tool's size keys, sent as real keys on both sides; a tool switch on the reference side makes the step 'unsupported'; R-23 (TW-159 c, run 25: the real Up switched the reference's tool Freeform -> Pen -> Vector Path -> Redraw Path unnoticed): `nudge: false` checks the tool switch too; `orig_tool_keys: \"held\"` - on the reference side the keys are sent with the mouse button held at the hover point (hypothesis: the size keys work only during a drag); a switch all the same -> Properties fields logged, step 'unsupported' with the reason; R-24 (TW-159 rest c, run 26: the keys kept the Freeform tool, but no shot and no size were recorded): the reference's mouse button goes down once at the first key and stays down for all five keys, the size is read from the Properties panel field on both sides (`tool_size_read`: reference = the panel's Edit fields by WM_GETTEXT, no input; Firepixel = ui_find right of the 'Größe' label) and the canvas shot is taken while the button is still held; `release_mouse` in the cleanup; 'unsupported' only when the field is unreadable",
+   "orig_tool_keys": "held",
+   "shot": {
+    "area": "canvas"
+   },
+   "cleanup": [
+    {
+     "release_mouse": true
+    }
+   ]
   },
   {
    "id": "05_reshape_area_result",

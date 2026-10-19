@@ -774,6 +774,31 @@ def selection_highlight(a: Image.Image, b: Image.Image, box, want=None, thr: int
     return out
 
 
+# R-24 (TW-146 rest): advance widths of Arial (the reset text face) in 1/1000 em; other characters 556
+ARIAL_ADVANCE = {" ": 278, "!": 278, ",": 278, ".": 278, "-": 333, ":": 278, ";": 278, "?": 556,
+                 **{c: 556 for c in "0123456789"},
+                 **dict(zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ", (667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833,
+                                                          722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611))),
+                 **dict(zip("abcdefghijklmnopqrstuvwxyz", (556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833,
+                                                          556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500)))}
+
+
+def glyph_spans(text, left, right, size=None):
+    """R-24 (TW-146 rest): [(x_from, x_to), ...] per character of a one-line text whose box runs from `left` to
+    `right` (document px): the advance widths (ARIAL_ADVANCE) scaled by the size (pt = px at 72 dpi), or by the box
+    width when no size is known or the sized width is off by more than 15 %. Returns (spans, scale px per unit)."""
+    adv = [ARIAL_ADVANCE.get(c, 556) for c in str(text or "")] or [556]
+    total, width = float(sum(adv)), max(1.0, float(right) - float(left))
+    scale = float(size) / 1000.0 if size else 0.0
+    if not scale or abs(total * scale - width) > 0.15 * width:
+        scale = width / total
+    out, x = [], float(left)
+    for v in adv:
+        out.append((x, x + v * scale))
+        x += v * scale
+    return out, scale
+
+
 def text_entry_selfcheck() -> str:
     """R-20: offline check of the editor read-back parser, the typed-text check and the highlight measurement
     (run by --dry-run)."""
@@ -852,6 +877,17 @@ def size_number(v) -> float | None:
     return float(m.group(0)) if m else None
 
 
+def tail_size(runs, tail: str):
+    """R-24 (TW-146 rest): the size (number) of the run holding the last character of `tail`, None when unknown."""
+    try:
+        text = "".join(str(c) for c, _ in runs)
+        if not runs or not tail or not text.endswith(tail):
+            return None
+        return size_number(runs[-1][1])
+    except (TypeError, ValueError):
+        return None
+
+
 def runs_size_ok(runs, tail: str, size) -> bool:
     """R-21 (TW-146 c): every run touching the last characters `tail` of the text carries `size` ("72" = "72pt")."""
     want = size_number(size)
@@ -896,6 +932,33 @@ def step_time_limit(base, substitutes: int, per_sub: float = 2.0) -> float:
     """R-21 (TW-150, run 23 xs-shortcuts/08 94.1 s on the reference: a Pointer tool click after every tool letter):
     the per-step slow limit grows by `per_sub` seconds for every reference-side substitute of the step."""
     return float(base) + float(per_sub) * max(0, int(substitutes or 0))
+
+
+def r24_selfcheck() -> str:
+    """R-24: offline check of the glyph boxes (TW-146 rest, run 26 tool-text/13: 72 pt "Abc 123" in 100..361, the
+    caret landed at 245 = before "1"), the tail size and the tool name check's ui_map entries (TW-164)."""
+    bad = []
+    spans, _ = glyph_spans("Abc 123", 100, 361, 72)
+    if not (240 <= spans[4][0] <= 248 and 355 <= spans[-1][1] <= 368):
+        bad.append(f"glyphs 72 pt {spans[4]}..{spans[-1]}")
+    spans, _ = glyph_spans("Abc 123", 100, 145, 12)
+    if not (122 <= spans[4][0] <= 127 and 142 <= spans[-1][1] <= 147):
+        bad.append(f"glyphs 12 pt {spans[4]}..{spans[-1]}")
+    if glyph_spans("Abc 123", 100, 361, 12)[1] < 0.07:
+        bad.append("size off by more than 15 % not scaled to the box")
+    if tail_size([["Abc ", "12pt"], ["123", "72pt"]], "123") != 72.0 or tail_size([["ERROR", "x"]], "123") is not None:
+        bad.append("tail_size")
+    try:
+        tools = json.loads((HERE / "ui_map.json").read_text(encoding="utf-8")).get("tools") or {}
+        ff = tools.get("tool.freeform") or {}
+        if ff.get("orig_index") != 0 or not ff.get("flyout") or not ff.get("orig_name"):
+            bad.append(f"tool.freeform {ff}")
+        idx = [tools.get(t, {}).get("orig_index") for t in ("tool.freeform", "tool.reshapeArea", "tool.pathScrubAdd", "tool.pathScrubSubtract")]
+        if idx != [0, 1, 2, 3]:
+            bad.append(f"freeform flyout order {idx}")
+    except (OSError, ValueError) as e:
+        bad.append(f"ui_map {e}")
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
 
 
 def r21_selfcheck() -> str:
@@ -970,12 +1033,76 @@ def screen_mode_verdict(mode, want) -> str:
     return "MISMATCH"
 
 
+def rect4(v):
+    """R-24: [l, t, r, b] of a host rect (list or {left, top, right, bottom}); None when not readable."""
+    if isinstance(v, dict):
+        v = [v.get("left", v.get("x1")), v.get("top", v.get("y1")), v.get("right", v.get("x2")), v.get("bottom", v.get("y2"))]
+    try:
+        out = [float(x) for x in list(v)[:4]]
+        return out if len(out) == 4 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def screen_mode_from_window(win: dict):
+    """R-24 (TW-163, run 26 `toolbox/13`: the screen-mode buttons read "full screen with menus" in Standard): the
+    mode from the main window against the monitor - the primary source. Not covering the monitor -> "standard";
+    covering it with a visible caption (client area starts below the window top) -> "standard" too (a maximised
+    standard window); covering it without a visible caption -> a full-screen mode: the document view starting at the
+    client top -> "full" (no menu bar, no panels), more than 20 px below it -> "full_menus", view unknown -> "full?".
+    Returns (mode or None, reason)."""
+    if not isinstance(win, dict) or win.get("error") or win.get("covers_monitor") is None:
+        return None, "window not readable"
+    if not win["covers_monitor"]:
+        return "standard", "window does not cover the monitor"
+    w, c = rect4(win.get("rect")), rect4(win.get("client"))
+    if w and c and c[1] - w[1] >= 15:
+        return "standard", f"window covers the monitor with a visible caption (client top {c[1]:.0f} > window top {w[1]:.0f})"
+    v = rect4(win.get("view"))
+    top = c[1] if c else (w[1] if w else 0.0)
+    if v is None:
+        return "full?", "window covers the monitor without a caption, view unknown"
+    if v[1] - top <= 20:
+        return "full", f"window covers the monitor without a caption, view at the client top ({v[1]:.0f})"
+    return "full_menus", f"window covers the monitor without a caption, view {v[1] - top:.0f} px below the client top (menus)"
+
+
+def size_digits(text):
+    """R-24 (TW-159 rest c): the number of a size field's text ("72", "72 px", "12pt") or None."""
+    m = re.search(r"-?\d+(?:[.,]\d+)?", str(text or ""))
+    return m.group(0).replace(",", ".") if m else None
+
+
+def pick_size_field(fields, want_rel=None):
+    """R-24 (TW-159 rest c): of the fields [{text, rel: [l, t, r, b]}] the numeric one (text is a number with an
+    optional px / pt / %) nearest to `want_rel` [x, y], else the first from the left (then the top); None when no
+    field is numeric."""
+    nums = [f for f in fields or [] if re.fullmatch(r"\s*-?\d+(?:[.,]\d+)?\s*(?:px|pt|%)?\s*", str(f.get("text") or ""))]
+    if not nums:
+        return None
+    if want_rel:
+        return min(nums, key=lambda f: abs((f["rel"][0] + f["rel"][2]) / 2 - want_rel[0])
+                   + abs((f["rel"][1] + f["rel"][3]) / 2 - want_rel[1]))
+    return min(nums, key=lambda f: (f["rel"][0], f["rel"][1]))
+
+
 def screen_mode_selfcheck() -> str:
     """R-23 (TW-159 a): offline check of screen_button_pressed / screen_mode_verdict, run by --dry-run."""
     cases = [(screen_button_pressed([120, 200, 201]), "standard"), (screen_button_pressed([200, 120, 201]), "full_menus"),
              (screen_button_pressed([200, 201, 120]), "full"), (screen_button_pressed([200, 201, 199]), None),
              (screen_button_pressed([100, 150, 200]), None), (screen_mode_verdict("full?", "full_menus"), "ok"),
              (screen_mode_verdict("full", "standard"), "MISMATCH"), (screen_mode_verdict(None, "full"), "unknown")]
+    # R-24 (TW-163): the window cases of run 26 (standard 1600 x 1000; full with menus: view at 89; full: view at 0)
+    mon = {"covers_monitor": True, "rect": [0, 0, 1800, 1130], "client": [0, 0, 1800, 1130]}
+    cases += [(screen_mode_from_window({"covers_monitor": False, "rect": [0, 0, 1600, 1000]})[0], "standard"),
+              (screen_mode_from_window({**mon, "view": [0, 89, 1800, 1110]})[0], "full_menus"),
+              (screen_mode_from_window({**mon, "view": [0, 0, 1800, 1130]})[0], "full"),
+              (screen_mode_from_window({**mon, "client": [0, 30, 1800, 1130], "view": [0, 120, 1800, 1110]})[0], "standard"),
+              (screen_mode_from_window({**mon})[0], "full?"), (screen_mode_from_window({"error": "x"})[0], None)]
+    # R-24 (TW-159 rest c): size field pick
+    ff = [{"text": "Freiform", "rel": [0, 0, 50, 13]}, {"text": "72", "rel": [60, 0, 80, 13]}, {"text": "10 px", "rel": [200, 0, 220, 13]}]
+    cases += [(size_digits((pick_size_field(ff) or {}).get("text")), "72"),
+              (size_digits((pick_size_field(ff, [210, 6]) or {}).get("text")), "10"), (pick_size_field(ff[:1]), None)]
     bad = [f"case {i}: {got} (want {want})" for i, (got, want) in enumerate(cases) if got != want]
     return "ok" if not bad else "FAILED: " + "; ".join(bad)
 
@@ -1915,8 +2042,8 @@ class OrigSide(Side):
         pressed one differs from the other two in mean brightness (`orig.screen_button_diff`, default 10 levels);
         (2) window: style, caption, IsZoomed, window / client rect against the monitor and its work area, the document
         view's rect (a window that covers the whole monitor = a full-screen mode); (3) script: `fw` properties whose
-        name holds "screen" or "full". Mode: the toolbox when decisive, else the window ("full?" when it covers the
-        monitor), else None. {"mode", "standard" (True / False / None), "source", "toolbox", "window", "script"}."""
+        name holds "screen" or "full". Mode (R-24, TW-163): the window first (screen_mode_from_window), the toolbox
+        buttons only when the window is not readable or cannot name the full-screen mode, else None. {"mode", "standard" (True / False / None), "source", "toolbox", "window", "script"}."""
         import ctypes
         import ctypes.wintypes as wt
         out = {"mode": None, "standard": None, "source": "none"}
@@ -1975,10 +2102,21 @@ class OrigSide(Side):
             out["script"] = str(self.jsf_value(SCREEN_MODE_JS, why="screen mode read-back") or "")[:300]
         except OrigError as e:
             out["script"] = f"error {str(e)[:80]}"
-        if tb.get("pressed"):
-            out.update(mode=tb["pressed"], source="toolbox button")
-        elif win.get("covers_monitor"):
-            out.update(mode="full?", source="window covers the monitor")
+        # R-24 (TW-163, run 26: the buttons read "full screen with menus" (181.2, 167.3, 180.2) in Standard): the
+        # window against the monitor is the primary source (screen_mode_from_window); the buttons are secondary
+        # evidence - used only when the window is not readable, or to name the full-screen mode when the window
+        # cannot ("full?"); a disagreement is logged in `buttons_agree`
+        wmode, wwhy = screen_mode_from_window(win)
+        out["window_mode"] = {"mode": wmode, "why": wwhy}
+        pressed = tb.get("pressed")
+        if wmode == "full?" and pressed in ("full_menus", "full"):
+            out.update(mode=pressed, source=f"window ({wwhy}) + toolbox button")
+        elif wmode:
+            out.update(mode=wmode, source=f"window ({wwhy})")
+        elif pressed:
+            out.update(mode=pressed, source="toolbox button (window not readable)")
+        if pressed and out["mode"]:
+            out["buttons_agree"] = pressed == out["mode"] or (out["mode"] == "full?" and pressed != "standard")
         if out["mode"]:
             out["standard"] = out["mode"] == "standard"
         return out
@@ -2022,10 +2160,12 @@ class OrigSide(Side):
         def short(x):
             # R-23 (TW-159 a): mode, source and the decisive evidence per read-back
             return {"mode": x.get("mode"), "source": x.get("source"), "buttons": (x.get("toolbox") or {}).get("means"),
-                    "covers_monitor": (x.get("window") or {}).get("covers_monitor")}
+                    "covers_monitor": (x.get("window") or {}).get("covers_monitor"),
+                    "buttons_agree": x.get("buttons_agree")}
         self.r.log(f"  orig screen mode standard: before {short(rec['before'])} | " + "; ".join(
             f"{t.get('how')}: {short(t['state']) if t.get('state') else t.get('error')}" for t in rec["tries"]))
         # R-23: only a decisive read-back of another mode is an error (None = not decidable, logged above)
+        # R-24 (TW-163): `standard` follows the window test first, so buttons alone no longer raise this
         if st.get("standard") is False:
             self.runner_error(f"screen mode: not standard after the reset ({short(st)})")
 
@@ -3020,61 +3160,142 @@ class OrigSide(Side):
     def text_size_on_selection(self, a, target, value):
         """R-21 (TW-146 c, TW-145; run 23 tool-text/11: the 72 set in the size field did not reach the selected
         "123", the shot showed the caret and no highlight): the drag selection is checked again (highlight; lost ->
-        the drag once more), the size field clicked once, the size typed with Enter; the selected text's runs read
-        back. The tail not at the size -> selection checked again and the size by the Text menu (config
-        `orig.text_size_menu`, default "Text > Größe > {size}"), read back once more. Value `text_size`, log
-        `orig text size on the selection: …`, runner error when the size is not on the characters."""
+        the drag once more), the size applied, the selected text's runs read back. R-24 (TW-146 rest, run 26: the
+        field click dropped the editor selection and the 72 went to the text tool's default - the next text of the
+        unit came out at 72 pt -, and Text > Size > 72 after a new drag did not reach the characters either): the
+        size is tried by routes in order (config `orig.text_size_routes`, default field, keys, dialog; `menu` = the
+        R-21 Text menu entry `orig.text_size_menu`), each preceded by the highlight check (lost -> the drag once
+        more) and followed by the runs read-back; the first route that puts the size on the tail wins:
+        - `field`: the Properties panel size field clicked, the size typed with Enter (R-21);
+        - `keys`: keyboard focus back to the document view (host `view_focus`, no click), then Text > Size > Larger
+          (Ctrl+Shift+Period, +1 pt on the selection, re 48 §1.6) or Smaller (Ctrl+Shift+Comma) as often as the tail's
+          size is away from the wanted one (at most `orig.text_size_keys_max`, default 100);
+        - `dialog`: the Text Editor (Ctrl+Shift+E) with the selection kept; its numeric field holding the tail's
+          size set to the wanted size (WM_SETTEXT), OK; no dialog -> logged (the key is not in every shortcut set).
+        A failed `field` / `menu` route may have set the text tool's default size: the unit's text tool reset runs
+        again with the next test document (`pending_text_defaults`). Value `text_size` {routes, method, runs_*},
+        log `orig text size on the selection: … (ok by <method> / NOT ON …)`, runner error when no route works."""
         ts = self.last_text_select
         tail, size = str(ts.get("expected") or ""), str(value)
-        rec = {"target": target, "value": size, "tail": tail}
+        want = size_number(size)
+        rec = {"target": target, "value": size, "tail": tail, "routes": []}
         steps = []
-        hl = rec["selection_before"] = self.selection_still_there()
-        if not hl.get("ok"):
-            steps.append(f"selection gone ({hl.get('changed_px')} px) - drag once more")
-            self.text_select_drag(ts["a"])
+        routes = [str(r) for r in (self.r.cfg["orig"].get("text_size_routes") or ["field", "keys", "dialog"])]
+        runs = rec["runs_before"] = self.text_runs_sizes()
+        ok, method = runs_size_ok(runs, tail, size), None
+        if ok:
+            method = "already"
+        for route in ([] if ok else routes):
+            r = {"route": route}
+            if route == "keys":
+                try:
+                    r["view_focus"] = (self.h.call("view_focus") or {}).get("ok")
+                except OrigError as e:
+                    r["view_focus"] = f"error {str(e)[:60]}"
             ts = self.last_text_select
-            # R-23 (TW-146 rest): the new drag's highlight checked once more right before the field
-            hl = rec["selection_after_redrag"] = self.selection_still_there()
-            steps.append(f"after the new drag {hl.get('changed_px')} px, cover {hl.get('cover')}")
-        else:
-            steps.append(f"selection still highlighted ({hl.get('changed_px')} px, cover {hl.get('cover')})")
-        rec["runs_before"] = self.text_runs_sizes()
-        pt, _info = self.resolve(target)
-        self.o.focus()
-        self.click_at(pt)
-        time.sleep(0.15)
-        self.h.call("key", combo="ctrl+a")
-        self.h.call("type", text=size)
-        self.h.call("key", combo="enter")
-        time.sleep(0.4)
-        runs = rec["runs_field"] = self.text_runs_sizes()
-        ok = runs_size_ok(runs, tail, size)
-        steps.append(f"size field click, {size} + Enter -> runs {runs}")
-        if not ok:
-            menu = str(self.r.cfg["orig"].get("text_size_menu", "Text > Größe > {size}")).replace(
-                "{size}", re.sub(r"\.0$", "", str(size_number(size) or size)))
-            hl2 = rec["selection_before_menu"] = self.selection_still_there()
-            if not hl2.get("ok"):
-                steps.append(f"selection gone after the field ({hl2.get('changed_px')} px) - drag once more")
+            hl = r["selection"] = self.selection_still_there()
+            if not hl.get("ok"):
                 self.text_select_drag(ts["a"])
-                hl3 = rec["selection_before_menu_2"] = self.selection_still_there()
-                steps.append(f"after the new drag {hl3.get('changed_px')} px, cover {hl3.get('cover')}")
+                ts = self.last_text_select
+                hl = r["selection_after_redrag"] = self.selection_still_there()
+                steps.append(f"{route}: selection gone - new drag {hl.get('changed_px')} px, cover {hl.get('cover')}")
             else:
-                steps.append(f"selection still highlighted before the menu ({hl2.get('changed_px')} px)")
+                steps.append(f"{route}: selection still highlighted ({hl.get('changed_px')} px, cover {hl.get('cover')})")
             try:
-                self.h.call("menu", path=split_path(menu), final="invoke", bar=self.r.ui_map["menu_bar"]["orig"], timeout=40)
-                time.sleep(0.4)
-                runs = rec["runs_menu"] = self.text_runs_sizes()
-                ok = runs_size_ok(runs, tail, size)
-                steps.append(f"menu {menu} -> runs {runs}")
-            except OrigError as e:
-                steps.append(f"menu {menu}: {str(e)[:80]}")
-        rec.update(ok=ok, how=steps)
+                if route == "field":
+                    pt, _info = self.resolve(target)
+                    self.o.focus()
+                    self.click_at(pt)
+                    time.sleep(0.15)
+                    self.h.call("key", combo="ctrl+a")
+                    self.h.call("type", text=size)
+                    self.h.call("key", combo="enter")
+                    r["how"] = f"size field click, {size} + Enter"
+                elif route == "menu":
+                    menu = str(self.r.cfg["orig"].get("text_size_menu", "Text > Größe > {size}")).replace(
+                        "{size}", re.sub(r"\.0$", "", str(want or size)))
+                    self.h.call("menu", path=split_path(menu), final="invoke", bar=self.r.ui_map["menu_bar"]["orig"], timeout=40)
+                    r["how"] = f"menu {menu}"
+                elif route == "keys":
+                    cur = tail_size(runs, tail)
+                    if cur is None or want is None:
+                        raise Unsupported(f"tail size unknown (runs {runs})")
+                    n = int(round(want - cur))
+                    cap = int(self.r.cfg["orig"].get("text_size_keys_max", 100))
+                    if not n or abs(n) > cap:
+                        raise Unsupported(f"{abs(n)} key presses ({cur} -> {want}) outside 1..{cap}")
+                    combo = "ctrl+shift+period" if n > 0 else "ctrl+shift+comma"
+                    for _ in range(abs(n)):
+                        self.h.call("key", combo=combo)
+                        time.sleep(0.03)
+                    r["how"] = f"{combo} x{abs(n)} ({cur:g} -> {want:g})"
+                elif route == "dialog":
+                    r["how"] = self.text_editor_dialog_size(runs, tail, want)
+                else:
+                    raise Unsupported(f"unknown route {route}")
+            except (OrigError, Unmapped, Unsupported) as e:
+                r["error"] = str(e)[:120]
+                steps.append(f"{route}: {r['error']}")
+                rec["routes"].append(r)
+                continue
+            time.sleep(0.4)
+            runs = r["runs"] = self.text_runs_sizes()
+            ok = r["ok"] = runs_size_ok(runs, tail, size)
+            steps.append(f"{route}: {r.get('how')} -> runs {runs}")
+            rec["routes"].append(r)
+            if route in ("field", "menu") and not ok:
+                # R-24: the size most likely went to the text tool's default (run 26: the next text came out at 72 pt)
+                self.pending_text_defaults = True
+                rec["tool_reset_pending"] = True
+            if ok:
+                method = route
+                break
+        rec.update(ok=ok, method=method, how=steps, runs_after=runs)
+        # R-21 key kept for the evaluation: runs after the field (or after the winning route)
+        rec["runs_field"] = next((x.get("runs") for x in rec["routes"] if x["route"] == "field"), runs)
         self.values.append({"text_size": rec})
-        self.values.append({"set_field": str(target), "commit": "enter", "text": size})
-        self.r.log(f"  orig text size on the selection: {'; '.join(steps)} ({'ok' if ok else 'NOT ON ' + repr(tail)})")
+        self.values.append({"set_field": str(target), "commit": "enter", "text": size, "method": method})
+        self.r.log(f"  orig text size on the selection: {'; '.join(steps)} "
+                   f"({'ok by ' + str(method) if ok else 'NOT ON ' + repr(tail)})"
+                   + ("; text tool reset pending for the next document" if rec.get("tool_reset_pending") else ""))
         if not ok:
-            self.runner_error(f"text size {size} not on the selected {tail!r} (runs {runs})")
+            self.runner_error(f"text size {size} not on the selected {tail!r} by {', '.join(routes)} (runs {runs})")
+
+    def text_editor_dialog_size(self, runs, tail, want) -> str:
+        """R-24 (TW-146 rest): the Text Editor dialog (Ctrl+Shift+E) with the editor selection kept: waited for up to
+        1.5 s; its Edit / ComboBox child whose number equals the tail's size (else the first numeric one) set to the
+        wanted size (WM_SETTEXT), then OK. Returns the description; raises Unsupported when no dialog opens."""
+        cur = tail_size(runs, tail)
+        if want is None:
+            raise Unsupported("no wanted size")
+        self.h.call("key", combo="ctrl+shift+e")
+        dlg = None
+        for _ in range(10):
+            time.sleep(0.15)
+            ds = self.h.list("dialog_kids")
+            if ds:
+                dlg = ds[0]
+                break
+        if not dlg:
+            raise Unsupported("Ctrl+Shift+E opened no Text Editor dialog (the key is not in this shortcut set)")
+        fields = []
+        for k in dlg.get("kids") or []:
+            if str(k.get("class")) in ("Edit", "ComboBox"):
+                try:
+                    t = str(self.h.call("get_text", hwnd=k["hwnd"], timeout=8) or "")
+                except OrigError:
+                    t = ""
+                fields.append((k, t))
+        nums = [(k, t) for k, t in fields if size_number(t) is not None and re.fullmatch(r"\s*\d+(?:[.,]\d+)?\s*(?:pt)?\s*", t)]
+        pick = next(((k, t) for k, t in nums if cur is not None and size_number(t) == cur), nums[0] if nums else None)
+        if not pick:
+            self.h.call("dialog_close", mode="cancel")
+            raise Unsupported(f"Text Editor '{dlg.get('title')}': no numeric size field ({[t for _, t in fields][:8]})")
+        self.h.call("set_text", hwnd=pick[0]["hwnd"], text=re.sub(r"\.0$", "", str(want)))
+        time.sleep(0.2)
+        self.h.call("dialog_close", mode="ok")
+        time.sleep(0.4)
+        return f"Text Editor '{dlg.get('title')}': size field {pick[1]!r} -> {want:g}, OK"
 
     def objects_settled(self, why: str, want_min=None) -> dict:
         """R-23 (TW-146 rest, run 25 tool-text/07: the second text lost its "H" and the click retry found no editor
@@ -3177,6 +3398,88 @@ class OrigSide(Side):
             self.runner_error(f"pointer tool not selectable (tools column slot / flyout / script: {tool})")
         return tool
 
+    def release_mouse(self):
+        """R-24 (TW-159 rest c): `{"release_mouse": true}` - a button held by the tool keys (`orig_tool_keys: "held"`)
+        released after the step's shot (step cleanup)."""
+        was = bool(getattr(self, "held", None))
+        self.release_held()
+        self.tool_keys_held_at = None
+        self.r.log(f"  orig mouse button {'released' if was else 'not held'}")
+
+    def tool_size_read(self, a):
+        """R-24 (TW-159 rest c, run 26 `tool-path-reshape/04`: `record_ui inspector.fields` returned only the title):
+        `{"tool_size_read": {"label": "Größe", "orig_rel": [x, y]}}` - the tool's size field in the Properties panel
+        read without input (the mouse button may still be held): the panel's Edit / ComboBox children by WM_GETTEXT
+        (host `kids`, `get_text`; no menu, no click, no script). The size = the numeric field nearest to `orig_rel`
+        (panel-relative, optional), else the first numeric field from the left (pick_size_field). Value `tool_size`
+        {size, fields, held}, log `orig tool size read: ...`; no readable numeric field -> step `unsupported`."""
+        rec = {"held": bool(getattr(self, "held", None))}
+        fields = []
+        try:
+            title = self.panel_info("properties").get("title") or "properties"
+            p = self.h.call("panel", name=title)
+            pal = p.get("palette") or p.get("rect")
+            for k in self.h.list("kids", hwnd=p["hwnd"]):
+                if str(k.get("class")) not in ("Edit", "ComboBox", "RichEdit20W", "RichEdit20A"):
+                    continue
+                try:
+                    txt = str(self.h.call("get_text", hwnd=k["hwnd"], timeout=8) or "")
+                except OrigError as e:
+                    txt = f"? {str(e)[:40]}"
+                r = k.get("rect") or [0, 0, 0, 0]
+                fields.append({"class": k.get("class"), "text": txt[:40],
+                               "rel": [r[0] - pal[0], r[1] - pal[1], r[2] - pal[0], r[3] - pal[1]]})
+        except (OrigError, KeyError, TypeError) as e:
+            rec["error"] = str(e)[:120]
+        rec["fields"] = fields
+        pick = pick_size_field(fields, a.get("orig_rel"))
+        rec["size"] = size_digits(pick["text"]) if pick else None
+        rec["source"] = f"Properties panel {pick['class']} at {pick['rel'][:2]}" if pick else "no numeric field"
+        self.values.append({"tool_size": rec})
+        self.r.log(f"  orig tool size read{' (mouse button held)' if rec['held'] else ''}: size {rec['size']} from "
+                   f"{rec['source']}; fields {[(f['text'], f['rel'][:2]) for f in fields]}"
+                   f"{'; ' + rec['error'] if rec.get('error') else ''}")
+        if pick is None:
+            raise Unsupported("orig: the tool's size field in the Properties panel is not readable "
+                              f"({len(fields)} edit fields, none numeric{'; ' + rec['error'] if rec.get('error') else ''})")
+        return rec
+
+    def tool_name_check(self, t, k):
+        """R-24 (TW-164, runs 24-26 `tool-path-reshape/12_inspector_heads_freeform`: the Freeform slot click selected
+        the Path Scrubber the slot still showed from steps 06 / 07): the active tool read back (`fw.activeTool`) after
+        a `tool` action whose ui_map entry has `orig_name` (substring, case-insensitive). Wrong tool -> the entry's
+        flyout once more (`flyout` / `orig_index`), then by script (`fw.activeTool = orig_name`). Value
+        `tool_check`, log `orig tool check <tool>: ...`, runner error when the tool stays wrong."""
+        want = str(k["orig_name"])
+        got = self.active_tool()
+        steps = [f"after the {'flyout' if 'flyout' in k else 'slot'}: {got}"]
+        if want.lower() not in got.lower() and k.get("flyout") is not None:
+            try:
+                self.reset_light()
+                self.choose({"target": k["flyout"], "item": k.get("item", "")}, {"orig_index": k["orig_index"]})
+                time.sleep(0.3)
+            except (OrigError, Unmapped, Unsupported) as e:
+                steps.append(f"flyout error {str(e)[:60]}")
+                try:
+                    self.h.call("close_menus")
+                except OrigError:
+                    pass
+            got = self.active_tool()
+            steps.append(f"flyout entry {k['orig_index']} again: {got}")
+        if want.lower() not in got.lower():
+            try:
+                self.o.jsf(f"fw.activeTool = {js_str(want)};", why=f"tool {t}")
+            except OrigError as e:
+                steps.append(f"script error {str(e)[:60]}")
+            got = self.active_tool()
+            steps.append(f"script: {got}")
+        ok = want.lower() in got.lower()
+        if hasattr(self, "values"):
+            self.values.append({"tool_check": {"tool": t, "want": want, "got": got, "ok": ok, "how": steps}})
+        self.r.log(f"  orig tool check {t}: want {want!r}; {'; '.join(steps)} ({'ok' if ok else 'WRONG TOOL'})")
+        if not ok:
+            self.runner_error(f"tool {t}: the reference shows {got!r}, not {want!r}")
+
     def key_substitute(self, combo, nudge=None) -> str | None:
         """R-19 (TW-140): a plain Delete / Backspace / arrow / Escape on the reference side is replaced (see
         key_substitute_plan): Delete -> Edit > Clear (menu; `deleteSelection(false)` when the menu fails or removes
@@ -3213,18 +3516,24 @@ class OrigSide(Side):
             held = str(getattr(self, "tool_keys_mode", "") or "").lower() == "held"
             hrec = {}
             if held:
-                pt = cursor_pos()
-                hrec = {"held_at": list(pt) if pt else None}
-                self.o.focus()
-                if pt:
-                    self.h.call("down", x=pt[0], y=pt[1])
-                try:
-                    time.sleep(0.1)
-                    self.h.call("key", combo=combo)
-                    time.sleep(0.15)
-                finally:
+                # R-24 (TW-159 rest c, run 26: the keys kept the Freeform tool, but the button was released after
+                # every key and the step had nothing to show): the button goes down once at the first key and stays
+                # down (`held`) for the following keys (the plain `]` too), the size field read (`tool_size_read`)
+                # and the canvas shot; released by `release_mouse` (step cleanup) or the next reset
+                if getattr(self, "held", None) and getattr(self, "tool_keys_held_at", None):
+                    pt = self.tool_keys_held_at
+                    hrec = {"held_at": list(pt), "already_down": True}
+                else:
+                    pt = cursor_pos()
+                    hrec = {"held_at": list(pt) if pt else None}
+                    self.o.focus()
                     if pt:
-                        self.h.call("up", x=pt[0], y=pt[1])
+                        self.h.call("down", x=pt[0], y=pt[1])
+                        self.held = "left"
+                        self.tool_keys_held_at = pt
+                time.sleep(0.1)
+                self.h.call("key", combo=combo)
+                time.sleep(0.15)
             else:
                 self.key(combo)
             time.sleep(0.2)
@@ -3387,8 +3696,8 @@ class OrigSide(Side):
                 "try{if(fw.selection.length==1&&ok(fw.selection[0]))best=fw.selection[0];}catch(x){}"
                 "if(!best){for(var l=0;l<d.layers.length;l++){var e=d.layers[l].frames[d.currentFrameNum].elements;"
                 "for(var i=0;i<e.length;i++)if(ok(e[i]))best=e[i];}}"
-                "if(!best)return 'none';var p=best.pixelRect;"
-                "return p.left+','+p.top+','+p.right+','+p.bottom+'|'+String(best.textChars).length;})()")
+                "if(!best)return 'none';var p=best.pixelRect,z='';try{z=best.textRuns.initialAttrs.size;}catch(x){}"
+                "return p.left+','+p.top+','+p.right+','+p.bottom+'|'+String(best.textChars).length+'|'+z;})()")
         rec = {"text": want_text, "chars": n}
         got = str(self.jsf_value(code, why="text selection") or "none")
         if "|" not in got:
@@ -3396,7 +3705,7 @@ class OrigSide(Side):
             self.values.append({"text_select": rec})
             self.runner_error(f"text selection by drag: {rec['error']}")
             return
-        box, length = got.split("|", 1)
+        box, length, size_txt = (got.split("|") + ["", ""])[:3]
         left, top, right, bottom = (float(v) for v in box.split(","))
         length = max(1, int(length))
         frac = float(a["start_frac"]) if a.get("start_frac") is not None else max(0.0, (length - n) / length)
@@ -3404,6 +3713,19 @@ class OrigSide(Side):
         x0, x1 = right - 1, left + (right - left) * frac
         rec.update(rect=[left, top, right, bottom], length=length, start_frac=round(frac, 3),
                    drag=[[round(x0, 1), round(y, 1)], [round(x1, 1), round(y, 1)]])
+        # R-24 (TW-146 rest, run 26 tool-text/13: on the 72 pt text the drag 360 -> 249 from the right end left only a
+        # caret column at 245, cover 0.0): the glyph boxes of the characters from the text (advance widths of
+        # ARIAL_ADVANCE scaled by the run size, or by the pixelRect width when the two disagree), the drag from 2 px
+        # inside the first selected glyph to 2 px past the last one (left to right); first plan for a tall line
+        # (height >= `glyph_min_px`, default 30), else the fourth try after the three right-to-left ones
+        spans, gscale = glyph_spans(want_text or "x" * length, left, right, size_number(size_txt))
+        if n and len(spans) >= n:
+            g0, g1 = spans[len(spans) - n][0], spans[-1][1]
+        else:
+            g0, g1 = x1, right
+        gx0, gx1 = g0 + 2, g1 + 2
+        rec["glyphs"] = {"size": size_txt or None, "scale": round(gscale, 4), "span": [round(g0, 1), round(g1, 1)],
+                         "drag": [[round(gx0, 1), round(y, 1)], [round(gx1, 1), round(y, 1)]]}
         expected = rec["expected"] = want_text[-n:] if want_text and n else None
         # R-20 (TW-146, run 22 tool-text/07: the Ctrl+C read-back typed U+0003 into the text): no key into the editor -
         # the text's box (2 px margin) is grabbed before and after the drag, the changed pixels must cover the
@@ -3411,6 +3733,7 @@ class OrigSide(Side):
         p0, p1 = self.doc_to_screen(left - 2, top - 2), self.doc_to_screen(right + 2, bottom + 2)
         sbox = [p0[0], p0[1], max(p1[0], p0[0] + 1), max(p1[1], p0[1] + 1)]
         wx = [self.doc_to_screen(x1, y)[0] - sbox[0], self.doc_to_screen(x0, y)[0] - sbox[0]]
+        gwx = [self.doc_to_screen(g0, y)[0] - sbox[0], self.doc_to_screen(g1, y)[0] - sbox[0]]
         tmp = Path(self.r.cfg["tmp_dir"])
         keep = getattr(self, "last_canvas", None)
         hl, tries = {}, 0
@@ -3420,28 +3743,37 @@ class OrigSide(Side):
         # plain, click at the end + pause, pause again; every try logged
         pause = int(self.r.cfg["orig"].get("text_drag_pause_ms", 100))
         trail = []
-        for tries, steps, pms, click in ((1, 20, 0, False), (2, 40, pause, True), (3, 40, pause, False)):
+        plain = [(20, 0, False, "end"), (40, pause, True, "end"), (40, pause, False, "end")]
+        glyph = [(20, 0, False, "glyphs"), (40, pause, True, "glyphs")]
+        tall = (bottom - top) >= float(a.get("glyph_min_px", 30)) or bool(a.get("glyphs"))
+        plans = glyph + plain if tall else plain + glyph[:1]
+        rec["plan"] = "glyphs first" if tall else "end first, glyphs last"
+        used_wx = wx
+        for tries, (steps, pms, click, how) in enumerate(plans, 1):
+            fx, tx, cwx = (gx0, gx1, gwx) if how == "glyphs" else (x0, x1, wx)
             if click:
                 self.do("canvas_click", [x0, y], {})
                 time.sleep(0.3)
             self.grab(sbox, tmp / "orig_textsel_a.png")
             with Image.open(tmp / "orig_textsel_a.png") as im:
                 ia = im.convert("RGB")
-            self.do("canvas_drag", {"from": [x0, y], "to": [x1, y], "steps": steps, **({"pause_ms": pms} if pms else {})}, {})
+            self.do("canvas_drag", {"from": [fx, y], "to": [tx, y], "steps": steps, **({"pause_ms": pms} if pms else {})}, {})
             time.sleep(0.3)
             self.grab(sbox, tmp / "orig_textsel_b.png")
             with Image.open(tmp / "orig_textsel_b.png") as im:
                 ib = im.convert("RGB")
-            hl = selection_highlight(ia, ib, [0, 0, ia.size[0], ia.size[1]], wx)
+            hl = selection_highlight(ia, ib, [0, 0, ia.size[0], ia.size[1]], cwx)
             rec["highlight" if tries == 1 else f"highlight_{tries}"] = hl
-            trail.append(f"try {tries} ({steps} moves{', click first' if click else ''}{f', pause {pms} ms' if pms else ''}):"
-                         f" {hl.get('changed_px')} px, cover {hl.get('cover')}")
+            trail.append(f"try {tries} ({how} {round(fx, 1)} -> {round(tx, 1)}, {steps} moves{', click first' if click else ''}"
+                         f"{f', pause {pms} ms' if pms else ''}): {hl.get('changed_px')} px, cover {hl.get('cover')}")
+            used_wx = cwx
             if hl.get("ok"):
+                rec["method"] = how
                 break
         self.last_canvas = keep
         rec.update(tries=tries, screen_box=sbox, readback="highlight pixels (no clipboard)", ok=bool(hl.get("ok")))
         # R-21 (TW-146 c): kept for the check right before a text field (text_size_on_selection)
-        self.last_text_select = {"a": a, "sbox": sbox, "wx": wx, "img": ia, "expected": expected, "ok": rec["ok"]}
+        self.last_text_select = {"a": a, "sbox": sbox, "wx": used_wx, "img": ia, "expected": expected, "ok": rec["ok"]}
         self.values.append({"text_select": rec})
         self.substituted = (getattr(self, "substituted", None) or []) + ["mouse drag over the characters"]
         self.r.log(f"  orig key substitute: shift+left x{n} -> mouse drag over the characters "
@@ -4474,6 +4806,10 @@ class OrigSide(Side):
             self.screen_mode_standard()
         elif verb == "screen_mode_read":
             self.screen_mode_read(arg if isinstance(arg, str) else None)
+        elif verb == "tool_size_read":
+            self.tool_size_read(arg if isinstance(arg, dict) else {})
+        elif verb == "release_mouse":
+            self.release_mouse()
         elif verb == "key":
             for _ in range(int(act.get("repeat", 1) or 1)):
                 # R-19 (TW-140): plain Delete / arrow / Escape replaced by menu / script / mouse actions; no
@@ -4523,6 +4859,8 @@ class OrigSide(Side):
             else:
                 self.reset_light()
                 self.key(k)
+            if isinstance(k, dict) and k.get("orig_name"):
+                self.tool_name_check(t, k)
         elif verb == "panel":
             info = self.panel_info(arg)
             self.last_panel = arg  # R-5: list_row by image looks in the panel shown last
@@ -5276,6 +5614,51 @@ class FpSide(Side):
                         "try{return scratch();}catch(e0){var n=0;try{n=d.layers.length;}catch(e){}"
                         "for(var j=n-1;j>=0;j--){if(j===L)continue;try{d.currentLayerNum=j;var r=scratch();back();return r+'|layer='+j;}catch(e){}}"
                         "back();return 'error '+e0;}})()")
+
+    def release_mouse(self):
+        """R-24 (TW-159 rest c): `{"release_mouse": true}` - a held pointer button released (no-op when none)."""
+        if getattr(self, "held", None):
+            self.held = None
+            try:
+                self.inp([{"type": "up"}])
+            except BridgeError:
+                pass
+
+    def tool_size_read(self, a):
+        """R-24 (TW-159 rest c): `{"tool_size_read": {"label": "Größe"}}` - the tool's size field in the Properties
+        panel by `ui_find`: the label (`label`, default "Größe"; the lowest hit = the docked panel), then the numeric
+        texts right of it on its row (pick_size_field). Value `tool_size` {size, fields, label}, log
+        `fp tool size read: ...`; nothing numeric -> step `unsupported` with the reason."""
+        label = str(a.get("label") or "Größe")
+        rec, fields = {"label": label}, []
+        try:
+            hits = (self.call("ui_find", {"text": label, "exact": False, "limit": 50}) or {}).get("hits") or []
+            hits = [h for h in hits if h.get("rect")]
+            if not hits:
+                raise Unmapped(f"label {label!r} not found")
+            lab = max(hits, key=lambda h: h["rect"][1])
+            r = lab["rect"]
+            rec["label_rect"] = [round(v) for v in r]
+            got = (self.call("ui_find", {"region": [r[2] - 2, r[1] - 6, r[2] + 160, r[3] + 6], "limit": 40}) or {}).get("hits") or []
+            for h in got:
+                t = h.get("text") if h.get("text") is not None else h.get("value")
+                if t is None or not h.get("rect"):
+                    continue
+                hr = h["rect"]
+                fields.append({"class": h.get("role"), "text": str(t)[:40],
+                               "rel": [hr[0] - r[2], hr[1] - r[1], hr[2] - r[2], hr[3] - r[1]]})
+        except (BridgeError, Unmapped) as e:
+            rec["error"] = str(e)[:120]
+        rec["fields"] = fields
+        pick = pick_size_field(fields, None)
+        rec["size"] = size_digits(pick["text"]) if pick else None
+        self.values.append({"tool_size": rec})
+        self.r.log(f"  fp tool size read: size {rec['size']} right of {label!r}; fields "
+                   f"{[(f['text'], f['rel'][:2]) for f in fields]}{'; ' + rec['error'] if rec.get('error') else ''}")
+        if pick is None:
+            raise Unsupported(f"fp: the tool's size field right of {label!r} is not readable"
+                              f"{' (' + rec['error'] + ')' if rec.get('error') else ''}")
+        return rec
 
     def screen_mode_read(self, want=None):
         """R-23 (TW-159 a): `{"screen_mode_read": "<standard|full_menus|full>"}` - `ui_state.screen_mode` (0 / 1 / 2 in
@@ -6064,6 +6447,10 @@ class FpSide(Side):
             self.screen_mode_standard()
         elif verb == "screen_mode_read":
             self.screen_mode_read(arg if isinstance(arg, str) else None)
+        elif verb == "tool_size_read":
+            self.tool_size_read(arg if isinstance(arg, dict) else {})
+        elif verb == "release_mouse":
+            self.release_mouse()
         elif verb == "key":
             for _ in range(int(act.get("repeat", 1) or 1)):
                 self.key(arg)
@@ -7714,6 +8101,7 @@ def main(argv=None):
         print(f"R-21 self check: {r21_selfcheck()}")
         # R-23: offline check of the screen-mode read-back helpers
         print(f"screen mode self check: {screen_mode_selfcheck()}")
+        print(f"R-24 self check: {r24_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0

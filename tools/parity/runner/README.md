@@ -996,3 +996,58 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
     a new drag once more.
 - `--dry-run` prints `screen mode self check: ok`; the key substitute self check covers "Teilauswahl" and
   `nudge: false` -> `tool_key`.
+
+## R-24 additions (19.10.)
+
+- **Size on a drag selection (TW-146 rest, run 26 `tool-text/11`: the drag highlighted "123", but the size field
+  click dropped the editor selection and the 72 went to the text tool's default - the next text of the unit came
+  out at 72 pt -, and Text > Size > 72 after a new drag left the runs at 12 pt):** `text_size_on_selection` tries
+  routes in order (config `orig.text_size_routes`, default `["field", "keys", "dialog"]`; `"menu"` = the R-21 Text
+  menu entry `orig.text_size_menu`). Before each route the highlight is checked (lost -> the drag once more), after
+  it the selected text's runs are read back (`textRuns`); the first route that puts the size on the tail wins.
+  `field` = size field click, size + Enter; `keys` = keyboard focus back to the document view (host `view_focus`, no
+  click), then Text > Size > Larger / Smaller (Ctrl+Shift+Period / Comma, +-1 pt on the selection) as often as the
+  tail's size is away from the wanted one (`tail_size`; at most `orig.text_size_keys_max`, default 100 - 60 presses
+  for 12 -> 72); `dialog` = the Text Editor (Ctrl+Shift+E) with the selection kept, its numeric field holding the
+  tail's size set by WM_SETTEXT, OK (no dialog -> logged; the key is missing from some shortcut sets). Value
+  `text_size` {routes [{route, selection, how, runs, ok}], method, runs_before, runs_field, runs_after}, log `orig
+  text size on the selection: … (ok by <route> / NOT ON …)`. A failed `field` / `menu` route sets
+  `pending_text_defaults`, so the unit's text tool reset runs again with the next test document.
+- **Drag over large text (TW-146 rest, run 26 `tool-text/13`: three drags 360 -> 249 from the right end of the
+  72 pt text left only a caret column at 245, cover 0.0):** `text_select_drag` computes the glyph boxes of the
+  characters (`glyph_spans`: advance widths of `ARIAL_ADVANCE` scaled by the run size from
+  `textRuns.initialAttrs.size`, or by the `pixelRect` width when the two differ by more than 15 %) and drags left to
+  right from 2 px inside the first selected glyph to 2 px past the last one, the highlight cover measured over those
+  glyphs. For a tall line (height >= `glyph_min_px`, default 30; or `"glyphs": true` in the action) the glyph drags
+  come first (plain, then a click at the end plus the pause) and the three right-to-left drags follow; otherwise the
+  glyph drag is the fourth try. Values `text_select.glyphs` {size, scale, span, drag}, `text_select.plan`,
+  `text_select.method`.
+- **Freeform size keys with the button held (TW-159 rest c, run 26 `tool-path-reshape/04`: the keys kept the
+  Freeform tool, but no shot and no size were recorded):** with `orig_tool_keys: "held"` the reference's left button
+  goes down once at the first tool key and stays down (`held`, `tool_keys_held_at`) for the following keys - also the
+  plain `]` - until the new action `{"release_mouse": true}` (both sides; step cleanup) or the next reset. New action
+  `{"tool_size_read": {"label": "Größe", "orig_rel": [x, y]}}` (both sides): reference = the Properties panel's
+  Edit / ComboBox children read by WM_GETTEXT (host `kids`, `get_text`; no input, no script), the numeric one nearest
+  to `orig_rel` or else the leftmost (`pick_size_field`, `size_digits`); Firepixel = `ui_find` of the label (lowest
+  hit) and the numeric texts right of it. Value `tool_size` {size, fields, held / label}, logs `orig tool size read
+  (mouse button held): …` / `fp tool size read: …`; `unsupported` only when no numeric field is readable. Step `04`
+  reads the size before `record_ui`, gets `shot: canvas` (taken while the button is still held) and
+  `cleanup: release_mouse`.
+- **Standard-mode detection (TW-163, run 26 `toolbox/13`: the screen-mode buttons read "full screen with menus"
+  (181.2, 167.3, 180.2) in Standard, six `runner error` lines "not standard after the reset"):** the window against
+  the monitor is now the primary source (`screen_mode_from_window`): not covering the monitor -> standard; covering
+  it with a visible caption (client top below the window top) -> standard; covering it without one -> full (the
+  document view at the client top) or full with menus (view more than 20 px lower; run 26: 89 px), "full?" when the
+  view is unknown. The buttons are secondary: used only when the window is unreadable or reads "full?"; a
+  disagreement is logged as `buttons_agree: false` (also in the short form of `orig screen mode standard: …`).
+  `screen_mode_standard` raises its runner error only when this verdict is not standard.
+- **Freeform through the flyout (TW-164, runs 24-26 `tool-path-reshape/12_inspector_heads_freeform`: the Freeform
+  slot click selected the Path Scrubber the slot still showed from steps `06` / `07`):** ui_map `tool.freeform` =
+  `toolbox.freeform_flyout` entry 0 (order Freeform 0, Reshape Area 1, Path Scrubber add 2, subtract 3, unchanged).
+  Tool entries may carry `orig_name` (set for the four group tools: "Freiform", "Bereich umformen",
+  "Pfadausbesserung"): after the `tool` action the active tool is read back (`tool_name_check`); wrong -> the flyout
+  entry once more, then `fw.activeTool = orig_name`; value `tool_check`, log `orig tool check <tool>: …`, runner
+  error when the tool stays wrong.
+- `--dry-run` prints `R-24 self check: ok` (glyph boxes of run 26's 72 pt and 12 pt texts, `tail_size`, the
+  Freeform flyout order in ui_map); `screen mode self check` covers the window cases of run 26 and the size field
+  pick.
