@@ -41,6 +41,8 @@ pub fn strip_maximized(builder: egui::ViewportBuilder) -> egui::ViewportBuilder 
 #[derive(serde::Deserialize)]
 struct Stored {
     inner_position_pixels: Option<Xy>,
+    #[serde(default)]
+    outer_position_pixels: Option<Xy>,
     inner_size_points: Option<Xy>,
     #[serde(default)]
     maximized: bool,
@@ -50,6 +52,18 @@ struct Stored {
 struct Xy {
     x: f32,
     y: f32,
+}
+
+/// Target (outer, physical pixels) of a window that was maximised last time. eframe places the
+/// window at the outer position of the maximised window (frame outside the screen). Without a
+/// system frame outer = inner, so the stored inner position is the exact target; with the native
+/// title bar (macOS, FB-03) the title bar lies above the inner area, so the stored outer position
+/// is the target (inner position as fallback for older stored states).
+fn stored_target(inner: Xy, outer: Option<Xy>, decorated: bool) -> Xy {
+    match outer {
+        Some(o) if decorated => o,
+        _ => inner,
+    }
 }
 
 /// Linke Kante rechts neben allen Bildschirmen (physische Pixel), mit Abstand.
@@ -69,16 +83,20 @@ pub fn prepare_hidden(window: &winit::window::Window, storage: Option<&dyn efram
     let target = if START_MAXIMIZED.load(Ordering::Relaxed) {
         let stored: Option<Stored> = storage.and_then(|s| eframe::get_value(s, "window"));
         if let Some(Stored {
-            inner_position_pixels: Some(p),
+            inner_position_pixels: Some(inner),
+            outer_position_pixels: outer,
             inner_size_points: Some(_),
             maximized: true,
         }) = stored
         {
-            // eframe legt das Fenster an die äußere Lage des maximierten Fensters (Rahmen außerhalb
-            // des Bildschirms); ohne Rahmen ist außen = innen, also die Innenlage nehmen.
+            let p = stored_target(inner, outer, crate::appbar::native_title_bar());
             Some((p.x as i32, p.y as i32))
         } else if let Some(m) = window.current_monitor() {
-            let _ = window.request_inner_size(m.size());
+            // without a system frame inner = outer = the monitor; with the native title bar (macOS)
+            // the inner area is smaller, and maximising afterwards sets the size anyway
+            if !crate::appbar::native_title_bar() {
+                let _ = window.request_inner_size(m.size());
+            }
             Some((m.position().x, m.position().y))
         } else {
             None
@@ -207,6 +225,20 @@ mod tests {
         );
         assert_eq!(b.maximized, Some(true));
         assert!(!START_MAXIMIZED.load(Ordering::Relaxed));
+    }
+
+    /// FB-03: with the native title bar the outer position is the target, without it the inner one.
+    #[test]
+    fn decorated_window_uses_outer_position() {
+        let inner = || Xy { x: 0.0, y: 28.0 };
+        let outer = || Some(Xy { x: 0.0, y: 0.0 });
+        assert_eq!(stored_target(inner(), outer(), true).y, 0.0);
+        assert_eq!(stored_target(inner(), outer(), false).y, 28.0);
+        assert_eq!(
+            stored_target(inner(), None, true).y,
+            28.0,
+            "older stored state"
+        );
     }
 
     /// Ohne natives Fenster (Tests, Bildschirmfotos) gibt es keine Startphase.

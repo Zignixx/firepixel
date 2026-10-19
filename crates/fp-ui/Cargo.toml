@@ -56,6 +56,11 @@ eframe = { workspace = true, features = ["x11", "wayland"] }
 winit = { version = "0.30", default-features = false, features = ["x11", "wayland", "wayland-dlopen", "wayland-csd-adwaita"] }
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
 
+# macOS: the application menu (About, Services, Hide, Quit) via muda's safe API (FB-05); winit's
+# default menu quits through `terminate:` without the save prompt, so it is replaced.
+[target.'cfg(target_os = "macos")'.dependencies]
+muda = { version = "=0.21.2", default-features = false }
+
 [dev-dependencies]
 egui_kittest = { version = "0.36", features = ["wgpu", "snapshot"] }
 fp-neutral = { path = "../fp-neutral" }

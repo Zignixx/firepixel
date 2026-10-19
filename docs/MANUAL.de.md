@@ -23,8 +23,9 @@ ausprobiert.
 
 **macOS:** Das Fenster behält die native Titelleiste mit den Ampelknöpfen (Schließen, Minimieren,
 Zoomen); die Menüleiste von Firepixel liegt direkt darunter. Cmd+Q beendet wie Datei ▸ Beenden und
-fragt vorher, ob geänderte Dokumente gespeichert werden sollen; ein Programmmenü von Firepixel in der
-Menüleiste von macOS gibt es nicht.
+fragt vorher, ob geänderte Dokumente gespeichert werden sollen. Das Programmmenü in der Menüleiste von
+macOS bietet Über Firepixel, Dienste, Firepixel ausblenden, Andere ausblenden, Alle einblenden und
+Firepixel beenden (Cmd+Q, ebenfalls mit der Rückfrage).
 
 **Start:**
 

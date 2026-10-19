@@ -167,3 +167,11 @@ fieldmenu-copy = Copy
 fieldmenu-paste = Paste
 fieldmenu-delete = Delete
 fieldmenu-select-all = Select All
+
+## macOS application menu (app_menu.rs)
+ui-macmenu-about = About Firepixel
+ui-macmenu-services = Services
+ui-macmenu-hide = Hide Firepixel
+ui-macmenu-hide-others = Hide Others
+ui-macmenu-show-all = Show All
+ui-macmenu-quit = Quit Firepixel

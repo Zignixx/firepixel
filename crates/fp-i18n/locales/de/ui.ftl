@@ -167,3 +167,11 @@ fieldmenu-copy = Kopieren
 fieldmenu-paste = Einfügen
 fieldmenu-delete = Löschen
 fieldmenu-select-all = Alles auswählen
+
+## Programmmenü unter macOS (app_menu.rs)
+ui-macmenu-about = Über Firepixel
+ui-macmenu-services = Dienste
+ui-macmenu-hide = Firepixel ausblenden
+ui-macmenu-hide-others = Andere ausblenden
+ui-macmenu-show-all = Alle einblenden
+ui-macmenu-quit = Firepixel beenden

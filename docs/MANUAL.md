@@ -22,7 +22,8 @@ build is new and has not yet been tried on many desktops.
 
 **macOS:** the window keeps the native title bar with the traffic-light buttons (close, minimise,
 zoom); Firepixel's menu bar sits directly below it. Cmd+Q quits like File ▸ Exit and asks to save
-changed documents first; there is no Firepixel application menu in the macOS menu bar.
+changed documents first. The application menu in the macOS menu bar offers About Firepixel,
+Services, Hide Firepixel, Hide Others, Show All and Quit Firepixel (Cmd+Q, also with the save prompt).
 
 **Starting:**
 

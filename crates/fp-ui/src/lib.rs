@@ -22,6 +22,7 @@
 //! | [`app_state`] / [`actions`] | Zustand und Aktions-Warteschlange |
 
 pub mod actions;
+pub mod app_menu; // macOS application menu (FB-05)
 pub mod app_state;
 pub mod appbar;
 pub mod batch; // BATCH-2: Batch-Studio (Reiter „Batch“)
@@ -242,6 +243,10 @@ impl FirepixelApp {
         // independent of the shortcut set and of a focused text field
         if cfg!(target_os = "macos") && !st.dialogs.any_open() && input::take_quit_key(&ctx) {
             st.push(Action::Quit);
+        }
+        // macOS application menu: About, Services, Hide, Quit with the save prompt (FB-05)
+        if cfg!(target_os = "macos") {
+            app_menu::frame(&ctx, st);
         }
         input::drop_alt_text(&ctx); // CT-A-06: Zugriffstasten (Alt+Buchstabe) schreiben nichts ins Feld
         batch::frame_input(&ctx, st); // BATCH-2: Ablegen/Tasten im Batch-Studio vor dem Dokument
@@ -598,10 +603,9 @@ pub fn native_options() -> eframe::NativeOptions {
     // key reaches the window, so the app never sees Cmd+Q; `terminate:` then runs winit's
     // `applicationWillTerminate:` (winit's delegate has no `applicationShouldTerminate:`), which
     // exits the event loop directly – there is no `CloseRequested`, so the unsaved-changes prompt
-    // was skipped. Without the default menu Cmd+Q arrives as a normal key event and `root_ui`
-    // turns it into `Action::Quit` (with the prompt). A custom menu or an
-    // `applicationShouldTerminate:` delegate would need Objective-C calls (`unsafe`), which the
-    // workspace forbids.
+    // was skipped. The default menu is therefore off; `app_menu` installs Firepixel's own app menu
+    // (muda, safe API) whose Quit item runs `Action::Quit` with the prompt, and `root_ui` also turns
+    // a Cmd+Q key event into `Action::Quit` as a fallback.
     #[cfg(target_os = "macos")]
     {
         options.event_loop_builder = Some(Box::new(|builder| {

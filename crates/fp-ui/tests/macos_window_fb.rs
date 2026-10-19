@@ -139,3 +139,43 @@ fn native_title_bar_hides_own_window_buttons() {
         cfg!(target_os = "macos")
     );
 }
+
+/// FB-05: the custom items of the macOS app menu: *Quit Firepixel* runs the Quit action (save
+/// prompt), *About Firepixel* the About command; the system items (Services, Hide …) need none.
+#[test]
+fn app_menu_items_route_to_actions() {
+    use fp_ui::app_menu::{ABOUT, QUIT, action_for};
+    use fp_ui::app_state::Action;
+    assert_eq!(action_for(QUIT), Some(Action::Quit));
+    assert!(matches!(action_for(ABOUT), Some(Action::Run(c, _)) if c == "help.about"));
+    assert_eq!(action_for("unknown"), None);
+    // the menu labels exist in both languages (checked by fp-i18n) and are not empty
+    for key in ["ui-macmenu-about", "ui-macmenu-quit", "ui-macmenu-hide"] {
+        assert!(!fp_i18n::t(key).is_empty() && fp_i18n::t(key) != key, "{key}");
+    }
+}
+
+/// FB-05: a menu click is no window event; queuing it requests a frame at once, and the next frame
+/// runs the item's action.
+#[test]
+fn app_menu_click_wakes_the_ui_and_runs_quit() {
+    let ctx = egui::Context::default();
+    let mut app = fp_ui::FirepixelApp::with_session(
+        &ctx,
+        fp_engine::Session::default(),
+        fp_ui::app_state::UiSettings::default(),
+        false,
+    );
+    let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+        fp_ui::app_menu::menu_chosen(ui.ctx(), fp_ui::app_menu::QUIT.into());
+    });
+    out.textures_delta.clear();
+    assert!(out.viewport_output[&ViewportId::ROOT].repaint_delay.is_zero());
+    let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+        fp_ui::app_menu::frame(ui.ctx(), &mut app.state);
+        app.state.process_actions(ui.ctx());
+    });
+    out.textures_delta.clear();
+    // nothing unsaved: Quit closes the window right away
+    assert!(app.state.quit_confirmed && app.state.close_window);
+}
