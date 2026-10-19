@@ -2470,6 +2470,7 @@ fn overlays(
             | fp_engine::ToolId::ReplaceColor
             | fp_engine::ToolId::RedEyeRemoval
     );
+    let subsel_outline = st.session.tools.active == fp_engine::ToolId::Subselection;
     if view.show_edges {
         // alle gewählten Elemente in einem Durchlauf (PERF-1: eine Suche je ID kostete bei
         // Tausenden gewählten Objekten O(Objekte × Auswahl) je Bild)
@@ -2510,6 +2511,18 @@ fn overlays(
                 None => b.corners(),
             };
             frames.push(corners);
+            // FB-06 (re 54 §1, §6): the Subselection tool shows a vector object as its path outline
+            // (1 px, real curves through the anchors) instead of a bounding box with corner squares;
+            // the anchors and handles come from `Overlay::PathPoints` on top of it
+            if subsel_outline && let fp_model::ElementKind::Path(pe) = &e.kind {
+                if !is_moving {
+                    if let Some(bt) = batch.as_mut() {
+                        bt.flush(painter);
+                    }
+                    paint_path_outline(painter, &pe.contours, &spp, Stroke::new(1.0, c.selection));
+                }
+                continue;
+            }
             if is_moving {
                 let q: Vec<Pos2> = corners.iter().map(|p| spp(*p)).collect();
                 if !cull.intersects(Rect::from_points(&q)) {
@@ -2641,6 +2654,9 @@ fn overlays(
         .map(|r| r.intersect(area))
         .unwrap_or(area);
     let page_painter = painter.with_clip_rect(page_clip);
+    // Subselection tool: point display per re 54 (Some(ShowSolidPoints))
+    let subsel_points = (st.session.tools.active == fp_engine::ToolId::Subselection)
+        .then(|| st.session.prefs.get_bool("ShowSolidPoints", false));
     let cc = st.canvases.entry(id).or_default();
     let mut had_text = false;
     for o in feedback.iter().cloned() {
@@ -2820,6 +2836,19 @@ fn overlays(
                         c.hover_highlight,
                     );
                 }
+            }
+            Overlay::PathPoints {
+                contours,
+                selected,
+                handles,
+            } if subsel_points.is_some() && handles => {
+                // FB-06 (re 54 §1.3/§1.4): nothing with hidden edges; otherwise both handles of every
+                // segment with a selected end, then the anchor squares on top (selected filled,
+                // the others hollow; `ShowSolidPoints` reverses the fill)
+                let Some(solid) = subsel_points.filter(|_| view.show_edges) else {
+                    continue;
+                };
+                subselection_points(painter, &contours, &selected, solid, &spp, c);
             }
             Overlay::PathPoints {
                 contours,
@@ -3184,6 +3213,104 @@ fn fill_live_key(generation: u64, target: u64, h: &fp_model::FillHandles) -> u64
         k = (k ^ v.to_bits() as u64).wrapping_mul(0x0100_0000_01b3);
     }
     k
+}
+
+/// Path outline as crisp 1 px lines along the real curves (Subselection display, re 54 §6).
+fn paint_path_outline(
+    painter: &egui::Painter,
+    contours: &[fp_model::Contour],
+    spp: &dyn Fn(Point) -> Pos2,
+    stroke: Stroke,
+) {
+    for ct in contours {
+        let v: Vec<Pos2> = crisp_outline(
+            &fp_engine::geometry::flatten(ct)
+                .iter()
+                .map(|p| spp(*p))
+                .collect::<Vec<_>>(),
+        );
+        if v.len() < 2 {
+            continue;
+        }
+        if ct.closed {
+            painter.add(egui::Shape::closed_line(v, stroke));
+        } else {
+            painter.add(egui::Shape::line(v, stroke));
+        }
+    }
+}
+
+/// Handles drawn for the Subselection display (re 54 §1.3): both handles of every segment with at
+/// least one selected end, plus the outer handle of a selected first/last point of an open path.
+/// Pairs of (anchor, handle) as (contour, node, which) with `which` = false for pred, true for succ.
+pub fn subselection_handles(
+    contours: &[fp_model::Contour],
+    selected: &[(usize, usize)],
+) -> Vec<(usize, usize, bool)> {
+    let mut out = Vec::new();
+    for (ci, ct) in contours.iter().enumerate() {
+        let n = ct.nodes.len();
+        if n < 2 {
+            continue;
+        }
+        let sel = |k: usize| selected.contains(&(ci, k));
+        let segs = if ct.closed { n } else { n - 1 };
+        for i in 0..segs {
+            let j = (i + 1) % n;
+            if sel(i) || sel(j) {
+                out.push((ci, i, true));
+                out.push((ci, j, false));
+            }
+        }
+        if !ct.closed {
+            if sel(0) {
+                out.push((ci, 0, false));
+            }
+            if sel(n - 1) {
+                out.push((ci, n - 1, true));
+            }
+        }
+    }
+    out.sort_unstable();
+    out.dedup();
+    out
+}
+
+/// Anchors and handles of the Subselection display (re 54 §1.3, §1.4, §6): handle lines first,
+/// then a 5 x 5 px square on every anchor, filled when `selected XOR solid`, else hollow (1 px
+/// border in the selection colour, white inside).
+fn subselection_points(
+    painter: &egui::Painter,
+    contours: &[fp_model::Contour],
+    selected: &[(usize, usize)],
+    solid: bool,
+    spp: &dyn Fn(Point) -> Pos2,
+    c: &crate::theme::Palette,
+) {
+    let line = Stroke::new(1.0, c.selection);
+    for (ci, ni, succ) in subselection_handles(contours, selected) {
+        let n = &contours[ci].nodes[ni];
+        let q = if succ { n.succ } else { n.pred };
+        if q != n.anchor {
+            let (a, qs) = (spp(n.anchor), spp(q));
+            painter.line_segment([a, qs], line);
+            painter.circle_filled(qs, 2.5, c.selection);
+        }
+    }
+    for (ci, ct) in contours.iter().enumerate() {
+        for (ni, n) in ct.nodes.iter().enumerate() {
+            let a = spp(n.anchor);
+            // pixel-aligned: the square covers whole pixels centred on the anchor pixel
+            let a = pos2(a.x.floor() + 0.5, a.y.floor() + 0.5);
+            let h = Rect::from_center_size(a, vec2(5.0, 5.0));
+            if selected.contains(&(ci, ni)) != solid {
+                painter.rect_filled(h, 0.0, c.selection);
+            } else {
+                painter.rect_filled(h, 0.0, c.handle_border);
+                painter.rect_stroke(h, 0.0, line, StrokeKind::Inside);
+            }
+        }
+    }
 }
 
 /// Screen points of a hover outline snapped to pixel centres, like the selection frame: points on
