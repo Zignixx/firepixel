@@ -18,15 +18,15 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 49 (all classified since full run 24; the measurement unit `xs-select-behind` was added on 19 Oct 2026) | [PARITY.md](PARITY.md) |
-| Equal except for design | **48** (1 real deviation, 0 unclear, 0 under-measured) | run 25 (20 units) on top of full run 24, 19 Oct 2026 |
-| Proven 1:1 | **98.0 %** (48 / 49; no unit under-measured; over the 48 units before run 24: 97.9 %; run 24: 93.9 %; run 17: 87.5 %) | run 25 |
-| Canvas image pairs within 1 % | **186 / 211** (run 24: 164 / 210; `tool-autoshapes` back to 26 / 27 after the runner's colour fix, TW-153; `tool-text` 15 / 16 with 72 pt next texts on both sides; `xs-select-behind` 9 / 9) | run 25 |
-| Measurement quota, all 49 units | **87.3 %** (1075 / 1232 measurable steps both `ok`; over the 48 old units 87.2 %, 1066 / 1223; run 24: 87.0 %; run 17 alone 86.3 %; in the 20 units of run 25: 474 / 537) | run 25 |
-| Errors | 33 reference-side (run 24: 37; `menu-text/05`, `menu-view/20` now unsupported, `tool-text/13` and `/17` gone), 21 Firepixel-side (run 24: 23); 4 `runner error` lines, all reference-side text entry in `tool-text` (TW-146 rest) | run 25 |
+| Equal except for design | **49** (0 real deviations, 0 unclear, 0 under-measured) | run 26 (5 units) on top of runs 25 and 24, 19 Oct 2026 |
+| Proven 1:1 | **100.0 %** (49 / 49; no unit under-measured; over the 48 units before run 24: 100.0 %; run 25: 98.0 %; run 24: 93.9 %; run 17: 87.5 %) | run 26 |
+| Canvas image pairs within 1 % | **186 / 211** (unchanged since run 25; run 24: 164 / 210; the full screen window pair `toolbox/13_view_modes_full_normal` is now 1.97 %, run 25: 77.1 %) | run 26 |
+| Measurement quota, all 49 units | **87.3 %** (1077 / 1233 measurable steps both `ok`; over the 48 old units 87.3 %, 1068 / 1224; run 25: 1075 / 1232 with one `toolbox` step recounted; run 24: 87.0 %; run 17 alone 86.3 %; in the 5 units of run 26: 142 / 153) | run 26 |
+| Errors | 33 reference-side, 21 Firepixel-side (both unchanged since run 25); 8 `runner error` lines in run 26: six from the reference's Standard reset in `toolbox/13` (TW-163) and two reference-side text selections in `tool-text/11, 13` (TW-146 rest) | run 26 |
 | Latest release | **v0.2.3** (19 Oct 2026; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; all assets verified after publishing; tester thanks in the release notes) | GitHub releases |
-| Workspace tests | Last full run: **2762 passed, 0 failed, 134 ignored** at `a225a01c` (the commit of preview `2026-10-19_12-16`, package F48 and runner R-22); the full run on `439a3ec5` (R-23, F49, macOS fixes) is pending | `main`, 19 Oct 2026 |
-| Open findings | 9 rows in `[F]`: 2 open (PDF layers, U-1 rest; TW-146 rest, runner); TW-138 rest closed except the unmeasured R3 note; TW-158 (F49) and TW-159 (R-23) fixed, to confirm in run 26; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test; 5 deferred `[V]`, 20 informational `[N]`; run 25 closed TW-145, TW-148 and TW-153 to TW-157 | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | None measured open: the one of run 25, full screen mode (TW-158, `toolbox/13`), is fixed by F49 and waits for run 26. Unmeasured: whether indent and paragraph spacing on pointer-selected text become text defaults (TW-138 R3) | [PARITY.md](PARITY.md) |
+| Workspace tests | Last full run: **2776 passed, 0 failed, 134 ignored** at `439a3ec5` (runner R-23, package F49, macOS fixes; the code of preview `2026-10-19_16-07`) | `main`, 19 Oct 2026 |
+| Open findings | 10 rows in `[F]`: 5 open (PDF layers, U-1 rest; the runner items TW-146 rest, TW-159 rest, TW-163 and TW-164); TW-138 rest closed except the unmeasured R3 note; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test; 5 deferred `[V]`, 20 informational `[N]`; run 26 closed TW-158 and most of TW-159 | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | None measured open: run 26 confirmed the fix of the last one, full screen mode (TW-158, `toolbox/13`). Unmeasured: whether indent and paragraph spacing on pointer-selected text become text defaults (TW-138 R3) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -48,10 +48,14 @@ the app under Xvfb and checks that the control channel comes up. The first CI ru
 real Linux desktop; file dialogs need `xdg-desktop-portal`. v0.2.2 is the first release with Windows x64, macOS
 universal and Linux x86_64.
 
-Latest test build: preview build **`2026-10-19_12-16`** (release profile, single `firepixel.exe` plus
-`firepixel-cli.exe`) from `main` at `a225a01c` (package F48: consecutive key nudges merge into one History row,
-crisp Select Behind hover line without a frame right after a click; runner R-22). The full workspace test run on that
-commit gave 2762 passed, 0 failed, 134 ignored. Follow-up run 25 used this build. Before that came preview
+Latest test build: preview build **`2026-10-19_16-07`** (release profile, single `firepixel.exe` plus
+`firepixel-cli.exe`) from `main` at `37c0ee81` (package F49: the three screen modes as in the reference, full screen
+shows only the canvas on black; text preference rules, TW-138 rest; runner R-23). The full workspace test run on its
+code (`439a3ec5`) gave 2776 passed, 0 failed, 134 ignored. Follow-up run 26 used this build. Since then `main` has the
+macOS app menu (`e11f8d1b`, FB-05); the macOS CI build with it is green. Before that came preview `2026-10-19_12-16`
+from `a225a01c` (package F48: consecutive key nudges merge into one History row, crisp Select Behind hover line
+without a frame right after a click; runner R-22; 2762 passed, 0 failed, 134 ignored), used by follow-up run 25.
+Before that came preview
 `2026-10-19_06-06` from `44d7c5f5` (packages F46 and F47; 2761 passed, 0 failed, 134 ignored), used by full run 24
 and published as v0.2.3. Before that came preview `2026-10-19_01-32` from
 `cd86ce75` (package F46: Escape keeps the selection and only commits text, cancels crop or transform or leaves bitmap
@@ -142,8 +146,9 @@ the click-test ([VERIFICATION.md](VERIFICATION.md) A4-15 to A4-17).
 type-checked for macOS (no Mac at hand). FB-04 (TW-160, `b9f085f4`): after the app's own minimise and a restore from
 the Dock the window stayed frozen, because the minimised flag was never refreshed; the stale flag is now healed
 against the real window state. FB-05 (TW-161, `0352e7c9`): Cmd+Q quit through the default app menu without the save
-prompt; the default menu is off and Cmd+Q goes through the Quit action with the prompt; a native app menu through a
-safe menu library is in progress in a follow-up. FB-03 (TW-162, `53e08484`): native title bar with traffic lights on
+prompt; the default menu is off and Cmd+Q goes through the Quit action with the prompt; since `e11f8d1b` the app has
+its own macOS app menu (About, Services, Hide, Hide Others, Show All and Quit Firepixel with the save prompt), and the
+macOS CI build with it is green. FB-03 (TW-162, `53e08484`): native title bar with traffic lights on
 macOS, without Firepixel's own window buttons. Hands-on checks on a Mac: [VERIFICATION.md](VERIFICATION.md) A4-19
 to A4-21.
 
@@ -152,7 +157,8 @@ After run 25 (on `main` up to `439a3ec5`): runner R-23 (`5f498cd7`) for TW-159 a
 on black, full screen with menus keeps menu bar and toolbar with a floating Tools panel and an icon dock, F needs a
 document, back to Standard when the last document closes) and the text preference rules of TW-138 (the inspector
 never writes the baseline shift default, font changes store the PostScript name and the recent font list, a style
-applied to text writes the text defaults). The full test run on `439a3ec5` and a new preview build are pending.
+applied to text writes the text defaults). The full test run on `439a3ec5` gave 2776 passed, 0 failed, 134 ignored;
+preview `2026-10-19_16-07` (from `37c0ee81`, the same code plus documentation) was built for run 26.
 
 **Full run 24 (19 Oct 2026, 06:09–11:10, all 49 units, 1295 steps, 698 image pairs)** used preview
 `2026-10-19_06-06` and runner R-21: 46 / 2 / 1 / 0, proven 1:1 93.9 % (46 / 49; 95.8 % over the 48 old units),
@@ -194,6 +200,16 @@ the document tab and the status bar while the reference shows only the document 
 description first); runner rests TW-159 (screen-mode read-back, a real arrow with the Subselection tool in
 `xs-shortcuts/10_nudge_point`, the Freeform size keys, a 24 pt text size after one reset). TW-146 rest is down to one
 lost text in 17.
+
+**Follow-up run 26 (19 Oct 2026, 16:11–16:55, 5 units, 155 steps, 72 image pairs)** used preview
+`2026-10-19_16-07` and runner R-23 over `toolbox`, `xs-shortcuts`, `tool-path-reshape`, `tool-text` and `menu-text`:
+49 / 0 / 0 / 0 over all 49 units, proven 1:1 100.0 % (49 / 49), quota 87.3 % (1077 / 1233), canvas pairs 186 / 211.
+Confirmed and closed: TW-158 (after the second F both programs show only the canvas on black, `toolbox` is equal except
+for design again) and TW-159 (b) and (d) (the Subselection nudge reads 201,210 in both; the reference's text reset goes
+from 72 pt to 12 pt). The entry part of TW-146 rest is confirmed (all 15 new texts and three edits arrive as typed).
+Open, all runner: TW-146 rest (text selections in `tool-text/11, 13`), TW-159 rest (the Freeform size keys keep the
+tool but record no size), new TW-163 (the reference's screen-mode button reads "full screen with menus" in Standard)
+and TW-164 (the reference shows the Path Scrubber head in `tool-path-reshape/12_inspector_heads_freeform`).
 
 ## How tests run
 
