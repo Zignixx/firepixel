@@ -2770,6 +2770,14 @@ fn overlays(
                         StrokeKind::Middle,
                     );
                 }
+                // filled 5 x 5 px square on every corner point (re 52 §2b)
+                for q in highlight_corners(&contours, rect) {
+                    painter.rect_filled(
+                        Rect::from_center_size(spp(q), vec2(5.0, 5.0)),
+                        0.0,
+                        c.hover_highlight,
+                    );
+                }
             }
             Overlay::PathPoints {
                 contours,
@@ -3137,6 +3145,27 @@ fn fill_live_key(generation: u64, target: u64, h: &fp_model::FillHandles) -> u64
 }
 
 /// Zeichnet die Leinwand die gespeicherten Verlaufsgriffe des gewählten Objekts? Beim Zeiger bzw.
+/// Corner points of a hover frame, each marked with a filled 5 x 5 px square (re 52 §2b): the
+/// anchors of the outlined paths, or the four corners of the bounds rectangle.
+pub fn highlight_corners(
+    contours: &[fp_model::Contour],
+    rect: Option<fp_geom::Rect>,
+) -> Vec<Point> {
+    let mut v: Vec<Point> = contours
+        .iter()
+        .flat_map(|c| c.nodes.iter().map(|n| n.anchor))
+        .collect();
+    if let Some(r) = rect {
+        v.extend([
+            Point::new(r.left, r.top),
+            Point::new(r.right, r.top),
+            Point::new(r.right, r.bottom),
+            Point::new(r.left, r.bottom),
+        ]);
+    }
+    v
+}
+
 /// Hintere auswählen, solange kein Objekt verschoben wird; auch während ein Griff gezogen wird
 /// (re 37 §3: die alte Linie samt Griffen bleibt bis zum Loslassen, BA-120 zurückgenommen). Die
 /// Füllwerkzeuge zeichnen sie über ihre eigene Rückmeldung.

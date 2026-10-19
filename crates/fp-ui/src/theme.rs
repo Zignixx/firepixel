@@ -500,7 +500,8 @@ impl Theme {
                 rgb(0, 102, 204),
                 rgb(0, 102, 204),
             ],
-            hover_highlight: rgb(255, 0, 0),
+            // hover frame #E00000 (re 52 §2b)
+            hover_highlight: rgb(224, 0, 0),
             smart_guide: rgb(255, 74, 255),
             cursor_fill: g(0),
             cursor_outline: g(255),
@@ -622,7 +623,8 @@ impl Theme {
             scrollbar_bg: g(46),
             scrollbar_thumb: g(90),
             group_accent: [accent, accent, accent, accent, accent, accent],
-            hover_highlight: rgb(255, 40, 40),
+            // hover frame #E00000 (re 52 §2b)
+            hover_highlight: rgb(224, 0, 0),
             smart_guide: rgb(255, 74, 255),
             cursor_fill: g(0),
             cursor_outline: g(255),

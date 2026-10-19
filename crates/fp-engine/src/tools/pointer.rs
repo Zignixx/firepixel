@@ -689,6 +689,25 @@ impl PointerTool {
         self.id == ToolId::Pointer && ctx.prefs.get_bool("PointerToolPaintHandles", true)
     }
 
+    /// Object a Select Behind click at `p` selects: the next hit below the topmost selected hit
+    /// object (cycling back to the top), else the topmost hit. Hover frame and click share it, so
+    /// the frame always shows what the click picks (FB-02, re 52 §2.3).
+    fn behind_target(ctx: &ToolContext, p: Point, opt: &HitOptions) -> Option<ElementPath> {
+        let hits = docops::hits_at(ctx.doc, ctx.page, ctx.frame, p, ctx.geometry, opt);
+        let mut t = hits.first().cloned();
+        if hits.len() > 1
+            && let Some(i) = hits.iter().position(|h| {
+                ctx.doc
+                    .element_at(h)
+                    .is_some_and(|e| ctx.selection.contains(e.id))
+            })
+        {
+            // repeated clicks select the object below, cycling back to the top
+            t = hits.get((i + 1) % hits.len()).cloned();
+        }
+        t
+    }
+
     /// Überfahren ohne gedrückte Taste: Hervorhebung und Cursor.
     fn hover(&mut self, p: Point, ctx: &ToolContext) -> ToolResponse {
         self.hover = None;
@@ -740,7 +759,12 @@ impl PointerTool {
             };
         }
         let opt = Self::hit_opts(ctx);
-        if let Some(path) = top_hit(ctx, p, &opt) {
+        let hit = if self.id == ToolId::SelectBehind {
+            Self::behind_target(ctx, p, &opt)
+        } else {
+            top_hit(ctx, p, &opt)
+        };
+        if let Some(path) = hit {
             let path = if self.id == ToolId::Subselection {
                 docops::deep_hit(ctx.doc, &path, p, ctx.geometry, &opt)
             } else {
@@ -857,19 +881,7 @@ impl PointerTool {
         }
         let opt = Self::hit_opts(ctx);
         let mut target = if self.id == ToolId::SelectBehind {
-            let hits = docops::hits_at(ctx.doc, ctx.page, ctx.frame, p, ctx.geometry, &opt);
-            let mut t = hits.first().cloned();
-            if hits.len() > 1
-                && let Some(i) = hits.iter().position(|h| {
-                    ctx.doc
-                        .element_at(h)
-                        .is_some_and(|e| ctx.selection.contains(e.id))
-                })
-            {
-                // wiederholter Klick wählt das jeweils darunterliegende Objekt
-                t = hits.get((i + 1) % hits.len()).cloned();
-            }
-            t
+            Self::behind_target(ctx, p, &opt)
         } else {
             top_hit(ctx, p, &opt)
         };
