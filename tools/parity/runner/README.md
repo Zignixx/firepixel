@@ -898,3 +898,47 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   character '​'`); no foreign window logs `foreign windows at run start: none`.
 - `--dry-run` prints `R-21 self check: ok` (row labels, run sizes, caret blink with a caret line / no change / a
   wide change, step limit).
+
+## R-22 additions (19.10.)
+
+- **Reference text tool reset without fill side effect (TW-153, run 24: shapes drawn after the reset had fill
+  #000000 in eight units, `tool-autoshapes` 20 of 27 canvas pairs above 1 %; 23 pt kept in eight units):** the text
+  attributes are still set only with the text tool active through the Properties panel (size field, faux style
+  buttons, the text colour control); selecting the text tool hands its colour to the fill swatch, so afterwards
+  `default_colors_restore` clicks the tools' "default colours" button (Pointer tool, nothing selected) and reads
+  `pathAttributes` back (want `orig.default_fill` #ffffff / `orig.default_stroke` #000000, one retry; log
+  `default colours (after the text tool reset): ...`). The size is read back: not 12 -> once more with the text tool,
+  first a different size (13), then 12 (the field already showed 12, so typing 12 changed nothing). Fill / stroke,
+  text colour and size after the reset are checked and named in the `unit start text tool reset` line. The colour
+  reset runs once more with the reopened document.
+- **Steps without a key in the "Web Standard" set (TW-154):** `menu-text/05_editor_open` and
+  `menu-view/20_edit_guides_dialog_open` - neither program has a menu entry for the Text Editor or Edit Guides (re 46,
+  re 11), so there is no menu path: Firepixel opens the dialogs by its commands (`text.editor`,
+  `view.guides.editGuides`), the reference side is `unsupported` with the reason (shot only).
+- **Arrow substitutes only for nudges (TW-155 a):** `key_substitute_plan(..., nudge)`: an arrow becomes
+  `moveSelectionBy` only with the Pointer or Subselection tool (`NUDGE_TOOLS`) or with `nudge: true` (step or key
+  action); `nudge: false` = always the real key. With another tool the arrow is `tool_key`: the real key, the tool
+  read back; a tool switch (the key taken as a tool shortcut, not consumed) -> Pointer tool back and the step
+  `unsupported` with the reason; no switch -> value `tool_key`. `tool-path-reshape/04` carries `nudge: false`.
+- **No plain arrows in `inspector-stroke/01_category_submenu_open` (TW-155 b):** the open category list's
+  "Airbrush" entry is hovered (`hover {menu_item}`, wait 600 ms), which opens its submenu, on both sides.
+- **History read-back with one document (TW-155 c):** `menu-edit/01_undo_redo_result`, `09_clear_result`,
+  `22_undo_names_result` start with `close_all` before the reopen.
+- **Screen mode start (TW-156):** new action `{"screen_mode_standard": true}` (both sides), at the start of the three
+  `toolbox/13` steps and in their `after`. Reference: the tools' "standard screen mode" button (F only when the
+  button cannot be reached, read back after each press, at most twice); read back as the main window's caption
+  (`WS_CAPTION`, `screen_mode_state`). Firepixel: `ui_state.screen_mode`; not 0 -> the button, else
+  `view.exitFullScreen`. Value `screen_mode`, log `orig/fp screen mode standard: ...`, runner error when not standard.
+- **Reference text entry retries (TW-146 rest, run 24 `tool-text/11` only "Ab", `12, 13, 17` nothing although the
+  caret check passed):** after the caret check the first character is always typed alone and read back; lost ->
+  `orig.text_retry_settle_ms` (default 400) settle, the text tool again if the key switched it, one click into the
+  text (`caret_retry_point`), editor and caret checked, the first character typed again; the rest only once it
+  arrived, else runner error and nothing more typed. Each attempt in `text_entry.attempts` and the log line
+  (`attempt n: first character 'A' arrived/lost ...`). `orig.type_delay_ms` default 20 -> 35 ms.
+- **Firepixel text tool reset in T07 units (TW-149 leftovers, run 24 `panel-layers`, `panel-layers-menu`,
+  `panel-pages-states-history`):** the read-back failed with -2147216344 = 0x80041428 `EBadSelection` (`draw.text`
+  unavailable): T07's active layer after opening is the Web layer / the locked layer, so the scratch text could not be
+  added - not a menu or dialog state. `FP_TEXT_ATTRS_JS` now tries the other layers top down (`currentLayerNum`,
+  active layer restored, `layer=<n>` in the result); `text_tool_attrs` and `text.setToolDefaults` close menus /
+  dialogs (`reset_light`) and try once more on an error.
+- `--dry-run`: the key substitute self check covers `tool_key` and the nudge flag.

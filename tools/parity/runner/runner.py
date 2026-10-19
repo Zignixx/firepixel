@@ -592,12 +592,17 @@ POINTER_TOOLS = ("zeiger", "pointer")
 SUBST_KEYS = {"delete": "clear", "backspace": "clear", "left": "nudge", "right": "nudge", "up": "nudge",
               "down": "nudge", "esc": "escape"}
 NUDGE = {"left": (-1, 0), "right": (1, 0), "up": (0, -1), "down": (0, 1)}
+# R-22 (TW-155 a): tools whose plain arrows nudge the selection (the moveSelectionBy substitute applies only there)
+NUDGE_TOOLS = POINTER_TOOLS + ("unterauswahl", "subselection")
 
 
-def key_substitute_plan(combo: str, view: bool, busy: str, tool: str) -> tuple[str | None, str]:
+def key_substitute_plan(combo: str, view: bool, busy: str, tool: str, nudge=None) -> tuple[str | None, str]:
     """R-19: what replaces a reference-side key. (kind, why); kind None = send the real key. Kinds: `clear` (Edit >
     Clear, script fallback), `nudge` (moveSelectionBy 1 px), `leave_editor` (Pointer tool click), `pointer_tool`
-    (Escape with another tool active), `none` (Escape with nothing to close)."""
+    (Escape with another tool active), `none` (Escape with nothing to close). R-22 (TW-155 a, run 24
+    `tool-path-reshape/04`: Freeform's Up / Down were replaced by a nudge): an arrow is a nudge only with the Pointer
+    or Subselection tool, or with the step / action flag `nudge: true`; with another tool it is `tool_key` (the real
+    key, checked for a tool switch - a switch makes the step `unsupported`); `nudge: false` = always the real key."""
     mods, k = parse_combo(combo)
     kind = SUBST_KEYS.get(k)
     if mods or not kind:
@@ -616,6 +621,13 @@ def key_substitute_plan(combo: str, view: bool, busy: str, tool: str) -> tuple[s
         return "pointer_tool", f"tool {tool} active"
     if editing:
         return None, f"text editor open ({tool}): the real key edits the text"
+    if kind == "nudge":
+        if nudge is False:
+            return None, "step flag nudge false"
+        if nudge is True:
+            return "nudge", f"tool {tool}, step flag nudge"
+        if not any(t in tl for t in NUDGE_TOOLS):
+            return "tool_key", f"tool {tool}: the arrow is not a nudge"
     return kind, f"tool {tool}"
 
 
@@ -627,7 +639,11 @@ def key_substitute_selfcheck() -> str:
              (("Escape", True, "", "Text"), "leave_editor"), (("Escape", True, "", "Zeiger"), "none"),
              (("Escape", True, "", "Zuschneiden"), "pointer_tool"), (("Escape", True, "dialog", "Text"), None),
              (("Escape", True, "menu", "Zeiger"), None), (("Delete", False, "", "?"), None),
-             (("Left", True, "", "Text"), None), (("Delete", True, "", "Text"), None), (("Enter", True, "", "Zeiger"), None)]
+             (("Left", True, "", "Text"), None), (("Delete", True, "", "Text"), None), (("Enter", True, "", "Zeiger"), None),
+             # R-22 (TW-155 a): arrows nudge only with the Pointer / Subselection tool or the nudge flag
+             (("Up", True, "", "Freiform"), "tool_key"), (("Down", True, "", "Unterauswahl"), "nudge"),
+             (("Up", True, "", "Freiform", True), "nudge"), (("Right", True, "", "Zeiger", False), None),
+             (("Delete", True, "", "Freiform"), "clear")]
     bad = [f"{args} -> {key_substitute_plan(*args)[0]} (want {want})" for args, want in cases
            if key_substitute_plan(*args)[0] != want]
     return "ok" if not bad else "FAILED: " + "; ".join(bad)
@@ -1739,14 +1755,131 @@ class OrigSide(Side):
                 got = f"error {str(e)[:100]}"
             done.append(f"colour by script on a scratch text: {got[:80]}")
             after = self.text_tool_attrs()
+        # R-22 (TW-153, run 24: the size field kept 23 pt in eight units, `inspector-web` to `menu-text` - the field
+        # already showed 12, so typing 12 changed nothing): size read back; not the wanted one -> once more with the
+        # text tool, first a different size, then the wanted one
+        want_size = re.sub(r"[^\d.]", "", str(want.get("size", "12"))) or "12"
+        if "_error" not in after and re.sub(r"[^\d.]", "", str(after.get("size", ""))) != want_size:
+            try:
+                self.o.jsf("fw.getDocumentDOM().selectNone();", why="text tool reset (size retry)")
+                self.do("tool", "tool.text", {})
+                time.sleep(0.3)
+                other = str(int(float(want_size)) + 1)
+                field("inspector.size", other)
+                field("inspector.size", want_size)
+                self.do("tool", "tool.pointer", {})
+                time.sleep(0.2)
+                done.append(f"size retry {after.get('size')} -> {other} -> {want_size}")
+            except Exception as e:  # noqa: BLE001
+                errs.append(f"size retry: {str(e)[:100]}")
+            after = self.text_tool_attrs()
+        # R-22 (TW-153, run 24: shapes drawn after the reset had fill #000000 in eight units, `tool-autoshapes` 20 of
+        # 27 canvas pairs above 1 %): selecting the text tool hands its colour to the fill swatch, which keeps it
+        # after the Pointer tool. Only the text tool's own attributes may change here: the fill / stroke defaults
+        # are restored with the tools' "default colours" button (Pointer tool, nothing selected) and checked
+        colors = self.default_colors_restore("after the text tool reset")
+        done.append(f"default colours {'ok' if colors.get('ok') else 'NOT RESTORED'} ({colors.get('got')})")
+        if not colors.get("ok"):
+            errs.append(f"fill / stroke not #ffffff / #000000 after the reset: {colors.get('got')}")
+        after = self.text_tool_attrs()
         if "_error" not in after and str(after.get("fillColor", "")).lower() != col:
             errs.append(f"colour not {col} after the reset: {after.get('fillColor')}")
+        if "_error" not in after and re.sub(r"[^\d.]", "", str(after.get("size", ""))) != want_size:
+            errs.append(f"size not {want_size} after the reset: {after.get('size')}")
 
         def fmt(a):
             return a.get("_error") or " ".join(f"{k}={a[k]}" for k in sorted(a))
         self.r.log(f"unit start text tool reset (Properties panel, {time.time() - t0:.1f} s, wanted {want}): before "
                    f"{fmt(before)} | {', '.join(done) or 'nothing to change'}{'; errors: ' + '; '.join(errs) if errs else ''}"
                    f" | after {fmt(after)}")
+
+    def screen_mode_state(self) -> dict:
+        """R-22 (TW-156): the main window's frame - in the standard screen mode it has its caption (WS_CAPTION), the
+        two full-screen modes take it away. {"standard", "caption", "zoomed", "style"} or {"error"}."""
+        import ctypes
+        try:
+            hwnd = int(self.h.call("main")["hwnd"])
+            u = ctypes.windll.user32
+            u.GetWindowLongW.restype = ctypes.c_long
+            style = u.GetWindowLongW(ctypes.c_void_p(hwnd), -16) & 0xFFFFFFFF
+            caption = (style & 0x00C00000) == 0x00C00000
+            return {"standard": caption, "caption": caption, "zoomed": bool(u.IsZoomed(ctypes.c_void_p(hwnd))),
+                    "style": f"0x{style:08x}"}
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)[:100]}
+
+    def screen_mode_standard(self):
+        """R-22 (TW-156, run 24 `toolbox/13`: the steps had no defined start mode): `{"screen_mode_standard": true}`
+        = the tools' "standard screen mode" button (idempotent); only when the button cannot be reached (tools column
+        hidden) F, read back after each press, at most twice. Value `screen_mode` {before, tries, after}, log
+        `orig screen mode standard: ...`; not standard afterwards -> runner error."""
+        rec = {"before": self.screen_mode_state(), "tries": []}
+        st = rec["before"]
+        try:
+            self.reset_light()
+            pt = self.resolve("toolbox.screen_standard")[0]
+            self.click_at(pt)
+            time.sleep(0.8)
+            st = self.screen_mode_state()
+            rec["tries"].append({"how": f"button at {list(pt)}", "state": st})
+        except (OrigError, Unmapped) as e:
+            rec["tries"].append({"how": "button", "error": str(e)[:100]})
+            for _ in range(2):
+                if st.get("standard"):
+                    break
+                self.key("F")
+                time.sleep(0.8)
+                st = self.screen_mode_state()
+                rec["tries"].append({"how": "key F", "state": st})
+        rec["after"] = st
+        self.values.append({"screen_mode": rec})
+        self.r.log(f"  orig screen mode standard: before {rec['before']} | " + "; ".join(
+            f"{t.get('how')}: {t.get('state') or t.get('error')}" for t in rec["tries"]))
+        if not st.get("standard"):
+            self.runner_error(f"screen mode: not standard after the reset ({st})")
+
+    def path_colors(self) -> dict:
+        """R-22 (TW-153): the document's fill and stroke colour ({"fill", "stroke"}, lower case, 7 characters; or
+        {"error"})."""
+        try:
+            lines = self.o.jsf('var p = fw.getDocumentDOM().pathAttributes; fp_log("RET " + p.fillColor + " " + p.brushColor);',
+                               why="fill and stroke colour")
+            got = ([ln[4:] for ln in lines or [] if ln.startswith("RET ")] or ["? ?"])[-1].split()
+            return {"fill": str(got[0]).lower()[:7], "stroke": str(got[1] if len(got) > 1 else "?").lower()[:7]}
+        except OrigError as e:
+            return {"error": str(e)[:100]}
+
+    def default_colors_restore(self, why) -> dict:
+        """R-22 (TW-153): the tools' "default colours" button with the Pointer tool and nothing selected, fill and
+        stroke read back (want #ffffff / #000000, config `orig.default_fill` / `orig.default_stroke`); one retry.
+        Logged as `default colours (<why>): ...`."""
+        want = {"fill": str(self.r.cfg["orig"].get("default_fill", "#ffffff")).lower(),
+                "stroke": str(self.r.cfg["orig"].get("default_stroke", "#000000")).lower()}
+        out = {"before": self.path_colors(), "tries": [], "ok": False}
+        for n in (1, 2):
+            t = {}
+            try:
+                tool = self.active_tool()
+                if not any(p in tool.lower() for p in POINTER_TOOLS):
+                    self.do("tool", "tool.pointer", {})
+                    time.sleep(0.2)
+                    t["pointer"] = True
+                self.o.jsf("fw.getDocumentDOM().selectNone();", why="default colours")
+                pt = self.resolve("toolbox.default_colors")[0]
+                self.click_at(pt)
+                time.sleep(0.3)
+                t["clicked"] = list(pt)
+            except Exception as e:  # noqa: BLE001
+                t["error"] = str(e)[:100]
+            got = t["got"] = self.path_colors()
+            out["tries"].append(t)
+            out["got"] = got
+            if got.get("fill") == want["fill"] and got.get("stroke") == want["stroke"]:
+                out["ok"] = True
+                break
+        self.r.log(f"default colours ({why}): before {out['before']}, " + "; ".join(
+            f"try {i + 1}: {t}" for i, t in enumerate(out["tries"])) + f" -> {'ok' if out['ok'] else 'NOT ' + str(want)}")
+        return out
 
     def page_size(self) -> str:
         """R-17: the document's size, "WxH" (or "? (reason)")."""
@@ -1942,6 +2075,8 @@ class OrigSide(Side):
             # of the read-back leave history entries, so the test document is opened afresh afterwards
             self.pending_text_defaults = False
             self.text_tool_reset()
+            # R-22 (TW-153): the colour reset runs once more with the reopened document (script, else the button)
+            self.pending_colors = True
             self.open_testfile(path)
 
     def close_doc(self, path: Path):
@@ -2372,8 +2507,8 @@ class OrigSide(Side):
 
     def type_keys(self, text: str):
         """R-20: typed as real keys (vk + scan code + shift state of the reference's layout, host `type` mode keys),
-        config `orig.type_delay_ms` (default 20) between the characters."""
-        delay = int(self.r.cfg["orig"].get("type_delay_ms", 20))
+        config `orig.type_delay_ms` (default 35 since R-22, TW-146 rest; was 20) between the characters."""
+        delay = int(self.r.cfg["orig"].get("type_delay_ms", 35))
         self.o.focus()
         return self.h.call("type", text=text, mode="keys", delay_ms=delay, timeout=60 + len(text) * delay / 1000)
 
@@ -2448,26 +2583,71 @@ class OrigSide(Side):
         before = st.get("chars") or ""
         self.text_entry_state = {"new_text": not before, "text": text,
                                  "n_before": int(st.get("n") or 0) - (0 if before else 1)}
-        if probe and len(text) > 1:
+        # R-22 (TW-146 rest, run 24 tool-text/11 only "Ab", 12, 13, 17 nothing although the caret check passed; the
+        # losses follow the commit of the previous text): always the first character alone, read back; not arrived
+        # -> settle (`orig.text_retry_settle_ms`, default 400), the text tool again if a lost key switched it, one
+        # click into the text, editor and caret checked, the first character typed again from the start; the rest
+        # only once it arrived. Every attempt is logged (value `attempts`, log `attempt n: ...`)
+        attempts = rec["attempts"] = []
+        mid = {}
+        arrived = False
+        for n in (1, 2):
+            att = {"try": n}
+            if n == 2:
+                tool = str(mid.get("tool") or "")
+                if "text" not in tool.lower():
+                    try:
+                        self.do("tool", "tool.text", {})
+                        time.sleep(0.3)
+                        att["text_tool_again"] = self.active_tool()
+                    except (OrigError, Unmapped) as e:
+                        att["text_tool_error"] = str(e)[:100]
+                pt = self.caret_retry_point(lc, st)
+                if pt is None:
+                    att["error"] = "no point to click into the text"
+                    attempts.append(att)
+                    how.append("attempt 2: no point to click into the text")
+                    break
+                time.sleep(int(self.r.cfg["orig"].get("text_retry_settle_ms", 400)) / 1000)
+                keep = getattr(self, "last_canvas", None)
+                try:
+                    self.do("canvas_click", list(pt), {})
+                finally:
+                    self.last_canvas = keep
+                st2 = self.wait_text_editor()
+                att["click"] = {"at": list(pt), **{k: st2.get(k) for k in ("tool", "n", "sel", "open", "polls")}}
+                if not st2.get("open"):
+                    attempts.append(att)
+                    how.append(f"attempt 2: click into the text at {pt} - no editor")
+                    break
+                att["caret"] = self.caret_check(st2).get("how")
+                st = st2
+                before = st.get("chars") or ""
             self.type_keys(text[0])
             time.sleep(0.3)
             mid = self.editor_state()
-            rec["probe"] = {"char": text[0], "got": mid.get("chars"), "tool": mid.get("tool")}
-            if not text_entry_ok(before, mid.get("chars"), text[0]):
-                how.append(f'first character {text[0]!r} did not arrive (tool {mid.get("tool")}, text '
-                           f'"{text_escape(str(mid.get("chars")))}") - the rest is not typed')
-                rec.update(typed=False, before=before, after=mid.get("chars"), ok=False, how=how)
-                self.values.append({"text_entry": rec})
-                self.r.log(f'  orig text entry: {"; ".join(how)} -> "{text_escape(str(mid.get("chars") or ""))}" '
-                           f'(wanted "{text_escape(text)}", DIFFERENT)')
-                self.runner_error(f"text entry: no caret and the first character {text[0]!r} did not arrive "
-                                  f"(tool {mid.get('tool')}) - {text[1:]!r} not typed (the letters would select tools)")
-                return True
+            att.update(char=text[0], got=mid.get("chars"), tool=mid.get("tool"))
+            arrived = text_entry_ok(before, mid.get("chars"), text[0])
+            att["arrived"] = arrived
+            attempts.append(att)
+            how.append(f'attempt {n}: first character {text[0]!r} {"arrived" if arrived else "lost"} (tool '
+                       f'{mid.get("tool")}, text "{text_escape(str(mid.get("chars") or ""))}"'
+                       + (f', click at {att["click"]["at"]}, caret {att.get("caret")}' if "click" in att else "") + ")")
+            if arrived:
+                break
+        rec["probe"] = {"char": text[0], "got": mid.get("chars"), "tool": mid.get("tool")}
+        if not arrived:
+            rec.update(typed=False, before=before, after=mid.get("chars"), ok=False, how=how)
+            self.values.append({"text_entry": rec})
+            self.r.log(f'  orig text entry: {"; ".join(how)} -> "{text_escape(str(mid.get("chars") or ""))}" '
+                       f'(wanted "{text_escape(text)}", DIFFERENT)')
+            self.runner_error(f"text entry: the first character {text[0]!r} did not arrive in {len(attempts)} "
+                              f"attempt(s) (tool {mid.get('tool')}) - {text[1:]!r} not typed (the letters would "
+                              f"select tools)")
+            return True
+        if len(text) > 1:
             res = self.type_keys(text[1:])
-            how.append(f"first character arrived, rest typed as keys {res}")
-        else:
-            res = self.type_keys(text)
-            how.append(f"editor after {st.get('polls')} poll(s), typed as keys {res}")
+            how.append(f"rest typed as keys {res}")
         time.sleep(0.3)
         after = self.editor_state()
         got = after.get("chars")
@@ -2755,7 +2935,7 @@ class OrigSide(Side):
             self.runner_error(f"pointer tool not selectable (tools column slot / flyout / script: {tool})")
         return tool
 
-    def key_substitute(self, combo) -> str | None:
+    def key_substitute(self, combo, nudge=None) -> str | None:
         """R-19 (TW-140): a plain Delete / Backspace / arrow / Escape on the reference side is replaced (see
         key_substitute_plan): Delete -> Edit > Clear (menu; `deleteSelection(false)` when the menu fails or removes
         nothing), arrow -> `moveSelectionBy({x, y}, false, false)`, Escape in the text editor -> Pointer tool click.
@@ -2773,10 +2953,30 @@ class OrigSide(Side):
         except OrigError as e:
             self.r.log(f"  orig key {combo}: substitute check failed ({str(e)[:80]}) - real key")
             return None
-        kind, why = key_substitute_plan(combo, view, busy, tool)
+        if nudge is None:
+            nudge = getattr(self, "step_nudge", None)
+        kind, why = key_substitute_plan(combo, view, busy, tool, nudge)
         if kind is None:
             self.r.log(f"  orig key {combo}: real key ({why})")
             return None
+        if kind == "tool_key":
+            # R-22 (TW-155 a): the real key for the active tool (e.g. Freeform size keys); a tool switch means the
+            # program took it as a tool shortcut - the tool's own key use cannot be sent: Pointer tool back and the
+            # step `unsupported` with the reason
+            self.key(combo)
+            time.sleep(0.2)
+            after = self.active_tool()
+            self.r.log(f"  orig key {combo}: real key ({why}) -> tool {after}")
+            if after != tool:
+                try:
+                    self.do("tool", "tool.pointer", {})
+                except (OrigError, Unmapped) as e:
+                    self.r.log(f"  orig key {combo}: pointer tool back failed: {e}")
+                raise Unsupported(f"orig: plain {combo} with the {tool} tool selected the {after} tool (taken as a "
+                                  f"tool shortcut, not consumed by the tool) - the tool's own key use cannot be sent")
+            # not a substitute: the real key was sent (no `substituted` entry, no key_check)
+            self.values.append({"tool_key": {"key": combo, "tool": tool, "tool_after": after}})
+            return "real key"
         if kind == "none":
             try:
                 st0 = self.key_state()
@@ -3964,11 +4164,13 @@ class OrigSide(Side):
             self.after_menu()
         elif verb == "close_dialogs":
             self.reset_light()
+        elif verb == "screen_mode_standard":
+            self.screen_mode_standard()
         elif verb == "key":
             for _ in range(int(act.get("repeat", 1) or 1)):
                 # R-19 (TW-140): plain Delete / arrow / Escape replaced by menu / script / mouse actions; no
                 # key_check for a replaced key
-                if self.key_substitute(arg) is None:
+                if self.key_substitute(arg, act.get("nudge") if isinstance(act, dict) else None) is None:
                     self.key_checked(arg)
             if getattr(self, "popup_edit", None) and str(arg).lower() in ("enter", "return", "tab"):
                 self.popup_edit_record("after_key", str(arg))
@@ -4728,19 +4930,67 @@ class FpSide(Side):
             self.open_testfile(path)
 
     # R-21 (TW-149): the text tool's attributes from a scratch text (addNewText with the tool's defaults), deleted again
-    FP_TEXT_ATTRS_JS = ("(function(){var d=fw.getDocumentDOM();if(!d)return 'error no document';try{d.selectNone();"
-                        "d.addNewText({left:10,top:10,right:200,bottom:40},true);"
-                        "if(fw.selection.length!=1)return 'error scratch text not selected ('+fw.selection.length+')';"
+    # R-22 (TW-149 leftovers, run 24 `panel-layers`, `panel-layers-menu`, `panel-pages-states-history`: before and
+    # after read "error -2147216344" = 0x80041428 EBadSelection, i.e. `draw.text` unavailable): all three units open
+    # T07, whose active layer after opening is the Web layer / the locked "Ebene 3" - no text can be added there.
+    # The scratch text now falls back to the other layers (top down, `currentLayerNum`), the active layer restored;
+    # `layer=<n>` names the layer used
+    FP_TEXT_ATTRS_JS = ("(function(){var d=fw.getDocumentDOM();if(!d)return 'error no document';var L=null;"
+                        "try{L=d.currentLayerNum;}catch(e){}"
+                        "function scratch(){d.selectNone();d.addNewText({left:10,top:10,right:200,bottom:40},true);"
+                        "if(fw.selection.length!=1)throw 'scratch text not selected ('+fw.selection.length+')';"
                         "var a=fw.selection[0].textRuns.initialAttrs,s=[],ks=['face','size','bold','italic','underline','fillColor'];"
                         "for(var i=0;i<ks.length;i++)s.push(ks[i]+'='+a[ks[i]]);d.deleteSelection(false);return s.join('|');}"
-                        "catch(e){return 'error '+e;}})()")
+                        "function back(){try{if(L!==null)d.currentLayerNum=L;}catch(e){}}"
+                        "try{return scratch();}catch(e0){var n=0;try{n=d.layers.length;}catch(e){}"
+                        "for(var j=n-1;j>=0;j--){if(j===L)continue;try{d.currentLayerNum=j;var r=scratch();back();return r+'|layer='+j;}catch(e){}}"
+                        "back();return 'error '+e0;}})()")
+
+    def screen_mode_standard(self):
+        """R-22 (TW-156): standard screen mode at the step start - `ui_state.screen_mode` read; not 0 -> the tools'
+        "standard screen mode" button, else the command `view.exitFullScreen`; read back. Value `screen_mode`
+        {before, how, after}, log `fp screen mode standard: ...`; not 0 afterwards -> runner error."""
+        rec = {"before": self.state().get("screen_mode"), "how": []}
+        if rec["before"] not in (0, None):
+            try:
+                self.do("click", "toolbox.screen_standard", {})
+                rec["how"].append("button")
+            except Exception as e:  # noqa: BLE001
+                rec["how"].append(f"button: {str(e)[:80]}")
+            time.sleep(0.3)
+            if self.state().get("screen_mode") not in (0, None):
+                try:
+                    self.call("ui_action", {"run": "view.exitFullScreen"})
+                    rec["how"].append("command view.exitFullScreen")
+                except Exception as e:  # noqa: BLE001
+                    rec["how"].append(f"command: {str(e)[:80]}")
+                time.sleep(0.3)
+        rec["after"] = self.state().get("screen_mode")
+        self.values.append({"screen_mode": rec})
+        self.r.log(f"  fp screen mode standard: {rec}")
+        if rec["after"] not in (0, None):
+            msg = f"screen mode: {rec['after']} after the reset, not 0 (standard)"
+            self.runner_errors = getattr(self, "runner_errors", []) + [msg]
+            self.r.log(f"  fp runner error: {msg}")
 
     def text_tool_attrs(self) -> dict:
-        """R-21 (TW-149): Firepixel's text tool attributes (FP_TEXT_ATTRS_JS); {"_error": ...} when not readable."""
-        try:
-            got = str(self.script_value(self.FP_TEXT_ATTRS_JS))
-        except Exception as e:  # noqa: BLE001
-            got = f"error {str(e)[:160]}"
+        """R-21 (TW-149): Firepixel's text tool attributes (FP_TEXT_ATTRS_JS); {"_error": ...} when not readable.
+        R-22 (TW-149 leftovers): an error -> menus / dialogs closed (reset_light), read once more."""
+        got = ""
+        for n in (1, 2):
+            if n == 2:
+                try:
+                    self.reset_light()
+                except Exception as e:  # noqa: BLE001
+                    self.r.log(f"fp text tool attributes: reset before the retry failed: {str(e)[:100]}")
+            try:
+                got = str(self.script_value(self.FP_TEXT_ATTRS_JS))
+            except Exception as e:  # noqa: BLE001
+                got = f"error {str(e)[:160]}"
+            if not got.startswith("error"):
+                break
+            if n == 1:
+                self.r.log(f"fp text tool attributes: {got[:120]} - menus / dialogs closed, read again")
         if got.startswith("error"):
             return {"_error": got}
         return dict(kv.split("=", 1) for kv in got.split("|") if "=" in kv)
@@ -4763,13 +5013,21 @@ class FpSide(Side):
                   "bold": bool(want.get("bold")), "italic": bool(want.get("italic")),
                   "underline": bool(want.get("underline")), "color": str(want.get("fillColor", "#000000"))}
         err = ""
-        try:
-            self.call("run_script", {"code": "fw.getDocumentDOM().selectNone();"})
-            res = self.call("run_command", {"name": "text.setToolDefaults", "params": params})
-            if isinstance(res, dict) and res.get("ok") is False:
-                err = f"; error {str(res)[:120]}"
-        except Exception as e:  # noqa: BLE001
-            err = f"; error {str(e)[:120]}"
+        for n in (1, 2):
+            # R-22 (TW-149 leftovers): one retry after closing menus / dialogs
+            err = ""
+            try:
+                if n == 2:
+                    self.reset_light()
+                self.call("run_script", {"code": "fw.getDocumentDOM().selectNone();"})
+                res = self.call("run_command", {"name": "text.setToolDefaults", "params": params})
+                if isinstance(res, dict) and res.get("ok") is False:
+                    err = f"; error {str(res)[:120]}"
+            except Exception as e:  # noqa: BLE001
+                err = f"; error {str(e)[:120]}"
+            if not err:
+                break
+            err += f" (try {n})"
         after = self.text_tool_attrs()
 
         def fmt(a):
@@ -5462,6 +5720,8 @@ class FpSide(Side):
             self.call("ui_action", {"run": arg} if isinstance(arg, str) else arg)
         elif verb == "close_dialogs":
             self.reset_light()
+        elif verb == "screen_mode_standard":
+            self.screen_mode_standard()
         elif verb == "key":
             for _ in range(int(act.get("repeat", 1) or 1)):
                 self.key(arg)
@@ -6729,6 +6989,7 @@ class Runner:
             side.text_entry_state = None
             side.last_text_select = None  # R-21 (TW-146 c)
             side.nudge_keys = step.get("orig_nudge_keys")
+            side.step_nudge = step.get("nudge")  # R-22 (TW-155 a): arrows of this step are nudges (true) or not (false)
             side.history_not_comparable = bool(step.get("history_not_comparable"))
             side.escape_not_comparable = False
         t0 = time.time()

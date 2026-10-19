@@ -217,7 +217,7 @@
   },
   {
    "id": "05_editor_open",
-   "check": "text editor (Ctrl+Shift+E) open/apply",
+   "check": "text editor open/apply",
    "method": {
     "orig": "W, B",
     "fp": "Fi, B"
@@ -228,9 +228,6 @@
     },
     {
      "select": "TX1"
-    },
-    {
-     "key": "ctrl+shift+E"
     }
    ],
    "shot": {
@@ -241,7 +238,15 @@
      "key": "Escape"
     }
    ],
-   "note": "Firepixel command id for the text editor not in menu.ftl - shortcut only"
+   "note": "Firepixel command id for the text editor not in menu.ftl - shortcut only; R-22 (TW-154, run 24: Ctrl+Shift+E opened nothing on either side - the key is missing from the 'Web Standard' set): neither program has a menu entry for the Text Editor, so Firepixel opens it through its command text.editor (bridge ui_action) and the reference side is 'unsupported'",
+   "fp": [
+    {
+     "command": "text.editor"
+    }
+   ],
+   "unsupported": {
+    "orig": "Text Editor: no menu entry in the reference (re 46: cmd_TextEditor 35046 without menu) and no key in the 'Web Standard' set both programs use since R-13 (Ctrl+Shift+E is Firepixel's own set) - shot only (R-22, TW-154)"
+   }
   },
   {
    "id": "06_attach_path_result",

@@ -66,21 +66,18 @@
      "open": "inspector.stroke_category"
     },
     {
-     "repeat": 3,
-     "do": [
-      {
-       "key": "Down"
-      }
-     ]
+     "hover": {
+      "menu_item": "Airbrush"
+     }
     },
     {
-     "key": "Right"
+     "wait": 600
     }
    ],
    "shot": {
     "area": "popup"
    },
-   "note": "Original: 3x down = Airbrush, right opens the submenu."
+   "note": "Original: 3x down = Airbrush, right opens the submenu. R-22 (TW-155 b, run 24: a real Down selected the Line tool on the reference side, then the substitute nudged P1): no plain arrows - the 'Airbrush' entry of the open category list is hovered, which opens its submenu, on both sides"
   },
   {
    "id": "02_type_result_basic_result",

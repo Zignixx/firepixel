@@ -176,7 +176,9 @@
     {
      "record_ui": "inspector.fields"
     }
-   ]
+   ],
+   "nudge": false,
+   "note": "R-22 (TW-155 a, run 24: the reference's Up / Down were replaced by moveSelectionBy): `nudge: false` - the arrows are the Freeform tool's size keys, sent as real keys on both sides; a tool switch on the reference side makes the step 'unsupported'"
   },
   {
    "id": "05_reshape_area_result",

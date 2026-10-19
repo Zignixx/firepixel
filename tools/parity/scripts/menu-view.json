@@ -581,7 +581,7 @@
   },
   {
    "id": "20_edit_guides_dialog_open",
-   "check": "edit guides (Ctrl+Alt+Shift+G)",
+   "check": "edit guides",
    "method": {
     "orig": "W, B",
     "fp": "Fi, B"
@@ -589,9 +589,6 @@
    "both": [
     {
      "reopen": "T10"
-    },
-    {
-     "key": "ctrl+alt+shift+G"
     }
    ],
    "shot": {
@@ -601,7 +598,16 @@
     {
      "key": "Escape"
     }
-   ]
+   ],
+   "fp": [
+    {
+     "command": "view.guides.editGuides"
+    }
+   ],
+   "unsupported": {
+    "orig": "Edit Guides: no menu entry in the reference (re 11: CS6 version without the menu entry, only the script API) and no key in the 'Web Standard' set both programs use since R-13 - shot only (R-22, TW-154)"
+   },
+   "note": "R-22 (TW-154, run 24: Ctrl+Alt+Shift+G opened nothing on either side - the key is missing from the 'Web Standard' set): neither program has a menu entry for Edit Guides, so Firepixel opens it through its command view.guides.editGuides (bridge ui_action) and the reference side is 'unsupported'"
   },
   {
    "id": "21_preview_modes_result",

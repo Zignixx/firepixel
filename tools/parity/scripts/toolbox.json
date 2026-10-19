@@ -1528,12 +1528,21 @@
      "open_testfile": "T10"
     },
     {
+     "screen_mode_standard": true
+    },
+    {
      "click": "toolbox.screen_full_menus"
     }
    ],
    "shot": {
     "area": "window"
-   }
+   },
+   "after": [
+    {
+     "screen_mode_standard": true
+    }
+   ],
+   "note": "R-22 (TW-156, run 24: no defined start mode - Firepixel's Tools panel was gone after the previous step, the button 'unmapped'): standard screen mode set and read back at the step start and again after the shot (reference: tools button, F only without it, window caption read; Firepixel: ui_state.screen_mode, button or view.exitFullScreen)"
   },
   {
    "id": "13_view_modes_full_normal",
@@ -1547,6 +1556,9 @@
      "open_testfile": "T10"
     },
     {
+     "screen_mode_standard": true
+    },
+    {
      "click": "toolbox.screen_full_menus"
     },
     {
@@ -1555,7 +1567,13 @@
    ],
    "shot": {
     "area": "window"
-   }
+   },
+   "after": [
+    {
+     "screen_mode_standard": true
+    }
+   ],
+   "note": "R-22 (TW-156, run 24: no defined start mode - Firepixel's Tools panel was gone after the previous step, the button 'unmapped'): standard screen mode set and read back at the step start and again after the shot (reference: tools button, F only without it, window caption read; Firepixel: ui_state.screen_mode, button or view.exitFullScreen)"
   },
   {
    "id": "13_view_modes_standard_normal",
@@ -1569,6 +1587,9 @@
      "open_testfile": "T10"
     },
     {
+     "screen_mode_standard": true
+    },
+    {
      "click": "toolbox.screen_full_menus"
     },
     {
@@ -1581,7 +1602,12 @@
    "shot": {
     "area": "window"
    },
-   "note": "Must restore 1600 x 1000 afterwards."
+   "note": "Must restore 1600 x 1000 afterwards.; R-22 (TW-156, run 24: no defined start mode - Firepixel's Tools panel was gone after the previous step, the button 'unmapped'): standard screen mode set and read back at the step start and again after the shot (reference: tools button, F only without it, window caption read; Firepixel: ui_state.screen_mode, button or view.exitFullScreen)",
+   "after": [
+    {
+     "screen_mode_standard": true
+    }
+   ]
   },
   {
    "id": "14_color_section_normal",
