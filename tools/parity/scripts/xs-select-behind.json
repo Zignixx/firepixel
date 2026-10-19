@@ -1,0 +1,739 @@
+{
+ "unit": "xs-select-behind",
+ "testfile": "T02",
+ "note": "Hover feedback of Select Behind (second entry of the Pointer slot flyout). Front rectangle FR (400,200-600,300, fill #99CC99) is drawn by script over bitmap B1 of T02 (40,40-520,360). Points (document px): P1 450,250 = FR over B1, P2 570,250 = FR only, P3 200,150 = B1 only. Every hover is a mouse move without a button (canvas_move next to the point, then canvas_hover), shot of the canvas while the mouse stays; selection and active tool are read back in 'after' so the script call cannot disturb the hover state before the shot. Edges are switched on (setShowEdges(true)) after drawing FR, because the runner's view_defaults switch them off and the blue selection frame would be hidden. Mouse pointer images are not captured. Verbs as in tools/parity/runner/README.md; per_side: the reference picks the flyout entry by orig_index 1, Firepixel sets tool.selectBehind.",
+ "steps": [
+  {
+   "id": "00_overview_normal",
+   "check": "T02 + front rectangle FR 400,200-600,300 over B1 (40,40-520,360), nothing selected",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, W"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM(); d.selectNone(); d.addNewRectangle({left:400,top:200,right:600,bottom:300},0); d.setFillColor('#99CC99'); d.selectNone(); d.setShowEdges(true);"
+    },
+    {
+     "tool": "tool.pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "canvas_move": [
+      700,
+      550
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "log_value": "fw.activeTool"
+    }
+   ]
+  },
+  {
+   "id": "01_front_selected_pointer",
+   "check": "front rectangle selected with the Pointer (click on 570,250, nothing behind)",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, W"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM(); d.selectNone(); d.addNewRectangle({left:400,top:200,right:600,bottom:300},0); d.setFillColor('#99CC99'); d.selectNone(); d.setShowEdges(true);"
+    },
+    {
+     "tool": "tool.pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "canvas_click": [
+      570,
+      250
+     ]
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "canvas_move": [
+      700,
+      550
+     ]
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "log_value": "fw.activeTool"
+    }
+   ]
+  },
+  {
+   "id": "02_behind_hover_overlap",
+   "check": "Select Behind, hover over the selected front rectangle where B1 lies behind (450,250): which object gets the hover frame",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, W"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM(); d.selectNone(); d.addNewRectangle({left:400,top:200,right:600,bottom:300},0); d.setFillColor('#99CC99'); d.selectNone(); d.setShowEdges(true);"
+    },
+    {
+     "tool": "tool.pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "canvas_click": [
+      570,
+      250
+     ]
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "per_side": {
+      "orig": [
+       {
+        "choose": {
+         "target": "toolbox.pointer_flyout",
+         "item": "Hintere auswählen"
+        },
+        "orig_index": 1
+       }
+      ],
+      "fp": [
+       {
+        "tool": "tool.selectBehind"
+       }
+      ]
+     }
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.activeTool"
+    },
+    {
+     "canvas_move": [
+      438,
+      238
+     ]
+    },
+    {
+     "wait": 200
+    },
+    {
+     "canvas_hover": [
+      450,
+      250
+     ]
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "log_value": "fw.activeTool"
+    }
+   ]
+  },
+  {
+   "id": "03_behind_hover_front_only",
+   "check": "Select Behind, hover over the selected front rectangle where nothing is behind (570,250)",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, W"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM(); d.selectNone(); d.addNewRectangle({left:400,top:200,right:600,bottom:300},0); d.setFillColor('#99CC99'); d.selectNone(); d.setShowEdges(true);"
+    },
+    {
+     "tool": "tool.pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "canvas_click": [
+      570,
+      250
+     ]
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "per_side": {
+      "orig": [
+       {
+        "choose": {
+         "target": "toolbox.pointer_flyout",
+         "item": "Hintere auswählen"
+        },
+        "orig_index": 1
+       }
+      ],
+      "fp": [
+       {
+        "tool": "tool.selectBehind"
+       }
+      ]
+     }
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.activeTool"
+    },
+    {
+     "canvas_move": [
+      558,
+      238
+     ]
+    },
+    {
+     "wait": 200
+    },
+    {
+     "canvas_hover": [
+      570,
+      250
+     ]
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "log_value": "fw.activeTool"
+    }
+   ]
+  },
+  {
+   "id": "04_behind_hover_back_only",
+   "check": "Select Behind, hover outside the front rectangle over B1 (200,150)",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, W"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM(); d.selectNone(); d.addNewRectangle({left:400,top:200,right:600,bottom:300},0); d.setFillColor('#99CC99'); d.selectNone(); d.setShowEdges(true);"
+    },
+    {
+     "tool": "tool.pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "canvas_click": [
+      570,
+      250
+     ]
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "per_side": {
+      "orig": [
+       {
+        "choose": {
+         "target": "toolbox.pointer_flyout",
+         "item": "Hintere auswählen"
+        },
+        "orig_index": 1
+       }
+      ],
+      "fp": [
+       {
+        "tool": "tool.selectBehind"
+       }
+      ]
+     }
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.activeTool"
+    },
+    {
+     "canvas_move": [
+      188,
+      138
+     ]
+    },
+    {
+     "wait": 200
+    },
+    {
+     "canvas_hover": [
+      200,
+      150
+     ]
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "log_value": "fw.activeTool"
+    }
+   ]
+  },
+  {
+   "id": "05_behind_click1_result",
+   "check": "Select Behind, click once at 450,250 (expect B1 selected); shot with the mouse still there",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, W"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM(); d.selectNone(); d.addNewRectangle({left:400,top:200,right:600,bottom:300},0); d.setFillColor('#99CC99'); d.selectNone(); d.setShowEdges(true);"
+    },
+    {
+     "tool": "tool.pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "canvas_click": [
+      570,
+      250
+     ]
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "per_side": {
+      "orig": [
+       {
+        "choose": {
+         "target": "toolbox.pointer_flyout",
+         "item": "Hintere auswählen"
+        },
+        "orig_index": 1
+       }
+      ],
+      "fp": [
+       {
+        "tool": "tool.selectBehind"
+       }
+      ]
+     }
+    },
+    {
+     "wait": 300
+    },
+    {
+     "canvas_move": [
+      438,
+      238
+     ]
+    },
+    {
+     "wait": 200
+    },
+    {
+     "canvas_hover": [
+      450,
+      250
+     ]
+    },
+    {
+     "wait": 600
+    },
+    {
+     "canvas_click": [
+      450,
+      250
+     ]
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "log_value": "fw.activeTool"
+    }
+   ]
+  },
+  {
+   "id": "06_behind_click2_result",
+   "check": "Select Behind, second click at 450,250 (deeper or cycle back to FR); shot with the mouse still there",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, W"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM(); d.selectNone(); d.addNewRectangle({left:400,top:200,right:600,bottom:300},0); d.setFillColor('#99CC99'); d.selectNone(); d.setShowEdges(true);"
+    },
+    {
+     "tool": "tool.pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "canvas_click": [
+      570,
+      250
+     ]
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "per_side": {
+      "orig": [
+       {
+        "choose": {
+         "target": "toolbox.pointer_flyout",
+         "item": "Hintere auswählen"
+        },
+        "orig_index": 1
+       }
+      ],
+      "fp": [
+       {
+        "tool": "tool.selectBehind"
+       }
+      ]
+     }
+    },
+    {
+     "wait": 300
+    },
+    {
+     "canvas_move": [
+      438,
+      238
+     ]
+    },
+    {
+     "wait": 200
+    },
+    {
+     "canvas_hover": [
+      450,
+      250
+     ]
+    },
+    {
+     "wait": 600
+    },
+    {
+     "canvas_click": [
+      450,
+      250
+     ]
+    },
+    {
+     "wait": 800
+    },
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "canvas_move": [
+      451,
+      251
+     ]
+    },
+    {
+     "wait": 300
+    },
+    {
+     "canvas_click": [
+      450,
+      250
+     ]
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "log_value": "fw.activeTool"
+    }
+   ]
+  },
+  {
+   "id": "07_pointer_hover_overlap",
+   "check": "back to the Pointer with FR selected, hover at 450,250 (comparison)",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, W"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM(); d.selectNone(); d.addNewRectangle({left:400,top:200,right:600,bottom:300},0); d.setFillColor('#99CC99'); d.selectNone(); d.setShowEdges(true);"
+    },
+    {
+     "tool": "tool.pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "canvas_click": [
+      570,
+      250
+     ]
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "per_side": {
+      "orig": [
+       {
+        "choose": {
+         "target": "toolbox.pointer_flyout",
+         "item": "Hintere auswählen"
+        },
+        "orig_index": 1
+       }
+      ],
+      "fp": [
+       {
+        "tool": "tool.selectBehind"
+       }
+      ]
+     }
+    },
+    {
+     "wait": 300
+    },
+    {
+     "tool": "tool.pointer"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.activeTool"
+    },
+    {
+     "canvas_move": [
+      438,
+      238
+     ]
+    },
+    {
+     "wait": 200
+    },
+    {
+     "canvas_hover": [
+      450,
+      250
+     ]
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "log_value": "fw.activeTool"
+    }
+   ]
+  },
+  {
+   "id": "08_behind_hover_overlap_nothing_selected",
+   "check": "Select Behind with nothing selected, hover at 450,250",
+   "method": {
+    "orig": "B, W",
+    "fp": "B, W"
+   },
+   "both": [
+    {
+     "open_testfile": "T02"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM(); d.selectNone(); d.addNewRectangle({left:400,top:200,right:600,bottom:300},0); d.setFillColor('#99CC99'); d.selectNone(); d.setShowEdges(true);"
+    },
+    {
+     "tool": "tool.pointer"
+    },
+    {
+     "select_none": true
+    },
+    {
+     "per_side": {
+      "orig": [
+       {
+        "choose": {
+         "target": "toolbox.pointer_flyout",
+         "item": "Hintere auswählen"
+        },
+        "orig_index": 1
+       }
+      ],
+      "fp": [
+       {
+        "tool": "tool.selectBehind"
+       }
+      ]
+     }
+    },
+    {
+     "wait": 300
+    },
+    {
+     "log_value": "fw.activeTool"
+    },
+    {
+     "canvas_move": [
+      438,
+      238
+     ]
+    },
+    {
+     "wait": 200
+    },
+    {
+     "canvas_hover": [
+      450,
+      250
+     ]
+    },
+    {
+     "wait": 600
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "log_value": "(function(){var s=[];for(var i=0;i<fw.selection.length;i++){var e=fw.selection[i];var r=e.pixelRect;s.push((e.name||'?')+'@'+r.left+','+r.top+'-'+r.right+','+r.bottom);}return s.length?s.join(';'):'none';})()"
+    },
+    {
+     "log_value": "fw.activeTool"
+    }
+   ]
+  }
+ ]
+}
