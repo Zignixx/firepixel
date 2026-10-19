@@ -405,6 +405,7 @@ effect, text-tool state carried between units).
 | 28 (2 units) | 19 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.3 % over the 48 old units); canvas pairs 185 / 212 |
 
 The next steps are in [ROADMAP.md](../ROADMAP.md): the human click-test, including the macOS re-test by the tester;
-the remaining runner items (the text selection and size of TW-146 rest, the text tool reset when every size route is
-skipped of TW-165 and the panel dock reference width of TW-167); U-1 rest; and the unmeasured R3 note of the text tool defaults
+the remaining runner item (the panel dock reference width of TW-167; the text selection and size of TW-146 rest and the
+text tool reset of TW-165 moved to the click-test A1-19 on 20 Oct 2026 as runner measurement gaps, not deviations);
+U-1 rest; and the unmeasured R3 note of the text tool defaults
 (TW-138 rest).

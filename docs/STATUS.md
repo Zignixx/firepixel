@@ -26,7 +26,7 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Errors | 33 reference-side, 21 Firepixel-side (both unchanged since run 25); 7 `runner error` lines in run 28 (run 27: 2), all reference-side text selections in `tool-text/07, 11, 13` that R-25 no longer accepts as a highlight (TW-146 rest); none in `toolbox` (TW-166 confirmed) | run 28 |
 | Latest release | **v0.2.4** (19 Oct 2026, pre-release; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; the three screen modes, the text default rules and the macOS fixes TW-160 to TW-162 with the own app menu); before: v0.2.3 (19 Oct 2026) | GitHub releases |
 | Workspace tests | Last full run: **2776 passed, 0 failed, 134 ignored** at `439a3ec5` (runner R-23, package F49, macOS fixes; the code of preview `2026-10-19_16-07`) | `main`, 19 Oct 2026 |
-| Open findings | 9 rows in `[F]`: 4 open (PDF layers, U-1 rest; the runner items TW-146 rest, TW-165 and TW-167); TW-138 rest closed except the unmeasured R3 note; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test and the macOS re-test by the tester; 5 deferred `[V]`, 20 informational `[N]`; run 28 closed TW-166, run 27 TW-159 rest, TW-163 and TW-164 | [FINDINGS.md](FINDINGS.md) |
+| Open findings | 7 rows in `[F]`: 2 open (PDF layers, U-1 rest; the runner item TW-167); TW-146 rest and TW-165 moved to the click-test A1-19 on 20 Oct 2026 (runner measurement gaps, not deviations); TW-138 rest closed except the unmeasured R3 note; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test and the macOS re-test by the tester; 5 deferred `[V]`, 20 informational `[N]`; run 28 closed TW-166, run 27 TW-159 rest, TW-163 and TW-164 | [FINDINGS.md](FINDINGS.md) |
 | Real differences known | None measured open (runs 26 to 28; the last one, full screen mode TW-158, was confirmed fixed in run 26). Unmeasured: whether indent and paragraph spacing on pointer-selected text become text defaults (TW-138 R3) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
@@ -268,7 +268,7 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
    typing after a double-click, crop option off, Linux start, pen anchor modes, the Select Behind hover frame,
    the History rows of key nudges, the screen modes) and the open A2 checks, and the macOS re-test of v0.2.4 by the
    tester (A4-19 to A4-21).
-2. Runner items TW-146 rest, TW-165 and TW-167, then a short follow-up run over `tool-text` and `toolbox`.
+2. Runner item TW-167, then a short follow-up run over `toolbox`; TW-146 rest and TW-165 moved to the click-test A1-19 (runner measurement gaps, not deviations).
 3. Remaining parity items: U-1 rest and the unmeasured R3 note of TW-138 (indent and spacing as text defaults).
 4. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 

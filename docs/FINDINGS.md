@@ -1,6 +1,6 @@
 # Open findings
 
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
 This file lists the findings that are still **open** in Firepixel: known bugs, deviations from the reference application, postponed features and accepted limitations. Closed findings are not kept here; their history lives in the commit log.
 
@@ -27,7 +27,7 @@ Findings are grouped by their state:
 
 ---
 
-## [F] Fixable now (9)
+## [F] Fixable now (7)
 
 Recounted after F48, runner R-22 and release v0.2.3 (19 Oct 2026); 3 rows open, 8 waiting for confirmation in run 25. The earlier remnants (sprite
 padding default, Shift-constrain for L-shape/arrow line, import rubber band, New Style defaults, text runs, SVG
@@ -280,15 +280,25 @@ Quotas and canvas pairs are unchanged; all units stay equal except for design. T
 runner items TW-146 rest, TW-165 and TW-167; TW-138 rest is closed except the unmeasured R3 note; TW-151 and TW-160 to
 TW-162 wait for the click-test, including the macOS re-test by the tester.
 
+**Moved to the click-test (20 Oct 2026): TW-146 rest and TW-165.** After runs 26 to 28 the runner cannot create a
+text selection inside the reference application's text editor with the mouse: glyph-box drags (from the start and
+from the end, 20 or 40 moves, with and without a first click) and word double-clicks only move the caret, 24 changed
+pixels instead of the expected highlight of about 172 px (ratio 0.12–0.14 in `tool-text/07, 11, 13`), so no size or
+colour route ever reaches the reference's selection. The two measurements that depend on it, the size and colour
+applied to a partial text selection (TW-146 rest) and the two-sided text tool reset derived from that step (TW-165),
+are therefore runner measurement gaps, not product deviations. Firepixel follows the code-derived rule (RE specs 49,
+50 and 53): an edit on a selection changes only the selected characters, and the next new text takes the size but not
+the colour. The hands-on check is [VERIFICATION.md](VERIFICATION.md) A1-19. The 7 rows: open are U-1 rest and the
+runner item TW-167; TW-138 rest is closed except the unmeasured R3 note; TW-151 and TW-160 to TW-162 wait for the
+click-test, including the macOS re-test by the tester.
+
 | ID | Area | What is open (expected vs. current) |
 |---|---|---|
 | TW-138 rest | Text tool defaults, Text menu (*RE spec*, rest) | **Closed except R3** (F49, `439a3ec5`; run 26: `tool-text` and `menu-text` without deviation, quotas and canvas pairs unchanged). The Properties panel (also routed to the open editor) no longer writes the baseline shift default; only the Text tool's own defaults command does (R1). Every font change (Text menu, panel, editor) stores the PostScript name next to the family and puts the family at the front of the recent font list, deduplicated and limited by the preference (R2). Applying a style from the Styles panel to text writes bold/italic/underline, the font, leading and anti-aliasing as text defaults, not the size (R4). Left open: R3, whether indent and paragraph spacing set on pointer-selected text become defaults, is not measured in the reference. |
-| TW-146 rest | Reference-side text selection and size in `tool-text` (*runner*) | Entry part confirmed in runs 26, 27 and 28: all new texts and the edits in `06`, `08` and `10` arrive with the first character on the first attempt. Left (run 28, R-25): the selection itself. R-25 requires a highlight of at least 60 % of the expected inverted area and now rejects the 24 changed pixels of runs 27 and 28 as the caret. In `11` five drags (glyph box and from the end, 20 or 40 moves, with and without a first click) and the word double-click at 89,97 all give 24 px of 171.7 expected (ratio 0.14, cover 0.4–1.0) over "123"; the size field, the size keys and the Text Editor route are all skipped ("no selection highlight", `text_size.method` null), "Abc 123" stays 12 pt and the export equals that of `03`. `07` ("Welt": 24 of 206.2 px, ratio 0.12) and `13` (24 of 171.7 px) log the same; in `13` the grey A0A0A0 is still set without a checked selection and does not reach "123" (pair 0.81 %). 7 `runner error` lines in `tool-text` (run 27: 1). Still unknown whether the reference selects without a visible highlight in the capture or does not select at all. Next: read the text selection by script after the drag (selected range or the runs' selection state), capture the highlight while the view keeps focus, and gate the colour step in `13` like the size routes. |
 | TW-151 (FB-01) | Pen tool: click on an existing anchor while drawing (tester feedback, *RE spec* 52 §1) | **Closed** (`c3a9e264`, confirm by click-test A4-15; run 24: no regression in `tool-path-reshape` and `inspector-stroke`, the anchor modes themselves are not measured by the runner). Clicking the last anchor of the path being drawn retracted nothing; in the reference it retracts the anchor's outgoing handle and the next segment leaves the point straight. Now: pressing on the last anchor sets its outgoing handle onto the anchor and keeps the incoming one; the path stays in progress. A drag past 2 screen px pulls the point again as a symmetric curve point (Alt keeps the previous incoming handle, Ctrl moves the point, Shift snaps to 45°). While drawing, an interior curve point becomes a corner, an interior corner point is deleted, a click on a segment inserts a point, the endpoint of another open path joins it; without a path in progress a click on an open path's endpoint continues it. Cursors: pen with a caret (convert) and pen with a ring and stub (join). The hit radius follows the *Snap distance* preference. Known limits: a join across elements appends the other path instead of merging the elements; no drag after a join, a close or an interior press; a double-click still ends the path. |
 | TW-160 (FB-04) | macOS: window frozen after minimise/restore (tester feedback, *direct fix*) | **Fixed, pending the Mac check** (`b9f085f4`, only type-checked for macOS; hands-on check A4-19). The minimised flag of the window was never refreshed after the app's own minimise, so the restored window was treated as invisible and stopped painting. Now the stale flag is compared with the real window state, cleared and a new frame requested. |
 | TW-161 (FB-05) | macOS: Cmd+Q quit without the save prompt (tester feedback, *direct fix*) | **Fixed, pending the Mac check** (`0352e7c9`, only type-checked for macOS; hands-on check A4-20). The default app menu of the windowing library bound Cmd+Q to an immediate terminate, so unsaved changes were lost. Now the default menu is off and Cmd+Q goes through the Quit action with the save prompt. Since `e11f8d1b` the app has its own macOS app menu (About Firepixel, Services, Hide, Hide Others, Show All and Quit Firepixel with the save prompt); the macOS CI build with it is green. |
 | TW-162 (FB-03) | macOS: native title bar (tester feedback, *direct fix*) | **Fixed, pending the Mac check** (`53e08484`, only type-checked for macOS; hands-on check A4-21). On macOS the window uses the system title bar with traffic lights; the app bar keeps the menus but draws no own window buttons, drag area or resize edges. Windows and Linux keep the own chrome. |
-| TW-165 | Text tool reset after a failed size step (*runner*) | Run 27 `tool-text`: only the reference's text tool was reset after the failed size step of `11`. R-25 mirrors the reset on Firepixel's side, but run 28 shows that the reset is armed only by a failed field or menu route: all three routes were skipped (no selection highlight, TW-146 rest), no "text tool reset pending on both sides" line is logged, and neither text tool is reset. The reference's texts stay 12 pt (its size never applied), Firepixel's tool keeps 72 pt from its successful selection edit (the F43 rule, equal to the reference in run 25), so `14_bounds` (1.10 %) and `16_overflow` (3.82 %) stay above 1 % (run 26: 0.19 % and 0.27 %). Arm the two-sided reset whenever the size step does not reach the selection on the reference side, skipped routes included. |
 | TW-167 | Reference panel dock width after the screen modes (*runner*) | Run 28 `toolbox`: the reference started the unit with its right panel dock collapsed to icons (left over from run 27; `00_overview_normal` 64.3 %, run 27: 25.9 %). R-25's layout check takes this 110 px dock as the reference width (`dock_ref` 110); after the screen modes of `13` the dock is expanded (276 px), and the restore logs `restored: []` without acting, so `13_view_modes_standard_normal` (25.6 %, run 27: 64.3 %) and the overview have swapped. Window pairs only, no class effect. Take the expanded default layout as the reference (or restore it at unit start) and restore that after `13`. |
 | U-1 rest | File ▸ Import, PDF | SVG files now import with their layers; **PDF files still arrive as one layer** because the pure-Rust PDF reader exposes no optional content groups (layers). Library limit; needs either an upstream feature or an own OCG reader. |
 

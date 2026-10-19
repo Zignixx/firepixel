@@ -73,6 +73,18 @@ Conventions: coordinates are document pixels; "R1", "E1", "B1", "P1", "PG" are t
   **Expected:** All supported files are added (folder recursively as configured), unsupported files are reported.
 - [ ] **A1-18** (CF-C CT-C-02/03, F19 TW-69; needs: real mouse) – see VER-4.23 and VER-1.36: reorder states/pages and drag across eye icons.
 
+### Text selection in the text editor
+
+- [ ] **A1-19** (TW-146 rest, TW-165; RE specs 49, 50 and 53; needs: real mouse, reference application) – moved from
+  A2 on 20 Oct 2026: in runs 26 to 28 the runner's drags and word double-clicks only moved the caret in the reference's
+  text editor (24 px instead of about 172 px of highlight), so the selection edits were never measured there.
+  **Steps:** In both programs create the text "Abc 123" (Arial 12 pt, black), double-click into it and select only
+  "123" with the mouse. In the Properties panel set the size to 72, then a colour (for example #A0A0A0). Leave the
+  editor, then create a new text with the Text tool.
+  **Expected:** Only "123" changes to 72 pt and the new colour; "Abc " keeps 12 pt and black. The new text takes the
+  size 72 pt but not the colour (it stays black). Firepixel matches the reference application; differences go into a
+  "Parity gap" issue.
+
 ## A2. Open items from comparison runs 12–27
 
 Comparison run 12 left seven units unclear (`?`). Runs 13 and 14 (17 Oct 2026) resolved or reclassified all of
@@ -102,6 +114,8 @@ added TW-163 and TW-164. Run 27 (19 Oct 2026, 3 units, runner R-24, the same pre
 rest, TW-163 and TW-164, kept TW-146 rest open (no size route reaches the selected "123") and added TW-165 and TW-166.
 Run 28 (19 Oct 2026, 2 units, runner R-25, the same preview) confirmed TW-166, kept TW-146 rest and TW-165 open (no
 selection try reaches the expected highlight, so no size route runs and no text tool is reset) and added TW-167.
+On 20 Oct 2026 TW-146 rest and TW-165 were moved to the hands-on check A1-19: the runner cannot select text in the
+reference's editor with the mouse, so they are measurement gaps, not deviations.
 The open checks below come from runs 17 to 28.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
@@ -161,7 +175,7 @@ The open checks below come from runs 17 to 28.
   **Expected:** As in the reference: TX2's bounds grow to 50,150–120,194 while the editor is open.
 - [x] **TW-144** (`xs-shortcuts/15_in_text_tx2`, `tool-text/06`) – resolved in run 21: with CR/LF kept in the read-backs (runner R-17b) both programs separate TX2's paragraphs with `\r`; the `\n` of run 20 was the reference-side read-back. Tests pin the separators.
 - [x] **TW-145** (`tool-text/11, 13, 14, 16`) – decided in run 25: the reference's size field again misses the drag-selected "123" in `11`, but its Text ▸ Size 72 sets the text tool to 72 pt, and its next texts are 72 pt like Firepixel's (`13` text box 100,48–361,101; `14` 0.18 %, `16` 0.27 %; the next unit starts with the reference's tool at 72 pt). The F43 rule gives the same next-text size; earlier runs (21–24) compared nothing because the reference's text or selection failed.
-- [ ] **TW-146 rest** (`tool-text/07, 11, 13`; runner; needs: next `tool-text` run) – entry part confirmed in runs 26 to 28 (all reference texts and the edits in `06`, `08` and `10` arrive as typed on the first attempt). Left (run 28, R-25): the area test (at least 60 % of the expected inverted area) rejects the 24 changed pixels as the caret, and no try gives more: five drags and the word double-click over "123" read 24 of 171.7 px (ratio 0.14), so the size field, the keys and the Text Editor route are skipped (`text_size.method` null) and "Abc 123" stays 12 pt; `07` ("Welt", ratio 0.12) and `13` the same, and `13`'s grey does not reach "123".
+- [x] **TW-146 rest** (`tool-text/07, 11, 13`; runner) – **moved to A1-19** (20 Oct 2026; runner measurement gap, not a deviation). Entry part confirmed in runs 26 to 28 (all reference texts and the edits in `06`, `08` and `10` arrive as typed on the first attempt). Left (run 28, R-25): the area test (at least 60 % of the expected inverted area) rejects the 24 changed pixels as the caret, and no try gives more: five drags and the word double-click over "123" read 24 of 171.7 px (ratio 0.14), so the size field, the keys and the Text Editor route are skipped (`text_size.method` null) and "Abc 123" stays 12 pt; `07` ("Welt", ratio 0.12) and `13` the same, and `13`'s grey does not reach "123".
   **Steps:** Runner: read the selection by script after the drag, capture the highlight while the view keeps focus, and gate the colour step of `13` like the size routes. Hands-on: in the reference click with the text tool, type "Abc 123", drag over "123" (or double-click it) and set 72 pt.
   **Expected:** The size and colour edits change only "123" on both sides.
 - [x] **TW-147** (`xs-shortcuts/07, 21`, `panel-pages-states-history/16, 21, 22`, `menu-edit/03`; runner R-20) – resolved in run 23: the Pointer tool is taken from the flyout when the slot holds Select Behind (`xs-shortcuts/07`, no runner error), Escape keeps R1 selected in both programs (`xs-shortcuts/21`, 1 / 1, F46 after RE spec 51), the paste read-back is R1 at 50,50–150,120 on both sides (`menu-edit/03`) and `MaxUndos` reads 20 in both (`panel-pages-states-history/22`). The nudge rows (c) are now compared with real Shift+arrows and continue as TW-148.
@@ -182,7 +196,7 @@ The open checks below come from runs 17 to 28.
   **Expected:** The Standard read-back reads "standard" from the window against the monitor; no `runner error` line in `toolbox/13`.
 - [x] **TW-164** (`tool-path-reshape/12_inspector_heads_freeform_normal`; runner R-24 `f7d13d61`) – confirmed in run 27: Freeform is chosen through flyout entry 0 and read back, and the reference's shot shows the Freeform head, pixel-identical to its `01` shot (9.7 %, run 26: 10.8 % with the Path Scrubber head).
   **Expected:** Both sides show the Freeform head (size, Pressure, Preview), as in `01`.
-- [ ] **TW-165** (`tool-text/12–16`; runner) – run 28: R-25's two-sided reset is armed only by a failed field or menu route; with every size route skipped (TW-146 rest) neither text tool is reset, so Firepixel's texts in `14` and `16` read 72 pt (F43) against the reference's 12 pt, and `14_bounds` (1.10 %) and `16_overflow` (3.82 %) stay above 1 % (run 26: 0.19 % and 0.27 %).
+- [x] **TW-165** (`tool-text/12–16`; runner) – **moved to A1-19** (20 Oct 2026; derived from the selection step of TW-146 rest, a runner measurement gap, not a deviation). Run 28: R-25's two-sided reset is armed only by a failed field or menu route; with every size route skipped (TW-146 rest) neither text tool is reset, so Firepixel's texts in `14` and `16` read 72 pt (F43) against the reference's 12 pt, and `14_bounds` (1.10 %) and `16_overflow` (3.82 %) stay above 1 % (run 26: 0.19 % and 0.27 %).
   **Expected:** Both text tools are reset whenever the size does not reach the reference's selection, skipped routes included; `14` and `16` back within 1 %.
 - [x] **TW-166** (`toolbox/13_view_modes_full_normal`; runner R-25 `74d6bfc8`) – confirmed in run 28: the reference leaves full screen by F (F, F from full screen with menus, one F from full screen), each Standard reset reads Standard from the window (1600 × 1000, not covering the monitor), and `toolbox` has no `runner error` (run 27: one). The panel dock part continues as TW-167.
   **Expected:** The runner leaves full screen by key before the button; no `runner error` line in `toolbox/13`.
