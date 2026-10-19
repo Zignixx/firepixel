@@ -404,6 +404,31 @@ impl FirepixelApp {
     }
 }
 
+/// Freeze after minimise/restore on macOS (FB-04).
+///
+/// Root cause (egui-winit 0.36 / eframe 0.36 / winit 0.30): `ViewportCommand::Minimized(true)`
+/// sets `ViewportInfo::minimized = Some(true)`, but on macOS `egui_winit::update_viewport_info`
+/// deliberately never refreshes `minimized`/`maximized` after window creation (egui issue 3494),
+/// and winit sends no event when the window is restored from the Dock (only `Occluded(false)`).
+/// The flag therefore stays `Some(true)`, `ViewportInfo::visible()` stays `Some(false)`, and eframe's
+/// `run_ui_and_paint` keeps taking its "nothing will be shown" branch: it only calls
+/// [`eframe::App::logic`], never `ui`, and never paints – the restored window looks frozen.
+///
+/// `logic` still runs on every event in that state, so it compares the flag with the real window
+/// state and, when the window is no longer minimised, clears the flag with
+/// `ViewportCommand::Minimized(false)` (a no-op for the window itself) and asks for a new frame.
+/// Returns whether the flag was stale. On Windows/Linux eframe refreshes the flag before every pass,
+/// so the two never disagree there; the call site is macOS-only anyway.
+pub fn heal_stale_minimized(ctx: &egui::Context, window_minimized: Option<bool>) -> bool {
+    let flagged = ctx.input(|i| i.viewport().minimized == Some(true));
+    if !(flagged && window_minimized == Some(false)) {
+        return false;
+    }
+    ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+    ctx.request_repaint();
+    true
+}
+
 impl eframe::App for FirepixelApp {
     /// Läuft vor jedem Bild, bei minimiertem Fenster als Einziges (eframe ruft dann `ui` nicht).
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -413,6 +438,11 @@ impl eframe::App for FirepixelApp {
                 i.viewport().close_requested(),
             )
         });
+        // macOS (FB-04): heal a stale "minimised" flag after the window came back from the Dock
+        #[cfg(target_os = "macos")]
+        if let Some(window) = _frame.winit_window() {
+            heal_stale_minimized(ctx, window.is_minimized());
+        }
         self.close_while_minimized(ctx, minimized, close);
     }
 
