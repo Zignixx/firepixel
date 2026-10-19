@@ -10,16 +10,16 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **49 / 49** (0 real deviations, 0 unclear, 0 under-measured; run 27 over 3 units on top of runs 26, 25 and 24, 19 Oct 2026) |
-| Proven 1:1 | **100.0 %** (49 / 49; 100.0 % over the 48 units before run 24; runs 26 and 27: 100.0 %; run 25: 98.0 %; run 24: 93.9 %) |
-| Measurement quota, all 49 units | **87.3 %** (1077 / 1233 steps; 87.3 % over the 48 old units; unchanged in run 27; run 24: 87.0 %; run 17: 86.3 %) |
-| Canvas image pairs within 1 % | 185 / 212 (run 26: 186 / 211; `tool-text/14, 16` above 1 % from a one-sided runner reset, TW-165) |
+| Parity units equal except for design | **49 / 49** (0 real deviations, 0 unclear, 0 under-measured; run 28 over 2 units on top of runs 27, 26, 25 and 24, 19 Oct 2026) |
+| Proven 1:1 | **100.0 %** (49 / 49; 100.0 % over the 48 units before run 24; runs 26 to 28: 100.0 %; run 25: 98.0 %; run 24: 93.9 %) |
+| Measurement quota, all 49 units | **87.3 %** (1077 / 1233 steps; 87.3 % over the 48 old units; unchanged in runs 27 and 28; run 24: 87.0 %; run 17: 86.3 %) |
+| Canvas image pairs within 1 % | 185 / 212 (unchanged in run 28; run 26: 186 / 211; `tool-text/14, 16` above 1 % because no text tool is reset after the reference's size step fails, TW-165) |
 | Tests | Last full run: 2776 passed, 0 failed, 134 ignored at `439a3ec5` (the code of preview `2026-10-19_16-07`); macOS CI build with the app menu (`e11f8d1b`) green |
 | Latest release | **v0.2.4** pre-release published on 19 Oct 2026 (tag at `1f26223c`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage, with the three screen modes, the text default rules and the macOS fixes; before: **v0.2.3** (19 Oct 2026); Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 9 fixable rows (4 open: U-1 rest and the runner items TW-146 rest, TW-165, TW-166; TW-138 rest closed except R3; TW-151 and TW-160 to TW-162 awaiting the click-test and the macOS re-test) · 5 deferred · 20 informational · 850+ closed |
+| Open findings | 9 fixable rows (4 open: U-1 rest and the runner items TW-146 rest, TW-165, TW-167; TW-138 rest closed except R3; TW-151 and TW-160 to TW-162 awaiting the click-test and the macOS re-test) · 5 deferred · 20 informational · 850+ closed |
 
 Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including the measurement unit
-`xs-select-behind` (9 steps); run 25 repeated 20 of them, run 26 five and run 27 three.
+`xs-select-behind` (9 steps); run 25 repeated 20 of them, run 26 five, run 27 three and run 28 two.
 
 ## Next (in order)
 
@@ -31,9 +31,10 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
    tester** (A4-19 to A4-21 on a real Mac).
 2. **Remaining `[F]` items:** U-1 rest (PDF import layers) and the unmeasured R3 note of TW-138 (indent and spacing
    as text defaults).
-3. **Runner items of run 27:** the text selection and size in `tool-text/11, 13` (TW-146 rest), the one-sided text
-   tool reset after a failed size step (TW-165) and the Standard reset after full screen (TW-166); then a short
-   follow-up run over `tool-text` and `toolbox`.
+3. **Runner items of run 28:** the text selection in `tool-text/07, 11, 13`, which no drag or word double-click
+   makes visible in the reference (TW-146 rest; read the selection by script), the text tool reset when every size
+   route is skipped (TW-165) and the reference's panel dock width as reference and restore target (TW-167); then a
+   short follow-up run over `tool-text` and `toolbox`.
 4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
    boxes), BA-110 rest (lossy LZW with an SSIM bound) and BA-083 (resampler hashes on another OS).
 
@@ -42,9 +43,11 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 ### Fixable remnants (`[F]`)
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- Open: the runner items TW-146 rest (text selection and size in `tool-text/11, 13`), TW-165 (only the reference's
-  text tool is reset after a failed size step) and TW-166 (the Standard reset after full screen), and the unmeasured
-  R3 note of TW-138.
+- Open: the runner items TW-146 rest (text selection and size in `tool-text/07, 11, 13`), TW-165 (no text tool is
+  reset when every size route is skipped) and TW-167 (the reference's collapsed panel dock taken as the reference
+  width), and the unmeasured R3 note of TW-138.
+- Confirmed and closed in run 28 (runner R-25): TW-166 (the reference leaves full screen by F; no `runner error` in
+  `toolbox`).
 - Confirmed and closed in run 27 (runner R-24): TW-159 rest (both programs keep the Freeform tool and read size 72
   after the size keys), TW-163 (the reference's Standard mode read from the window) and TW-164 (Freeform head on the
   reference side).

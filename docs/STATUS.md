@@ -19,15 +19,15 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 49 (all classified since full run 24; the measurement unit `xs-select-behind` was added on 19 Oct 2026) | [PARITY.md](PARITY.md) |
-| Equal except for design | **49** (0 real deviations, 0 unclear, 0 under-measured) | run 27 (3 units) on top of runs 26, 25 and 24, 19 Oct 2026 |
-| Proven 1:1 | **100.0 %** (49 / 49; no unit under-measured; over the 48 units before run 24: 100.0 %; runs 26 and 27: 100.0 %; run 25: 98.0 %; run 24: 93.9 %; run 17: 87.5 %) | run 27 |
-| Canvas image pairs within 1 % | **185 / 212** (run 26: 186 / 211; run 27 adds `tool-path-reshape/04` within 1 %, while `tool-text/14, 16` move above 1 % because only the reference's text tool is reset after a failed size step, TW-165) | run 27 |
-| Measurement quota, all 49 units | **87.3 %** (1077 / 1233 measurable steps both `ok`; over the 48 old units 87.3 %, 1068 / 1224; unchanged since run 26; run 24: 87.0 %; run 17 alone 86.3 %; in the 3 units of run 27: 99 / 106, as in run 26) | run 27 |
-| Errors | 33 reference-side, 21 Firepixel-side (both unchanged since run 25); 2 `runner error` lines in run 27 (run 26: 8): `tool-text/11` (no size route reaches the selected "123", TW-146 rest) and `toolbox/13` (the Standard reset after full screen, TW-166) | run 27 |
+| Equal except for design | **49** (0 real deviations, 0 unclear, 0 under-measured) | run 28 (2 units) on top of runs 27, 26, 25 and 24, 19 Oct 2026 |
+| Proven 1:1 | **100.0 %** (49 / 49; no unit under-measured; over the 48 units before run 24: 100.0 %; runs 26 to 28: 100.0 %; run 25: 98.0 %; run 24: 93.9 %; run 17: 87.5 %) | run 28 |
+| Canvas image pairs within 1 % | **185 / 212** (unchanged in run 28; run 26: 186 / 211; run 27 added `tool-path-reshape/04` within 1 %, while `tool-text/14, 16` stay above 1 % because Firepixel's text tool keeps 72 pt after the reference's size step fails, TW-165) | run 28 |
+| Measurement quota, all 49 units | **87.3 %** (1077 / 1233 measurable steps both `ok`; over the 48 old units 87.3 %, 1068 / 1224; unchanged since run 26; run 24: 87.0 %; run 17 alone 86.3 %; in the 2 units of run 28: 76 / 83, as in run 27) | run 28 |
+| Errors | 33 reference-side, 21 Firepixel-side (both unchanged since run 25); 7 `runner error` lines in run 28 (run 27: 2), all reference-side text selections in `tool-text/07, 11, 13` that R-25 no longer accepts as a highlight (TW-146 rest); none in `toolbox` (TW-166 confirmed) | run 28 |
 | Latest release | **v0.2.4** (19 Oct 2026, pre-release; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; the three screen modes, the text default rules and the macOS fixes TW-160 to TW-162 with the own app menu); before: v0.2.3 (19 Oct 2026) | GitHub releases |
 | Workspace tests | Last full run: **2776 passed, 0 failed, 134 ignored** at `439a3ec5` (runner R-23, package F49, macOS fixes; the code of preview `2026-10-19_16-07`) | `main`, 19 Oct 2026 |
-| Open findings | 9 rows in `[F]`: 4 open (PDF layers, U-1 rest; the runner items TW-146 rest, TW-165 and TW-166); TW-138 rest closed except the unmeasured R3 note; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test and the macOS re-test by the tester; 5 deferred `[V]`, 20 informational `[N]`; run 27 closed TW-159 rest, TW-163 and TW-164 | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | None measured open (runs 26 and 27; the last one, full screen mode TW-158, was confirmed fixed in run 26). Unmeasured: whether indent and paragraph spacing on pointer-selected text become text defaults (TW-138 R3) | [PARITY.md](PARITY.md) |
+| Open findings | 9 rows in `[F]`: 4 open (PDF layers, U-1 rest; the runner items TW-146 rest, TW-165 and TW-167); TW-138 rest closed except the unmeasured R3 note; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test and the macOS re-test by the tester; 5 deferred `[V]`, 20 informational `[N]`; run 28 closed TW-166, run 27 TW-159 rest, TW-163 and TW-164 | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | None measured open (runs 26 to 28; the last one, full screen mode TW-158, was confirmed fixed in run 26). Unmeasured: whether indent and paragraph spacing on pointer-selected text become text defaults (TW-138 R3) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -228,6 +228,15 @@ the three size routes (field, keys, Text Editor) reaches the selected "123" in t
 text and move above 1 %) and TW-166 (the Standard reset after full screen finds neither the screen-mode button nor
 the menu bar).
 
+**Follow-up run 28 (19 Oct 2026, 21:57–22:21, 2 units, 83 steps, 42 image pairs)** used the same preview
+`2026-10-19_16-07` and runner R-25 (`74d6bfc8`) over `tool-text` and `toolbox`: 49 / 0 / 0 / 0 over all 49 units,
+proven 1:1 100.0 % (49 / 49), quota 87.3 % (1077 / 1233; both quotas unchanged), canvas pairs 185 / 212 (unchanged).
+Confirmed and closed: TW-166 (the reference leaves full screen by F; no `runner error` in `toolbox`). Open, all
+runner: TW-146 rest (no selection try reaches the expected highlight, so the size routes are skipped; 7 `runner error`
+lines), TW-165 (the two-sided reset is not armed when every size route is skipped) and new TW-167 (the reference's
+panel dock started collapsed to icons and is taken as the reference width; after the screen modes it is expanded and
+not restored).
+
 ## How tests run
 
 - Every crate has unit tests; `fp-ui` and `fp-engine` bundle their integration tests into one program `all`
@@ -259,7 +268,7 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
    typing after a double-click, crop option off, Linux start, pen anchor modes, the Select Behind hover frame,
    the History rows of key nudges, the screen modes) and the open A2 checks, and the macOS re-test of v0.2.4 by the
    tester (A4-19 to A4-21).
-2. Runner items TW-146 rest, TW-165 and TW-166, then a short follow-up run over `tool-text` and `toolbox`.
+2. Runner items TW-146 rest, TW-165 and TW-167, then a short follow-up run over `tool-text` and `toolbox`.
 3. Remaining parity items: U-1 rest and the unmeasured R3 note of TW-138 (indent and spacing as text defaults).
 4. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 
