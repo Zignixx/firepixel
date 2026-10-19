@@ -2748,11 +2748,14 @@ fn overlays(
             }
             Overlay::Highlight { contours, rect } => {
                 let hs = Stroke::new(1.0, c.hover_highlight);
+                // crisp 1 px line on the pixels inside the path coordinates (TW-157)
                 for ct in &contours {
-                    let v: Vec<Pos2> = fp_engine::geometry::flatten(ct)
-                        .iter()
-                        .map(|p| spp(*p))
-                        .collect();
+                    let v: Vec<Pos2> = crisp_outline(
+                        &fp_engine::geometry::flatten(ct)
+                            .iter()
+                            .map(|p| spp(*p))
+                            .collect::<Vec<_>>(),
+                    );
                     if ct.closed {
                         painter.add(egui::Shape::closed_line(v, hs));
                     } else {
@@ -2760,10 +2763,14 @@ fn overlays(
                     }
                 }
                 if let Some(r) = rect {
+                    let r = Rect::from_min_max(
+                        sp(r.left as f64, r.top as f64),
+                        sp(r.right as f64, r.bottom as f64),
+                    );
                     painter.rect_stroke(
                         Rect::from_min_max(
-                            sp(r.left as f64, r.top as f64),
-                            sp(r.right as f64, r.bottom as f64),
+                            pos2(r.left().round() + 0.5, r.top().round() + 0.5),
+                            pos2(r.right().round() - 0.5, r.bottom().round() - 0.5),
                         ),
                         0.0,
                         hs,
@@ -3142,6 +3149,25 @@ fn fill_live_key(generation: u64, target: u64, h: &fp_model::FillHandles) -> u64
         k = (k ^ v.to_bits() as u64).wrapping_mul(0x0100_0000_01b3);
     }
     k
+}
+
+/// Screen points of a hover outline snapped to pixel centres, like the selection frame: points on
+/// the left/top half of the outline go to the pixel right/below the coordinate, points on the
+/// right/bottom half to the pixel left/above it, so a 1 px stroke covers exactly one pixel row or
+/// column inside the path coordinates instead of two anti-aliased ones (TW-157).
+pub fn crisp_outline(v: &[Pos2]) -> Vec<Pos2> {
+    let r = Rect::from_points(v);
+    let c = r.center();
+    let snap = |x: f32, mid: f32, size: f32| {
+        if size >= 1.0 && x > mid {
+            x.round() - 0.5
+        } else {
+            x.round() + 0.5
+        }
+    };
+    v.iter()
+        .map(|p| pos2(snap(p.x, c.x, r.width()), snap(p.y, c.y, r.height())))
+        .collect()
 }
 
 /// Zeichnet die Leinwand die gespeicherten Verlaufsgriffe des gewählten Objekts? Beim Zeiger bzw.

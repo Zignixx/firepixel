@@ -83,6 +83,40 @@ fn bounds(h: &H, id: ElementId) -> Rect {
     fp_engine::docops::element_frame_bounds(&d.doc, &e).expect("bounds")
 }
 
+fn near(a: [u8; 3], b: [u8; 3]) -> bool {
+    a.iter().zip(b).all(|(x, y)| (*x as i32 - y as i32).abs() <= 8)
+}
+
+fn is_reddish(a: [u8; 3]) -> bool {
+    a[0] > 150 && a[1] < 200 && (a[0] as i32 - a[1] as i32) > 60
+}
+
+/// Rendered pixels around the hovered shape's top edge (doc y = 60, at x = 140) and left edge
+/// (doc x = 80, at y = 110): row above, row on, row below, column left of, column on. `None`
+/// without a graphics adapter.
+fn edge_pixels(h: &mut H) -> Option<[[u8; 3]; 5]> {
+    let top = at(h, 140.0, 60.0);
+    let left = at(h, 80.0, 110.0);
+    let shot = match h.render() {
+        Ok(i) => i,
+        Err(e) => {
+            eprintln!("no graphics adapter, pixel check skipped: {e}");
+            return None;
+        }
+    };
+    let px = |x: f32, y: f32| {
+        let p = shot.get_pixel(x.round() as u32, y.round() as u32).0;
+        [p[0], p[1], p[2]]
+    };
+    Some([
+        px(top.x, top.y - 1.0),
+        px(top.x, top.y),
+        px(top.x, top.y + 1.0),
+        px(left.x - 1.0, left.y),
+        px(left.x, left.y),
+    ])
+}
+
 #[test]
 fn select_behind_hover_frames_the_object_behind_the_selection() {
     fp_engine::shell::disable();
@@ -108,6 +142,11 @@ fn select_behind_hover_frames_the_object_behind_the_selection() {
 
     click(&mut h, 120.0, 100.0);
     assert_eq!(selection(&h), vec![bmp], "the click selects the framed object");
+    // TW-157: right after the click, with the mouse still, no frame until the pointer moves
+    h.run_steps(2);
+    assert!(frames(&h).is_empty(), "no frame right after a click: {:?}", highlights(&h));
+    hover(&mut h, 121.0, 100.0);
+    assert_eq!(frames(&h).len(), 1, "the frame comes back with the next pointer move");
 
     // the frame has a filled 5 x 5 square on each corner of the bitmap bounds
     let b = bounds(&h, bmp);
@@ -135,6 +174,16 @@ fn select_behind_hover_frames_the_object_behind_the_selection() {
     assert_eq!(anchors.len(), 4, "corner squares on the four corners: {anchors:?}");
     for (x, y) in anchors {
         assert!((x == 80.0 || x == 200.0) && (y == 60.0 || y == 160.0), "on the path geometry, not the stroke bounds: {x},{y}");
+    }
+
+    // TW-157: the line on the path is a crisp 1 px #E00000 line on the pixel row and column inside
+    // the path coordinates (top edge y = 60, left edge x = 80), not anti-aliased over two rows
+    if let Some([above, on, below, left_out, left_on]) = edge_pixels(&mut h) {
+        assert!(near(on, [224, 0, 0]), "top edge row is #E00000: {on:?}");
+        assert!(!is_reddish(above), "nothing above the top edge: {above:?}");
+        assert!(!is_reddish(below), "nothing below the top edge: {below:?}");
+        assert!(near(left_on, [224, 0, 0]), "left edge column is #E00000: {left_on:?}");
+        assert!(!is_reddish(left_out), "nothing left of the left edge: {left_out:?}");
     }
 
     // frame colour #E00000

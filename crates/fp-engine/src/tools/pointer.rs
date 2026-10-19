@@ -637,6 +637,9 @@ pub struct PointerTool {
     /// Hervorhebung beim Überfahren.
     hover: Option<Overlay>,
     hover_cursor: Cursor,
+    /// Select Behind: where the last click was released; no hover frame there until the pointer
+    /// moves (measured, TW-157).
+    click_pos: Option<Point>,
 }
 
 impl PointerTool {
@@ -648,6 +651,7 @@ impl PointerTool {
             overlay: Vec::new(),
             hover: None,
             hover_cursor: Cursor::Arrow,
+            click_pos: None,
         }
     }
 
@@ -711,6 +715,9 @@ impl PointerTool {
     /// Überfahren ohne gedrückte Taste: Hervorhebung und Cursor.
     fn hover(&mut self, p: Point, ctx: &ToolContext) -> ToolResponse {
         self.hover = None;
+        if self.click_pos.is_some_and(|c| c != p) {
+            self.click_pos = None;
+        }
         self.hover_cursor = self.idle_cursor();
         let tol = ctx.pick_tolerance() as f32;
         if self.id != ToolId::SelectBehind
@@ -772,7 +779,11 @@ impl PointerTool {
             };
             if let Some(e) = ctx.doc.element_at(&path) {
                 let selected = ctx.selection.contains(e.id);
-                if !selected && ctx.prefs.get_bool("SelectionMouseOverPreview", true) {
+                let after_click = self.click_pos == Some(p);
+                if !selected
+                    && !after_click
+                    && ctx.prefs.get_bool("SelectionMouseOverPreview", true)
+                {
                     self.hover = Some(outline_overlay(ctx.doc, e));
                 }
                 if self.id == ToolId::Subselection
@@ -1317,6 +1328,8 @@ impl PointerTool {
 
     fn up(&mut self, p: Point, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {
         let _ = self.moved(p, ev, ctx);
+        // Select Behind: right after a click the mouse has not moved yet, no hover frame (TW-157)
+        self.click_pos = (self.id == ToolId::SelectBehind).then_some(p);
         let st = std::mem::replace(&mut self.state, PState::Idle);
         self.overlay.clear();
         match st {
