@@ -361,7 +361,7 @@ function KeysDown($mods) {
   foreach ($m in @($mods)) { if ($m -and ((([int][PR.N]::GetAsyncKeyState([int](VkOf $m))) -band 0x8000) -eq 0)) { return $false } }
   return $true
 }
-function Drag($x1, $y1, $x2, $y2, $mods, $steps, $button, $pressMs, $releaseMs) {
+function Drag($x1, $y1, $x2, $y2, $mods, $steps, $button, $pressMs, $releaseMs, $pauseMs) {
   if (-not $steps) { $steps = 20 }
   $d, $u = 0x2, 0x4; if ($button -eq 'right') { $d, $u = 0x8, 0x10 }
   [PR.N]::SetCursorPos([int]$x1, [int]$y1) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 80
@@ -376,6 +376,9 @@ function Drag($x1, $y1, $x2, $y2, $mods, $steps, $button, $pressMs, $releaseMs) 
   # move at all. Now every input waits until the UI thread takes messages again (no effect on a responsive program)
   $busy = 0
   [PR.N]::Send(@([PR.N]::Mouse($d, 0))); Start-Sleep -Milliseconds 60; $busy += [PR.N]::Idle(2000)
+  # R-23 (TW-146 rest, run 25 tool-text/13: the drag over the text left no selection): optional pause after the
+  # press without any move, so the program takes the press before the first move
+  if ($pauseMs) { Start-Sleep -Milliseconds ([int]$pauseMs) }
   # R-7 (M9, panel-library-styles/03: the library drag never arrived): optional pause after the press and two small
   # moves past the drag threshold before the path (drag-and-drop out of a list), optional pause before the release
   if ($pressMs) { Start-Sleep -Milliseconds ([int]$pressMs)
@@ -706,7 +709,7 @@ function Handle($c) {
       return @{ caret = [int64]$g.hwndCaret; caret_class = (ClsOf $g.hwndCaret); blinking = (($g.flags -band 1) -ne 0); caret_rect = @([int]$g.rcCaret.L, [int]$g.rcCaret.T, [int]$g.rcCaret.R, [int]$g.rcCaret.B); focus_class = (ClsOf $g.hwndFocus) } }
     'click' { Click $c.x $c.y $c.button $c.mods $c.count; return 'ok' }
     'move' { [PR.N]::SetCursorPos([int]$c.x, [int]$c.y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 120; return 'ok' }
-    'drag' { $script:DragKeys = $null; $b = Drag $c.x1 $c.y1 $c.x2 $c.y2 $c.mods $c.steps $c.button $c.press_ms $c.release_ms
+    'drag' { $script:DragKeys = $null; $b = Drag $c.x1 $c.y1 $c.x2 $c.y2 $c.mods $c.steps $c.button $c.press_ms $c.release_ms $c.pause_ms
              $r = @{ ok = $true; busy_ms = [int]$b }; if ($script:DragKeys -and @($c.mods | ? { $_ }).Count) { $r.keys = $script:DragKeys }; return $r }
     'wheel' { [PR.N]::SetCursorPos([int]$c.x, [int]$c.y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 60; Mods $c.mods $false
               $fl = if ($c.horizontal) { 0x1000 } else { 0x800 }; $n = [int]$c.delta

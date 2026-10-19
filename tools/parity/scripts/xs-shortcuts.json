@@ -1626,7 +1626,7 @@
     }
    ],
    "shot": null,
-   "note": "R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record (Shift+arrows stay real keys: 10 px)"
+   "note": "R-19 (TW-140): on the reference side the runner replaces the plain keys - Delete by Edit > Clear (script deleteSelection(false) as fallback), plain arrows by moveSelectionBy 1 px, Escape in the text editor by a Pointer tool click; Firepixel keeps the real keys; replaced actions carry `substituted` in the step record (Shift+arrows stay real keys: 10 px); R-23 (TW-159 b, run 25: the reference names the Subselection tool \"Teilauswahl\", so the real Right selected the Text tool): Subselection counts as a nudge tool; a plain arrow moves the selected points by script moveSelectedBezierPointsBy (node coordinates read back), moveSelectionBy only when no point moved"
   },
   {
    "id": "11_pages_states_result",

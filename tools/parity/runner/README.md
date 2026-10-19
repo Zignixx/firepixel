@@ -942,3 +942,57 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   active layer restored, `layer=<n>` in the result); `text_tool_attrs` and `text.setToolDefaults` close menus /
   dialogs (`reset_light`) and try once more on an error.
 - `--dry-run`: the key substitute self check covers `tool_key` and the nudge flag.
+
+## R-23 additions (19.10.)
+
+- **Screen-mode read-back (TW-159 a, run 25 `toolbox/13`: the reference's main window keeps style 0x96cf0000 with
+  its caption in all three modes, so "standard" was read everywhere):** `screen_mode_state` gathers three kinds of
+  evidence and logs all of them: (1) the tools column's three screen-mode buttons, grabbed 15 x 15 px each - the
+  pressed one differs from the other two in mean brightness (`screen_button_pressed`, config
+  `orig.screen_button_diff`, default 10 levels); (2) the main window: style, caption, `IsZoomed`, `GetMenu`, window
+  and client rect against the monitor and its work area (`covers_monitor`), the document view's rect; (3) script:
+  every `fw` property whose name holds "screen" or "full" (`SCREEN_MODE_JS`; no such property is documented, the
+  list shows what exists). Mode = the pressed button when decisive, else "full?" when the window covers the monitor,
+  else None (not decidable). `screen_mode_standard` raises a runner error only for a decisive other mode and presses
+  F (no button) only then. New action `{"screen_mode_read": "<standard|full_menus|full>"}` (both sides) before the
+  shot of each `toolbox/13` step: value `screen_mode_read` {want, verdict ok / MISMATCH / unknown, mode, source,
+  evidence}, log `orig screen mode read (want …): …` with every evidence item; Firepixel logs `ui_state.screen_mode`.
+- **Subselection nudges (TW-159 b, run 25 `xs-shortcuts/10_nudge_point`: the reference names the Subselection tool
+  "Teilauswahl", which was not in `NUDGE_TOOLS`, so the real Right selected the Text tool):** `SUBSELECTION_TOOLS`
+  = teilauswahl / unterauswahl / subselection. With the Subselection tool a plain arrow first runs
+  `moveSelectedBezierPointsBy({x, y})` (the selected points move); the node coordinates of the selected paths
+  (`PATH_NODES_JS`) are read before and after - changed = done (`script moveSelectedBezierPointsBy …` in the
+  substitute log, value `points`), unchanged or an error (no point selected) -> `moveSelectionBy` as before.
+- **Freeform size keys (TW-159 c, run 25 `tool-path-reshape/04`: with `nudge: false` the real Up went through
+  unchecked and switched Freeform -> Pen -> Vector Path -> Redraw Path):** `nudge: false` now plans `tool_key` (the
+  real key, the tool read back, a switch -> Pointer tool back and the step `unsupported`). New step flag
+  `orig_tool_keys: "held"` (set on `04`): the reference side sends the key with the left mouse button held at the
+  cursor (the step's `canvas_hover` point, `cursor_pos`), then releases it - hypothesis: the size keys work only
+  during a drag. A switch all the same logs the Properties panel fields (`record_ui inspector.fields`) in the value
+  `tool_key` and makes the step `unsupported` with the reason ("the size is compared by the Properties panel
+  read-back only").
+- **Text tool size reset (TW-159 d, run 25 `menu-text`):** the unit-start reset was not skipped - it ran (22.8 s,
+  bold / italic / underline cleared), but neither the size field nor the R-22 retry 24 -> 13 -> 12 reached the tool,
+  so 24 pt from `inspector-text` stayed; the last key probes of `inspector-text` had left the keyboard focus in an
+  Edit control. Now every size attempt is read back with a scratch text and logged (`size retries from …: field … ->
+  …; edit_control … -> …; menu … -> …`), stopping at the first that gives 12: (1) the R-22 field retry after
+  `close_menus` and `view_focus`, 13 read back in between; (2) the size field's Edit control set directly
+  (WM_SETTEXT) and committed with Enter; (3) the Text menu's size entry (`orig.text_size_menu`) with the text tool
+  and nothing selected (run 25 `tool-text/11` showed that entry reaching the tool's size).
+- **Text entry rests (TW-146 rest, run 25 `tool-text/07`, `11`, `13`):**
+  - `objects_settled(why, want_min)`: the object count read every 150 ms until two reads agree (and reach
+    `want_min`), at most `orig.commit_wait_s` (default 2 s); log `orig objects settled (<why>): {n, polls, ms,
+    settled}`. Used by `commit_check` (a new text: one object more), before the first typed character, before the
+    click retry of a lost first character, and before a Pointer double-click on the canvas.
+  - The click retry of a lost first character is clicked once more when the first click opened no editor
+    (`click_2` in the attempt).
+  - Pointer double-click (`double_click_check`): the editor is polled for up to `orig.dbl_editor_wait_s` (default
+    1.5 s) and the caret checked (`caret_check`); no editor -> the batch double-click (one SendInput batch) once more,
+    editor and caret waited for again; value `double_click` / `double_click_retry` with the caret.
+  - Text selection drags (`text_select_drag`): the highlight (changed pixels, cover) is checked after every drag; up
+    to three tries - plain, a click at the text's end plus a pause of `orig.text_drag_pause_ms` (default 100 ms)
+    after the press before the first move (new host `drag` parameter `pause_ms`), the pause again; every try in the
+    log line. `text_size_on_selection` logs the highlight pixel count before the field and before the menu, and checks
+    a new drag once more.
+- `--dry-run` prints `screen mode self check: ok`; the key substitute self check covers "Teilauswahl" and
+  `nudge: false` -> `tool_key`.

@@ -593,7 +593,10 @@ SUBST_KEYS = {"delete": "clear", "backspace": "clear", "left": "nudge", "right":
               "down": "nudge", "esc": "escape"}
 NUDGE = {"left": (-1, 0), "right": (1, 0), "up": (0, -1), "down": (0, 1)}
 # R-22 (TW-155 a): tools whose plain arrows nudge the selection (the moveSelectionBy substitute applies only there)
-NUDGE_TOOLS = POINTER_TOOLS + ("unterauswahl", "subselection")
+# R-23 (TW-159 b, run 25 xs-shortcuts/10_nudge_point: the reference's German tool name is "Teilauswahl", so the
+# Subselection tool got the real Right, which selected the Text tool): all names of the Subselection tool
+SUBSELECTION_TOOLS = ("teilauswahl", "unterauswahl", "subselection")
+NUDGE_TOOLS = POINTER_TOOLS + SUBSELECTION_TOOLS
 
 
 def key_substitute_plan(combo: str, view: bool, busy: str, tool: str, nudge=None) -> tuple[str | None, str]:
@@ -602,7 +605,9 @@ def key_substitute_plan(combo: str, view: bool, busy: str, tool: str, nudge=None
     (Escape with another tool active), `none` (Escape with nothing to close). R-22 (TW-155 a, run 24
     `tool-path-reshape/04`: Freeform's Up / Down were replaced by a nudge): an arrow is a nudge only with the Pointer
     or Subselection tool, or with the step / action flag `nudge: true`; with another tool it is `tool_key` (the real
-    key, checked for a tool switch - a switch makes the step `unsupported`); `nudge: false` = always the real key."""
+    key, checked for a tool switch - a switch makes the step `unsupported`); `nudge: false` = always the real key.
+    R-23 (TW-159 c, run 25 `tool-path-reshape/04`: with `nudge: false` the real Up switched Freeform -> Pen -> Vector
+    Path -> Redraw Path unnoticed): `nudge: false` is `tool_key` too - the real key, checked for a tool switch."""
     mods, k = parse_combo(combo)
     kind = SUBST_KEYS.get(k)
     if mods or not kind:
@@ -623,7 +628,7 @@ def key_substitute_plan(combo: str, view: bool, busy: str, tool: str, nudge=None
         return None, f"text editor open ({tool}): the real key edits the text"
     if kind == "nudge":
         if nudge is False:
-            return None, "step flag nudge false"
+            return "tool_key", "step flag nudge false"
         if nudge is True:
             return "nudge", f"tool {tool}, step flag nudge"
         if not any(t in tl for t in NUDGE_TOOLS):
@@ -642,11 +647,26 @@ def key_substitute_selfcheck() -> str:
              (("Left", True, "", "Text"), None), (("Delete", True, "", "Text"), None), (("Enter", True, "", "Zeiger"), None),
              # R-22 (TW-155 a): arrows nudge only with the Pointer / Subselection tool or the nudge flag
              (("Up", True, "", "Freiform"), "tool_key"), (("Down", True, "", "Unterauswahl"), "nudge"),
-             (("Up", True, "", "Freiform", True), "nudge"), (("Right", True, "", "Zeiger", False), None),
-             (("Delete", True, "", "Freiform"), "clear")]
+             (("Up", True, "", "Freiform", True), "nudge"), (("Right", True, "", "Zeiger", False), "tool_key"),
+             (("Delete", True, "", "Freiform"), "clear"),
+             # R-23 (TW-159 b, c): the reference's German Subselection name; `nudge: false` checks the tool switch
+             (("Right", True, "", "Teilauswahl"), "nudge"), (("Up", True, "", "Freiform", False), "tool_key")]
     bad = [f"{args} -> {key_substitute_plan(*args)[0]} (want {want})" for args, want in cases
            if key_substitute_plan(*args)[0] != want]
     return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
+def cursor_pos():
+    """R-23 (TW-159 c): the mouse cursor's screen position (x, y), None when it cannot be read."""
+    import ctypes
+
+    class _Pt(ctypes.Structure):
+        _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+    p = _Pt()
+    try:
+        return (int(p.x), int(p.y)) if ctypes.windll.user32.GetCursorPos(ctypes.byref(p)) else None
+    except (AttributeError, OSError):
+        return None
 
 
 def clipboard_text() -> str | None:
@@ -922,6 +942,48 @@ KEY_STATE_JS = ('(function(){var r="tool="+fw.activeTool;try{var d=fw.getDocumen
                 'var s=fw.selection,b=[];for(var i=0;i<s.length;i++){var p=s[i].pixelRect;'
                 'b.push(p.left+","+p.top+","+p.right+","+p.bottom);}r+=";n="+n+";sel="+s.length+";rects="+b.join("/");}'
                 'catch(e){r+=";error="+e;}return r;})()')
+
+
+# R-23 (TW-159 a): screen modes in the order of the tools column's buttons, and `fw` properties about the screen mode
+SCREEN_MODES = ("standard", "full_menus", "full")
+SCREEN_MODE_JS = ('(function(){var r=[];try{for(var k in fw){if(/screen|full/i.test(k)){var v;try{v=fw[k];}catch(e){v="?"+e;}'
+                  'if(typeof v!="function")r.push(k+"="+v);}}}catch(e){r.push("error "+e);}return r.join(";")||"none";})()')
+
+
+def screen_button_pressed(means, thr: float = 10.0):
+    """R-23 (TW-159 a): the pressed one of the three screen-mode buttons from their mean brightness - the one that
+    differs from both others by at least `thr` while those two agree within thr / 2; None when not decisive."""
+    if len(means) != 3:
+        return None
+    odd = [i for i in range(3) if abs(means[(i + 1) % 3] - means[(i + 2) % 3]) < thr / 2
+           and min(abs(means[i] - means[(i + 1) % 3]), abs(means[i] - means[(i + 2) % 3])) >= thr]
+    return SCREEN_MODES[odd[0]] if len(odd) == 1 else None
+
+
+def screen_mode_verdict(mode, want) -> str:
+    """R-23 (TW-159 a): ok / MISMATCH / unknown of a screen-mode read-back ("full?" = a full-screen mode, menus not
+    known)."""
+    if not mode:
+        return "unknown"
+    if not want or mode == want or (mode == "full?" and want != "standard"):
+        return "ok"
+    return "MISMATCH"
+
+
+def screen_mode_selfcheck() -> str:
+    """R-23 (TW-159 a): offline check of screen_button_pressed / screen_mode_verdict, run by --dry-run."""
+    cases = [(screen_button_pressed([120, 200, 201]), "standard"), (screen_button_pressed([200, 120, 201]), "full_menus"),
+             (screen_button_pressed([200, 201, 120]), "full"), (screen_button_pressed([200, 201, 199]), None),
+             (screen_button_pressed([100, 150, 200]), None), (screen_mode_verdict("full?", "full_menus"), "ok"),
+             (screen_mode_verdict("full", "standard"), "MISMATCH"), (screen_mode_verdict(None, "full"), "unknown")]
+    bad = [f"case {i}: {got} (want {want})" for i, (got, want) in enumerate(cases) if got != want]
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
+# R-23 (TW-159 b): node coordinates of the selected paths (the point nudge's effect check)
+PATH_NODES_JS = ('(function(){var s=fw.selection,r=[];for(var i=0;i<s.length;i++){var c=s[i].contours;if(!c)continue;'
+                 'for(var j=0;j<c.length;j++){var n=c[j].nodes;for(var k=0;k<n.length;k++)r.push(n[k].x+","+n[k].y);}}'
+                 'return r.join(" ");})()')
 
 
 class LayoutError(Exception):
@@ -1759,20 +1821,73 @@ class OrigSide(Side):
         # already showed 12, so typing 12 changed nothing): size read back; not the wanted one -> once more with the
         # text tool, first a different size, then the wanted one
         want_size = re.sub(r"[^\d.]", "", str(want.get("size", "12"))) or "12"
-        if "_error" not in after and re.sub(r"[^\d.]", "", str(after.get("size", ""))) != want_size:
-            try:
-                self.o.jsf("fw.getDocumentDOM().selectNone();", why="text tool reset (size retry)")
-                self.do("tool", "tool.text", {})
-                time.sleep(0.3)
-                other = str(int(float(want_size)) + 1)
-                field("inspector.size", other)
-                field("inspector.size", want_size)
-                self.do("tool", "tool.pointer", {})
-                time.sleep(0.2)
-                done.append(f"size retry {after.get('size')} -> {other} -> {want_size}")
-            except Exception as e:  # noqa: BLE001
-                errs.append(f"size retry: {str(e)[:100]}")
-            after = self.text_tool_attrs()
+
+        def size_of(a) -> str:
+            return re.sub(r"[^\d.]", "", str(a.get("size", "")))
+        # R-23 (TW-159 d, run 25 `menu-text`: the reset ran - it was not skipped - but neither the size field nor the
+        # R-22 retry 24 -> 13 -> 12 reached the tool, the size stayed 24 pt; the last key probes of `inspector-text`
+        # left the keyboard focus in an Edit control): every size attempt is read back (scratch text) and logged;
+        # the attempts in order: (1) R-22 retry - open menus closed, the view focused, the field 13 -> 12; (2) the
+        # field's Edit control set directly (WM_SETTEXT) and committed with Enter; (3) the Text menu's size entry
+        # with the text tool and nothing selected (config `orig.text_size_menu`; run 25 `tool-text/11` showed that
+        # entry reaching the tool's size). Stops at the first attempt that reads back the wanted size
+        if "_error" not in after and size_of(after) != want_size:
+            tries = []
+            for how in ("field", "edit_control", "menu"):
+                t = {"how": how}
+                try:
+                    try:
+                        self.h.call("close_menus")
+                    except OrigError:
+                        pass
+                    self.o.jsf("fw.getDocumentDOM().selectNone();", why=f"text tool reset (size retry, {how})")
+                    self.do("tool", "tool.text", {})
+                    time.sleep(0.3)
+                    if how == "field":
+                        try:
+                            self.h.call("view_focus")
+                        except OrigError as e:
+                            t["view_focus"] = str(e)[:60]
+                        other = str(int(float(want_size)) + 1)
+                        field("inspector.size", other)
+                        t["mid"] = self.text_tool_attrs().get("size")
+                        self.do("tool", "tool.text", {})
+                        time.sleep(0.2)
+                        field("inspector.size", want_size)
+                        t["via"] = f"{other} -> {want_size}"
+                    elif how == "edit_control":
+                        pt, info = self.resolve("inspector.size")
+                        if not (info and info.get("class") == "Edit" and info.get("hwnd")):
+                            t["skipped"] = f"no Edit control at the size field ({(info or {}).get('class')})"
+                        else:
+                            self.h.call("set_text", hwnd=info["hwnd"], text=want_size)
+                            self.click_at(pt)
+                            time.sleep(0.15)
+                            self.h.call("key", combo="end")
+                            self.h.call("key", combo="enter")
+                            time.sleep(0.3)
+                            t["via"] = f"WM_SETTEXT {want_size} + Enter (hwnd {info['hwnd']})"
+                    else:
+                        menu = str(self.r.cfg["orig"].get("text_size_menu", "Text > Größe > {size}")).replace(
+                            "{size}", re.sub(r"\.0$", "", want_size))
+                        self.h.call("menu", path=split_path(menu), final="invoke", bar=self.r.ui_map["menu_bar"]["orig"],
+                                    timeout=40)
+                        self.after_menu()
+                        t["via"] = f"menu {menu}"
+                    self.do("tool", "tool.pointer", {})
+                    time.sleep(0.2)
+                except Exception as e:  # noqa: BLE001
+                    t["error"] = str(e)[:100]
+                after = self.text_tool_attrs()
+                t["got"] = after.get("size") or after.get("_error")
+                tries.append(t)
+                if "_error" not in after and size_of(after) == want_size:
+                    break
+            done.append(f"size retries from {before.get('size')}: " + "; ".join(
+                f"{t['how']} {t.get('via') or t.get('skipped') or t.get('error')} -> {t.get('got')}"
+                + (f" (mid {t['mid']})" if t.get("mid") else "") for t in tries))
+            if any(t.get("error") for t in tries):
+                errs.append("size retry: " + "; ".join(f"{t['how']}: {t['error']}" for t in tries if t.get("error")))
         # R-22 (TW-153, run 24: shapes drawn after the reset had fill #000000 in eight units, `tool-autoshapes` 20 of
         # 27 canvas pairs above 1 %): selecting the text tool hands its colour to the fill swatch, which keeps it
         # after the Pointer tool. Only the text tool's own attributes may change here: the fill / stroke defaults
@@ -1794,19 +1909,89 @@ class OrigSide(Side):
                    f" | after {fmt(after)}")
 
     def screen_mode_state(self) -> dict:
-        """R-22 (TW-156): the main window's frame - in the standard screen mode it has its caption (WS_CAPTION), the
-        two full-screen modes take it away. {"standard", "caption", "zoomed", "style"} or {"error"}."""
+        """R-22 (TW-156) / R-23 (TW-159 a, run 25 `toolbox/13`: the main window keeps its style 0x96cf0000 with the
+        caption in all three screen modes, so "standard" was read everywhere): the mode from three kinds of evidence,
+        all of them logged. (1) toolbox: the three screen-mode buttons of the tools column grabbed (15 x 15 px), the
+        pressed one differs from the other two in mean brightness (`orig.screen_button_diff`, default 10 levels);
+        (2) window: style, caption, IsZoomed, window / client rect against the monitor and its work area, the document
+        view's rect (a window that covers the whole monitor = a full-screen mode); (3) script: `fw` properties whose
+        name holds "screen" or "full". Mode: the toolbox when decisive, else the window ("full?" when it covers the
+        monitor), else None. {"mode", "standard" (True / False / None), "source", "toolbox", "window", "script"}."""
         import ctypes
+        import ctypes.wintypes as wt
+        out = {"mode": None, "standard": None, "source": "none"}
+        # (1) toolbox buttons
+        tb = out["toolbox"] = {}
         try:
-            hwnd = int(self.h.call("main")["hwnd"])
+            means = []
+            tmp = Path(self.r.cfg["tmp_dir"])
+            for i, key in enumerate(("toolbox.screen_standard", "toolbox.screen_full_menus", "toolbox.screen_full")):
+                pt = self.resolve(key)[0]
+                rect = [int(pt[0]) - 7, int(pt[1]) - 7, int(pt[0]) + 8, int(pt[1]) + 8]
+                self.grab(rect, tmp / f"orig_screen_btn_{i}.png")
+                with Image.open(tmp / f"orig_screen_btn_{i}.png") as im:
+                    g = list(im.convert("L").getdata())
+                means.append(round(sum(g) / max(1, len(g)), 1))
+            tb["means"] = means
+            tb["pressed"] = screen_button_pressed(means, float(self.r.cfg["orig"].get("screen_button_diff", 10)))
+        except Exception as e:  # noqa: BLE001
+            tb["error"] = str(e)[:100]
+        # (2) window
+        win = out["window"] = {}
+        try:
+            hwnd = ctypes.c_void_p(int(self.h.call("main")["hwnd"]))
             u = ctypes.windll.user32
             u.GetWindowLongW.restype = ctypes.c_long
-            style = u.GetWindowLongW(ctypes.c_void_p(hwnd), -16) & 0xFFFFFFFF
-            caption = (style & 0x00C00000) == 0x00C00000
-            return {"standard": caption, "caption": caption, "zoomed": bool(u.IsZoomed(ctypes.c_void_p(hwnd))),
-                    "style": f"0x{style:08x}"}
+            u.MonitorFromWindow.restype = ctypes.c_void_p
+            u.MonitorFromWindow.argtypes = [ctypes.c_void_p, ctypes.c_uint]
+            style = u.GetWindowLongW(hwnd, -16) & 0xFFFFFFFF
+            wr = wt.RECT()
+            u.GetWindowRect(hwnd, ctypes.byref(wr))
+
+            class MonInfo(ctypes.Structure):
+                _fields_ = [("cbSize", ctypes.c_ulong), ("rcMonitor", wt.RECT), ("rcWork", wt.RECT),
+                            ("dwFlags", ctypes.c_ulong)]
+            mi = MonInfo()
+            mi.cbSize = ctypes.sizeof(MonInfo)
+            u.GetMonitorInfoW(ctypes.c_void_p(u.MonitorFromWindow(hwnd, 2)), ctypes.byref(mi))
+
+            def rl(r):
+                return [r.left, r.top, r.right, r.bottom]
+            w, m, wk = rl(wr), rl(mi.rcMonitor), rl(mi.rcWork)
+            win.update(style=f"0x{style:08x}", caption=(style & 0x00C00000) == 0x00C00000,
+                       zoomed=bool(u.IsZoomed(hwnd)), rect=w, monitor=m, work=wk,
+                       covers_monitor=w[0] <= m[0] and w[1] <= m[1] and w[2] >= m[2] and w[3] >= m[3],
+                       covers_work=w[0] <= wk[0] and w[1] <= wk[1] and w[2] >= wk[2] and w[3] >= wk[3],
+                       has_menu=bool(u.GetMenu(hwnd)))
+            try:
+                win["client"] = self.h.call("main").get("client")
+                win["view"] = self.h.call("view")
+            except OrigError as e:
+                win["view_error"] = str(e)[:80]
         except Exception as e:  # noqa: BLE001
-            return {"error": str(e)[:100]}
+            win["error"] = str(e)[:100]
+        # (3) script: `fw` properties about the screen mode (none documented; enumerated so a run shows what exists)
+        try:
+            out["script"] = str(self.jsf_value(SCREEN_MODE_JS, why="screen mode read-back") or "")[:300]
+        except OrigError as e:
+            out["script"] = f"error {str(e)[:80]}"
+        if tb.get("pressed"):
+            out.update(mode=tb["pressed"], source="toolbox button")
+        elif win.get("covers_monitor"):
+            out.update(mode="full?", source="window covers the monitor")
+        if out["mode"]:
+            out["standard"] = out["mode"] == "standard"
+        return out
+
+    def screen_mode_read(self, want=None):
+        """R-23 (TW-159 a): `{"screen_mode_read": "<standard|full_menus|full>"}` - the screen mode read back with all
+        evidence (screen_mode_state), logged as `orig screen mode read (want ...)`, value `screen_mode_read`. A
+        decisive read-back of another mode is logged as MISMATCH (no runner error: the shots compare the modes)."""
+        st = self.screen_mode_state()
+        verdict = screen_mode_verdict(st.get("mode"), want)
+        self.values.append({"screen_mode_read": {"want": want, "verdict": verdict, **st}})
+        self.r.log(f"  orig screen mode read (want {want}): {verdict} - mode {st.get('mode')} from {st.get('source')}; "
+                   f"toolbox {st.get('toolbox')}; window {st.get('window')}; script {st.get('script')!r}")
 
     def screen_mode_standard(self):
         """R-22 (TW-156, run 24 `toolbox/13`: the steps had no defined start mode): `{"screen_mode_standard": true}`
@@ -1825,7 +2010,7 @@ class OrigSide(Side):
         except (OrigError, Unmapped) as e:
             rec["tries"].append({"how": "button", "error": str(e)[:100]})
             for _ in range(2):
-                if st.get("standard"):
+                if st.get("standard") is not False:
                     break
                 self.key("F")
                 time.sleep(0.8)
@@ -1833,10 +2018,16 @@ class OrigSide(Side):
                 rec["tries"].append({"how": "key F", "state": st})
         rec["after"] = st
         self.values.append({"screen_mode": rec})
-        self.r.log(f"  orig screen mode standard: before {rec['before']} | " + "; ".join(
-            f"{t.get('how')}: {t.get('state') or t.get('error')}" for t in rec["tries"]))
-        if not st.get("standard"):
-            self.runner_error(f"screen mode: not standard after the reset ({st})")
+
+        def short(x):
+            # R-23 (TW-159 a): mode, source and the decisive evidence per read-back
+            return {"mode": x.get("mode"), "source": x.get("source"), "buttons": (x.get("toolbox") or {}).get("means"),
+                    "covers_monitor": (x.get("window") or {}).get("covers_monitor")}
+        self.r.log(f"  orig screen mode standard: before {short(rec['before'])} | " + "; ".join(
+            f"{t.get('how')}: {short(t['state']) if t.get('state') else t.get('error')}" for t in rec["tries"]))
+        # R-23: only a decisive read-back of another mode is an error (None = not decidable, logged above)
+        if st.get("standard") is False:
+            self.runner_error(f"screen mode: not standard after the reset ({short(st)})")
 
     def path_colors(self) -> dict:
         """R-22 (TW-153): the document's fill and stroke colour ({"fill", "stroke"}, lower case, 7 characters; or
@@ -2583,6 +2774,9 @@ class OrigSide(Side):
         before = st.get("chars") or ""
         self.text_entry_state = {"new_text": not before, "text": text,
                                  "n_before": int(st.get("n") or 0) - (0 if before else 1)}
+        # R-23 (TW-146 rest, run 25 tool-text/07: the caret blinked but the "H" reached the tool shortcuts - Hand
+        # tool): the object count of the new text settles before the first key
+        rec["settle_before_typing"] = self.objects_settled("before the first character")
         # R-22 (TW-146 rest, run 24 tool-text/11 only "Ab", 12, 13, 17 nothing although the caret check passed; the
         # losses follow the commit of the previous text): always the first character alone, read back; not arrived
         # -> settle (`orig.text_retry_settle_ms`, default 400), the text tool again if a lost key switched it, one
@@ -2609,6 +2803,9 @@ class OrigSide(Side):
                     how.append("attempt 2: no point to click into the text")
                     break
                 time.sleep(int(self.r.cfg["orig"].get("text_retry_settle_ms", 400)) / 1000)
+                # R-23 (TW-146 rest, run 25 tool-text/07: the click retry found no editor): wait until the object count
+                # settles (the lost key may have ended the edit and committed / discarded the text) before the click
+                att["settle"] = self.objects_settled("before the click retry")
                 keep = getattr(self, "last_canvas", None)
                 try:
                     self.do("canvas_click", list(pt), {})
@@ -2617,8 +2814,19 @@ class OrigSide(Side):
                 st2 = self.wait_text_editor()
                 att["click"] = {"at": list(pt), **{k: st2.get(k) for k in ("tool", "n", "sel", "open", "polls")}}
                 if not st2.get("open"):
+                    # R-23 (TW-146 rest): one more click after the editor wait (the first one may only have committed
+                    # the empty text of attempt 1)
+                    self.objects_settled("after the click retry without editor")
+                    keep = getattr(self, "last_canvas", None)
+                    try:
+                        self.do("canvas_click", list(pt), {})
+                    finally:
+                        self.last_canvas = keep
+                    st2 = self.wait_text_editor()
+                    att["click_2"] = {k: st2.get(k) for k in ("tool", "n", "sel", "open", "polls")}
+                if not st2.get("open"):
                     attempts.append(att)
-                    how.append(f"attempt 2: click into the text at {pt} - no editor")
+                    how.append(f"attempt 2: click into the text at {pt} (twice) - no editor")
                     break
                 att["caret"] = self.caret_check(st2).get("how")
                 st = st2
@@ -2825,8 +3033,11 @@ class OrigSide(Side):
             steps.append(f"selection gone ({hl.get('changed_px')} px) - drag once more")
             self.text_select_drag(ts["a"])
             ts = self.last_text_select
+            # R-23 (TW-146 rest): the new drag's highlight checked once more right before the field
+            hl = rec["selection_after_redrag"] = self.selection_still_there()
+            steps.append(f"after the new drag {hl.get('changed_px')} px, cover {hl.get('cover')}")
         else:
-            steps.append(f"selection still highlighted (cover {hl.get('cover')})")
+            steps.append(f"selection still highlighted ({hl.get('changed_px')} px, cover {hl.get('cover')})")
         rec["runs_before"] = self.text_runs_sizes()
         pt, _info = self.resolve(target)
         self.o.focus()
@@ -2844,8 +3055,12 @@ class OrigSide(Side):
                 "{size}", re.sub(r"\.0$", "", str(size_number(size) or size)))
             hl2 = rec["selection_before_menu"] = self.selection_still_there()
             if not hl2.get("ok"):
-                steps.append("selection gone after the field - drag once more")
+                steps.append(f"selection gone after the field ({hl2.get('changed_px')} px) - drag once more")
                 self.text_select_drag(ts["a"])
+                hl3 = rec["selection_before_menu_2"] = self.selection_still_there()
+                steps.append(f"after the new drag {hl3.get('changed_px')} px, cover {hl3.get('cover')}")
+            else:
+                steps.append(f"selection still highlighted before the menu ({hl2.get('changed_px')} px)")
             try:
                 self.h.call("menu", path=split_path(menu), final="invoke", bar=self.r.ui_map["menu_bar"]["orig"], timeout=40)
                 time.sleep(0.4)
@@ -2861,6 +3076,31 @@ class OrigSide(Side):
         if not ok:
             self.runner_error(f"text size {size} not on the selected {tail!r} (runs {runs})")
 
+    def objects_settled(self, why: str, want_min=None) -> dict:
+        """R-23 (TW-146 rest, run 25 tool-text/07: the second text lost its "H" and the click retry found no editor
+        - the next input followed the commit / creation of a text too early): the document's object count read every
+        150 ms until two reads agree (and reach `want_min` when given), at most `orig.commit_wait_s` (default 2 s).
+        {n, polls, ms, settled}; logged as `orig objects settled (<why>): ...`."""
+        t0, end = time.time(), time.time() + float(self.r.cfg["orig"].get("commit_wait_s", 2.0))
+        last, polls, n = None, 0, None
+        settled = False
+        while True:
+            polls += 1
+            try:
+                n = int(self.key_state().get("n") or 0)
+            except (OrigError, ValueError):
+                n = None
+            if n is not None and n == last and (want_min is None or n >= want_min):
+                settled = True
+                break
+            last = n
+            if time.time() >= end:
+                break
+            time.sleep(0.15)
+        rec = {"n": n, "polls": polls, "ms": int((time.time() - t0) * 1000), "settled": settled}
+        self.r.log(f"  orig objects settled ({why}): {rec}")
+        return rec
+
     def commit_check(self, out: dict) -> None:
         """R-20 (TW-146): after the Pointer tool click that ends a text entry of this step the document must hold one
         object more than before the text was created (an empty text is discarded at the commit). Value `commit` in
@@ -2869,13 +3109,15 @@ class OrigSide(Side):
         if not te:
             return
         self.text_entry_state = None
-        try:
-            n = int(self.key_state().get("n") or 0)
-        except (OrigError, ValueError) as e:
-            out["commit"] = {"error": str(e)[:120]}
+        # R-23 (TW-146 rest): wait for the commit - the object count settles (a new text: one more than before)
+        # before the next click of the step
+        wait = self.objects_settled("text commit", te["n_before"] + 1 if te["new_text"] else None)
+        n = wait.get("n")
+        if n is None:
+            out["commit"] = {"error": "object count not readable", "wait": wait}
             return
         c = out["commit"] = {"elements_before": te["n_before"], "elements_after": n, "new_text": te["new_text"],
-                             "grew": n > te["n_before"]}
+                             "grew": n > te["n_before"], "wait_ms": wait.get("ms")}
         self.r.log(f"  orig text commit: elements {te['n_before']} -> {n} "
                    f"({'ok' if c['grew'] or not te['new_text'] else 'TEXT DISCARDED'})")
         if te["new_text"] and not c["grew"]:
@@ -2963,19 +3205,54 @@ class OrigSide(Side):
             # R-22 (TW-155 a): the real key for the active tool (e.g. Freeform size keys); a tool switch means the
             # program took it as a tool shortcut - the tool's own key use cannot be sent: Pointer tool back and the
             # step `unsupported` with the reason
-            self.key(combo)
+            # R-23 (TW-159 c, run 25 `tool-path-reshape/04`: the real Up switched Freeform -> Pen; hypothesis: the
+            # tool's size keys work only while the mouse button is down over the canvas): step flag
+            # `orig_tool_keys: "held"` = mouse button down at the cursor (the step's canvas_hover point), the key,
+            # button up; a switch all the same -> the Properties panel's fields read (record_ui inspector.fields)
+            # for the log, Pointer tool back, step `unsupported` with the reason
+            held = str(getattr(self, "tool_keys_mode", "") or "").lower() == "held"
+            hrec = {}
+            if held:
+                pt = cursor_pos()
+                hrec = {"held_at": list(pt) if pt else None}
+                self.o.focus()
+                if pt:
+                    self.h.call("down", x=pt[0], y=pt[1])
+                try:
+                    time.sleep(0.1)
+                    self.h.call("key", combo=combo)
+                    time.sleep(0.15)
+                finally:
+                    if pt:
+                        self.h.call("up", x=pt[0], y=pt[1])
+            else:
+                self.key(combo)
             time.sleep(0.2)
             after = self.active_tool()
-            self.r.log(f"  orig key {combo}: real key ({why}) -> tool {after}")
+            self.r.log(f"  orig key {combo}: real key ({why}{', mouse button held at ' + str(hrec.get('held_at')) if held else ''})"
+                       f" -> tool {after}")
             if after != tool:
+                size_ui = None
+                if held:
+                    try:
+                        size_ui = self.record_ui("inspector.fields")
+                    except Exception as e:  # noqa: BLE001
+                        size_ui = f"error {str(e)[:80]}"
+                    self.values.append({"tool_key": {"key": combo, "tool": tool, "tool_after": after, **hrec,
+                                                     "properties": size_ui}})
+                    self.r.log(f"  orig key {combo}: tool switched although the mouse button was held; Properties "
+                               f"panel fields: {str(size_ui)[:200]}")
                 try:
                     self.do("tool", "tool.pointer", {})
                 except (OrigError, Unmapped) as e:
                     self.r.log(f"  orig key {combo}: pointer tool back failed: {e}")
                 raise Unsupported(f"orig: plain {combo} with the {tool} tool selected the {after} tool (taken as a "
-                                  f"tool shortcut, not consumed by the tool) - the tool's own key use cannot be sent")
+                                  f"tool shortcut, not consumed by the tool"
+                                  + (", also with the mouse button held over the canvas" if held else "")
+                                  + ") - the tool's own key use cannot be sent; the size is compared by the Properties "
+                                  "panel read-back only")
             # not a substitute: the real key was sent (no `substituted` entry, no key_check)
-            self.values.append({"tool_key": {"key": combo, "tool": tool, "tool_after": after}})
+            self.values.append({"tool_key": {"key": combo, "tool": tool, "tool_after": after, **hrec}})
             return "real key"
         if kind == "none":
             try:
@@ -3006,6 +3283,26 @@ class OrigSide(Side):
                 st1 = rec["after"] = self.key_state()
                 rec["effect"] = self.key_effect("move", st0, st1)
                 return self.substituted_as(combo, f"real Shift+{k.capitalize()} (10 px, step orig_nudge_keys shift)", rec)
+            if any(t in str(tool).lower() for t in SUBSELECTION_TOOLS):
+                # R-23 (TW-159 b): Subselection - selected points move with `moveSelectedBezierPointsBy` (the arrow
+                # moves the selected points of a path there); an error or no change of the selection's bounds (no
+                # point selected: the whole object is subselected) -> moveSelectionBy below
+                pts = rec["points"] = {}
+                try:
+                    pts["nodes_before"] = str(self.jsf_value(PATH_NODES_JS, why="point nudge check") or "")
+                    self.o.jsf(f"fw.getDocumentDOM().moveSelectedBezierPointsBy({{x: {dx}, y: {dy}}});",
+                               why="key substitute (points)")
+                    time.sleep(0.15)
+                    st1 = pts["after"] = self.key_state()
+                    pts["nodes_after"] = str(self.jsf_value(PATH_NODES_JS, why="point nudge check") or "")
+                    pts["effect"] = bool(pts["nodes_before"]) and pts["nodes_after"] != pts["nodes_before"]
+                except OrigError as e:
+                    pts["error"] = str(e)[:120]
+                if pts.get("effect"):
+                    rec["after"], rec["effect"] = pts["after"], True
+                    self.history_not_comparable = True
+                    return self.substituted_as(combo, f"script moveSelectedBezierPointsBy({{x: {dx}, y: {dy}}}) "
+                                                      f"(Subselection tool {tool})", rec)
             self.o.jsf(f"fw.getDocumentDOM().moveSelectionBy({{x: {dx}, y: {dy}}}, false, false);", why="key substitute")
             time.sleep(0.15)
             st1 = rec["after"] = self.key_state()
@@ -3117,20 +3414,28 @@ class OrigSide(Side):
         tmp = Path(self.r.cfg["tmp_dir"])
         keep = getattr(self, "last_canvas", None)
         hl, tries = {}, 0
-        for tries, steps in ((1, 20), (2, 40)):
-            if tries > 1:
+        # R-23 (TW-146 rest, run 25 tool-text/13: both drags left only the caret line, 57 px in one column): the
+        # highlight is checked after every drag (pixel count and cover); missing -> the drag again with a pause of
+        # `orig.text_drag_pause_ms` (default 100) after the press, before the first move (host `pause_ms`); tries:
+        # plain, click at the end + pause, pause again; every try logged
+        pause = int(self.r.cfg["orig"].get("text_drag_pause_ms", 100))
+        trail = []
+        for tries, steps, pms, click in ((1, 20, 0, False), (2, 40, pause, True), (3, 40, pause, False)):
+            if click:
                 self.do("canvas_click", [x0, y], {})
                 time.sleep(0.3)
             self.grab(sbox, tmp / "orig_textsel_a.png")
             with Image.open(tmp / "orig_textsel_a.png") as im:
                 ia = im.convert("RGB")
-            self.do("canvas_drag", {"from": [x0, y], "to": [x1, y], "steps": steps}, {})
+            self.do("canvas_drag", {"from": [x0, y], "to": [x1, y], "steps": steps, **({"pause_ms": pms} if pms else {})}, {})
             time.sleep(0.3)
             self.grab(sbox, tmp / "orig_textsel_b.png")
             with Image.open(tmp / "orig_textsel_b.png") as im:
                 ib = im.convert("RGB")
             hl = selection_highlight(ia, ib, [0, 0, ia.size[0], ia.size[1]], wx)
             rec["highlight" if tries == 1 else f"highlight_{tries}"] = hl
+            trail.append(f"try {tries} ({steps} moves{', click first' if click else ''}{f', pause {pms} ms' if pms else ''}):"
+                         f" {hl.get('changed_px')} px, cover {hl.get('cover')}")
             if hl.get("ok"):
                 break
         self.last_canvas = keep
@@ -3140,9 +3445,10 @@ class OrigSide(Side):
         self.values.append({"text_select": rec})
         self.substituted = (getattr(self, "substituted", None) or []) + ["mouse drag over the characters"]
         self.r.log(f"  orig key substitute: shift+left x{n} -> mouse drag over the characters "
-                   f"({rec['drag'][0]} -> {rec['drag'][1]}, text box {rec['rect']}, {tries} drag(s)); selection read-back "
-                   f"(highlight, no clipboard): {hl.get('changed_px')} px changed in {hl.get('changed_box')}, cover "
-                   f"{hl.get('cover')} of the {expected!r} span ({'ok' if rec['ok'] else 'NO SELECTION'})")
+                   f"({rec['drag'][0]} -> {rec['drag'][1]}, text box {rec['rect']}, {tries} drag(s): {'; '.join(trail)}); "
+                   f"selection read-back (highlight, no clipboard): {hl.get('changed_px')} px changed in "
+                   f"{hl.get('changed_box')}, cover {hl.get('cover')} of the {expected!r} span "
+                   f"({'ok' if rec['ok'] else 'NO SELECTION'})")
         if not rec["ok"]:
             self.runner_error(f"text selection by drag: no selection highlight over {expected!r} after {tries} drags ({hl})")
 
@@ -4166,6 +4472,8 @@ class OrigSide(Side):
             self.reset_light()
         elif verb == "screen_mode_standard":
             self.screen_mode_standard()
+        elif verb == "screen_mode_read":
+            self.screen_mode_read(arg if isinstance(arg, str) else None)
         elif verb == "key":
             for _ in range(int(act.get("repeat", 1) or 1)):
                 # R-19 (TW-140): plain Delete / arrow / Escape replaced by menu / script / mouse actions; no
@@ -4298,8 +4606,10 @@ class OrigSide(Side):
                 drec["state_before"] = self.tool_state()  # R-9 (TW-107/109, Q-50): tool, fill, stroke before the drag
             self.values.append({"drag": drec})
             # R-7 (M9): `press_ms` / `release_ms` = pauses after the press (with two small moves) and before the release
+            # R-23 (TW-146 rest): `pause_ms` = pause after the press without a move (text selection drags)
             res = self.h.call("drag", x1=fr[0], y1=fr[1], x2=to[0], y2=to[1], mods=dmods, steps=a.get("steps", 20),
-                              press_ms=a.get("press_ms"), release_ms=a.get("release_ms"), timeout=90)
+                              press_ms=a.get("press_ms"), release_ms=a.get("release_ms"), pause_ms=a.get("pause_ms"),
+                              timeout=90)
             # R-9 (TW-109): state of the held keys (GetAsyncKeyState) at the press and before the release; the host
             # sends them again when they were not down
             if isinstance(res, dict) and res.get("keys"):
@@ -4520,6 +4830,9 @@ class OrigSide(Side):
             button = "right" if verb.startswith("right") else "left"
             count = 2 if verb.startswith("double") else 1
             pre = self.dbl_state() if canvas and count == 2 and button == "left" and not mods else None
+            if pre and any(t in pre.get("tool", "").lower() for t in POINTER_TOOLS) and pre.get("text") is not None:
+                # R-23 (TW-146 rest): the commit of the step's last text settles before the double-click
+                self.objects_settled("before the double-click")
             self.click_at(pt, button, count, mods)
             if pre and any(t in pre.get("tool", "").lower() for t in POINTER_TOOLS):
                 self.double_click_check(pt, pre)
@@ -4536,18 +4849,36 @@ class OrigSide(Side):
         """R-15 (TW-140, run 19 tool-text/06: the pointer double-click on a text opened no editor): a text selected
         but the pointer still active = no editor; the double-click is sent once more (one SendInput batch) and
         both states are logged."""
-        time.sleep(0.3)
-        post = self.dbl_state()
+        # R-23 (TW-146 rest, run 25 tool-text/07: no editor after the double-click and its retry): the editor is
+        # waited for (`orig.dbl_editor_wait_s`, default 1.5 s, polled), then the caret (caret_check); no editor ->
+        # the batch double-click once more (one SendInput batch), editor and caret waited for again; all logged
+        def wait_editor():
+            end = time.time() + float(self.r.cfg["orig"].get("dbl_editor_wait_s", 1.5))
+            while True:
+                time.sleep(0.25)
+                st = self.dbl_state()
+                if not (st.get("text") == "1" and any(t in st.get("tool", "").lower() for t in POINTER_TOOLS)):
+                    return st
+                if time.time() >= end:
+                    return st
+        post = wait_editor()
         if not (post.get("text") == "1" and any(t in post.get("tool", "").lower() for t in POINTER_TOOLS)):
+            if post.get("text") == "1":
+                car = self.caret_check()
+                self.values.append({"double_click": {"at": list(pt), "after": post, "caret": car.get("how")}})
+                self.r.log(f"  orig double-click {list(pt)}: editor (tool {post.get('tool')}), caret {car.get('how')}")
             return
+        self.objects_settled("before the double-click retry")
         self.click_at(pt, "left", 2)
-        time.sleep(0.3)
-        post2 = self.dbl_state()
-        rec = {"at": list(pt), "before": pre, "after": post, "after_retry": post2,
-               "editor": not any(t in post2.get("tool", "").lower() for t in POINTER_TOOLS)}
+        post2 = wait_editor()
+        editor = not any(t in post2.get("tool", "").lower() for t in POINTER_TOOLS)
+        car = self.caret_check() if editor else {}
+        rec = {"at": list(pt), "before": pre, "after": post, "after_retry": post2, "editor": editor,
+               "caret": car.get("how")}
         self.values.append({"double_click_retry": rec})
-        self.r.log(f"  orig double-click {list(pt)}: no text editor (tool {post.get('tool')}, text selected) - retried: "
-                   f"tool {post2.get('tool')}, editor {'open' if rec['editor'] else 'NOT open'}")
+        self.r.log(f"  orig double-click {list(pt)}: no text editor (tool {post.get('tool')}, text selected) - retried "
+                   f"(batch double-click): tool {post2.get('tool')}, editor {'open' if editor else 'NOT open'}"
+                   + (f", caret {car.get('how')}" if editor else ""))
         if not rec["editor"]:
             self.runner_error(f"double-click opened no text editor at {list(pt)} (retried once)")
 
@@ -4945,6 +5276,15 @@ class FpSide(Side):
                         "try{return scratch();}catch(e0){var n=0;try{n=d.layers.length;}catch(e){}"
                         "for(var j=n-1;j>=0;j--){if(j===L)continue;try{d.currentLayerNum=j;var r=scratch();back();return r+'|layer='+j;}catch(e){}}"
                         "back();return 'error '+e0;}})()")
+
+    def screen_mode_read(self, want=None):
+        """R-23 (TW-159 a): `{"screen_mode_read": "<standard|full_menus|full>"}` - `ui_state.screen_mode` (0 / 1 / 2 in
+        the order of SCREEN_MODES) read and logged as `fp screen mode read (want ...)`; value `screen_mode_read`."""
+        raw = self.state().get("screen_mode")
+        mode = SCREEN_MODES[raw] if isinstance(raw, int) and 0 <= raw < len(SCREEN_MODES) else None
+        verdict = screen_mode_verdict(mode, want)
+        self.values.append({"screen_mode_read": {"want": want, "verdict": verdict, "mode": mode, "raw": raw}})
+        self.r.log(f"  fp screen mode read (want {want}): {verdict} - ui_state.screen_mode {raw} ({mode})")
 
     def screen_mode_standard(self):
         """R-22 (TW-156): standard screen mode at the step start - `ui_state.screen_mode` read; not 0 -> the tools'
@@ -5722,6 +6062,8 @@ class FpSide(Side):
             self.reset_light()
         elif verb == "screen_mode_standard":
             self.screen_mode_standard()
+        elif verb == "screen_mode_read":
+            self.screen_mode_read(arg if isinstance(arg, str) else None)
         elif verb == "key":
             for _ in range(int(act.get("repeat", 1) or 1)):
                 self.key(arg)
@@ -6990,6 +7332,7 @@ class Runner:
             side.last_text_select = None  # R-21 (TW-146 c)
             side.nudge_keys = step.get("orig_nudge_keys")
             side.step_nudge = step.get("nudge")  # R-22 (TW-155 a): arrows of this step are nudges (true) or not (false)
+            side.tool_keys_mode = step.get("orig_tool_keys")  # R-23 (TW-159 c): "held" = tool keys with the button down
             side.history_not_comparable = bool(step.get("history_not_comparable"))
             side.escape_not_comparable = False
         t0 = time.time()
@@ -7369,6 +7712,8 @@ def main(argv=None):
         print(f"text entry self check: {text_entry_selfcheck()}")
         # R-21: offline check of the History row labels, text run sizes, caret blink and step limit
         print(f"R-21 self check: {r21_selfcheck()}")
+        # R-23: offline check of the screen-mode read-back helpers
+        print(f"screen mode self check: {screen_mode_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0
