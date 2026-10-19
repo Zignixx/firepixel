@@ -194,6 +194,9 @@ class Original:
         # restart after a crash does not change it)
         self.started_by_us = None
         self.own_pids: set[int] = set()  # processes this runner started (instances and script launchers)
+        # R-21 (TW-148): script file name -> caller (`why`) of the last scripts; every script that changes the
+        # document is a History row "fw.runScript(".../<name>.jsf")" - the runner's history read-back names them
+        self.script_whys: dict[str, str] = {}
         # R-14 (RE-15, TW-132): jsf() cancels dialogs while a script runs (a modal dialog blocks the script).
         # `keep_dialogs` (step flag `keep_dialog`) switches that off; every dialog it cancels is logged and
         # collected in `closed_dialogs` (the runner moves them into the step record)
@@ -355,6 +358,11 @@ class Original:
             self.start()
         code = map_compat(code)
         name = f"par_{time.strftime('%H%M%S')}_{random.randrange(100000)}"
+        head = code[code.rfind("var __v = ("):] if "var __v = (" in code else code  # past the read-back helper
+        self.script_whys[name] = f"{why}: " + re.sub(r"\s+", " ", head)[:80]
+        if len(self.script_whys) > 600:
+            for k in list(self.script_whys)[:200]:
+                self.script_whys.pop(k, None)
         done = self.tmp / f"{name}.done"
         logf = self.tmp / f"{name}.log"
         out = file_url(self.tmp) + "/"

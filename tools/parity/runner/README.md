@@ -852,3 +852,49 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
 - `--dry-run` prints `text entry self check: ok` (editor read-back parser, `text_entry_ok`, `selection_highlight`
   with a synthetic highlight, a caret line and an unchanged box); `selftest_host.ps1` checks the typed keys of
   "Ab 1" (scan code not 0, Shift only for "A").
+
+## R-21 additions (19.10.)
+
+- **History rows (TW-148, `panel-pages-states-history/16, 21`):** new action `{"history_rows": true}` (both sides),
+  in `16` right after the nudges (Shift+Right on E1), in `21` after the step count. Reference: `HISTORY_ROWS_JS`
+  reads every row alone (`historyPalette.getStepsAsJavaScript([i])`, line breaks as blanks; -2147216344 -> History
+  panel shown, read again); a runner script row (`fw.runScript(".../par_<time>_<n>.jsf")`) starts with the
+  script's name, followed by the runner's caller and the start of the script - origctl `jsf()` keeps `script_whys`
+  (name -> `why: code start`) and `select` passes `why="select [names]"`. Firepixel: bridge `history` (label and
+  command per step). Value `history_rows` {count, rows, (commands, position), source}, log
+  `orig history rows: [..]` / `fp history rows: [..]`.
+- **Caret check before typing (TW-146 a, b; run 23 `tool-text/06, 09, 13, 20`):** an open editor (one selected text)
+  is not enough any more. `caret_check` up to `orig.caret_wait_s` (default 1.5 s): host `caret` with a caret
+  window that blinks = ok; else `orig.caret_shots` (default 3) shots of the text box (selected text's pixelRect
+  plus the last canvas point, 4 px margin) `orig.caret_interval_ms` (default 300) apart - a thin vertical change
+  between two shots (at most 4 px wide, at least 5 px high, `caret_blink`) is the blinking caret. No caret -> one
+  canvas click into the text (the step's last click / double-click point, the middle of a text-tool drag; none
+  after keys in the editor, the caret would move), editor and caret checked again; still none -> the first
+  character alone, read back; the rest is typed only when it arrived, else runner error `no caret and the first
+  character … did not arrive` and nothing more is typed (no "typed once more" without a caret either). Values
+  `caret_check`, `caret_click`, `caret_check_2`, `probe` in `text_entry`; the log line `orig text entry:` names
+  each step (`caret (…)`, `no caret (…) - click into the text at …`, `first character arrived, rest typed …`).
+  The double-click "Q" of `06` goes the same way (caret wait, click at the double-click point with the text tool).
+  Config `orig.caret_check: false` = old behaviour.
+- **Size on a drag selection (TW-146 c, TW-145, `tool-text/11`):** `set_field inspector.size` after a
+  `text_select_drag` of the same step: the text box is grabbed again and compared with the shot before the drag
+  (`selection_highlight`; lost -> the drag once more), the size field clicked once, Ctrl+A, the size typed with
+  Enter, the selected text's runs read back (`TEXT_RUN_SIZES_JS`, [[characters, size]]). The tail (`expected`, e.g.
+  "123") not at the size -> selection checked again and `orig.text_size_menu` (default `Text > Größe > {size}`)
+  invoked, read back once more. Value `text_size` {selection_before, runs_before, runs_field, runs_menu?, ok, how},
+  log `orig text size on the selection: …`, runner error when the size is not on the characters. Config
+  `orig.text_size_on_selection: false` = the plain field edit.
+- **Firepixel text tool reset (TW-149):** with the unit's first document Firepixel's text tool gets the reference's
+  reset attributes (`TEXT_DEFAULTS` + `orig.text_defaults` + `fp.text_defaults`: ArialMT 12 regular #000000) by the
+  bridge command `text.setToolDefaults` {font, size, bold, italic, underline, color} with nothing selected; read
+  before and after from a scratch text (`addNewText(r, true)`, deleted), then the document is opened afresh. Value
+  `text_tool_reset`, log `fp unit start text tool reset (text.setToolDefaults, …): before … | params … | after …`.
+  Config `fp.text_tool_reset: false` switches it off.
+- **Step time limit (TW-150 a, run 23 `xs-shortcuts/08` 94.1 s with 26 substitutes):** limit = `step_timeout_s`
+  (90) + `step_timeout_per_substitute_s` (default 2 s) x the step's reference-side substitutes
+  (`step_time_limit`); the record gets `time_limit_s` when it is raised, the `slow` error names the substitutes.
+- **Foreign-window log (TW-150 b):** window titles go through UTF-8 with `errors="replace"`, and `Runner.log`
+  writes a line its console code page cannot hold with "?" instead of failing (`'charmap' codec can't encode
+  character '​'`); no foreign window logs `foreign windows at run start: none`.
+- `--dry-run` prints `R-21 self check: ok` (row labels, run sizes, caret blink with a caret line / no change / a
+  wide change, step limit).

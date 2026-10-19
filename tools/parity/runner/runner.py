@@ -766,6 +766,136 @@ def text_entry_selfcheck() -> str:
     return "ok" if not bad else "FAILED: " + "; ".join(bad)
 
 
+# R-21 (TW-148): the History rows of the reference one by one - each step's script (getStepsAsJavaScript of that
+# step alone, line breaks as blanks); "@@" separates the rows, the count comes first
+HISTORY_ROWS_JS = ('(function(){var h=fw.historyPalette,n=h.getStepCount(),r=[];for(var i=0;i<n;i++){var s;'
+                   'try{s=String(h.getStepsAsJavaScript([i]));}catch(e){s="ERROR "+e;}r.push(s.replace(/[\\r\\n]+/g," "));}'
+                   'return n+"@@"+r.join("@@");})()')
+# R-21 (TW-146 c): characters and size of every text run of the selected text ("chars=size" joined by "|")
+TEXT_RUN_SIZES_JS = ('(function(){var s=fw.selection;if(s.length!=1||s[0].textChars==null)return "none sel="+s.length;'
+                     'var t=s[0].textRuns,cur=t.initialAttrs.size,o=[];for(var i=0;i<t.textRuns.length;i++){var r=t.textRuns[i];'
+                     'if(r.changedAttrs&&r.changedAttrs.size!=null)cur=r.changedAttrs.size;o.push(r.characters+"="+cur);}'
+                     'return o.join("|");})()')
+RUNNER_SCRIPT_RE = re.compile(r'runScript\("[^"]*?/(par_\d+_\d+)\.jsf"\)')
+
+
+def history_row_labels(raw, whys=None) -> list:
+    """R-21 (TW-148): HISTORY_ROWS_JS read-back -> one label per History row. A row of a runner script
+    (`fw.runScript(".../par_<time>_<n>.jsf")`) starts with the script's name, followed by the runner's caller and
+    the start of the script (origctl `script_whys`); other rows keep their script (blanks collapsed, 140 chars)."""
+    s = str(raw or "")
+    if "@@" not in s:
+        return [s[:200]] if s else []
+    rows = [r for r in s.split("@@")[1:] if r.strip()]
+    out = []
+    for row in rows:
+        m = RUNNER_SCRIPT_RE.search(row)
+        if m:
+            why = (whys or {}).get(m.group(1))
+            out.append(f"{m.group(1)}.jsf (runner script{': ' + why if why else ''})")
+        else:
+            out.append(re.sub(r"\s+", " ", row).strip()[:140])
+    return out
+
+
+def parse_run_sizes(raw) -> list:
+    """R-21 (TW-146 c): TEXT_RUN_SIZES_JS read-back -> [[chars, size], ...] ([] when no single text is selected)."""
+    s = str(raw or "")
+    if not s or s.startswith("none"):
+        return []
+    out = []
+    for part in s.split("|"):
+        chars, _, size = part.rpartition("=")
+        out.append([chars, size])
+    return out
+
+
+def size_number(v) -> float | None:
+    """"72pt" / "72" / 72 -> 72.0 (None when there is no number)."""
+    m = re.search(r"\d+(\.\d+)?", str(v))
+    return float(m.group(0)) if m else None
+
+
+def runs_size_ok(runs, tail: str, size) -> bool:
+    """R-21 (TW-146 c): every run touching the last characters `tail` of the text carries `size` ("72" = "72pt")."""
+    want = size_number(size)
+    text = "".join(c for c, _ in runs)
+    if not runs or not tail or not text.endswith(tail) or want is None:
+        return False
+    pos, start = 0, len(text) - len(tail)
+    for chars, sz in runs:
+        end = pos + len(chars)
+        if end > start and chars and size_number(sz) != want:
+            return False
+        pos = end
+    return True
+
+
+def caret_blink(images, max_w: int = 4, min_h: int = 5, thr: int = 90) -> dict:
+    """R-21 (TW-146 a, b): a blinking caret in a series of shots of the same screen box (taken ~300 ms apart): two
+    consecutive shots differ only in a thin vertical line (changed box at most `max_w` px wide and at least `min_h`
+    px high). A wide change (redraw, highlight) is no caret; no change in the whole series = no blinking caret."""
+    out = {"shots": len(images), "pairs": []}
+    for i in range(1, len(images)):
+        a, b = images[i - 1].convert("RGB"), images[i].convert("RGB")
+        if a.size != b.size:
+            continue
+        diff = ImageChops.difference(a, b)
+        px, (w, h) = diff.load(), diff.size
+        hits = [(x, y) for y in range(h) for x in range(w) if sum(px[x, y][:3]) >= thr]
+        out["pairs"].append(len(hits))
+        if not hits:
+            continue
+        xs, ys = [x for x, _ in hits], [y for _, y in hits]
+        cb = [min(xs), min(ys), max(xs) + 1, max(ys) + 1]
+        if cb[2] - cb[0] <= max_w and cb[3] - cb[1] >= min_h:
+            out.update(ok=True, changed_box=cb, changed_px=len(hits))
+            return out
+        out.setdefault("wide_change", cb)
+    out["ok"] = False
+    return out
+
+
+def step_time_limit(base, substitutes: int, per_sub: float = 2.0) -> float:
+    """R-21 (TW-150, run 23 xs-shortcuts/08 94.1 s on the reference: a Pointer tool click after every tool letter):
+    the per-step slow limit grows by `per_sub` seconds for every reference-side substitute of the step."""
+    return float(base) + float(per_sub) * max(0, int(substitutes or 0))
+
+
+def r21_selfcheck() -> str:
+    """R-21: offline check of the History row labels, the text run sizes, the caret blink and the step limit
+    (run by --dry-run)."""
+    bad = []
+    rows = history_row_labels('3@@fw.runScript("file:///C|/x/tmp/par_015647_60240.jsf");@@'
+                              'fw.getDocumentDOM().moveSelectionBy({x:10, y:0}, false, false);@@'
+                              'fw.runScript("file:///C|/x/tmp/par_015656_19074.jsf");',
+                              {"par_015647_60240": "select ['R1']"})
+    if len(rows) != 3 or not rows[0].startswith("par_015647_60240.jsf (runner script: select") \
+            or not rows[1].startswith("fw.getDocumentDOM().moveSelectionBy") or not rows[2].startswith("par_015656_19074.jsf"):
+        bad.append(f"history rows {rows}")
+    if history_row_labels("0@@") != []:
+        bad.append("empty history")
+    runs = parse_run_sizes("Abc =12pt|123=72pt")
+    if runs != [["Abc ", "12pt"], ["123", "72pt"]] or not runs_size_ok(runs, "123", "72"):
+        bad.append(f"run sizes {runs}")
+    if runs_size_ok(parse_run_sizes("Abc 123=12pt"), "123", "72") or runs_size_ok([], "123", "72"):
+        bad.append("unchanged size read as set")
+    a = Image.new("RGB", (30, 20), "white")
+    b, c = a.copy(), a.copy()
+    for y in range(3, 17):
+        b.putpixel((10, y), (0, 0, 0))
+    for x in range(5, 25):
+        for y in range(3, 17):
+            c.putpixel((x, y), (0, 0, 128))
+    if not caret_blink([a, a.copy(), b]).get("ok"):
+        bad.append("caret blink not found")
+    if caret_blink([a, a.copy(), a.copy()]).get("ok") or caret_blink([a, c]).get("ok"):
+        bad.append("no caret / wide change read as a caret")
+    if step_time_limit(90, 0) != 90 or step_time_limit(90, 12) != 114:
+        bad.append("step limit")
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
 # R-15 (TW-140): text attributes the reference's text tool is reset to at unit start (config `orig.text_defaults`)
 TEXT_DEFAULTS = {"face": "ArialMT", "size": "12pt", "bold": False, "italic": False, "underline": False, "fillColor": "#000000"}
 # R-15: after a pointer double-click: active tool and whether exactly one text is selected
@@ -2284,13 +2414,66 @@ class OrigSide(Side):
                               f"caret {st.get('caret')}) - {text!r} not typed (the letters would select tools)")
             self.r.log(f'  orig text entry: {"; ".join(how + ["no editor - not typed"])} -> ""')
             return True
+        # R-21 (TW-146 a, b; run 23 tool-text/06, 09, 13, 20: one selected text was taken as an open editor, the keys
+        # reached the tool shortcuts): the editor counts as open only with a caret (caret_check); none -> one click
+        # into the text, check again; still none -> the first character alone, read back, the rest only when it
+        # arrived
+        car = rec["caret_check"] = self.caret_check(st)
+        probe = False
+        if not car.get("ok"):
+            pt = self.caret_retry_point(lc, st)
+            how.append(f"no caret ({car.get('how')}) - click into the text at {pt}")
+            if pt is not None:
+                keep = getattr(self, "last_canvas", None)
+                try:
+                    self.do("canvas_click", list(pt), {})
+                finally:
+                    self.last_canvas = keep
+                st2 = self.wait_text_editor()
+                rec["caret_click"] = {"at": list(pt), **{k: st2.get(k) for k in ("tool", "n", "sel", "open", "polls", "caret")}}
+                if not st2.get("open"):
+                    rec["typed"] = False
+                    self.values.append({"text_entry": rec})
+                    self.runner_error(f"text entry: no text editor after the caret click (tool {st2.get('tool')}, "
+                                      f"selection {st2.get('sel')}) - {text!r} not typed")
+                    self.r.log(f'  orig text entry: {"; ".join(how + ["no editor after the caret click - not typed"])} -> ""')
+                    return True
+                st = st2
+                car = rec["caret_check_2"] = self.caret_check(st)
+            probe = not car.get("ok")
+            how.append(f"still no caret ({car.get('how')}) - first character alone, checked" if probe
+                       else f"caret after the click ({car.get('how')})")
+        else:
+            how.append(f"caret ({car.get('how')})")
         before = st.get("chars") or ""
-        res = self.type_keys(text)
-        how.append(f"editor after {st.get('polls')} poll(s), typed as keys {res}")
+        self.text_entry_state = {"new_text": not before, "text": text,
+                                 "n_before": int(st.get("n") or 0) - (0 if before else 1)}
+        if probe and len(text) > 1:
+            self.type_keys(text[0])
+            time.sleep(0.3)
+            mid = self.editor_state()
+            rec["probe"] = {"char": text[0], "got": mid.get("chars"), "tool": mid.get("tool")}
+            if not text_entry_ok(before, mid.get("chars"), text[0]):
+                how.append(f'first character {text[0]!r} did not arrive (tool {mid.get("tool")}, text '
+                           f'"{text_escape(str(mid.get("chars")))}") - the rest is not typed')
+                rec.update(typed=False, before=before, after=mid.get("chars"), ok=False, how=how)
+                self.values.append({"text_entry": rec})
+                self.r.log(f'  orig text entry: {"; ".join(how)} -> "{text_escape(str(mid.get("chars") or ""))}" '
+                           f'(wanted "{text_escape(text)}", DIFFERENT)')
+                self.runner_error(f"text entry: no caret and the first character {text[0]!r} did not arrive "
+                                  f"(tool {mid.get('tool')}) - {text[1:]!r} not typed (the letters would select tools)")
+                return True
+            res = self.type_keys(text[1:])
+            how.append(f"first character arrived, rest typed as keys {res}")
+        else:
+            res = self.type_keys(text)
+            how.append(f"editor after {st.get('polls')} poll(s), typed as keys {res}")
         time.sleep(0.3)
         after = self.editor_state()
         got = after.get("chars")
-        if not text_entry_ok(before, got, text) and after.get("open"):
+        if probe and not text_entry_ok(before, got, text):
+            how.append("no caret - not typed once more (the letters would select tools)")
+        elif not text_entry_ok(before, got, text) and after.get("open"):
             rec["first"] = got
             if (got or "") == before:
                 how.append("nothing arrived - typed once more")
@@ -2308,14 +2491,195 @@ class OrigSide(Side):
         ok = text_entry_ok(before, got, text)
         rec.update(typed=True, before=before, after=got, ok=ok, how=how)
         self.values.append({"text_entry": rec})
-        self.text_entry_state = {"new_text": not before, "text": text,
-                                 "n_before": int(st.get("n") or 0) - (0 if before else 1)}
         self.r.log(f'  orig text entry: {"; ".join(how)} -> "{text_escape(str(got if got is not None else ""))}"'
                    + ("" if ok else f' (wanted "{text_escape(text)}", DIFFERENT)'))
         if not ok:
             self.runner_error(f'text entry: "{text_escape(str(got))}" instead of "{text_escape(text)}" '
                               f'(before "{text_escape(before)}")')
         return True
+
+    def caret_box(self, st=None):
+        """R-21 (TW-146): screen box of the text being edited (selected text's pixelRect, 4 px margin, at least
+        16 px high) together with the step's last canvas point; None when nothing is known."""
+        pts = []
+        try:
+            rects = str(self.key_state().get("rects") or "")
+            if rects:
+                l, t, r, b = (float(v) for v in rects.split("/")[0].split(","))
+                pts += [(l, t), (r, max(b, t + 12))]
+        except (OrigError, ValueError):
+            pass
+        lc = getattr(self, "last_canvas", None)
+        try:
+            if lc and lc[0] in ("canvas_click", "canvas_double_click"):
+                x, y = self.canvas_doc_point(lc[1])
+                pts += [(x, y - 2), (x, y + 14)]
+            elif lc and lc[0] == "canvas_drag":
+                x, y = self.canvas_doc_point(lc[1].get("from"))
+                pts += [(x, y - 2), (x, y + 14)]
+        except (OrigError, Unmapped, AttributeError):
+            pass
+        if not pts:
+            return None
+        l, t = min(p[0] for p in pts) - 4, min(p[1] for p in pts) - 4
+        r, b = max(p[0] for p in pts) + 4, max(p[1] for p in pts) + 4
+        p0, p1 = self.doc_to_screen(l, t), self.doc_to_screen(r, b)
+        return [int(p0[0]), int(p0[1]), max(int(p1[0]), int(p0[0]) + 2), max(int(p1[1]), int(p0[1]) + 2)]
+
+    def caret_check(self, st=None) -> dict:
+        """R-21 (TW-146 a, b: run 23 tool-text/06, 09, 13, 20 typed into an editor without a caret - the keys
+        selected tools): the caret of the text editor, up to config `orig.caret_wait_s` (default 1.5 s). Host
+        `caret` with a caret window that blinks = ok; else `orig.caret_shots` (default 3) shots of the text box
+        `orig.caret_interval_ms` (default 300) apart, a thin vertical change between two of them = the blinking caret
+        (caret_blink). {ok, how, rounds, host, blink, box}. Config `orig.caret_check: false` = always ok."""
+        cfg = self.r.cfg["orig"]
+        if not cfg.get("caret_check", True):
+            return {"ok": True, "how": "not checked (orig.caret_check false)"}
+        end = time.time() + float(cfg.get("caret_wait_s", 1.5))
+        shots, gap = max(2, int(cfg.get("caret_shots", 3))), float(cfg.get("caret_interval_ms", 300)) / 1000
+        tmp = Path(self.r.cfg["tmp_dir"])
+        box = self.caret_box(st)
+        out, rounds = {"box": box}, 0
+        while True:
+            rounds += 1
+            try:
+                c = self.h.call("caret") or {}
+                out["host"] = {k: c.get(k) for k in ("caret_class", "blinking", "focus_class")}
+            except OrigError as e:
+                out["host"] = {"error": str(e)[:80]}
+            h = out["host"]
+            if h.get("caret_class") and h.get("blinking"):
+                out.update(ok=True, rounds=rounds, how=f"host caret {h.get('caret_class')} blinking")
+                return out
+            if box:
+                imgs = []
+                try:
+                    for i in range(shots):
+                        if i:
+                            time.sleep(gap)
+                        self.grab(box, tmp / f"orig_caret_{i}.png")
+                        with Image.open(tmp / f"orig_caret_{i}.png") as im:
+                            imgs.append(im.convert("RGB"))
+                    out["blink"] = caret_blink(imgs)
+                except (OrigError, OSError) as e:
+                    out["blink"] = {"ok": False, "error": str(e)[:80]}
+                if out["blink"].get("ok"):
+                    out.update(ok=True, rounds=rounds, how=f"caret blink {out['blink'].get('changed_box')} in {box}")
+                    return out
+            if time.time() >= end:
+                break
+            time.sleep(0.2)
+        bl = out.get("blink") or {}
+        out.update(ok=False, rounds=rounds, how=f"host caret {h.get('caret_class') or 'none'}/blinking {h.get('blinking')}, "
+                                                f"no blink in {box} (changes {bl.get('pairs')}, {rounds} round(s))")
+        return out
+
+    def caret_retry_point(self, lc, st=None):
+        """R-21 (TW-146): document point for the click that should put the caret into the text: the step's last
+        canvas click / double-click point or the middle of a text-tool drag. None after keys in the editor (a click
+        would move the caret away from where the step left it) - then only the first-character check applies."""
+        try:
+            if lc and lc[0] in ("canvas_click", "canvas_double_click"):
+                return self.canvas_doc_point(lc[1])
+            if lc and lc[0] == "canvas_drag":
+                x0, y0 = self.canvas_doc_point(lc[1].get("from"))
+                x1, y1 = self.canvas_doc_point(lc[1].get("to"))
+                return (x0 + x1) / 2, (y0 + y1) / 2
+        except (OrigError, Unmapped, ValueError, AttributeError):
+            pass
+        return None
+
+    def history_rows(self, arg=None) -> list:
+        """R-21 (TW-148, run 23 panel-pages-states-history/21: 4 History steps in the reference, 5 in Firepixel, rows
+        not known): the History rows one by one (HISTORY_ROWS_JS), runner scripts named by their file and caller
+        (history_row_labels). Value `history_rows` {count, rows, source}, log `orig history rows: [..]`."""
+        try:
+            raw = self.jsf_value(HISTORY_ROWS_JS, why="history rows")
+            if "-2147216344" in str(raw):
+                self.do("panel", "history", {})
+                time.sleep(0.5)
+                raw = self.jsf_value(HISTORY_ROWS_JS, why="history rows")
+        except OrigError as e:
+            raw = f"ERROR {e}"
+        rows = history_row_labels(raw, getattr(self.o, "script_whys", {}))
+        count = str(raw).split("@@", 1)[0] if "@@" in str(raw) else None
+        rec = {"count": int(count) if str(count or "").isdigit() else None, "rows": rows,
+               "source": "historyPalette.getStepsAsJavaScript per row"}
+        self.values.append({"history_rows": rec})
+        self.r.log(f"  orig history rows: {rows}")
+        return rows
+
+    def text_runs_sizes(self) -> list:
+        """R-21 (TW-146 c): [[characters, size], ...] of the selected text's runs."""
+        try:
+            return parse_run_sizes(self.jsf_value(TEXT_RUN_SIZES_JS, why="text run sizes"))
+        except OrigError as e:
+            return [["ERROR", str(e)[:80]]]
+
+    def selection_still_there(self) -> dict:
+        """R-21 (TW-146 c): the drag selection of text_select_drag still highlighted - the text box grabbed again and
+        compared with the shot before the drag (selection_highlight)."""
+        ts = getattr(self, "last_text_select", None) or {}
+        if not ts.get("img"):
+            return {"ok": False, "error": "no drag selection in this step"}
+        tmp = Path(self.r.cfg["tmp_dir"]) / "orig_textsel_c.png"
+        self.grab(ts["sbox"], tmp)
+        with Image.open(tmp) as im:
+            ic = im.convert("RGB")
+        ia = ts["img"]
+        return selection_highlight(ia, ic, [0, 0, ia.size[0], ia.size[1]], ts["wx"])
+
+    def text_size_on_selection(self, a, target, value):
+        """R-21 (TW-146 c, TW-145; run 23 tool-text/11: the 72 set in the size field did not reach the selected
+        "123", the shot showed the caret and no highlight): the drag selection is checked again (highlight; lost ->
+        the drag once more), the size field clicked once, the size typed with Enter; the selected text's runs read
+        back. The tail not at the size -> selection checked again and the size by the Text menu (config
+        `orig.text_size_menu`, default "Text > Größe > {size}"), read back once more. Value `text_size`, log
+        `orig text size on the selection: …`, runner error when the size is not on the characters."""
+        ts = self.last_text_select
+        tail, size = str(ts.get("expected") or ""), str(value)
+        rec = {"target": target, "value": size, "tail": tail}
+        steps = []
+        hl = rec["selection_before"] = self.selection_still_there()
+        if not hl.get("ok"):
+            steps.append(f"selection gone ({hl.get('changed_px')} px) - drag once more")
+            self.text_select_drag(ts["a"])
+            ts = self.last_text_select
+        else:
+            steps.append(f"selection still highlighted (cover {hl.get('cover')})")
+        rec["runs_before"] = self.text_runs_sizes()
+        pt, _info = self.resolve(target)
+        self.o.focus()
+        self.click_at(pt)
+        time.sleep(0.15)
+        self.h.call("key", combo="ctrl+a")
+        self.h.call("type", text=size)
+        self.h.call("key", combo="enter")
+        time.sleep(0.4)
+        runs = rec["runs_field"] = self.text_runs_sizes()
+        ok = runs_size_ok(runs, tail, size)
+        steps.append(f"size field click, {size} + Enter -> runs {runs}")
+        if not ok:
+            menu = str(self.r.cfg["orig"].get("text_size_menu", "Text > Größe > {size}")).replace(
+                "{size}", re.sub(r"\.0$", "", str(size_number(size) or size)))
+            hl2 = rec["selection_before_menu"] = self.selection_still_there()
+            if not hl2.get("ok"):
+                steps.append("selection gone after the field - drag once more")
+                self.text_select_drag(ts["a"])
+            try:
+                self.h.call("menu", path=split_path(menu), final="invoke", bar=self.r.ui_map["menu_bar"]["orig"], timeout=40)
+                time.sleep(0.4)
+                runs = rec["runs_menu"] = self.text_runs_sizes()
+                ok = runs_size_ok(runs, tail, size)
+                steps.append(f"menu {menu} -> runs {runs}")
+            except OrigError as e:
+                steps.append(f"menu {menu}: {str(e)[:80]}")
+        rec.update(ok=ok, how=steps)
+        self.values.append({"text_size": rec})
+        self.values.append({"set_field": str(target), "commit": "enter", "text": size})
+        self.r.log(f"  orig text size on the selection: {'; '.join(steps)} ({'ok' if ok else 'NOT ON ' + repr(tail)})")
+        if not ok:
+            self.runner_error(f"text size {size} not on the selected {tail!r} (runs {runs})")
 
     def commit_check(self, out: dict) -> None:
         """R-20 (TW-146): after the Pointer tool click that ends a text entry of this step the document must hold one
@@ -2571,6 +2935,8 @@ class OrigSide(Side):
                 break
         self.last_canvas = keep
         rec.update(tries=tries, screen_box=sbox, readback="highlight pixels (no clipboard)", ok=bool(hl.get("ok")))
+        # R-21 (TW-146 c): kept for the check right before a text field (text_size_on_selection)
+        self.last_text_select = {"a": a, "sbox": sbox, "wx": wx, "img": ia, "expected": expected, "ok": rec["ok"]}
         self.values.append({"text_select": rec})
         self.substituted = (getattr(self, "substituted", None) or []) + ["mouse drag over the characters"]
         self.r.log(f"  orig key substitute: shift+left x{n} -> mouse drag over the characters "
@@ -3404,7 +3770,7 @@ class OrigSide(Side):
                 "    cnt++; if (web) sc++; for (var k = 0; k < want.length; k++) if (e.name == want[k] || (want[k] !== null && typeof want[k] == 'object' && (want[k].index == cnt - 1 || (web && want[k].slice == sc - 1)))) sel.push(e); } }\n"
                 "d.selectNone(); fw.selection = sel; fp_log('RET ' + sel.length);") % json.dumps(names, ensure_ascii=True)
         before = self.panel_image()
-        lines = self.o.jsf(code)
+        lines = self.o.jsf(code, why=f"select {names}")  # R-21: named in the History row read-back
         n = [ln for ln in lines if ln.startswith("RET ")]
         if not n or n[-1] == "RET 0":
             raise OrigError(f"objects not found: {names}")
@@ -3663,6 +4029,8 @@ class OrigSide(Side):
             code = arg if isinstance(arg, str) else arg.get("code")
             lines = self.o.jsf(code if "fp_log" in code else f"var __v = (function(){{ {code} }})(); if (__v !== undefined) fp_log('RET ' + __v);")
             self.values.append({"jsf": code[:200], "out": lines[-5:]})
+        elif verb == "history_rows":
+            self.history_rows(arg)
         elif verb in ("log_value", "log"):
             expr = arg if isinstance(arg, str) else arg.get("value") or arg.get("expr")
             if isinstance(arg, dict) and not expr:
@@ -4089,6 +4457,10 @@ class OrigSide(Side):
 
     def set_field(self, a):
         target, value = a.get("target") or a.get("set_field") or a.get("set"), a.get("value")
+        if str(target) == "inspector.size" and getattr(self, "last_text_select", None) \
+                and self.r.cfg["orig"].get("text_size_on_selection", True):
+            # R-21 (TW-146 c): size of a drag-selected part of a text - checked selection, read-back of the runs
+            return self.text_size_on_selection(a, target, value)
         pt, info = self.resolve(target)
         if pt is None:
             raise Unsupported("set_field without a point")
@@ -4347,6 +4719,79 @@ class FpSide(Side):
                            f" - after fill {after.get('fill_color')} stroke {after.get('stroke_color')}")
             except Exception as e:  # noqa: BLE001
                 self.r.log(f"fp default colours failed: {e}")
+
+        if getattr(self, "pending_text_defaults", False):
+            # R-21 (TW-149): the reference's unit-start text tool reset (ArialMT 12 pt regular #000000) here too; the
+            # scratch texts of the read-back leave History rows, so the document is opened afresh afterwards
+            self.pending_text_defaults = False
+            self.text_tool_reset()
+            self.open_testfile(path)
+
+    # R-21 (TW-149): the text tool's attributes from a scratch text (addNewText with the tool's defaults), deleted again
+    FP_TEXT_ATTRS_JS = ("(function(){var d=fw.getDocumentDOM();if(!d)return 'error no document';try{d.selectNone();"
+                        "d.addNewText({left:10,top:10,right:200,bottom:40},true);"
+                        "if(fw.selection.length!=1)return 'error scratch text not selected ('+fw.selection.length+')';"
+                        "var a=fw.selection[0].textRuns.initialAttrs,s=[],ks=['face','size','bold','italic','underline','fillColor'];"
+                        "for(var i=0;i<ks.length;i++)s.push(ks[i]+'='+a[ks[i]]);d.deleteSelection(false);return s.join('|');}"
+                        "catch(e){return 'error '+e;}})()")
+
+    def text_tool_attrs(self) -> dict:
+        """R-21 (TW-149): Firepixel's text tool attributes (FP_TEXT_ATTRS_JS); {"_error": ...} when not readable."""
+        try:
+            got = str(self.script_value(self.FP_TEXT_ATTRS_JS))
+        except Exception as e:  # noqa: BLE001
+            got = f"error {str(e)[:160]}"
+        if got.startswith("error"):
+            return {"_error": got}
+        return dict(kv.split("=", 1) for kv in got.split("|") if "=" in kv)
+
+    def text_tool_reset(self):
+        """R-21 (TW-149, runs 21 to 23: the reference's texts were ArialMT 12 pt after its unit-start reset,
+        Firepixel's stayed in its default Myriad Pro, so every text pair compared two fonts): the same attributes
+        (TEXT_DEFAULTS + config `orig.text_defaults`, then `fp.text_defaults`) as the text tool's defaults through
+        the bridge command `text.setToolDefaults` (font, size, bold, italic, underline, color), nothing selected.
+        Read before and after (text_tool_attrs); log `fp unit start text tool reset (…): before … | after …`.
+        Config `fp.text_tool_reset: false` switches it off."""
+        if not self.r.cfg["fp"].get("text_tool_reset", True):
+            return
+        want = dict(TEXT_DEFAULTS)
+        want.update(self.r.cfg["orig"].get("text_defaults") or {})
+        want.update(self.r.cfg["fp"].get("text_defaults") or {})
+        t0 = time.time()
+        before = self.text_tool_attrs()
+        params = {"font": str(want.get("face", "ArialMT")), "size": size_number(want.get("size", 12)) or 12.0,
+                  "bold": bool(want.get("bold")), "italic": bool(want.get("italic")),
+                  "underline": bool(want.get("underline")), "color": str(want.get("fillColor", "#000000"))}
+        err = ""
+        try:
+            self.call("run_script", {"code": "fw.getDocumentDOM().selectNone();"})
+            res = self.call("run_command", {"name": "text.setToolDefaults", "params": params})
+            if isinstance(res, dict) and res.get("ok") is False:
+                err = f"; error {str(res)[:120]}"
+        except Exception as e:  # noqa: BLE001
+            err = f"; error {str(e)[:120]}"
+        after = self.text_tool_attrs()
+
+        def fmt(a):
+            return a.get("_error") or " ".join(f"{k}={a[k]}" for k in sorted(a))
+        self.values.append({"text_tool_reset": {"before": before, "params": params, "after": after}})
+        self.r.log(f"fp unit start text tool reset (text.setToolDefaults, {time.time() - t0:.1f} s, wanted {want}): "
+                   f"before {fmt(before)} | params {params}{err} | after {fmt(after)}")
+
+    def history_rows(self, arg=None) -> list:
+        """R-21 (TW-148): Firepixel's History rows (bridge `history`: label and command per step). Value
+        `history_rows` {count, rows, commands, position}, log `fp history rows: [..]`."""
+        try:
+            h = self.call("history") or {}
+            steps = h.get("steps") or []
+            rows = [str(s.get("label") or s.get("command") or "?") for s in steps]
+            rec = {"count": len(steps), "rows": rows, "commands": [s.get("command") for s in steps],
+                   "position": h.get("position"), "source": "bridge history"}
+        except Exception as e:  # noqa: BLE001
+            rows, rec = [], {"error": str(e)[:120], "rows": []}
+        self.values.append({"history_rows": rec})
+        self.r.log(f"  fp history rows: {rows}")
+        return rows
 
     def close_doc(self, path: Path):
         docs = self.call("documents") or {}
@@ -5066,6 +5511,8 @@ class FpSide(Side):
         elif verb in ("jsf", "run_script"):
             code = arg if isinstance(arg, str) else arg.get("code")
             self.values.append({"jsf": code[:200], "out": self.script_value(code)})
+        elif verb == "history_rows":
+            self.history_rows(arg)
         elif verb in ("log_value", "log"):
             expr = arg if isinstance(arg, str) else arg.get("value") or arg.get("expr")
             if isinstance(arg, dict) and not expr:
@@ -5669,7 +6116,14 @@ class Runner:
         self.lock = Lock(cfg["orig"]["lock"])
 
     def log(self, *a):
-        print(time.strftime("%H:%M:%S"), *a, flush=True)
+        try:
+            print(time.strftime("%H:%M:%S"), *a, flush=True)
+        except UnicodeEncodeError:
+            # R-21 (TW-150, runs 22, 23: "'charmap' codec can't encode character '​'" instead of the foreign
+            # window list): the log keeps the console's code page; characters it cannot hold become "?"
+            enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+            line = " ".join([time.strftime("%H:%M:%S"), *(str(x) for x in a)])
+            print(line.encode(enc, errors="replace").decode(enc, errors="replace"), flush=True)
 
     # ---- files
     # test files of TESTFILES.md that the config may not list: T11 = import folder, T12 = swatch file
@@ -5884,8 +6338,13 @@ class Runner:
                     if len(parts) > 1 and parts[1].isdigit():
                         names[int(parts[1])] = parts[0]
             for pid, title in found:
+                # R-21 (TW-150): titles hold characters outside the log's code page (U+200B) - UTF-8 with "replace",
+                # then whatever the log cannot hold as "?" (Runner.log)
+                title = title.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
                 self.log(f"foreign window at run start: Chrome_WidgetWin_1 pid {pid} ({names.get(pid, '?')}) "
                          f"'{title[:60]}' - close it or switch off its notifications before a long run")
+            if not found:
+                self.log("foreign windows at run start: none (Chrome_WidgetWin_1)")
         except Exception as e:  # noqa: BLE001
             self.log(f"foreign windows: {e}")
 
@@ -6268,6 +6727,7 @@ class Runner:
             # R-20 (TW-146, TW-147 c): per-step text entry state and nudge / History flags
             side.last_canvas = None
             side.text_entry_state = None
+            side.last_text_select = None  # R-21 (TW-146 c)
             side.nudge_keys = step.get("orig_nudge_keys")
             side.history_not_comparable = bool(step.get("history_not_comparable"))
             side.escape_not_comparable = False
@@ -6394,9 +6854,15 @@ class Runner:
         rec.pop("want_before", None)
         rec["values"] = side.values
         rec["s"] = round(time.time() - t0, 2)
-        limit = float(self.cfg.get("step_timeout_s", 90))
+        # R-21 (TW-150): + `step_timeout_per_substitute_s` (default 2 s) per reference-side substitute of the step
+        nsub = len(rec.get("substituted") or [])
+        limit = step_time_limit(self.cfg.get("step_timeout_s", 90), nsub,
+                                float(self.cfg.get("step_timeout_per_substitute_s", 2.0)))
+        if nsub:
+            rec["time_limit_s"] = limit
         if rec["s"] > limit and rec["status"] == "ok":
-            rec.update(status="slow", error=f"step took {rec['s']}s (limit {limit}s)")
+            rec.update(status="slow", error=f"step took {rec['s']}s (limit {limit}s"
+                                            + (f" = base + {nsub} substitutes)" if nsub else ")"))
         return rec
 
     def run_unit(self, unit_name: str):
@@ -6441,6 +6907,7 @@ class Runner:
                     side.prepare()
                     if side.name != "orig":
                         side.pending_colors = True  # R-9 (TW-107): default colours with the unit's first document
+                        side.pending_text_defaults = True  # R-21 (TW-149): text tool reset like the reference
                     if side.name == "orig":
                         side.log_foreground(f"unit start {unit_name}")
                         self.log_shortcut_sets()
@@ -6639,6 +7106,8 @@ def main(argv=None):
         print(f"key substitute self check: {key_substitute_selfcheck()}")
         # R-20: offline check of the text entry / selection read-back helpers
         print(f"text entry self check: {text_entry_selfcheck()}")
+        # R-21: offline check of the History row labels, text run sizes, caret blink and step limit
+        print(f"R-21 self check: {r21_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0
