@@ -1051,3 +1051,33 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
 - `--dry-run` prints `R-24 self check: ok` (glyph boxes of run 26's 72 pt and 12 pt texts, `tail_size`, the
   Freeform flyout order in ui_map); `screen mode self check` covers the window cases of run 26 and the size field
   pick.
+
+## R-25 additions (19.10.)
+
+- **Word selection for text edits (TW-146 rest, run 27 `tool-text/11`, `13`: the "highlight" after the drag was 24
+  changed px with cover 1.0 - the caret moving from the end to the start of "123", two 12 px columns - so no size or
+  colour route could reach the characters):** `text_select_drag` now drags over the glyph boxes first for every size
+  (Arial advance widths x run size, from 2 px inside the first selected glyph to 2 px past the last, y in the middle
+  of the x-height zone, `xheight_y`), then the R-23 drags from the end, then - when the tail is one whole word
+  (`tail_is_word`, e.g. "123" of "Abc 123") - a double-click on it (word selection, `text_select.method` "word").
+  Every try is checked with the expected inverted area (glyph span width x line height on the screen, value
+  `text_select.expected_area`): `selection_highlight(..., area=, area_min=)` needs at least `orig.text_highlight_min`
+  (default 0.6) of it changed (values `expected_area`, `area_ratio`); each try logs measured px, expected area and
+  ratio. `text_size_on_selection` runs a size route only on a checked selection (lost -> selected again; still none
+  -> the route is skipped, so no size reaches the tool's default).
+- **Two-sided text tool reset (TW-165, run 27: after the failed size step of `11` only the reference's text tool
+  went back to 12 pt, Firepixel's kept 72 pt by the F43 rule, so `14` and `16` compared 12 pt with 72 pt):** a
+  pending reset from a failed size step is mirrored to Firepixel before the next step (`fp_text_reset_pending`; log
+  `text tool reset pending on both sides (after the failed size step in <step>) …`); both sides reset with their
+  next document (reference: Properties panel, Firepixel: `text.setToolDefaults`), logged as `text tool reset after
+  the failed size step in <step> (…)` and `fp text tool reset after … (…)`.
+- **Leaving full screen by key (TW-166, run 27 `toolbox/13_view_modes_full_normal`: the Standard reset clicked the
+  screen-mode button that full screen hides and tried the Window menu without a menu bar):** `screen_mode_standard`
+  plans its moves from the mode read before (`screen_standard_plan`): full -> F once, full with menus or "full?" ->
+  F up to twice (F cycles standard -> full with menus -> full -> standard), each read back by the window test; the
+  tools button only from Standard or an unreadable mode, never in full; F as before when nothing else works.
+  Afterwards the unit-start layout restore (`ensure_layout`, R-2) and the panel dock width (client right - view
+  right against the first width read this run; `dock_collapse_px`, default 100) are logged (`| layout {…}`, value
+  `screen_mode.layout` with `collapsed`). This runs in the `after` of all three `toolbox/13` steps.
+- `--dry-run` prints `R-25 self check: ok` (run 27's caret move rejected and an inverted block accepted by the area
+  test, `tail_is_word`, `xheight_y`, the Standard plan per mode).

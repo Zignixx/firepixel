@@ -746,12 +746,16 @@ def text_entry_ok(before, after, text: str) -> bool:
     return len(after) == len(before) + len(text) and text in after
 
 
-def selection_highlight(a: Image.Image, b: Image.Image, box, want=None, thr: int = 90) -> dict:
+def selection_highlight(a: Image.Image, b: Image.Image, box, want=None, thr: int = 90, area=None,
+                        area_min: float = 0.6) -> dict:
     """R-20 (TW-146): selection read-back without the clipboard (Ctrl+C typed U+0003 into the reference's text in
     run 22). Pixels of `box` ([l, t, r, b], image coordinates) that changed between the shot before the drag (`a`)
     and after it (`b`) (sum of the RGB differences >= thr); `want` = [x_from, x_to] of the characters to be
     selected. ok = the changed pixels cover at least half of `want` and are more than a caret line (a blinking
-    caret is 1-2 px wide)."""
+    caret is 1-2 px wide). R-25 (TW-146 rest, run 27 tool-text/11, 13: 24 changed px with cover 1.0 = the caret
+    moving from the end to the start of "123", two 12 px columns, taken as the selection): `area` = the expected
+    inverted area in px (span width x line height on the screen); ok also needs at least `area_min` (default 0.6) of
+    it changed. Values `expected_area`, `area_ratio`."""
     l, t, r, bt = (int(round(v)) for v in box)
     diff = ImageChops.difference(a.convert("RGB").crop((l, t, r, bt)), b.convert("RGB").crop((l, t, r, bt)))
     w, h = diff.size
@@ -771,7 +775,46 @@ def selection_highlight(a: Image.Image, b: Image.Image, box, want=None, thr: int
         out["ok"] = out["cover"] >= 0.5 and len(hits) >= 2 * (cb[3] - cb[1])
     else:
         out["ok"] = cb[2] - cb[0] >= 4
+    if area:
+        out["expected_area"] = round(float(area), 1)
+        out["area_ratio"] = round(len(hits) / max(1.0, float(area)), 2)
+        out["ok"] = bool(out["ok"]) and out["area_ratio"] >= float(area_min)
     return out
+
+
+def tail_is_word(text, n) -> bool:
+    """R-25 (TW-146 rest): the last `n` characters of `text` are one whole word (no blank inside, a blank or the
+    text start before them) - then a double-click on them selects exactly them (word selection)."""
+    text, n = str(text or ""), int(n or 0)
+    if not n or len(text) < n:
+        return False
+    tail = text[-n:]
+    return not any(c.isspace() for c in tail) and (len(text) == n or text[-n - 1].isspace())
+
+
+def xheight_y(top, bottom, scale):
+    """R-25 (TW-146 rest): the drag's y for a one-line text whose pixelRect (ink box, bottom = baseline for text
+    without descenders) runs from `top` to `bottom`: the middle of the x-height zone (Arial x-height 519/1000 em,
+    so 260 units above the baseline; `scale` = px per 1/1000 em), kept 1 px inside the box."""
+    top, bottom = float(top), float(bottom)
+    y = bottom - 260.0 * float(scale or 0)
+    lo, hi = top + 1, bottom - 1
+    return (top + bottom) / 2 if hi < lo else min(hi, max(lo, y))
+
+
+def screen_standard_plan(mode) -> list:
+    """R-25 (TW-166, run 27 `toolbox/13_view_modes_full_normal`: after the second F the reset clicked the screen-mode
+    button that full screen hides, then tried the Window menu that has no menu bar there): the moves of the
+    Standard reset by the mode read before it - F cycles standard -> full with menus -> full -> standard, so full
+    needs one F and full with menus two; the tools button only from Standard or an unreadable mode (it is hidden in
+    full screen)."""
+    if mode == "standard":
+        return []
+    if mode == "full":
+        return ["key F"]
+    if mode in ("full_menus", "full?"):
+        return ["key F", "key F"]
+    return ["button"]
 
 
 # R-24 (TW-146 rest): advance widths of Arial (the reset text face) in 1/1000 em; other characters 556
@@ -958,6 +1001,36 @@ def r24_selfcheck() -> str:
             bad.append(f"freeform flyout order {idx}")
     except (OSError, ValueError) as e:
         bad.append(f"ui_map {e}")
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
+def r25_selfcheck() -> str:
+    """R-25: offline check of the area test (run 27's caret move: two 12 px columns, 24 px, cover 1.0 - no
+    selection; an inverted 20 x 12 block - a selection), the whole-word tail, the x-height y and the Standard reset
+    plan by mode (TW-166)."""
+    bad = []
+    a = Image.new("RGB", (60, 16), "white")
+    caret = a.copy()
+    for yy in range(2, 14):
+        a.putpixel((49, yy), (0, 0, 0))
+        caret.putpixel((27, yy), (0, 0, 0))
+    block = a.copy()
+    for xx in range(28, 48):
+        for yy in range(2, 14):
+            block.putpixel((xx, yy), (51, 153, 255))
+    hc = selection_highlight(a, caret, [0, 0, 60, 16], [28, 48], area=20 * 9)
+    if hc.get("ok") or hc.get("changed_px") != 24:
+        bad.append(f"caret move taken as selection {hc}")
+    if not selection_highlight(a, block, [0, 0, 60, 16], [28, 48], area=20 * 9).get("ok"):
+        bad.append("inverted block not taken as selection")
+    if not (tail_is_word("Abc 123", 3) and not tail_is_word("Abc 123", 2) and not tail_is_word("Abc 123", 5)
+            and tail_is_word("123", 3)):
+        bad.append("tail_is_word")
+    if not 95.5 <= xheight_y(91, 100, 0.012) <= 97.5 or xheight_y(91, 92, 0.012) != 91.5:
+        bad.append(f"xheight_y {xheight_y(91, 100, 0.012)}")
+    plans = [screen_standard_plan(m) for m in ("standard", "full", "full_menus", "full?", None)]
+    if plans != [[], ["key F"], ["key F", "key F"], ["key F", "key F"], ["button"]]:
+        bad.append(f"standard plan {plans}")
     return "ok" if not bad else "FAILED: " + "; ".join(bad)
 
 
@@ -2031,7 +2104,9 @@ class OrigSide(Side):
 
         def fmt(a):
             return a.get("_error") or " ".join(f"{k}={a[k]}" for k in sorted(a))
-        self.r.log(f"unit start text tool reset (Properties panel, {time.time() - t0:.1f} s, wanted {want}): before "
+        why, self.text_reset_reason = getattr(self, "text_reset_reason", None), None
+        self.r.log(f"{'text tool reset ' + why if why else 'unit start text tool reset'} (Properties panel, "
+                   f"{time.time() - t0:.1f} s, wanted {want}): before "
                    f"{fmt(before)} | {', '.join(done) or 'nothing to change'}{'; errors: ' + '; '.join(errs) if errs else ''}"
                    f" | after {fmt(after)}")
 
@@ -2135,39 +2210,86 @@ class OrigSide(Side):
         """R-22 (TW-156, run 24 `toolbox/13`: the steps had no defined start mode): `{"screen_mode_standard": true}`
         = the tools' "standard screen mode" button (idempotent); only when the button cannot be reached (tools column
         hidden) F, read back after each press, at most twice. Value `screen_mode` {before, tries, after}, log
-        `orig screen mode standard: ...`; not standard afterwards -> runner error."""
+        `orig screen mode standard: ...`; not standard afterwards -> runner error.
+        R-25 (TW-166, run 27 `toolbox/13_view_modes_full_normal`: in full screen the button is hidden (means 0, 0, 0)
+        and there is no menu bar): the moves follow the mode read before (screen_standard_plan) - from a full-screen
+        mode F first (full: one, with menus: two; read back after each, stop at Standard), the button only from
+        Standard or an unreadable mode or when the keys did not reach Standard (then not in "full"); afterwards the
+        layout restore of the unit start (ensure_layout, R-2) and the panel dock's width (view right edge against
+        the client) logged, `dock` in the value."""
         rec = {"before": self.screen_mode_state(), "tries": []}
         st = rec["before"]
+        plan = screen_standard_plan(st.get("mode"))
+        rec["plan"] = plan
         try:
             self.reset_light()
-            pt = self.resolve("toolbox.screen_standard")[0]
-            self.click_at(pt)
+        except OrigError as e:
+            rec["tries"].append({"how": "reset_light", "error": str(e)[:100]})
+        for move in plan:
+            if move != "key F" or st.get("standard") is True:
+                break
+            self.key("F")
             time.sleep(0.8)
             st = self.screen_mode_state()
-            rec["tries"].append({"how": f"button at {list(pt)}", "state": st})
-        except (OrigError, Unmapped) as e:
-            rec["tries"].append({"how": "button", "error": str(e)[:100]})
-            for _ in range(2):
-                if st.get("standard") is not False:
-                    break
-                self.key("F")
+            rec["tries"].append({"how": "key F (leave full screen)", "state": st})
+        if st.get("standard") is not True and st.get("mode") != "full":
+            try:
+                pt = self.resolve("toolbox.screen_standard")[0]
+                self.click_at(pt)
                 time.sleep(0.8)
                 st = self.screen_mode_state()
-                rec["tries"].append({"how": "key F", "state": st})
+                rec["tries"].append({"how": f"button at {list(pt)}", "state": st})
+            except (OrigError, Unmapped) as e:
+                rec["tries"].append({"how": "button", "error": str(e)[:100]})
+        for _ in range(2):
+            if st.get("standard") is not False:
+                break
+            self.key("F")
+            time.sleep(0.8)
+            st = self.screen_mode_state()
+            rec["tries"].append({"how": "key F", "state": st})
         rec["after"] = st
-        self.values.append({"screen_mode": rec})
+        if st.get("standard") is not False:
+            rec["layout"] = self.layout_after_screen_modes(st)
 
         def short(x):
             # R-23 (TW-159 a): mode, source and the decisive evidence per read-back
             return {"mode": x.get("mode"), "source": x.get("source"), "buttons": (x.get("toolbox") or {}).get("means"),
                     "covers_monitor": (x.get("window") or {}).get("covers_monitor"),
                     "buttons_agree": x.get("buttons_agree")}
-        self.r.log(f"  orig screen mode standard: before {short(rec['before'])} | " + "; ".join(
-            f"{t.get('how')}: {short(t['state']) if t.get('state') else t.get('error')}" for t in rec["tries"]))
+        self.values.append({"screen_mode": rec})
+        self.r.log(f"  orig screen mode standard: before {short(rec['before'])}, plan {plan or ['nothing']} | " + "; ".join(
+            f"{t.get('how')}: {short(t['state']) if t.get('state') else t.get('error')}" for t in rec["tries"])
+            + (f" | layout {rec['layout']}" if rec.get("layout") else ""))
         # R-23: only a decisive read-back of another mode is an error (None = not decidable, logged above)
         # R-24 (TW-163): `standard` follows the window test first, so buttons alone no longer raise this
         if st.get("standard") is False:
             self.runner_error(f"screen mode: not standard after the reset ({short(st)})")
+
+    def layout_after_screen_modes(self, st: dict) -> dict:
+        """R-25 (TW-166, run 27: after the screen modes the reference's right panel dock stayed collapsed to icons in
+        the next Standard shot): the unit-start layout restore (ensure_layout: panels shown, toolbar, tools column)
+        and the panel dock's width = client right - view right, compared with the first width read in Standard this
+        run (`dock_ref`); narrower by more than `orig.dock_collapse_px` (default 100) -> `collapsed` (logged)."""
+        out = {}
+        try:
+            out["restored"] = self.ensure_layout() or []
+            self.tools_anchor = None
+        except (OrigError, LayoutError) as e:
+            out["error"] = str(e)[:100]
+        try:
+            c, v = rect4(self.h.call("main").get("client")), rect4(self.h.call("view"))
+        except OrigError as e:
+            c = v = None
+            out["dock_error"] = str(e)[:80]
+        if c and v:
+            dock = round(c[2] - v[2])
+            ref = getattr(self, "dock_ref", None)
+            if ref is None:
+                self.dock_ref = ref = dock
+            out.update(dock=dock, dock_ref=ref,
+                       collapsed=dock < ref - float(self.r.cfg["orig"].get("dock_collapse_px", 100)))
+        return out
 
     def path_colors(self) -> dict:
         """R-22 (TW-153): the document's fill and stroke colour ({"fill", "stroke"}, lower case, 7 characters; or
@@ -3155,7 +3277,8 @@ class OrigSide(Side):
         with Image.open(tmp) as im:
             ic = im.convert("RGB")
         ia = ts["img"]
-        return selection_highlight(ia, ic, [0, 0, ia.size[0], ia.size[1]], ts["wx"])
+        return selection_highlight(ia, ic, [0, 0, ia.size[0], ia.size[1]], ts["wx"], area=ts.get("area"),
+                                   area_min=float(ts.get("area_min") or 0.6))
 
     def text_size_on_selection(self, a, target, value):
         """R-21 (TW-146 c, TW-145; run 23 tool-text/11: the 72 set in the size field did not reach the selected
@@ -3174,7 +3297,12 @@ class OrigSide(Side):
           size set to the wanted size (WM_SETTEXT), OK; no dialog -> logged (the key is not in every shortcut set).
         A failed `field` / `menu` route may have set the text tool's default size: the unit's text tool reset runs
         again with the next test document (`pending_text_defaults`). Value `text_size` {routes, method, runs_*},
-        log `orig text size on the selection: … (ok by <method> / NOT ON …)`, runner error when no route works."""
+        log `orig text size on the selection: … (ok by <method> / NOT ON …)`, runner error when no route works.
+        R-25 (TW-146 rest d): a route runs only on a checked selection (highlight with the expected area): none ->
+        the selection once more (drags, word double-click); still none -> the route is skipped (no size to the
+        tool's default). R-25 (TW-165, run 27: only the reference's text tool was reset after the failed size step,
+        Firepixel's kept 72 pt by the F43 rule): a pending reset is set for both sides (`fp_text_reset_pending`,
+        played before the next step - Firepixel by `text.setToolDefaults`)."""
         ts = self.last_text_select
         tail, size = str(ts.get("expected") or ""), str(value)
         want = size_number(size)
@@ -3197,10 +3325,19 @@ class OrigSide(Side):
             if not hl.get("ok"):
                 self.text_select_drag(ts["a"])
                 ts = self.last_text_select
-                hl = r["selection_after_redrag"] = self.selection_still_there()
-                steps.append(f"{route}: selection gone - new drag {hl.get('changed_px')} px, cover {hl.get('cover')}")
+                hl = r["selection_after_redrag"] = self.selection_still_there() if ts.get("ok") else \
+                    {"ok": False, "changed_px": None, "cover": None}
+                steps.append(f"{route}: selection gone - selected again ({ts.get('ok') and 'ok' or 'NO SELECTION'}), "
+                             f"{hl.get('changed_px')} px of {ts.get('area') and round(ts['area'])} expected, "
+                             f"cover {hl.get('cover')}")
+                if not ts.get("ok"):
+                    r["error"] = "skipped: no selection highlight (R-25)"
+                    steps.append(f"{route}: skipped - no selection to apply the size to")
+                    rec["routes"].append(r)
+                    continue
             else:
-                steps.append(f"{route}: selection still highlighted ({hl.get('changed_px')} px, cover {hl.get('cover')})")
+                steps.append(f"{route}: selection still highlighted ({hl.get('changed_px')} px of "
+                             f"{hl.get('expected_area')} expected, cover {hl.get('cover')})")
             try:
                 if route == "field":
                     pt, _info = self.resolve(target)
@@ -3247,6 +3384,10 @@ class OrigSide(Side):
                 # R-24: the size most likely went to the text tool's default (run 26: the next text came out at 72 pt)
                 self.pending_text_defaults = True
                 rec["tool_reset_pending"] = True
+                # R-25 (TW-165): the same reset for Firepixel's text tool (its F43 size from the selection edit)
+                why = f"after the failed size step in {getattr(self.r, 'cur_step', '?')}"
+                self.text_reset_reason = why
+                self.r.fp_text_reset_pending = why
             if ok:
                 method = route
                 break
@@ -3257,7 +3398,7 @@ class OrigSide(Side):
         self.values.append({"set_field": str(target), "commit": "enter", "text": size, "method": method})
         self.r.log(f"  orig text size on the selection: {'; '.join(steps)} "
                    f"({'ok by ' + str(method) if ok else 'NOT ON ' + repr(tail)})"
-                   + ("; text tool reset pending for the next document" if rec.get("tool_reset_pending") else ""))
+                   + ("; text tool reset pending for the next document on both sides" if rec.get("tool_reset_pending") else ""))
         if not ok:
             self.runner_error(f"text size {size} not on the selected {tail!r} by {', '.join(routes)} (runs {runs})")
 
@@ -3688,7 +3829,12 @@ class OrigSide(Side):
         select the last `chars` characters of the text being edited (the text object whose `textChars` contains
         `text`, else the selected one) with a mouse drag from its right end to the estimated start of those
         characters (share of the characters, `start_frac` overrides), at the middle of the line (`line_frac`,
-        default 0.5). Read back (R-20): the selection highlight in the text's box (no Ctrl+C), value `text_select`."""
+        default 0.5). Read back (R-20): the selection highlight in the text's box (no Ctrl+C), value `text_select`.
+        R-25 (TW-146 rest, run 27 tool-text/11, 13: the "highlight" was 24 px = the caret, no selection): the glyph
+        drag (left to right over the glyph boxes) comes first for every size, at the x-height (xheight_y); every try
+        needs at least `orig.text_highlight_min` (default 0.6) of the expected inverted area (glyph span x line
+        height on the screen); after the drags a double-click on the tail when it is one whole word (word selection,
+        tail_is_word; `text_select.method` "word"), checked the same way. Expected and measured area logged."""
         a = a if isinstance(a, dict) else {"chars": a}
         want_text, n = str(a.get("text") or ""), int(a.get("chars") or 0)
         code = ("(function(){var d=fw.getDocumentDOM(),best=null;"
@@ -3724,8 +3870,9 @@ class OrigSide(Side):
         else:
             g0, g1 = x1, right
         gx0, gx1 = g0 + 2, g1 + 2
+        gy = xheight_y(top, bottom, gscale)
         rec["glyphs"] = {"size": size_txt or None, "scale": round(gscale, 4), "span": [round(g0, 1), round(g1, 1)],
-                         "drag": [[round(gx0, 1), round(y, 1)], [round(gx1, 1), round(y, 1)]]}
+                         "drag": [[round(gx0, 1), round(gy, 1)], [round(gx1, 1), round(gy, 1)]], "y": "x-height"}
         expected = rec["expected"] = want_text[-n:] if want_text and n else None
         # R-20 (TW-146, run 22 tool-text/07: the Ctrl+C read-back typed U+0003 into the text): no key into the editor -
         # the text's box (2 px margin) is grabbed before and after the drag, the changed pixels must cover the
@@ -3734,6 +3881,13 @@ class OrigSide(Side):
         sbox = [p0[0], p0[1], max(p1[0], p0[0] + 1), max(p1[1], p0[1] + 1)]
         wx = [self.doc_to_screen(x1, y)[0] - sbox[0], self.doc_to_screen(x0, y)[0] - sbox[0]]
         gwx = [self.doc_to_screen(g0, y)[0] - sbox[0], self.doc_to_screen(g1, y)[0] - sbox[0]]
+        # R-25: expected inverted area of the selected glyphs - span width x line height on the screen (the line
+        # height = the cap height 716/1000 em, at most the grabbed box)
+        zs = abs(gwx[1] - gwx[0]) / max(1e-6, g1 - g0)
+        line_h = min(bottom - top + 4, 716.0 * gscale) * zs
+        area = abs(gwx[1] - gwx[0]) * max(1.0, line_h)
+        amin = float(self.r.cfg["orig"].get("text_highlight_min", 0.6))
+        rec["expected_area"] = round(area, 1)
         tmp = Path(self.r.cfg["tmp_dir"])
         keep = getattr(self, "last_canvas", None)
         hl, tries = {}, 0
@@ -3745,27 +3899,38 @@ class OrigSide(Side):
         trail = []
         plain = [(20, 0, False, "end"), (40, pause, True, "end"), (40, pause, False, "end")]
         glyph = [(20, 0, False, "glyphs"), (40, pause, True, "glyphs")]
-        tall = (bottom - top) >= float(a.get("glyph_min_px", 30)) or bool(a.get("glyphs"))
-        plans = glyph + plain if tall else plain + glyph[:1]
-        rec["plan"] = "glyphs first" if tall else "end first, glyphs last"
+        # R-25 (TW-146 rest): glyph boxes first for every size (run 27: the 12 pt drags from the end only moved the
+        # caret), then the R-23 drags from the end, then the word double-click (whole-word tail only)
+        word = tail_is_word(want_text, n) and a.get("word", True) is not False
+        plans = glyph + plain + ([(0, 0, False, "word")] if word else [])
+        rec["plan"] = "glyphs first" + (", word double-click last" if word else "")
         used_wx = wx
         for tries, (steps, pms, click, how) in enumerate(plans, 1):
-            fx, tx, cwx = (gx0, gx1, gwx) if how == "glyphs" else (x0, x1, wx)
+            fx, tx, fy, cwx = (gx0, gx1, gy, gwx) if how in ("glyphs", "word") else (x0, x1, y, wx)
             if click:
                 self.do("canvas_click", [x0, y], {})
                 time.sleep(0.3)
             self.grab(sbox, tmp / "orig_textsel_a.png")
             with Image.open(tmp / "orig_textsel_a.png") as im:
                 ia = im.convert("RGB")
-            self.do("canvas_drag", {"from": [fx, y], "to": [tx, y], "steps": steps, **({"pause_ms": pms} if pms else {})}, {})
-            time.sleep(0.3)
+            if how == "word":
+                mx = (g0 + g1) / 2
+                self.do("canvas_double_click", [mx, gy], {})
+                time.sleep(0.4)
+                what = f"word double-click at {round(mx, 1)}, {round(gy, 1)}"
+            else:
+                self.do("canvas_drag", {"from": [fx, fy], "to": [tx, fy], "steps": steps,
+                                        **({"pause_ms": pms} if pms else {})}, {})
+                time.sleep(0.3)
+                what = (f"{how} {round(fx, 1)} -> {round(tx, 1)} at y {round(fy, 1)}, {steps} moves"
+                        f"{', click first' if click else ''}{f', pause {pms} ms' if pms else ''}")
             self.grab(sbox, tmp / "orig_textsel_b.png")
             with Image.open(tmp / "orig_textsel_b.png") as im:
                 ib = im.convert("RGB")
-            hl = selection_highlight(ia, ib, [0, 0, ia.size[0], ia.size[1]], cwx)
+            hl = selection_highlight(ia, ib, [0, 0, ia.size[0], ia.size[1]], cwx, area=area, area_min=amin)
             rec["highlight" if tries == 1 else f"highlight_{tries}"] = hl
-            trail.append(f"try {tries} ({how} {round(fx, 1)} -> {round(tx, 1)}, {steps} moves{', click first' if click else ''}"
-                         f"{f', pause {pms} ms' if pms else ''}): {hl.get('changed_px')} px, cover {hl.get('cover')}")
+            trail.append(f"try {tries} ({what}): {hl.get('changed_px')} px of {hl.get('expected_area')} expected "
+                         f"(ratio {hl.get('area_ratio')}), cover {hl.get('cover')}")
             used_wx = cwx
             if hl.get("ok"):
                 rec["method"] = how
@@ -3773,14 +3938,16 @@ class OrigSide(Side):
         self.last_canvas = keep
         rec.update(tries=tries, screen_box=sbox, readback="highlight pixels (no clipboard)", ok=bool(hl.get("ok")))
         # R-21 (TW-146 c): kept for the check right before a text field (text_size_on_selection)
-        self.last_text_select = {"a": a, "sbox": sbox, "wx": used_wx, "img": ia, "expected": expected, "ok": rec["ok"]}
+        self.last_text_select = {"a": a, "sbox": sbox, "wx": used_wx, "img": ia, "expected": expected, "ok": rec["ok"],
+                                 "area": area, "area_min": amin}
         self.values.append({"text_select": rec})
         self.substituted = (getattr(self, "substituted", None) or []) + ["mouse drag over the characters"]
         self.r.log(f"  orig key substitute: shift+left x{n} -> mouse drag over the characters "
                    f"({rec['drag'][0]} -> {rec['drag'][1]}, text box {rec['rect']}, {tries} drag(s): {'; '.join(trail)}); "
                    f"selection read-back (highlight, no clipboard): {hl.get('changed_px')} px changed in "
-                   f"{hl.get('changed_box')}, cover {hl.get('cover')} of the {expected!r} span "
-                   f"({'ok' if rec['ok'] else 'NO SELECTION'})")
+                   f"{hl.get('changed_box')} (expected inverted area {rec['expected_area']} px, at least {amin:g} of it), "
+                   f"cover {hl.get('cover')} of the {expected!r} span "
+                   f"({'ok by ' + str(rec.get('method')) if rec['ok'] else 'NO SELECTION'})")
         if not rec["ok"]:
             self.runner_error(f"text selection by drag: no selection highlight over {expected!r} after {tries} drags ({hl})")
 
@@ -5756,7 +5923,9 @@ class FpSide(Side):
         def fmt(a):
             return a.get("_error") or " ".join(f"{k}={a[k]}" for k in sorted(a))
         self.values.append({"text_tool_reset": {"before": before, "params": params, "after": after}})
-        self.r.log(f"fp unit start text tool reset (text.setToolDefaults, {time.time() - t0:.1f} s, wanted {want}): "
+        why, self.text_reset_reason = getattr(self, "text_reset_reason", None), None
+        self.r.log(f"fp {'text tool reset ' + why if why else 'unit start text tool reset'} (text.setToolDefaults, "
+                   f"{time.time() - t0:.1f} s, wanted {want}): "
                    f"before {fmt(before)} | params {params}{err} | after {fmt(after)}")
 
     def history_rows(self, arg=None) -> list:
@@ -7949,6 +8118,14 @@ class Runner:
                     self.write_log(logf, entry)
                     continue
                 entry["result"] = {}
+                if getattr(self, "fp_text_reset_pending", None):
+                    # R-25 (TW-165): the reference's text tool reset after its failed size step is mirrored here,
+                    # after Firepixel played that step too (both sides reset with their next document)
+                    why, self.fp_text_reset_pending = self.fp_text_reset_pending, None
+                    self.sides["fp"].pending_text_defaults = True
+                    self.sides["fp"].text_reset_reason = why
+                    self.log(f"text tool reset pending on both sides ({why}): reference Properties panel, "
+                             f"Firepixel text.setToolDefaults - before {step['id']}")
                 for name, side in self.sides.items():
                     if name == "fp" and step.get("orig_only"):
                         continue
@@ -8102,6 +8279,7 @@ def main(argv=None):
         # R-23: offline check of the screen-mode read-back helpers
         print(f"screen mode self check: {screen_mode_selfcheck()}")
         print(f"R-24 self check: {r24_selfcheck()}")
+        print(f"R-25 self check: {r25_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0
