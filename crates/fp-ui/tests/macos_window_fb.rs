@@ -53,3 +53,41 @@ fn consistent_minimized_flag_is_left_alone() {
         );
     }
 }
+
+/// One pass with a single key press; returns whether `take_quit_key` saw Quit and whether the key
+/// was consumed (no longer visible to later handlers in the same pass).
+fn quit_key(key: egui::Key, modifiers: egui::Modifiers) -> (bool, bool) {
+    let ctx = egui::Context::default();
+    let input = egui::RawInput {
+        events: vec![egui::Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers,
+        }],
+        ..Default::default()
+    };
+    let (mut quit, mut left) = (false, true);
+    let mut out = ctx.run_ui(input, |ui| {
+        quit = fp_ui::input::take_quit_key(ui.ctx());
+        left = ui.ctx().input(|i| !i.events.is_empty());
+    });
+    out.textures_delta.clear();
+    (quit, !left)
+}
+
+/// FB-05: Cmd+Q as egui-winit reports it on macOS (`mac_cmd` + `command`) is the Quit command and
+/// is consumed, so neither the shortcut set nor a text field sees it a second time.
+#[test]
+fn cmd_q_is_quit_on_macos() {
+    let mac_cmd = egui::Modifiers {
+        mac_cmd: true,
+        command: true,
+        ..Default::default()
+    };
+    assert_eq!(quit_key(egui::Key::Q, mac_cmd), (true, true));
+    // plain Q (tool key), Cmd+W: not Quit and left alone
+    assert_eq!(quit_key(egui::Key::Q, egui::Modifiers::NONE), (false, false));
+    assert_eq!(quit_key(egui::Key::W, mac_cmd), (false, false));
+}

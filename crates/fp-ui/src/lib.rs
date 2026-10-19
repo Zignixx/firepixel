@@ -237,6 +237,11 @@ impl FirepixelApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             st.push(Action::Quit);
         }
+        // macOS: Cmd+Q is the app's Quit command with the save prompt (FB-05, see `native_options`),
+        // independent of the shortcut set and of a focused text field
+        if cfg!(target_os = "macos") && !st.dialogs.any_open() && input::take_quit_key(&ctx) {
+            st.push(Action::Quit);
+        }
         input::drop_alt_text(&ctx); // CT-A-06: Zugriffstasten (Alt+Buchstabe) schreiben nichts ins Feld
         batch::frame_input(&ctx, st); // BATCH-2: Ablegen/Tasten im Batch-Studio vor dem Dokument
         files::handle_dropped_files(&ctx, st);
@@ -554,7 +559,8 @@ fn switch_documents(ctx: &egui::Context, st: &mut AppState) {
 
 /// Fensteroptionen: ohne Systemrahmen (eigene Anwendungsleiste wie CS6), maximiert.
 pub fn native_options() -> eframe::NativeOptions {
-    eframe::NativeOptions {
+    #[allow(unused_mut)]
+    let mut options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Firepixel")
             .with_app_id("firepixel")
@@ -574,7 +580,24 @@ pub fn native_options() -> eframe::NativeOptions {
         window_builder: Some(Box::new(start_window::strip_maximized)),
         wgpu_options: wgpu_options(),
         ..Default::default()
+    };
+    // macOS (FB-05): winit 0.30 installs a default application menu whose "Quit" item has the key
+    // equivalent Cmd+Q and the action `terminate:`. AppKit handles menu key equivalents before the
+    // key reaches the window, so the app never sees Cmd+Q; `terminate:` then runs winit's
+    // `applicationWillTerminate:` (winit's delegate has no `applicationShouldTerminate:`), which
+    // exits the event loop directly – there is no `CloseRequested`, so the unsaved-changes prompt
+    // was skipped. Without the default menu Cmd+Q arrives as a normal key event and `root_ui`
+    // turns it into `Action::Quit` (with the prompt). A custom menu or an
+    // `applicationShouldTerminate:` delegate would need Objective-C calls (`unsafe`), which the
+    // workspace forbids.
+    #[cfg(target_os = "macos")]
+    {
+        options.event_loop_builder = Some(Box::new(|builder| {
+            use winit::platform::macos::EventLoopBuilderExtMacOS as _;
+            builder.with_default_menu(false);
+        }));
     }
+    options
 }
 
 /// Grafik-Einrichtung (START-1): wgpu tastet sonst beim Start Vulkan, DX12 und OpenGL ab; auf

@@ -314,6 +314,12 @@ fn run_clip(
     }
 }
 
+/// Cmd+Q (Ctrl+Q outside macOS) pressed in this frame? The key is consumed. Used on macOS only,
+/// where Cmd+Q always means "Quit Firepixel" (FB-05); elsewhere the shortcut set decides.
+pub fn take_quit_key(ctx: &egui::Context) -> bool {
+    ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, Key::Q))
+}
+
 /// Verarbeitet die Tastatureingaben dieses Frames.
 pub fn handle(ctx: &egui::Context, st: &mut AppState) {
     let editing = st.session.tool_is_editing_text();
