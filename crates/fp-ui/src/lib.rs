@@ -42,6 +42,7 @@ pub mod menu_scroll;
 pub mod os_clipboard;
 pub mod panels;
 pub mod preview;
+pub mod screen_mode; // TW-158: Standard / full screen with menus / full screen
 mod start_window;
 pub mod theme;
 pub mod toolbar;
@@ -258,17 +259,21 @@ impl FirepixelApp {
         appbar::resize_edges(&ctx);
 
         let m = theme.metrics.clone();
+        screen_mode::frame(st);
+        let chrome = screen_mode::current(st);
         let hidden = st.settings.workspace.panels_hidden || st.session.ui.screen_mode == 2;
         // BATCH-2: Studio vorn → Werkzeuge, Dock und Inspektor ausblenden (Arbeitsbereich bleibt gespeichert)
         let studio = batch::is_front(st);
         let no_frame = egui::Frame::NONE;
-        egui::Panel::top("fp-appbar")
-            .exact_size(m.app_bar_height)
-            .frame(no_frame)
-            .resizable(false)
-            .show_separator_line(false)
-            .show(ui, |ui| appbar::show(ui, st));
-        if st.settings.workspace.show_toolbar && !hidden {
+        if chrome.app_bar {
+            egui::Panel::top("fp-appbar")
+                .exact_size(m.app_bar_height)
+                .frame(no_frame)
+                .resizable(false)
+                .show_separator_line(false)
+                .show(ui, |ui| appbar::show(ui, st));
+        }
+        if st.settings.workspace.show_toolbar && !hidden && chrome.toolbar {
             egui::Panel::top("fp-toolbar")
                 .exact_size(m.toolbar_height)
                 .frame(no_frame)
@@ -276,7 +281,7 @@ impl FirepixelApp {
                 .show_separator_line(false)
                 .show(ui, |ui| toolbar::show(ui, st));
         }
-        if st.settings.workspace.show_tools && !hidden && !studio {
+        if st.settings.workspace.show_tools && !hidden && !studio && chrome.tools_docked {
             egui::Panel::left("fp-tools")
                 .exact_size(m.tools_width + m.splitter)
                 .frame(no_frame)
@@ -290,7 +295,7 @@ impl FirepixelApp {
                     widgets::vsplitter(ui.painter(), r.right() - m.splitter, r.y_range(), &theme);
                 });
         }
-        if !hidden && !studio {
+        if !hidden && !studio && chrome.dock_docked {
             // wie im Original: nicht schmaler als das breiteste angedockte Bedienfeld
             let dock_min = docking::dock_min_width(st, &theme);
             let dock_w = if st.settings.workspace.dock_mode == workspace::DockMode::Expanded {
@@ -334,7 +339,7 @@ impl FirepixelApp {
                 st.settings.workspace.dock_width = w;
             }
         }
-        if st.settings.workspace.show_inspector && !hidden && !studio {
+        if st.settings.workspace.show_inspector && !hidden && !studio && chrome.inspector {
             let h = inspector::height(&theme, st);
             egui::Panel::bottom("fp-inspector")
                 .exact_size(h + m.splitter)
@@ -349,9 +354,15 @@ impl FirepixelApp {
                     inspector::show(&mut child, st);
                 });
         }
-        egui::CentralPanel::no_frame().show(ui, |ui| {
-            canvas::show_document_area(ui, st);
-        });
+        let doc_area = egui::CentralPanel::no_frame()
+            .show(ui, |ui| {
+                canvas::show_document_area(ui, st);
+            })
+            .response
+            .rect;
+        if !hidden {
+            screen_mode::show_floating_chrome(&ctx, st, doc_area);
+        }
         docking::show_floating(&ctx, st);
         docking::finish_drag(&ctx, st);
         dialogs::show_all(&ctx, st);

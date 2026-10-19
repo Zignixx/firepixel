@@ -209,9 +209,23 @@ fn save_active(
     ))
 }
 
+/// Screen mode after the toggle key `F`: 0 Standard -> 1 full screen with menus -> 2 full
+/// screen -> 0 (TW-158).
+fn next_screen_mode(mode: u8) -> u8 {
+    match mode {
+        0 => 1,
+        1 => 2,
+        _ => 0,
+    }
+}
+
 fn toggle_panel(s: &mut Session, name: &str, default: bool) -> Result<CommandOutput> {
     let v = !s.ui.panels.get(name).copied().unwrap_or(default);
     s.ui.panels.insert(name.to_string(), v);
+    // TW-158: showing a panel by command leaves the full-screen modes (back to Standard)
+    if v && s.ui.screen_mode != 0 {
+        s.ui.screen_mode = 0;
+    }
     s.emit(SessionEvent::PanelsChanged);
     Ok(CommandOutput::session_with(json!({"visible": v})))
 }
@@ -655,7 +669,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .label("Bildschirmmodus umschalten")
             .describe("Pseudo-Werkzeug 33015 (Kürzel F)")
             .run(|s, _| {
-                s.ui.screen_mode = (s.ui.screen_mode + 1) % 3;
+                // TW-158: without an open document the key does nothing; otherwise the cycle is
+                // Standard -> full screen with menus -> full screen -> Standard
+                if s.active().is_none() {
+                    return Ok(CommandOutput::session_with(
+                        json!({"mode": s.ui.screen_mode}),
+                    ));
+                }
+                s.ui.screen_mode = next_screen_mode(s.ui.screen_mode);
                 s.emit(SessionEvent::PanelsChanged);
                 Ok(CommandOutput::session_with(
                     json!({"mode": s.ui.screen_mode}),

@@ -37,8 +37,17 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
     let full = ui.max_rect();
     let m = &theme.metrics;
-    let tabs = Rect::from_min_size(full.min, vec2(full.width(), m.doc_tab_height));
-    doc_tabs(ui, st, tabs);
+    // TW-158: the full-screen modes hide the document tabs (and in full screen every bar)
+    let chrome = crate::screen_mode::current(st);
+    let tab_h = if chrome.doc_tabs {
+        m.doc_tab_height
+    } else {
+        0.0
+    };
+    let tabs = Rect::from_min_size(full.min, vec2(full.width(), tab_h));
+    if chrome.doc_tabs {
+        doc_tabs(ui, st, tabs);
+    }
     // geschlossene Dokumente: Leinwand-Cache und Kachel-Cache des Renderers freigeben
     let open: Vec<fp_engine::DocId> = st.session.documents().iter().map(|d| d.id).collect();
     let before = st.canvases.len();
@@ -61,12 +70,20 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
         crate::welcome::show(ui, st, rest);
         return;
     }
+    let view_bar_h = if chrome.view_bar {
+        m.view_bar_height
+    } else {
+        0.0
+    };
     let view_bar = Rect::from_min_size(
         pos2(full.left(), tabs.bottom()),
-        vec2(full.width(), m.view_bar_height),
+        vec2(full.width(), view_bar_h),
     );
-    view_bar_ui(ui, st, view_bar);
-    let footer = Rect::from_min_max(pos2(full.left(), full.bottom() - m.footer_height), full.max);
+    if chrome.view_bar {
+        view_bar_ui(ui, st, view_bar);
+    }
+    let footer_h = if chrome.footer { m.footer_height } else { 0.0 };
+    let footer = Rect::from_min_max(pos2(full.left(), full.bottom() - footer_h), full.max);
     // TW-36: Symbolbearbeitung im Fenster des Dokuments mit Pfadleiste (Zurück · Seite ▸ Symbol)
     let mut top = view_bar.bottom();
     if let Some(path) = symbol_path(st) {
@@ -85,7 +102,9 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
     } else {
         canvas_ui(ui, st, canvas);
     }
-    footer_ui(ui, st, footer);
+    if chrome.footer {
+        footer_ui(ui, st, footer);
+    }
 }
 
 // ---------------------------------------------------------------------- Symbolbearbeitung
@@ -886,7 +905,8 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let c = theme.colors.clone();
     let Some(d) = st.session.active() else { return };
     let id = d.id;
-    let show_rulers = d.view.show_rulers;
+    let chrome = crate::screen_mode::current(st);
+    let show_rulers = d.view.show_rulers && chrome.rulers;
     let ruler = if show_rulers {
         theme.metrics.ruler_size
     } else {
@@ -894,8 +914,14 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     };
     let area = Rect::from_min_max(rect.min + vec2(ruler, ruler), rect.max);
     // Hintergrund mit Schatten unter der Ansichtsleiste wie CS6
-    ui.painter().rect_filled(rect, 0.0, c.canvas_bg);
-    if theme.gradients {
+    if chrome.black {
+        // TW-158: full screen = the canvas alone on black
+        ui.painter()
+            .rect_filled(rect, 0.0, crate::screen_mode::FULL_PASTEBOARD);
+    } else {
+        ui.painter().rect_filled(rect, 0.0, c.canvas_bg);
+    }
+    if theme.gradients && !chrome.black {
         for k in 0..5 {
             let col = crate::theme::mix(c.frame_bg, c.canvas_bg, k as f32 / 4.0);
             ui.painter().hline(
@@ -1183,7 +1209,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         ),
     );
     cc.page_screen = Some(page_screen);
-    if theme.kind != crate::theme::ThemeKind::Oled {
+    if theme.kind != crate::theme::ThemeKind::Oled && !chrome.black {
         painter.rect_filled(
             page_screen.translate(vec2(2.0, 2.0)),
             0.0,
@@ -1256,10 +1282,19 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         });
         cc.feedback = feedback;
     }
+    if chrome.black {
+        // page edge 1 px at the top and left, no shadow (full screen, TW-158)
+        let edge = Stroke::new(1.0, crate::screen_mode::PAGE_EDGE);
+        let e = page_screen.expand(0.5);
+        painter.hline(e.left()..=e.right(), e.top(), edge);
+        painter.vline(e.left(), e.top()..=e.bottom(), edge);
+    }
     if show_rulers {
         rulers(ui, st, rect, area, &view);
     }
-    scrollbars(ui, st, area, &view, pr);
+    if chrome.scrollbars {
+        scrollbars(ui, st, area, &view, pr);
+    }
     // Kontextmenü (Rechtsklick)
     if resp.secondary_clicked()
         && !st.dialogs.any_open()

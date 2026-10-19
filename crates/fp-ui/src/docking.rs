@@ -774,7 +774,8 @@ fn iconic_dock(ui: &mut Ui, st: &mut AppState, area: Rect) {
 /// Schwebende Gruppen (über allem außer Menüs).
 pub fn show_floating(ctx: &egui::Context, st: &mut AppState) {
     let theme = Theme::current(ctx);
-    if st.settings.workspace.panels_hidden {
+    // full-screen mode shows only the canvas (TW-158)
+    if st.settings.workspace.panels_hidden || !crate::screen_mode::current(st).floating_panels {
         return;
     }
     let groups = st.settings.workspace.floating.clone();
