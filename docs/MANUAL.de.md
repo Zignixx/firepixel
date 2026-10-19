@@ -52,7 +52,9 @@ ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\F
   kommen nicht wieder.
 - *Bearbeiten ▸ Rückgängig/Wiederholen* (Strg+Z / Strg+Y); das Verlauf-Bedienfeld zeigt alle Schritte.
   Kopieren und Ausschneiden erhalten eine eigene Zeile („Kopie“, „Ausschneiden“); Kopieren markiert das
-  Dokument nicht als geändert.
+  Dokument nicht als geändert. Aufeinanderfolgende Verschiebungen derselben Auswahl mit den Pfeiltasten
+  bilden eine gemeinsame Zeile mit dem summierten Versatz; eine andere Auswahl, ein anderer Befehl oder
+  Rückgängig beginnt eine neue Zeile.
 - Das Fenster hat oben die Anwendungsleiste mit Logo, Menüs, Schnellknöpfen und dem
   Arbeitsbereich-Umschalter, darunter die Hauptsymbolleiste, links die Werkzeuge, rechts die
   Bedienfelder und unten den Eigenschaften-Inspektor.

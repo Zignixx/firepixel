@@ -50,7 +50,9 @@ available in German (`MANUAL.de.md`).
   728 × 90 or Smartphone 390 × 844. Each template brings a fitting export setting (PNG 32 or JPEG).
   Templates you delete do not come back.
 - *Edit ▸ Undo/Redo* (Ctrl+Z / Ctrl+Y); the History panel shows all steps. Copy and Cut get a row of
-  their own ("Copy", "Cut"); Copy does not mark the document as changed.
+  their own ("Copy", "Cut"); Copy does not mark the document as changed. Consecutive arrow-key nudges
+  of the same selection form one Move row with the summed offset; selecting something else, another
+  command or an undo starts a new row.
 - At the top of the window is the application bar with logo, menus, quick buttons and the
   workspace switcher, below it the main toolbar, the tools on the left, the panels on the right
   and the Properties inspector at the bottom.

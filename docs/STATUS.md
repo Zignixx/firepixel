@@ -8,10 +8,9 @@ came about is kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)).
 Firepixel is feature-complete as a preview: all menus, tools, panels, the property inspector and the dialogs of
 the reference application exist and work, FW-PNG files round-trip, and everything is drivable over CLI, JSF and
 MCP. Work is now parity polishing: a scripted comparison runner measures Firepixel against the reference
-application unit by unit, and the remaining differences are tracked as findings. Release **v0.2.2** was published as a
-pre-release on 18 Oct 2026 (tag from `c031a987`) for Windows x64, macOS universal arm64 + x86_64 (macOS 10.15 or
-later) and, for the first time, Linux x86_64 (tar.gz and AppImage); **v0.2.3** is being published on 19 Oct 2026.
-Further preview builds are made on request. The Intel slice of the macOS bundle is verified with tools only, not yet
+application unit by unit, and the remaining differences are tracked as findings. Release **v0.2.3** was published on
+19 Oct 2026 for Windows x64, macOS universal arm64 + x86_64 (macOS 10.15 or later) and Linux x86_64 (tar.gz and
+AppImage); the previous release v0.2.2 (18 Oct 2026) was the first with Linux. Further preview builds are made on request. The Intel slice of the macOS bundle is verified with tools only, not yet
 run on Intel hardware, and the Linux build has run only in CI, not yet on a real Linux desktop.
 
 ## Figures
@@ -24,16 +23,18 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Canvas image pairs within 1 % | **164 / 210** (48 old units: 155 / 201, carried before 175 / 201; `tool-autoshapes` 7 / 27 because the reference drew with fill #000000 after the runner's text reset, TW-153; `tool-text/14` 1.07 %; `xs-select-behind` 9 / 9) | run 24 |
 | Measurement quota, all 49 units | **87.0 %** (1074 / 1235 measurable steps both `ok`; over the 48 old units 86.9 %, 1065 / 1226, the same count as the carried newest-run figure; run 17 alone 86.3 %; `xs-shortcuts` +1 step, `toolbox` −1 step) | run 24 |
 | Errors | 37 reference-side (before: 38 plus one `slow` step), 23 Firepixel-side (before: 21; `menu-text/05` and `menu-view/20` now fail on both sides, no key in the "Web Standard" set, TW-154); 13 `runner error` lines, 12 of them reference-side text entry in `tool-text` | run 24 |
-| Workspace tests | **2761 passed, 0 failed, 134 ignored** at `44d7c5f5` (full workspace run, the commit of preview `2026-10-19_06-06`, packages F46 and F47) | `main`, 19 Oct 2026 |
-| Open findings | 11 rows in `[F]`, 10 of them open (PDF layers; TW-138 rest; TW-145 size of new text after a partial-selection edit; TW-146 rest reference-side text entry; TW-148 merge consecutive key nudges into one History row; runner items TW-153 to TW-156; TW-157 Select Behind hover line and frame after a click) and TW-151 / FB-01 closed and kept until the click-test, 5 deferred `[V]`, 20 informational `[N]`; run 24 closed TW-149, TW-150 and TW-152 | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | Two, from run 24: the reference merges consecutive arrow-key nudges of the same selection into one History row, Firepixel writes one row per press (TW-148, F46 to be reverted to merging); Select Behind draws its hover line on vector paths anti-aliased over two pixel rows and shows the frame right after a click (TW-157; the hover rule itself is equal). Smaller, from the code: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest). Not yet compared: the size of a new text after a partial-selection edit (TW-145), because the reference's text in `tool-text/11` was not created in run 24 | [PARITY.md](PARITY.md) |
+| Latest release | **v0.2.3** (19 Oct 2026; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; all assets verified after publishing; tester thanks in the release notes) | GitHub releases |
+| Workspace tests | Full run **pending** on `ace7873c` (package F48 and runner R-22); last full run: **2761 passed, 0 failed, 134 ignored** at `44d7c5f5` (the commit of preview `2026-10-19_06-06`, packages F46 and F47) | `main`, 19 Oct 2026 |
+| Open findings | 11 rows in `[F]`, 3 of them open (PDF layers, U-1 rest; TW-138 rest; TW-145 size of new text after a partial-selection edit) and 8 fixed or closed, waiting for confirmation (TW-148 and TW-157 by F48; TW-146 rest and TW-153 to TW-156 by runner R-22, TW-154 closed as not comparable; TW-151 / FB-01 until the click-test), 5 deferred `[V]`, 20 informational `[N]`; run 24 closed TW-149, TW-150 and TW-152 | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | None measured that is not fixed: the two real deviations of run 24 (one History row per arrow-key nudge, TW-148; the anti-aliased Select Behind hover line and the frame right after a click, TW-157) are fixed by F48 and wait for run 25. Smaller, from the code: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest). Not yet compared: the size of a new text after a partial-selection edit (TW-145), because the reference's text in `tool-text/11` was not created in run 24 | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
 ## Last test build
 
-Release **v0.2.3** is being published on 19 Oct 2026 from the state of preview `2026-10-19_06-06` (`main` at
-`44d7c5f5` plus documentation). The previous release was **v0.2.2** (18 Oct 2026, pre-release on GitHub, tag from
+Release **v0.2.3** was published on 19 Oct 2026 from the state of preview `2026-10-19_06-06` (`main` at
+`44d7c5f5` plus documentation): Windows x64 ZIP, macOS universal ZIP and Linux x86_64 tar.gz and AppImage, all
+assets verified after publishing, with thanks to the tester in the release notes. The previous release was **v0.2.2** (18 Oct 2026, pre-release on GitHub, tag from
 `c031a987`, version bump `2cfff08d`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64) and Linux x86_64 tar.gz
 and AppImage. All assets were verified after publishing (fat binary, CLI version, archive contents). The Linux build
 is tested in CI only, the Intel macOS slice by tools only (not run on Intel hardware). Earlier releases were v0.2.1
@@ -150,6 +151,20 @@ from F47 in the pen-related units. New runner items: TW-153 (the reference's uni
 TW-155 (plain arrow keys outside nudges, History read-back with two documents) and TW-156 (screen-mode steps without
 a defined start mode).
 
+After run 24 (on `main` up to `ace7873c`, not yet in a preview build): package F48 fixes TW-148 (`0419534c`:
+consecutive arrow-key nudges of an unchanged selection merge into one Move row with the summed offset; a selection
+change, another command or an undo starts a new row; script moves stay one row each; Alt+arrow creates the copy on
+the first press and merges further presses into that row; this corrects F46) and TW-157 (`ace7873c`: crisp
+pixel-aligned hover line, no frame right after a Select Behind click until the pointer moves). Runner R-22
+(`72c695dd`) fixes TW-153 (the text reset no longer touches the fill colour, default colours restored and read
+back), closes TW-154 as not comparable (Text Editor and Edit Guides have no menu entry and no key in the reference;
+Firepixel opens them by command, the reference side is unsupported), fixes TW-155 (arrow substitutes only with the
+Pointer or Subselection tool or `nudge: true`; `inspector-stroke/01` hovers instead of using arrows; `menu-edit`
+closes extra documents) and TW-156 (standard screen mode at the start and end of `toolbox/13`), and retries the
+reference-side text entry (TW-146 rest: first character alone and read back, 35 ms per character). The TW-149
+leftover (a bridge error with the Web/locked layer active) is handled by reading the scratch text back from other
+layers. Run 25 over the R-22 units is to confirm all of them.
+
 ## How tests run
 
 - Every crate has unit tests; `fp-ui` and `fp-engine` bundle their integration tests into one program `all`
@@ -177,16 +192,16 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Release **v0.2.3** (being published on 19 Oct 2026).
-2. Fix package for the two real deviations of run 24: merge consecutive arrow-key nudges into one History row
-   (TW-148) and the Select Behind hover line and frame after a click (TW-157); runner R-22 for TW-146 rest and
-   TW-153 to TW-156; then a follow-up run over the affected units.
-3. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
-   typing after a double-click, crop option off, Linux start, pen anchor modes and the Select Behind hover frame)
-   and the open A2 checks.
-4. Remaining parity items: the size rule for new text (TW-145, once the reference's text entry in `tool-text/11`
+1. Full workspace test run on `ace7873c` and a preview build, then follow-up run 25 over the R-22 units
+   (`panel-pages-states-history`, `xs-select-behind`, `tool-text`, `tool-autoshapes`, `toolbox`, `menu-edit`,
+   `menu-text`, `menu-view`, `tool-path-reshape`, `inspector-stroke`) to confirm TW-146 rest, TW-148 and TW-153 to
+   TW-157.
+2. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
+   typing after a double-click, crop option off, Linux start, pen anchor modes, the Select Behind hover frame and
+   the History rows of key nudges) and the open A2 checks.
+3. Remaining parity items: the size rule for new text (TW-145, once the reference's text entry in `tool-text/11`
    works) and the *Text* menu remnant of the text tool defaults (TW-138 rest).
-5. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
+4. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external
 programs and unsandboxed scripts, opt-in GIF optimiser modes, the remaining Batch Studio UI conveniences, selectable

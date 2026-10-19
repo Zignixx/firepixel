@@ -14,45 +14,42 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Proven 1:1 | **93.9 %** (46 / 49; 95.8 % over the 48 units before run 24) |
 | Measurement quota, all 49 units | **87.0 %** (1074 / 1235 steps; 86.9 % over the 48 old units; run 17: 86.3 %) |
 | Canvas image pairs within 1 % | 164 / 210 (`tool-autoshapes` 7 / 27 from a runner artefact, TW-153) |
-| Tests | 2761 passed, 0 failed, 134 ignored at `44d7c5f5` (preview `2026-10-19_06-06`) |
-| Latest release | **v0.2.3** being published on 19 Oct 2026 (state of preview `2026-10-19_06-06`); before: **v0.2.2** pre-release (18 Oct 2026, tag from `c031a987`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage; Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 11 fixable rows (10 open, TW-151 closed awaiting the click-test) · 5 deferred · 20 informational · 850+ closed |
+| Tests | Full run pending on `ace7873c`; last full run 2761 passed, 0 failed, 134 ignored at `44d7c5f5` (preview `2026-10-19_06-06`) |
+| Latest release | **v0.2.3** published on 19 Oct 2026 (state of preview `2026-10-19_06-06`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage, all assets verified; before: **v0.2.2** pre-release (18 Oct 2026, tag from `c031a987`); Linux tested in CI only, the Intel macOS slice verified by tools only |
+| Open findings | 11 fixable rows (3 open: U-1 rest, TW-138 rest, TW-145; 8 fixed or closed awaiting run 25 or the click-test) · 5 deferred · 20 informational · 850+ closed |
 
 Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including the measurement unit
 `xs-select-behind` (9 steps).
 
 ## Next (in order)
 
-1. **Release v0.2.3** (being published on 19 Oct 2026, the state measured by full run 24).
-2. **Fixes after run 24:** merge consecutive arrow-key nudges of one selection into one History row (TW-148, the
-   reference sums the offsets; F46's one row per press goes back) and the Select Behind hover line on vector paths
-   (crisp #E00000 on the pixels inside the coordinates) plus no frame right after a click (TW-157); runner R-22 for
-   the reference-side text entry (TW-146 rest), the fill colour after the unit-start text reset (TW-153), dialogs
-   without a key in the "Web Standard" set (TW-154), arrow keys outside nudges and the History read-back with two
-   documents (TW-155) and the screen-mode steps (TW-156); then a follow-up run over `panel-pages-states-history`,
+1. **Run 25 of the R-22 units** after a full test run and a preview build from `ace7873c`: `panel-pages-states-history`,
    `xs-select-behind`, `tool-text`, `tool-autoshapes`, `toolbox`, `menu-edit`, `menu-text`, `menu-view`,
-   `tool-path-reshape` and `inspector-stroke`.
-3. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
+   `tool-path-reshape` and `inspector-stroke`, to confirm package F48 (TW-148: consecutive key nudges merge into one
+   History row; TW-157: crisp Select Behind hover line, no frame right after a click) and runner R-22 (TW-146 rest,
+   TW-153 to TW-156).
+2. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the open checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
-   a double-click, the crop option, the Linux start, the pen anchor modes and the Select Behind hover frame, A4-15 to
-   A4-17).
-4. **Remaining parity items:** the size rule for new text (TW-145, once the reference's text entry works in
-   `tool-text/11`) and the *Text* menu remnant of the text tool defaults (TW-138 rest).
-5. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
-   boxes), BA-110 rest (lossy LZW with an SSIM bound), BA-083 (resampler hashes on another OS), U-1 PDF import
-   layers.
+   a double-click, the crop option, the Linux start, the pen anchor modes, the Select Behind hover frame and the
+   History rows of key nudges, A4-15 to A4-18).
+3. **Remaining `[F]` items:** U-1 rest (PDF import layers), the *Text* menu remnant of the text tool defaults
+   (TW-138 rest) and the size rule for new text (TW-145, once the reference's text entry works in `tool-text/11`).
+4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
+   boxes), BA-110 rest (lossy LZW with an SSIM bound) and BA-083 (resampler hashes on another OS).
 
 ## What remains
 
 ### Fixable remnants (`[F]`)
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- TW-138 rest (*Text* menu commands and the text tool defaults), TW-145 (size of a new text after a
-  partial-selection edit, not yet compared), TW-146 rest (reference-side text entry, runner R-22), TW-148 (merge
-  consecutive key nudges into one History row; decided by run 24) and TW-157 (Select Behind hover line on vector
-  paths, frame after a click); runner items TW-153 to TW-156 (fill colour after the text reset, keys missing from the
-  "Web Standard" set, arrow keys outside nudges, screen-mode steps). Full run 24 closed TW-149, TW-150 and TW-152.
+- Open: TW-138 rest (*Text* menu commands and the text tool defaults) and TW-145 (size of a new text after a
+  partial-selection edit, not yet compared).
+- Fixed, to confirm in run 25: TW-148 (consecutive key nudges merge into one History row, F48) and TW-157 (Select
+  Behind hover line on vector paths, frame after a click, F48); runner R-22 for TW-146 rest (text entry retries),
+  TW-153 (fill colour after the text reset), TW-155 (arrow keys outside nudges, History read-back) and TW-156
+  (screen-mode steps); TW-154 closed as not comparable (no menu entry or key in the reference). Full run 24 closed
+  TW-149, TW-150 and TW-152.
 - Tester feedback of 19 Oct 2026 (E-Man): TW-151 / FB-01 (pen tool anchor modes: the click on the last anchor
   retracts its outgoing handle) is fixed and kept until the click-test; TW-152 / FB-02 (Select Behind hover frame) is
   confirmed by run 24.
