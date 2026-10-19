@@ -18,15 +18,15 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 49 (all classified since full run 24; the measurement unit `xs-select-behind` was added on 19 Oct 2026) | [PARITY.md](PARITY.md) |
-| Equal except for design | **46** (2 real deviations, 1 unclear, 0 under-measured) | full run 24, 19 Oct 2026, all 49 units |
-| Proven 1:1 | **93.9 %** (46 / 49; no unit under-measured; over the 48 units before run 24: 95.8 %, as in run 23; run 17: 87.5 %) | run 24 |
-| Canvas image pairs within 1 % | **164 / 210** (48 old units: 155 / 201, carried before 175 / 201; `tool-autoshapes` 7 / 27 because the reference drew with fill #000000 after the runner's text reset, TW-153; `tool-text/14` 1.07 %; `xs-select-behind` 9 / 9) | run 24 |
-| Measurement quota, all 49 units | **87.0 %** (1074 / 1235 measurable steps both `ok`; over the 48 old units 86.9 %, 1065 / 1226, the same count as the carried newest-run figure; run 17 alone 86.3 %; `xs-shortcuts` +1 step, `toolbox` −1 step) | run 24 |
-| Errors | 37 reference-side (before: 38 plus one `slow` step), 23 Firepixel-side (before: 21; `menu-text/05` and `menu-view/20` now fail on both sides, no key in the "Web Standard" set, TW-154); 13 `runner error` lines, 12 of them reference-side text entry in `tool-text` | run 24 |
+| Equal except for design | **48** (1 real deviation, 0 unclear, 0 under-measured) | run 25 (20 units) on top of full run 24, 19 Oct 2026 |
+| Proven 1:1 | **98.0 %** (48 / 49; no unit under-measured; over the 48 units before run 24: 97.9 %; run 24: 93.9 %; run 17: 87.5 %) | run 25 |
+| Canvas image pairs within 1 % | **186 / 211** (run 24: 164 / 210; `tool-autoshapes` back to 26 / 27 after the runner's colour fix, TW-153; `tool-text` 15 / 16 with 72 pt next texts on both sides; `xs-select-behind` 9 / 9) | run 25 |
+| Measurement quota, all 49 units | **87.3 %** (1075 / 1232 measurable steps both `ok`; over the 48 old units 87.2 %, 1066 / 1223; run 24: 87.0 %; run 17 alone 86.3 %; in the 20 units of run 25: 474 / 537) | run 25 |
+| Errors | 33 reference-side (run 24: 37; `menu-text/05`, `menu-view/20` now unsupported, `tool-text/13` and `/17` gone), 21 Firepixel-side (run 24: 23); 4 `runner error` lines, all reference-side text entry in `tool-text` (TW-146 rest) | run 25 |
 | Latest release | **v0.2.3** (19 Oct 2026; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; all assets verified after publishing; tester thanks in the release notes) | GitHub releases |
-| Workspace tests | Full run **pending** on `ace7873c` (package F48 and runner R-22); last full run: **2761 passed, 0 failed, 134 ignored** at `44d7c5f5` (the commit of preview `2026-10-19_06-06`, packages F46 and F47) | `main`, 19 Oct 2026 |
-| Open findings | 11 rows in `[F]`, 3 of them open (PDF layers, U-1 rest; TW-138 rest; TW-145 size of new text after a partial-selection edit) and 8 fixed or closed, waiting for confirmation (TW-148 and TW-157 by F48; TW-146 rest and TW-153 to TW-156 by runner R-22, TW-154 closed as not comparable; TW-151 / FB-01 until the click-test), 5 deferred `[V]`, 20 informational `[N]`; run 24 closed TW-149, TW-150 and TW-152 | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | None measured that is not fixed: the two real deviations of run 24 (one History row per arrow-key nudge, TW-148; the anti-aliased Select Behind hover line and the frame right after a click, TW-157) are fixed by F48 and wait for run 25. Smaller, from the code: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest). Not yet compared: the size of a new text after a partial-selection edit (TW-145), because the reference's text in `tool-text/11` was not created in run 24 | [PARITY.md](PARITY.md) |
+| Workspace tests | **2762 passed, 0 failed, 134 ignored** at `a225a01c` (the commit of preview `2026-10-19_12-16`, package F48 and runner R-22) | `main`, 19 Oct 2026 |
+| Open findings | 6 rows in `[F]`, 5 of them open (PDF layers, U-1 rest; TW-138 rest; TW-146 rest, runner; TW-158 full screen mode, RE spec; TW-159 runner rests) and TW-151 / FB-01 waiting for the click-test, 5 deferred `[V]`, 20 informational `[N]`; run 25 closed TW-145, TW-148 and TW-153 to TW-157 | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | One measured: Firepixel's full screen mode keeps the menu bar, the document tab and the status bar on a grey pasteboard, the reference shows only the document on black (TW-158, `toolbox/13`). Smaller, from the code: *Text* menu commands on pointer-selected text do not yet update the text tool defaults (TW-138 rest) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -48,10 +48,12 @@ the app under Xvfb and checks that the control channel comes up. The first CI ru
 real Linux desktop; file dialogs need `xdg-desktop-portal`. v0.2.2 is the first release with Windows x64, macOS
 universal and Linux x86_64.
 
-Latest test build: preview build **`2026-10-19_06-06`** (release profile, single `firepixel.exe` plus
-`firepixel-cli.exe`) from `main` at `44d7c5f5` (package F46 after RE spec 51 and package F47 after RE spec 52: pen
-tool anchor modes, FB-01, and the Select Behind hover frame, FB-02). The full workspace test run on that commit gave
-2761 passed, 0 failed, 134 ignored. Full run 24 used this build. Before that came preview `2026-10-19_01-32` from
+Latest test build: preview build **`2026-10-19_12-16`** (release profile, single `firepixel.exe` plus
+`firepixel-cli.exe`) from `main` at `a225a01c` (package F48: consecutive key nudges merge into one History row,
+crisp Select Behind hover line without a frame right after a click; runner R-22). The full workspace test run on that
+commit gave 2762 passed, 0 failed, 134 ignored. Follow-up run 25 used this build. Before that came preview
+`2026-10-19_06-06` from `44d7c5f5` (packages F46 and F47; 2761 passed, 0 failed, 134 ignored), used by full run 24
+and published as v0.2.3. Before that came preview `2026-10-19_01-32` from
 `cd86ce75` (package F46: Escape keeps the selection and only commits text, cancels crop or transform or leaves bitmap
 mode; one History row per arrow-key nudge), used by run 23. Before that came preview `2026-10-18_23-25`
 from `a4c2bf2b` (package F45: element-list read-backs see the live text element while editing, TW-143). The
@@ -165,6 +167,18 @@ reference-side text entry (TW-146 rest: first character alone and read back, 35 
 leftover (a bridge error with the Web/locked layer active) is handled by reading the scratch text back from other
 layers. Run 25 over the R-22 units is to confirm all of them.
 
+**Follow-up run 25 (19 Oct 2026, 12:19–14:39, 20 units, 556 steps, 317 image pairs)** used preview
+`2026-10-19_12-16` and runner R-22: 48 / 1 / 0 / 0 over all 49 units, proven 1:1 98.0 % (48 / 49), quota 87.3 %
+(1075 / 1232), canvas pairs 186 / 211. Confirmed and closed: TW-148 (one History row per selection for consecutive key
+nudges in both programs), TW-157 (680 px #E00000 hover line on FR in both, no frame right after a click), TW-153
+(`tool-autoshapes` 26 / 27), TW-154, TW-155, TW-156 and the TW-149 leftover; TW-145 is decided (the next text after
+the size edit is 72 pt in both programs). `panel-pages-states-history`, `xs-select-behind` and `tool-text` are now
+equal except for design. New: `toolbox` is a real deviation because Firepixel's full screen mode keeps the menu bar,
+the document tab and the status bar while the reference shows only the document on black (TW-158, behaviour
+description first); runner rests TW-159 (screen-mode read-back, a real arrow with the Subselection tool in
+`xs-shortcuts/10_nudge_point`, the Freeform size keys, a 24 pt text size after one reset). TW-146 rest is down to one
+lost text in 17.
+
 ## How tests run
 
 - Every crate has unit tests; `fp-ui` and `fp-engine` bundle their integration tests into one program `all`
@@ -192,15 +206,13 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 ## Next
 
-1. Full workspace test run on `ace7873c` and a preview build, then follow-up run 25 over the R-22 units
-   (`panel-pages-states-history`, `xs-select-behind`, `tool-text`, `tool-autoshapes`, `toolbox`, `menu-edit`,
-   `menu-text`, `menu-view`, `tool-path-reshape`, `inspector-stroke`) to confirm TW-146 rest, TW-148 and TW-153 to
-   TW-157.
+1. Behaviour description of the three screen modes from the reference (TW-158), then the fix; runner R-23 for
+   TW-159 and the TW-146 rest; then a follow-up run over `toolbox`, `xs-shortcuts`, `tool-path-reshape`, `tool-text`
+   and `menu-text`.
 2. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
    typing after a double-click, crop option off, Linux start, pen anchor modes, the Select Behind hover frame and
    the History rows of key nudges) and the open A2 checks.
-3. Remaining parity items: the size rule for new text (TW-145, once the reference's text entry in `tool-text/11`
-   works) and the *Text* menu remnant of the text tool defaults (TW-138 rest).
+3. Remaining parity item: the *Text* menu remnant of the text tool defaults (TW-138 rest).
 4. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083, U-1 PDF import layers.
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external
