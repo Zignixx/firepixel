@@ -49,6 +49,16 @@ fn selection_paths(
     ids.into_iter().zip(paths).collect()
 }
 
+/// Is this step an arrow-key nudge from the canvas (`edit.move` with `nudge`, without `ids`)?
+pub(crate) fn is_key_nudge(name: &str, params: &Value) -> bool {
+    name == "edit.move"
+        && params.get("nudge").and_then(|v| v.as_bool()) == Some(true)
+        && params
+            .get("ids")
+            .and_then(|v| v.as_array())
+            .is_none_or(|a| a.is_empty())
+}
+
 /// Hat sich am Text etwas geändert, das den Satz ändert (Inhalt, Attribute, Rahmenart, Größe des
 /// festen Rahmens, Richtung)? Reines Verschieben zählt nicht – dann bleibt der gespeicherte Rahmen
 /// (Rundreise mit dem Original).
@@ -993,8 +1003,35 @@ impl Session {
         if !doc_changed && SILENT.contains(&name) {
             return;
         }
-        // Arrow-key nudges are never merged: one history row per press (re 51 §2).
         let now = d.snapshot();
+        // Arrow keys: consecutive key nudges of an unchanged selection are one history row with
+        // the summed offset, across directions and Shift (measured, TW-148: Shift+Right twice and
+        // Shift+Down → one row moveSelectionBy({x:20, y:10})). A selection change, another step or
+        // an undo in between starts a new row; script calls (`edit.move` without `nudge`,
+        // `edit.nudge.*`) stay one row each.
+        if doc_changed
+            && is_key_nudge(name, params)
+            && let Some(top) = d.history.last_mergeable()
+            && is_key_nudge(&top.command, &top.params)
+            && top.params.get("copy") == params.get("copy")
+            && Arc::ptr_eq(&top.after.doc, &before.doc)
+            && top.after.selection == before.selection
+            && top.after.page == before.page
+            && top.after.frame == before.frame
+        {
+            let sum = |k: &str| {
+                top.params.get(k).and_then(|v| v.as_f64()).unwrap_or(0.0)
+                    + params.get(k).and_then(|v| v.as_f64()).unwrap_or(0.0)
+            };
+            let (dx, dy) = (sum("dx"), sum("dy"));
+            if let Some(o) = top.params.as_object_mut() {
+                o.insert("dx".into(), serde_json::json!(dx));
+                o.insert("dy".into(), serde_json::json!(dy));
+            }
+            top.after = now;
+            self.events.push(SessionEvent::HistoryChanged(id));
+            return;
+        }
         // Ziehen über die Ebenen-Augen ist im Original EIN Verlaufsschritt (TW-69 Rest): die
         // Fortsetzungen eines Zugs (`dragContinue`) gehen in den Schritt seiner ersten Zeile ein.
         if doc_changed

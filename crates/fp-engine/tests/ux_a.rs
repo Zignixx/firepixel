@@ -111,9 +111,10 @@ fn undo_count(s: &Session) -> usize {
     s.active().expect("d").history.undo_count()
 }
 
-/// One history row per arrow press, also for auto-repeat, mixed directions and Shift (re 51 §2).
+/// Script-driven nudges and moves (`edit.nudge.*`, `edit.move` over JSF/MCP) stay one history row
+/// per call; only arrow keys on the canvas merge (TW-148, see `re51_nudge_rows.rs`).
 #[test]
-fn every_nudge_is_its_own_step() {
+fn script_nudges_are_one_step_each() {
     let mut s = session(600, 400);
     rect(&mut s, [50, 50, 150, 120]);
     let n0 = undo_count(&s);
@@ -132,6 +133,10 @@ fn every_nudge_is_its_own_step() {
     assert_eq!(sel_bounds(&s), [52.0, 50.0, 152.0, 120.0]);
     s.execute("edit.redo", json!({})).expect("redo");
     assert_eq!(sel_bounds(&s), [53.0, 50.0, 153.0, 120.0]);
+    let n1 = undo_count(&s);
+    s.execute("edit.move", json!({"dx": 10, "dy": 0})).expect("move");
+    s.execute("edit.move", json!({"dx": 10, "dy": 0})).expect("move");
+    assert_eq!(undo_count(&s), n1 + 2);
 }
 
 #[test]

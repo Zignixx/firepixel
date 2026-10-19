@@ -871,11 +871,28 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 "arrow-key nudge (with copy the history row reads \"Duplicate\")",
             )
             .run(|s, p| {
-                let copy = p.bool_or("copy", false)?;
+                let mut copy = p.bool_or("copy", false)?;
                 let nudge = p.bool_or("nudge", false)?;
+                // Alt+arrow right after an Alt+arrow of the same selection moves that copy
+                // again; the session merges the press into the "Duplicate" row (TW-148).
+                if copy && nudge && p.opt_ids("ids")?.is_none_or(|v| v.is_empty()) {
+                    let d = s.doc()?;
+                    if d.history.redo_count() == 0
+                        && d.history.steps().last().is_some_and(|top| {
+                            crate::session::is_key_nudge(&top.command, &top.params)
+                                && top.params.get("copy").and_then(|v| v.as_bool()) == Some(true)
+                                && Arc::ptr_eq(&top.after.doc, &d.doc)
+                                && top.after.selection == d.selection
+                                && top.after.page == d.page
+                                && top.after.frame == d.frame
+                        })
+                    {
+                        copy = false;
+                    }
+                }
                 super::with_targets(s, p, |s, p| {
                     let out = move_selection(s, p.f64("dx")? as f32, p.f64("dy")? as f32, copy)?;
-                    // Alt+arrow: one "Duplicate" row per press (re 51 §2)
+                    // the first Alt+arrow press creates the copy: row "Duplicate"
                     Ok(if copy && nudge {
                         out.labeled(fp_i18n::t("msg-step-duplicate"))
                     } else {

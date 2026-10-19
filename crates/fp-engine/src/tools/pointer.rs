@@ -1692,18 +1692,12 @@ impl ToolMachine for PointerTool {
                             json!({"dx": dx, "dy": dy}),
                         )]);
                     }
-                    if ev.mods.alt {
-                        return ToolResponse::commit(vec![Invocation::new(
-                            "edit.move",
-                            json!({"dx": dx, "dy": dy, "copy": true, "nudge": true}),
-                        )]);
-                    }
-                    let name = if big {
-                        format!("edit.nudge.big{}{}", d[..1].to_uppercase(), &d[1..])
-                    } else {
-                        format!("edit.nudge.{d}")
-                    };
-                    return ToolResponse::commit(vec![Invocation::new(&name, json!({}))]);
+                    // Arrow keys move as a key nudge: consecutive presses of an unchanged
+                    // selection merge into one history row (TW-148); Alt duplicates first.
+                    return ToolResponse::commit(vec![Invocation::new(
+                        "edit.move",
+                        json!({"dx": dx, "dy": dy, "copy": ev.mods.alt, "nudge": true}),
+                    )]);
                 }
                 match k {
                     ToolKey::Delete | ToolKey::Backspace
