@@ -34,8 +34,8 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 3. **Preview** `2026-10-20_09-25` (GT-1h) built; the next pre-release waits for the tester's macOS re-test.
 4. **Next full parity run** over all 49 units; it also checks whether the tiled canvas (BA-098) shifts a sampling
    position by one device pixel at fractional zoom. No runner item is open.
-5. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke) and BA-109 (two AI batch steps without
-   models).
+5. **Remaining deferred items:** BA-101 (PSD stroke; JPEG 2000 in PDF done in `974af253`) and BA-109 (two AI
+   batch steps without models).
 
 ## What remains
 
@@ -82,7 +82,7 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
   EXIF/GPS/IPTC writing, MCP refusal of external/IO scripts with a deep script sandbox, opt-in GIF optimiser modes
   (figures in [docs/BATCH.md](docs/BATCH.md)), per-file progress with ETA, file order, the pro filter bar,
   drag/keyboard sorting, Save as Template and Help in the card menu.
-- **PDF/PSD export:** JPEG 2000 in PDF (no encoder; written as JPEG and flagged). Done in wave 3: selectable PDF
+- **PDF/PSD export:** JPEG 2000 in PDF is real JPEG 2000 (`/JPXDecode`, `974af253`). Done in wave 3: selectable PDF
   text, PSD layers per object with text layers, vector masks and layer effects.
 - Done in wave 4: HTML setup (Set Defaults, external `styles.css`, Generic HTML5 style, nav-bar tests), CMD-1
   (screen capture, symbol scripts, shared palette), the ffmpeg row in Preferences, the optional AI hover preview
