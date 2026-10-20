@@ -28,8 +28,8 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
    checks in section A2), including the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4
    features, URL panel menu, typing after a double-click, the crop option, the Linux start, the pen anchor modes, the
    Select Behind hover frame and the History rows of key nudges, A4-15 to A4-18, the screen modes, A4-22, the
-   Subselection display, A4-23, tester feedback batch 3, A4-24 to A4-27, a real layered PDF, A4-28, and the text
-   tool reset, A4-29).
+   Subselection display, A4-23, tester feedback batch 3, A4-24 to A4-27, a real layered PDF, A4-28, the text
+   tool reset, A4-29, JPEG 2000 in PDF, A4-30, and the AI batch steps upscale and face blur, A4-31 and A4-32).
 2. **macOS re-test of v0.2.4 by the tester** (A4-19 to A4-21 on a real Mac).
 3. **Preview** `2026-10-20_09-25` (GT-1h) built; the next pre-release waits for the tester's macOS re-test.
 4. **Next full parity run** over all 49 units; it also checks whether the tiled canvas (BA-098) shifts a sampling

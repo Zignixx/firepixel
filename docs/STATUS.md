@@ -339,7 +339,7 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 1. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
    typing after a double-click, crop option off, Linux start, pen anchor modes, the Select Behind hover frame,
    the History rows of key nudges, the screen modes, the Subselection display A4-23, tester feedback batch 3 A4-24
-   to A4-27, a real layered PDF A4-28 and the text tool reset A4-29), the text selection edits of A1-19 and the open
+   to A4-27, a real layered PDF A4-28, the text tool reset A4-29, JPEG 2000 in PDF A4-30 and the AI batch steps A4-31 and A4-32), the text selection edits of A1-19 and the open
    A2 checks.
 2. The macOS re-test of v0.2.4 by the tester (A4-19 to A4-21).
 3. Preview `2026-10-20_09-25` (GT-1h) is on the Desktop; the next pre-release waits for the tester's macOS re-test.
