@@ -225,11 +225,12 @@ fn popup_menu_confirm_hotspot() {
     });
 }
 
+/// Redo is redo only (FB-08, re 55 §2): without an undone step the entry reads
+/// „Wiederholen nicht möglich“ and is disabled; after an undo „Wiederholen: <Schritt>“.
 #[test]
 fn redo_with_last_step_in_menu() {
     fp_i18n::with_language("de", || {
-        let h = harness();
-        let menus = fp_ui::menu::build_main_menu(st(&h));
+        let mut h = harness();
         fn labels(nodes: &[fp_ui::menu::Node], out: &mut Vec<(String, bool)>) {
             for n in nodes {
                 match n {
@@ -239,12 +240,19 @@ fn redo_with_last_step_in_menu() {
                 }
             }
         }
-        let mut all = Vec::new();
-        for (_, nodes) in &menus {
-            labels(nodes, &mut all);
-        }
-        let redo = all.iter().find(|(l, _)| l.replace('&', "").starts_with("Wiederholen")).expect("Wiederholen im Menü");
-        assert_eq!(redo.0.replace('&', ""), "Wiederholen: Auswahl aufheben", "wie im Original");
-        assert!(redo.1, "aktiv");
+        let redo = |h: &H| {
+            let mut all = Vec::new();
+            for (_, nodes) in &fp_ui::menu::build_main_menu(st(h)) {
+                labels(nodes, &mut all);
+            }
+            all.into_iter().find(|(l, _)| l.replace('&', "").starts_with("Wiederholen")).expect("Wiederholen im Menü")
+        };
+        let r = redo(&h);
+        assert_eq!(r.0.replace('&', ""), "Wiederholen nicht möglich", "wie im Original");
+        assert!(!r.1, "inaktiv");
+        h.state_mut().state.session.execute("edit.undo", json!({})).expect("undo");
+        let r = redo(&h);
+        assert_eq!(r.0.replace('&', ""), "Wiederholen: Auswahl aufheben", "wie im Original");
+        assert!(r.1, "aktiv");
     });
 }

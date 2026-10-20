@@ -408,10 +408,6 @@ pub struct Session {
     /// Filteraufruf (Vorschau oder OK im Filterdialog) rastert gewählte Vektoren im selben
     /// Verlaufsschritt (re 28 L9). Die Oberfläche setzt es zurück, sobald kein Dialog mehr offen ist.
     pub filter_rasterize: bool,
-    /// Letzter Dokumentbefehl und seine Verlaufsbeschriftung (Bearbeiten ▸ Wiederholen ohne
-    /// zurückgenommenen Schritt wiederholt ihn wie im Original).
-    pub last_command: Option<RecordedCommand>,
-    pub last_command_label: Option<String>,
     group_depth: u32,
     /// TW-139: live text view for script read-back: document whose model currently shows the open
     /// text editor's state, with the committed model to put back (see [`Session::begin_live_text_view`]).
@@ -465,8 +461,6 @@ impl Session {
             step_keys: std::collections::HashMap::new(),
             last_filter: None,
             filter_rasterize: false,
-            last_command: None,
-            last_command_label: None,
             group_depth: 0,
             live_text: None,
             group_log: Vec::new(),
@@ -843,18 +837,6 @@ impl Session {
         } else {
             (String::new(), None)
         };
-        if out.effect == Effect::Document
-            && !matches!(name, "edit.undo" | "edit.redo")
-            && !name.starts_with("history.")
-        {
-            self.last_command = Some(RecordedCommand {
-                command: name.into(),
-                params: p.value.clone(),
-            });
-            // in der Sprache der Oberfläche wie der Verlaufsname („Wiederholen: Verschieben“, auch wenn
-            // der Befehl über die Brücke in der Antwortsprache lief; CT-A-02)
-            self.last_command_label = Some(step_name.clone());
-        }
         if name.starts_with("filter.") && name != "filter.repeat" {
             self.last_filter = Some(RecordedCommand {
                 command: name.into(),
@@ -904,7 +886,16 @@ impl Session {
             d.selection_history.note(&sel);
         }
         self.events.push(SessionEvent::CommandExecuted(name.into()));
+        if self.group_depth == 0 && out.effect == Effect::Document {
+            self.sync_tool();
+        }
         Ok(out)
+    }
+
+    /// Lets the active tool follow a document change it did not make itself
+    /// ([`ToolMachine::sync`]; e.g. the pen after undoing its last point, FB-07).
+    fn sync_tool(&mut self) {
+        self.with_tool_ctx(|m, ctx| m.sync(ctx));
     }
 
     /// Führt einen Befehl innerhalb eines anderen aus, ohne eigenen Verlaufsschritt (der äußere Befehl
@@ -1106,6 +1097,7 @@ impl Session {
             let params = serde_json::json!({ "commands": log, "label": label });
             let key = self.step_key(label);
             self.finish_step(id, b, label.into(), key, "history.replay", &params);
+            self.sync_tool();
         }
         Ok(())
     }
@@ -1123,6 +1115,10 @@ impl Session {
     /// Rückgängig im aktiven Dokument.
     pub fn undo(&mut self) -> Result<()> {
         self.end_live_text_view();
+        // a Vector Path stroke with the mouse button held ignores Ctrl+Z (FB-07)
+        if self.tools.machine.blocks_history() {
+            return Ok(());
+        }
         let d = self.doc_mut()?;
         let snap = d
             .history
@@ -1183,20 +1179,22 @@ impl Session {
             .unwrap_or_else(|| step.label.clone())
     }
 
-    /// Beschriftungen für „Rückgängig: …“ und „Wiederholen: …“ im Menü (Original): Rückgängig = letzter
-    /// Verlaufsschritt; Wiederholen = zurückgenommener Schritt, sonst der letzte Befehl.
+    /// Labels for "Undo: …" and "Redo: …" in the Edit menu: the last step and the undone step. Without
+    /// an undone step there is no redo label ("Can't Redo", tester feedback FB-08); the last command
+    /// is never repeated.
     pub fn undo_redo_labels(&self) -> (Option<String>, Option<String>) {
         let d = self.active();
         let undo = d.and_then(|d| d.history.undo_label().map(str::to_string));
-        let redo = d
-            .and_then(|d| d.history.redo_label().map(str::to_string))
-            .or_else(|| d.and(self.last_command_label.clone()));
+        let redo = d.and_then(|d| d.history.redo_label().map(str::to_string));
         (undo, redo)
     }
 
     /// Wiederholen im aktiven Dokument.
     pub fn redo(&mut self) -> Result<()> {
         self.end_live_text_view();
+        if self.tools.machine.blocks_history() {
+            return Ok(());
+        }
         let d = self.doc_mut()?;
         let snap = d
             .history
@@ -1216,6 +1214,12 @@ impl Session {
     }
 
     fn apply_history_snapshot(&mut self, snap: Snapshot) {
+        self.restore_history_snapshot(snap);
+        // the pen follows its path: undoing a point keeps drawing from the new last point (FB-07)
+        self.sync_tool();
+    }
+
+    fn restore_history_snapshot(&mut self, snap: Snapshot) {
         let Some(d) = self.active_mut() else { return };
         // Das Raster gehört wie im Original nicht zum Verlauf (PM-5 D18: „Raster bearbeiten“ legt
         // keinen Schritt an, Strg+Z ändert das Raster nicht) – es bleibt beim Springen im Verlauf
@@ -1498,13 +1502,31 @@ impl Session {
     fn run_tool_response(&mut self, mut resp: ToolResponse) -> Result<ToolResponse> {
         let cmds: Vec<Invocation> = std::mem::take(&mut resp.commands);
         let mut first_err = None;
-        for c in &cmds {
-            match self.execute(&c.command, c.params.clone()) {
-                Ok(o) => resp.results.push(o.value),
-                Err(e) => {
-                    resp.results.push(Value::Null);
-                    if first_err.is_none() {
-                        first_err = Some(e);
+        match resp.group.take() {
+            Some(label) if !cmds.is_empty() && self.active().is_some() => {
+                // one history step for all commands; an error takes everything back
+                let mut results = Vec::new();
+                if let Err(e) = self.run_group(&label, |s| {
+                    for c in &cmds {
+                        results.push(s.execute(&c.command, c.params.clone())?.value);
+                    }
+                    Ok(())
+                }) {
+                    first_err = Some(e);
+                }
+                results.resize(cmds.len(), Value::Null);
+                resp.results.extend(results);
+            }
+            _ => {
+                for c in &cmds {
+                    match self.execute(&c.command, c.params.clone()) {
+                        Ok(o) => resp.results.push(o.value),
+                        Err(e) => {
+                            resp.results.push(Value::Null);
+                            if first_err.is_none() {
+                                first_err = Some(e);
+                            }
+                        }
                     }
                 }
             }

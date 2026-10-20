@@ -260,13 +260,17 @@ fn z11_bis_z13_selektives_jpeg() {
     });
 }
 
-/// Wiederholen ohne zurückgenommenen Schritt: „Wiederholen: <letzter Schritt>“ (PARITAET_B).
+/// Redo without an undone step is not possible (FB-08, re 55 §2: „Wiederholen nicht möglich“);
+/// with the undone step „Wiederholen: <Schritt>“.
 #[test]
 fn wiederholen_zeigt_den_letzten_schritt() {
     fp_i18n::with_language("de", || {
         let mut s = doc_session(300.0, 200.0);
         rect(&mut s, 10.0, 10.0, 50.0, 50.0);
         ex(&mut s, "select.none", json!({}));
+        assert!(!s.is_available("edit.redo"));
+        assert_eq!(s.undo_redo_labels().1, None);
+        ex(&mut s, "edit.undo", json!({}));
         assert!(s.is_available("edit.redo"));
         assert_eq!(s.undo_redo_labels().1.as_deref(), Some("Auswahl aufheben"));
     });

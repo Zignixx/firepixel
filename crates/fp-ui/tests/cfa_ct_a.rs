@@ -360,8 +360,9 @@ fn ct_a_01_undo_impossible_without_ampersand() {
     fp_i18n::set_language("de");
 }
 
-/// „Wiederholen: <letzter Befehl>“ in der Sprache der Oberfläche, auch wenn der Befehl über die Brücke
-/// in der Antwortsprache Englisch lief (Auswahlrahmen verschieben → „Verschieben“, nicht „Move“).
+/// "Redo: <undone step>" in the user interface language, even when the command ran over the bridge
+/// in the response language English (moving the marquee → „Verschieben“, not "Move"). Without an
+/// undone step there is nothing to redo (FB-08): the last command is not repeated.
 #[test]
 fn ct_a_02_redo_label_in_ui_language() {
     let mut s = fp_engine::Session::default();
@@ -370,6 +371,9 @@ fn ct_a_02_redo_label_in_ui_language() {
     fp_i18n::with_language("en", || s.execute("select.moveMarquee", json!({"dx": 10, "dy": 5}))).expect("verschieben");
     let (undo, redo) = s.undo_redo_labels();
     assert_eq!(undo.as_deref(), Some("Verschieben"));
+    assert_eq!(redo, None, "nothing undone: no redo label");
+    s.execute("edit.undo", json!({})).expect("undo");
+    let (_, redo) = s.undo_redo_labels();
     assert_eq!(redo.as_deref(), Some("Verschieben"), "Wiederholen nennt den Schritt deutsch");
     let h = harness_with(s);
     let items = edit_items(&h);

@@ -516,17 +516,15 @@ impl Field {
 
 /// Angewandte Vorschau: das Dokument (Zeiger) unmittelbar danach und der Zustand davor.
 /// Zurücknehmen stellt den Zustand exakt her, damit nach Abbrechen weder ein Rückgängig- noch ein
-/// Wiederholen-Schritt übrig bleibt, ein vorher vorhandener Wiederholen-Stapel erhalten bleibt und
-/// Strg+Y nicht die Vorschau als „letzten Befehl“ wiederholt (N01, §4b.2).
+/// Wiederholen-Schritt übrig bleibt und ein vorher vorhandener Wiederholen-Stapel erhalten bleibt
+/// (N01, §4b.2).
 #[derive(Clone, Debug)]
 pub struct AppliedPreview {
     /// Dokument nach der Vorschau.
     pub doc: std::sync::Arc<fp_model::Document>,
-    /// Verlauf (Rückgängig- und Wiederholen-Stapel), „gespeichert“ und letzter Befehl davor.
+    /// Verlauf (Rückgängig- und Wiederholen-Stapel) und „gespeichert“ davor.
     pub history: fp_engine::History,
     pub clean: bool,
-    pub last_command: Option<fp_engine::RecordedCommand>,
-    pub last_command_label: Option<String>,
 }
 
 /// Ein Formular-Dialog.
@@ -1061,14 +1059,12 @@ pub fn revert_preview(st: &mut AppState, d: &mut FormDialog) {
             let before = d.applied_doc.take();
             let _ = st.session.undo();
             // Abbrechen bzw. neue Vorschau: weder Rückgängig- noch Wiederholen-Schritt der Vorschau
-            if let Some(b) = before {
-                st.session.last_command = b.last_command;
-                st.session.last_command_label = b.last_command_label;
-                if let Some(doc) = st.session.active_mut() {
-                    doc.history = b.history;
-                    if b.clean {
-                        doc.saved_generation = doc.generation;
-                    }
+            if let Some(b) = before
+                && let Some(doc) = st.session.active_mut()
+            {
+                doc.history = b.history;
+                if b.clean {
+                    doc.saved_generation = doc.generation;
                 }
             }
         } else {
@@ -1144,10 +1140,6 @@ pub fn apply_preview(st: &mut AppState, d: &mut FormDialog) {
         .session
         .active()
         .map(|x| (x.history.clone(), !x.is_dirty()));
-    let last = (
-        st.session.last_command.clone(),
-        st.session.last_command_label.clone(),
-    );
     match crate::ui_commands::execute(&mut st.session, &cmd, p.clone()) {
         Ok(_) => {
             d.applied = st.session.active().map(|x| x.history.undo_count());
@@ -1159,8 +1151,6 @@ pub fn apply_preview(st: &mut AppState, d: &mut FormDialog) {
                     doc: std::sync::Arc::clone(&x.doc),
                     history,
                     clean,
-                    last_command: last.0,
-                    last_command_label: last.1,
                 });
             d.applied_params = Some(d.params());
         }

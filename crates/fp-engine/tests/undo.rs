@@ -52,15 +52,14 @@ fn undo_redo_restores_document_and_selection() {
     // neuer Befehl leert den Redo-Stapel
     rect(&mut s, 50.0, 50.0, 60.0, 60.0);
     assert!(s.active().is_some_and(|d| !d.history.can_redo()));
-    // Wiederholen bleibt wie im Original aktiv und wiederholt dann den letzten Befehl
-    assert!(s.is_available("edit.redo"));
-    assert_eq!(s.undo_redo_labels().1.as_deref(), Some("Rechteck"));
-    ex(&mut s, "edit.redo", json!({}));
-    assert_eq!(top_elements(&s).len(), 3);
-    ex(&mut s, "edit.undo", json!({}));
-    // zwei Schritte im Verlauf, der wiederholte liegt auf dem Wiederholen-Stapel
+    // Redo is redo only (FB-08, re 55 §2): without an undone step it is disabled and does not repeat
+    // the last command
+    assert!(!s.is_available("edit.redo"));
+    assert_eq!(s.undo_redo_labels().1, None);
+    assert!(s.execute("edit.redo", json!({})).is_err());
+    assert_eq!(top_elements(&s).len(), 2);
     assert_eq!(s.active().map(|d| d.history.undo_count()), Some(2));
-    assert_eq!(s.active().map(|d| d.history.labels()), Some(vec!["Rechteck".to_string(); 3]));
+    assert_eq!(s.active().map(|d| d.history.labels()), Some(vec!["Rechteck".to_string(); 2]));
 }
 
 #[test]

@@ -607,35 +607,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 Ok(CommandOutput::session())
             }),
     );
-    // Wiederholen: ohne zurückgenommenen Schritt wiederholt das Original den letzten Befehl
-    // („Wiederholen: Auswahl aufheben“).
+    // Redo only (tester feedback FB-08): without an undone step Ctrl+Y and Ctrl+Shift+Z do nothing
+    // and the menu entry reads "Can't Redo". Re-running steps is the History panel's "Replay".
     r.add(
         cmd("edit.redo")
-            .requires(DOC)
-            .available(|s| {
-                s.active().is_some_and(|d| d.history.can_redo()) || s.last_command.is_some()
-            })
+            .requires(&[Requirement::Document, Requirement::CanRedo])
             .run(|s, _| {
-                if s.active().is_some_and(|d| d.history.can_redo()) {
-                    s.redo()?;
-                    return Ok(CommandOutput::session());
-                }
-                let last = s
-                    .last_command
-                    .clone()
-                    .ok_or(EngineError::History("err-req-can-redo"))?;
-                let c = s
-                    .registry()
-                    .get(&last.command)
-                    .cloned()
-                    .ok_or_else(|| EngineError::UnknownCommand(last.command.clone()))?;
-                let p = crate::command::Params::new(&last.command, last.params.clone());
-                let out = c.apply(s, &p)?;
-                let label = s
-                    .last_command_label
-                    .clone()
-                    .unwrap_or_else(|| c.info().label.clone());
-                Ok(out.labeled(label))
+                s.redo()?;
+                Ok(CommandOutput::session())
             }),
     );
     r.add(

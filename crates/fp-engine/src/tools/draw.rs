@@ -608,12 +608,40 @@ impl ToolMachine for LineTool {
 /// Knoten des Stifts: (Anker, Eingang, Ausgang).
 type PenNode = (Point, Point, Point);
 
-/// Fortgesetzter Pfad: Element, Konturindex, Originalkonturen.
-#[derive(Clone, Debug)]
+/// The document path the pen is drawing (FB-07: the path lives in the document, one history step
+/// per point): element and contour index; `fresh` = created by this pen run (first click), not an
+/// existing path being continued.
+#[derive(Clone, Copy, Debug)]
 struct PenTarget {
     id: ElementId,
     contour: usize,
-    contours: Vec<Contour>,
+    fresh: bool,
+}
+
+/// Nodes of a contour in pen order.
+fn pen_nodes(c: &Contour) -> Vec<PenNode> {
+    c.nodes.iter().map(|n| (n.anchor, n.pred, n.succ)).collect()
+}
+
+/// Reversed drawing direction: order reversed, incoming and outgoing handles swapped.
+fn reversed_nodes(nodes: &[PenNode]) -> Vec<PenNode> {
+    nodes.iter().rev().map(|&(a, i, o)| (a, o, i)).collect()
+}
+
+/// Same nodes (anchors and handles, within rounding)?
+fn same_nodes(a: &[PenNode], b: &[PenNode]) -> bool {
+    a.len() == b.len()
+        && a.iter()
+            .zip(b)
+            .all(|(x, y)| dist(x.0, y.0) < 1e-3 && dist(x.1, y.1) < 1e-3 && dist(x.2, y.2) < 1e-3)
+}
+
+/// Contours of the path `id` on the current page.
+fn doc_path_contours(ctx: &ToolContext, id: ElementId) -> Option<Vec<Contour>> {
+    match &docops::element_on_page(ctx.doc, ctx.page, id)?.kind {
+        ElementKind::Path(pe) => Some(pe.contours.clone()),
+        _ => None,
+    }
 }
 
 /// Stift (Bézier): Klick = Eckpunkt, Ziehen = Kurvenpunkt (Tangenten symmetrisch, Alt bricht),
@@ -622,7 +650,13 @@ struct PenTarget {
 /// entfernt ihn, Klick auf ein Segment fügt einen Punkt ein.
 #[derive(Clone, Debug, Default)]
 pub struct PenTool {
+    /// Path being drawn, in drawing order (the last node is the active end), including a point
+    /// still being pressed/dragged.
     nodes: Vec<PenNode>,
+    /// The nodes as last written to the document (same order as `nodes`).
+    doc_nodes: Vec<PenNode>,
+    /// The first point was written (`draw.path`), the new element is not known yet.
+    awaiting: bool,
     button: bool,
     closing: bool,
     hover: Option<Point>,
@@ -871,45 +905,111 @@ impl PenTool {
         None
     }
 
-    fn commit(&mut self, closed: bool, opts: &super::ToolOptions) -> ToolResponse {
-        let nodes = std::mem::take(&mut self.nodes);
-        let target = self.target.take();
+    /// Ends the drawing state without touching the document.
+    fn reset_drawing(&mut self) {
+        self.nodes.clear();
+        self.doc_nodes.clear();
+        self.awaiting = false;
+        self.target = None;
         self.closing = false;
         self.button = false;
+        self.convert = None;
+        self.smooth_drag = false;
         self.hover = None;
         self.guides.clear();
-        if let Some(t) = target {
-            if nodes.len() < 2 && !closed {
-                return ToolResponse::default();
+    }
+
+    /// Writes the path being drawn into the document as one history step "Pen" (FB-07, re 55 §1.3):
+    /// the first point creates the path, every further change sets its contour.
+    fn write(&mut self, ctx: &ToolContext, closed: bool) -> Vec<Invocation> {
+        let c = geometry::contour_from_nodes(&self.nodes, closed);
+        let inv = match self.target {
+            None => {
+                self.awaiting = true;
+                super::styled(
+                    Invocation::new(
+                        "draw.path",
+                        json!({"contours": [contour_json(&c)], "step": "pen"}),
+                    ),
+                    ctx.options,
+                )
             }
-            let mut cs = t.contours.clone();
-            if let Some(c) = cs.get_mut(t.contour) {
-                *c = geometry::contour_from_nodes(&nodes, closed);
-            }
-            // Verlaufsschritt „Stift“ wie im Original (PAR 09/05); der Pfad wird gewählt
-            return ToolResponse::commit(vec![
-                pick_select(t.id),
+            Some(t) => {
+                let Some(mut cs) = doc_path_contours(ctx, t.id) else {
+                    return Vec::new();
+                };
+                let Some(slot) = cs.get_mut(t.contour) else {
+                    return Vec::new();
+                };
+                *slot = c;
                 Invocation::new(
                     "path.setContours",
                     json!({"id": t.id.0, "contours": contours_json(&cs), "step": "pen"}),
-                ),
-            ]);
+                )
+            }
+        };
+        self.doc_nodes = self.nodes.clone();
+        vec![inv]
+    }
+
+    /// Response that writes the current nodes as a step and keeps drawing.
+    fn write_step(&mut self, ctx: &ToolContext, cursor: Cursor) -> ToolResponse {
+        let commands = self.write(ctx, false);
+        ToolResponse {
+            commands,
+            overlay: self.overlay(),
+            cursor,
+            ..ToolResponse::default()
         }
-        if nodes.len() < 2 {
-            return ToolResponse::default();
+    }
+
+    /// Ends drawing. Open: no history step of its own (re 55 §1.3); only a change not yet written
+    /// (a point still being dragged) is written. Closed: the closing click is one step "Pen"; a
+    /// path started by this pen run is drawn again as a closed shape (fill like any closed path)
+    /// in the same step.
+    fn commit(&mut self, closed: bool, ctx: &ToolContext) -> ToolResponse {
+        let mut resp = ToolResponse::default();
+        if closed && self.nodes.len() >= 2 {
+            match self.target {
+                Some(t) if t.fresh => {
+                    let c = geometry::contour_from_nodes(&self.nodes, true);
+                    resp.commands = vec![
+                        pick_select(t.id),
+                        Invocation::new("edit.clear", json!({})),
+                        super::styled(
+                            Invocation::new(
+                                "draw.path",
+                                json!({"contours": [contour_json(&c)], "step": "pen"}),
+                            ),
+                            ctx.options,
+                        ),
+                    ];
+                    resp.group = Some(fp_i18n::t("msg-step-pen"));
+                }
+                Some(t) => {
+                    let mut cmds = self.write(ctx, true);
+                    if !ctx.selection.elements.contains(&t.id) {
+                        cmds.insert(0, pick_select(t.id));
+                    }
+                    resp.commands = cmds;
+                }
+                None => resp.commands = self.write(ctx, true),
+            }
+        } else if !closed
+            && !same_nodes(&self.nodes, &self.doc_nodes)
+            && (self.target.is_some() || self.nodes.len() >= 2)
+        {
+            resp.commands = self.write(ctx, false);
         }
-        let c = json!({"closed": closed, "nodes": nodes.iter().map(|(a, i, o)| json!({"anchor": pt_json(*a), "in": pt_json(*i), "out": pt_json(*o)})).collect::<Vec<Value>>()});
-        ToolResponse::commit(vec![super::styled(
-            Invocation::new("draw.path", json!({"contours": [c], "step": "pen"})),
-            opts,
-        )])
+        self.reset_drawing();
+        resp
     }
 
     /// Esc/Eingabe: Pfad beenden, aber zum Fortsetzen merken (PAR 09/07).
-    fn commit_resumable(&mut self, opts: &super::ToolOptions) -> ToolResponse {
+    fn commit_resumable(&mut self, ctx: &ToolContext) -> ToolResponse {
         let contour = self.target.as_ref().map(|t| t.contour).unwrap_or(0);
         let had = self.nodes.len() >= 2;
-        let r = self.commit(false, opts);
+        let r = self.commit(false, ctx);
         if had {
             self.resume = Some(contour);
         }
@@ -966,7 +1066,7 @@ impl PenTool {
             }) => {
                 // joining with another element than the one being continued is not supported:
                 // the press appends a point instead
-                if self.target.as_ref().is_some_and(|t| t.id != id) {
+                if self.target.as_ref().is_some_and(|t| !t.fresh && t.id != id) {
                     return None;
                 }
                 Some(DrawHit::Join {
@@ -1004,34 +1104,45 @@ impl PenTool {
         let mut merged = self.nodes.clone();
         merged.extend(other);
         let joined = geometry::contour_from_nodes(&merged, false);
-        let cs = match &self.target {
-            None => {
+        let mut resp = match self.target {
+            // a new path: the joined contour replaces the hit one (attributes of the hit path) and
+            // the pen's own path is removed, in one step
+            None | Some(PenTarget { fresh: true, .. }) => {
                 let mut cs = pe.contours.clone();
                 cs[contour] = joined;
-                cs
+                let mut cmds = vec![Invocation::new(
+                    "path.setContours",
+                    json!({"id": id.0, "contours": contours_json(&cs), "step": "pen"}),
+                )];
+                if let Some(t) = self.target {
+                    cmds.push(pick_select(t.id));
+                    cmds.push(Invocation::new("edit.clear", json!({})));
+                }
+                cmds.push(pick_select(id));
+                ToolResponse {
+                    commands: cmds,
+                    group: Some(fp_i18n::t("msg-step-pen")),
+                    ..ToolResponse::default()
+                }
             }
             Some(t) if t.id == id && t.contour != contour => {
-                let mut cs = t.contours.clone();
+                let mut cs = doc_path_contours(ctx, id)?;
                 *cs.get_mut(t.contour)? = joined;
                 cs.remove(contour);
-                cs
+                ToolResponse::commit(vec![
+                    pick_select(id),
+                    Invocation::new(
+                        "path.setContours",
+                        json!({"id": id.0, "contours": contours_json(&cs), "step": "pen"}),
+                    ),
+                ])
             }
             Some(_) => return None,
         };
-        self.nodes.clear();
-        self.target = None;
-        self.closing = false;
-        self.button = false;
-        self.hover = None;
-        self.guides.clear();
+        self.reset_drawing();
         self.resume = None;
-        Some(ToolResponse::commit(vec![
-            pick_select(id),
-            Invocation::new(
-                "path.setContours",
-                json!({"id": id.0, "contours": contours_json(&cs), "step": "pen"}),
-            ),
-        ]))
+        resp.cursor = Cursor::Pen;
+        Some(resp)
     }
 
     /// Konturen des Pfads mit eingezogenen Henkeln am Knoten (Kurvenpunkt → Eckpunkt).
@@ -1077,11 +1188,13 @@ impl PenTool {
                 *n = (n.0, n.2, n.1);
             }
         }
+        self.doc_nodes = nodes.clone();
         self.nodes = nodes;
+        self.awaiting = false;
         self.target = Some(PenTarget {
             id,
             contour,
-            contours: pe.contours.clone(),
+            fresh: false,
         });
         true
     }
@@ -1156,6 +1269,7 @@ impl ToolMachine for PenTool {
         if !ctx.has_document {
             return ToolResponse::default();
         }
+        self.sync(ctx);
         let tol = pen_tol(ctx);
         match &ev.input {
             ToolInput::Pointer {
@@ -1199,7 +1313,7 @@ impl ToolMachine for PenTool {
                         } else {
                             self.nodes[i] = (a, a, a);
                         }
-                        return ToolResponse::with_overlay(self.overlay(), Cursor::Pen);
+                        return self.write_step(ctx, Cursor::Pen);
                     }
                     Some(DrawHit::Segment(seg, t)) => {
                         self.button = false;
@@ -1207,10 +1321,9 @@ impl ToolMachine for PenTool {
                             geometry::to_bezier(&self.contour(false)).insert_node(seg, t)
                         {
                             let c = geometry::from_bezier(&bc);
-                            self.nodes =
-                                c.nodes.iter().map(|n| (n.anchor, n.pred, n.succ)).collect();
+                            self.nodes = pen_nodes(&c);
                         }
-                        return ToolResponse::with_overlay(self.overlay(), Cursor::PenAdd);
+                        return self.write_step(ctx, Cursor::PenAdd);
                     }
                     Some(DrawHit::Join {
                         id,
@@ -1515,7 +1628,12 @@ impl ToolMachine for PenTool {
                 }
                 if self.closing {
                     self.resume = None;
-                    return self.commit(true, ctx.options);
+                    return self.commit(true, ctx);
+                }
+                // every placed point (and every change of the last point) is one step "Pen"
+                // (FB-07, re 55 §1.3); drawing goes on
+                if !self.nodes.is_empty() && !same_nodes(&self.nodes, &self.doc_nodes) {
+                    return self.write_step(ctx, Cursor::Pen);
                 }
                 ToolResponse::with_overlay(self.overlay(), Cursor::Pen)
             }
@@ -1523,36 +1641,105 @@ impl ToolMachine for PenTool {
                 kind: PointerKind::DoubleClick,
                 ..
             } => {
-                // der Doppelklick hat bereits einen Punkt gesetzt (Down) – doppelten Endpunkt entfernen
-                if self.nodes.len() >= 2 {
-                    let n = self.nodes.len();
-                    if dist(self.nodes[n - 1].0, self.nodes[n - 2].0) <= tol {
-                        self.nodes.pop();
-                    }
+                // a point of the double-click not written yet that doubles the end point: drop it
+                let n = self.nodes.len();
+                if n >= 2
+                    && n > self.doc_nodes.len()
+                    && dist(self.nodes[n - 1].0, self.nodes[n - 2].0) <= tol
+                {
+                    self.nodes.pop();
                 }
                 // Doppelklick beendet endgültig: nächster Klick beginnt einen neuen Pfad (PAR 09/06)
                 self.resume = None;
-                self.commit(false, ctx.options)
+                self.commit(false, ctx)
             }
             ToolInput::Key(ToolKey::Enter) | ToolInput::Key(ToolKey::Escape) => {
-                self.commit_resumable(ctx.options)
+                self.commit_resumable(ctx)
             }
             ToolInput::Key(ToolKey::Backspace) | ToolInput::Key(ToolKey::Delete)
                 if !self.nodes.is_empty() =>
             {
-                // letzten gesetzten Punkt zurücknehmen
-                self.nodes.pop();
-                if self.nodes.is_empty() {
-                    self.target = None;
+                // remove the last placed point (a step "Pen"); the last point of a new path removes
+                // the path
+                if self.button {
+                    return ToolResponse::with_overlay(self.overlay(), Cursor::Pen);
                 }
-                ToolResponse::with_overlay(self.overlay(), Cursor::Pen)
+                if self.nodes.len() > 1 {
+                    self.nodes.pop();
+                    return self.write_step(ctx, Cursor::Pen);
+                }
+                let mut resp = ToolResponse::default();
+                if let Some(t) = self.target.filter(|t| t.fresh) {
+                    resp.commands =
+                        vec![pick_select(t.id), Invocation::new("edit.clear", json!({}))];
+                    resp.group = Some(fp_i18n::t("msg-step-pen"));
+                }
+                self.reset_drawing();
+                resp
             }
             _ => ToolResponse::default(),
         }
     }
 
     fn finish(&mut self, ctx: &ToolContext) -> ToolResponse {
-        self.commit(false, ctx.options)
+        self.commit(false, ctx)
+    }
+
+    /// Follows the path being drawn in the document (FB-07): after the first point the new element
+    /// (selected by `draw.path`) becomes the target; after an undo/redo/other change the nodes are
+    /// rebuilt from the document (handles included), so drawing goes on from the new last point.
+    /// Without the path (first point undone) or with a closed contour drawing ends.
+    fn sync(&mut self, ctx: &ToolContext) {
+        if !ctx.has_document {
+            return;
+        }
+        if self.awaiting {
+            self.awaiting = false;
+            let found = match ctx.selection.elements.as_slice() {
+                [id] => doc_path_contours(ctx, *id)
+                    .filter(|cs| cs.len() == 1 && same_nodes(&pen_nodes(&cs[0]), &self.doc_nodes))
+                    .map(|_| *id),
+                _ => None,
+            };
+            match found {
+                Some(id) => {
+                    self.target = Some(PenTarget {
+                        id,
+                        contour: 0,
+                        fresh: true,
+                    })
+                }
+                None => self.reset_drawing(),
+            }
+            return;
+        }
+        let Some(t) = self.target else {
+            return;
+        };
+        let c = doc_path_contours(ctx, t.id)
+            .and_then(|cs| cs.get(t.contour).cloned())
+            .filter(|c| !c.closed && !c.nodes.is_empty());
+        let Some(c) = c else {
+            self.reset_drawing();
+            return;
+        };
+        let fwd = pen_nodes(&c);
+        let rev = reversed_nodes(&fwd);
+        // the start of the drawing direction stays where it was (continuing at the start of a
+        // path reverses it)
+        let start = self.doc_nodes.first().or(self.nodes.first()).map(|n| n.0);
+        let on =
+            |v: &[PenNode]| start.is_some_and(|a| v.first().is_some_and(|f| dist(f.0, a) < 1e-3));
+        let oriented = if !on(&fwd) && on(&rev) { rev } else { fwd };
+        if same_nodes(&oriented, &self.doc_nodes) {
+            return;
+        }
+        self.nodes = oriented.clone();
+        self.doc_nodes = oriented;
+        self.button = false;
+        self.closing = false;
+        self.convert = None;
+        self.smooth_drag = false;
     }
 
     fn overlay(&self) -> Vec<Overlay> {
@@ -1883,6 +2070,11 @@ impl ToolMachine for FreehandTool {
             _ => {}
         }
         ToolResponse::with_overlay(self.overlay(), Cursor::Pen)
+    }
+
+    fn blocks_history(&self) -> bool {
+        // Ctrl+Z while the stroke is drawn is ignored (FB-07, re 55 §1.2)
+        self.active
     }
 
     fn overlay(&self) -> Vec<Overlay> {

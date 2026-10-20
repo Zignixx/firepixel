@@ -135,14 +135,12 @@ fn n01_cancel_new_live_effect_leaves_no_history() {
     }
 }
 
-/// Ohne vorherigen Wiederholen-Stapel: nach Abbrechen ist kein Schritt wiederholbar, und der
-/// „letzte Befehl“ (Strg+Y ohne Wiederholen-Stapel wiederholt ihn wie im Original) ist wieder der
-/// vor dem Dialog, nicht die Vorschau – vorher fügte Strg+Y das Glühen wieder ein.
+/// Without a previous redo stack: after Cancel no step can be redone and Ctrl+Y does nothing (it
+/// is redo only, FB-08) – it must not bring the glow back.
 #[test]
 fn n01_cancel_glow_ctrl_y_does_not_bring_glow_back() {
     let mut h = harness(|s| rect(s, [20, 20, 140, 100]));
     let h0 = history(&h);
-    let last0 = st(&h).session.last_command.clone();
     assert_eq!(h0.1, 0);
     effects::begin_add(&mut h.state_mut().state, fx_index("Glühen"));
     h.run_steps(2);
@@ -151,7 +149,6 @@ fn n01_cancel_glow_ctrl_y_does_not_bring_glow_back() {
     }
     press(&mut h, "Abbrechen");
     assert_eq!(history(&h), h0);
-    assert_eq!(st(&h).session.last_command, last0, "letzter Befehl wie vor dem Dialog");
     ctrl_y(&mut h);
     let d = st(&h).session.active().expect("Dokument");
     let fx: usize = fp_engine::docops::selectable_ids(&d.doc, d.page, d.frame).into_iter().filter_map(|id| fp_engine::docops::element_on_page(&d.doc, d.page, id)).map(|e| e.common.effects.as_ref().map(|l| l.effects.len()).unwrap_or(0)).sum();

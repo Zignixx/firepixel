@@ -410,6 +410,9 @@ pub struct ToolResponse {
     /// Ereignisse, die die Sitzung nach Befehlen und Werkzeugwechsel an das (neue) Werkzeug gibt
     /// (z. B. Doppelklick auf Text: Zeiger → Text, Klick an derselben Stelle).
     pub replay: Vec<ToolEvent>,
+    /// Run `commands` as ONE history step with this name (e.g. the pen joining its path with another
+    /// one: change the other path and remove its own); `None` = one step per command.
+    pub group: Option<String>,
     /// Anfrage an die Oberfläche, die kein Befehl der Sitzung erledigen kann (z. B. Exportbereich →
     /// Export-Dialog mit `file.exportArea {rect}` öffnen). Ohne Oberfläche (MCP/CLI) ignoriert.
     pub ui_request: Option<Invocation>,
@@ -507,6 +510,16 @@ pub trait ToolMachine: Send {
     /// `object`, `handle`, `point`, `fill_handle`, `empty` or `idle`; `None` for tools without it.
     fn press_hit(&self) -> Option<&'static str> {
         None
+    }
+    /// The document changed outside the tool's own events (undo, redo, a jump in the History panel,
+    /// a menu command, or the commands the tool itself just emitted): rebuild state that mirrors the
+    /// document. The pen keeps the path being drawn in the document (one history step per point,
+    /// FB-07) and follows it here.
+    fn sync(&mut self, _ctx: &ToolContext) {}
+    /// Is a stroke running with the mouse button held, during which undo and redo are ignored
+    /// (Vector Path, FB-07)?
+    fn blocks_history(&self) -> bool {
+        false
     }
 }
 

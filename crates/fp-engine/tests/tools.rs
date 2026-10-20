@@ -113,11 +113,13 @@ fn pen_tool() {
         ToolEvent::up(100.5, 100.5),
     ]);
     assert!(matches!(&el(&s, last(&s)).kind, ElementKind::Path(p) if p.contours[0].closed && p.contours[0].nodes.len() == 3));
-    // Werkzeugwechsel beendet offen
-    events(&mut s, &[ToolEvent::down(0.0, 150.0), ToolEvent::up(0.0, 150.0), ToolEvent::down(20.0, 150.0), ToolEvent::up(20.0, 150.0)]);
+    // Werkzeugwechsel beendet offen; the path exists from the first click (FB-07)
     let n = top_elements(&s).len();
+    events(&mut s, &[ToolEvent::down(0.0, 150.0), ToolEvent::up(0.0, 150.0), ToolEvent::down(20.0, 150.0), ToolEvent::up(20.0, 150.0)]);
+    assert_eq!(top_elements(&s).len(), n + 1);
     tool(&mut s, ToolId::Pointer);
     assert_eq!(top_elements(&s).len(), n + 1);
+    assert!(matches!(&el(&s, last(&s)).kind, ElementKind::Path(p) if !p.contours[0].closed && p.contours[0].nodes.len() == 2));
 }
 
 #[test]

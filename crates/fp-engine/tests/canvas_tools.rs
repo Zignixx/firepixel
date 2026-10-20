@@ -443,7 +443,14 @@ fn pen_continue_insert_remove_and_close() {
     let p = last(&s);
     let n = &path_of(&s, p).contours[0].nodes[1];
     assert_eq!((n.succ.x, n.pred.x), (70.0, 50.0), "Kurvenpunkt durch Ziehen");
-    undo_redo(&mut s, &before);
+    // one history step per point (FB-07): two undos restore the empty document, two redos the path
+    let after = doc(&s);
+    s.undo().expect("Rückgängig");
+    s.undo().expect("Rückgängig");
+    assert_eq!(doc(&s), before, "Rückgängig stellt nicht exakt wieder her");
+    s.redo().expect("Wiederholen");
+    s.redo().expect("Wiederholen");
+    assert_eq!(doc(&s), after, "Wiederholen liefert ein anderes Ergebnis");
     // Pfad fortsetzen am Endpunkt
     select(&mut s, &[p]);
     events(&mut s, &[ToolEvent::down(60.0, 10.0), ToolEvent::up(60.0, 10.0), ToolEvent::down(60.0, 60.0), ToolEvent::up(60.0, 60.0), ToolEvent::key(ToolKey::Enter)]);
@@ -1207,7 +1214,8 @@ fn hover_cursors_like_original() {
 
 /// UX-A L24: Stift Klick, Klick, Doppelklick – genau die Folge der Leinwand (je Klick Drücken,
 /// Loslassen, Überfahren; beim zweiten Klick des Doppelklicks danach `DoubleClick`). Original:
-/// offener Pfad mit drei Punkten 250,150 → 330,150 → 330,220, ein Verlaufsschritt.
+/// offener Pfad mit drei Punkten 250,150 → 330,150 → 330,220; one history step per point, the
+/// double-click adds none (FB-07, re 55 §1.2).
 #[test]
 fn pen_double_click_keeps_open_path_like_original() {
     let mut s = doc_session(600.0, 400.0);
@@ -1222,13 +1230,21 @@ fn pen_double_click_keeps_open_path_like_original() {
     seq.extend([ToolEvent::down(330.0, 220.0), ToolEvent::up(330.0, 220.0), ToolEvent::double(330.0, 220.0), ToolEvent::drag(330.0, 220.0)]);
     events(&mut s, &seq);
     assert_eq!(top_elements(&s).len(), n0 + 1, "Pfad bleibt");
-    assert_eq!(s.active().unwrap().history.len(), h0 + 1, "ein Verlaufsschritt");
+    assert_eq!(s.active().unwrap().history.len(), h0 + 3, "ein Verlaufsschritt je Punkt");
     let c = &path_of(&s, last(&s)).contours[0];
     assert!(!c.closed);
     let pts: Vec<(f32, f32)> = c.nodes.iter().map(|n| (n.anchor.x, n.anchor.y)).collect();
     assert_eq!(pts, vec![(250.0, 150.0), (330.0, 150.0), (330.0, 220.0)]);
     assert_eq!(s.tools.active, ToolId::Pen, "Werkzeug bleibt");
-    undo_redo(&mut s, &before);
+    let after = doc(&s);
+    for _ in 0..3 {
+        s.undo().expect("Rückgängig");
+    }
+    assert_eq!(doc(&s), before, "Rückgängig stellt nicht exakt wieder her");
+    for _ in 0..3 {
+        s.redo().expect("Wiederholen");
+    }
+    assert_eq!(doc(&s), after, "Wiederholen liefert ein anderes Ergebnis");
     // danach beginnt ein Klick einen neuen Pfad (nicht das Fortsetzen des eben gezeichneten)
     let mut seq = click(100.0, 300.0);
     seq.extend(click(150.0, 300.0));
