@@ -36,8 +36,8 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 3. **Runner:** no item open; TW-167 was closed by run 29 (20 Oct 2026, the layout check expands the reference's
    collapsed panel dock). The text selection edits (TW-146 rest, TW-165) are no longer runner items:
    the runner cannot select text in the reference's editor with the mouse, so they moved to the click-test (A1-19).
-4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
-   boxes), BA-110 rest (lossy LZW with an SSIM bound) and BA-083 (resampler hashes on another OS).
+4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke) and BA-109 (two AI batch steps without
+   models). BA-108, BA-110 rest and BA-083 were closed on 20 Oct 2026.
 
 ## What remains
 

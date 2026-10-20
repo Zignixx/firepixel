@@ -300,7 +300,7 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
    tester (A4-19 to A4-21).
 2. No runner item open (TW-167 closed by run 29); TW-146 rest and TW-165 moved to the click-test A1-19 (runner measurement gaps, not deviations).
 3. Remaining parity item: the unmeasured R3 note of TW-138 (indent and spacing as text defaults).
-4. Remaining deferred items: BA-101, BA-108 (metadata box writing), BA-110 rest, BA-083.
+4. Remaining deferred items: BA-101 (JPEG 2000, PSD stroke) and BA-109 (AI batch steps without models); BA-108, BA-110 rest and BA-083 closed on 20 Oct 2026.
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external
 programs and unsandboxed scripts, opt-in GIF optimiser modes, the remaining Batch Studio UI conveniences, selectable
