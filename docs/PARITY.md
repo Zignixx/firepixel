@@ -3,7 +3,7 @@
 Firepixel aims to behave like the reference application button by button. This page explains how that is
 measured, what the figures mean, where the method stops, and gives the current per-unit result.
 
-**Current state (run 28 over 2 units on top of runs 27, 26, 25 and 24, 19 Oct 2026, all 49 units):** **49 equal except
+**Current state (run 29 over 3 units on top of runs 28, 27, 26, 25 and 24, 20 Oct 2026, all 49 units):** **49 equal except
 for design**, 0 real deviations, 0 unclear, 0 under-measured. **Proven 1:1: 100.0 %** (49 / 49; all 49 units are
 sufficiently measured). Measurement quota over all 49 units: **87.3 %** (1077 / 1233 steps). Canvas image pairs within
 1 %: **185 / 212**.
@@ -70,14 +70,18 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images
   cannot be captured.
 
-## Per-unit result (run 28 on top of runs 27, 26, 25 and 24)
+## Per-unit result (run 29 on top of runs 28, 27, 26, 25 and 24)
 
-Each row is the unit's newest run. Two rows (`tool-text`, `toolbox`) come from follow-up run 28 (19 Oct 2026,
+Each row is the unit's newest run. Three rows (`toolbox`, `tool-path-reshape`, `xs-select-behind`) come from
+follow-up run 29 (20 Oct 2026, 06:17–06:43, 3 units, 88 steps, 54 image pairs), preview build `2026-10-20_06-08`
+from `main` at `901f0a56` (fixes F51a to F51c), runner R-26 (the reference's right panel dock measured at every
+layout check and expanded by its own button when it is collapsed to icons, at unit start and after the screen modes
+of `toolbox/13`; the reference dock width read only from an expanded dock). One row (`tool-text`) comes from follow-up run 28 (19 Oct 2026,
 21:57–22:21, 2 units, 83 steps, 42 image pairs) with the same preview build as runs 26 and 27 and runner R-25 at
 `74d6bfc8` (glyph-box drags for all sizes, a word double-click as the last selection try, a highlight of at least 60 %
 of the expected inverted area required, size routes only on a checked selection, a text tool reset on both sides after
 a failed size step, the Standard reset from full screen by F with a window test, the panel layout restored after
-`toolbox/13` with the dock width logged). One row (`tool-path-reshape`) comes from follow-up run
+`toolbox/13` with the dock width logged). Run 29 replaced the last row of follow-up run
 27 (19 Oct 2026, 20:49–21:18, 3 units, 106 steps, 62 image pairs) with the same preview build as run 26 and runner
 R-24 at `f7d13d61` (the size on a text selection by three routes: size field, size keys and the Text Editor dialog;
 drags over the glyph box of 72 pt text; the Freeform size keys with the mouse held, a size read-back and a shot while
@@ -88,7 +92,7 @@ full screen shows only the canvas on black, TW-158; text preference rules, TW-13
 (screen mode read back from the screen-mode buttons, the window against the monitor and the application properties;
 Subselection nudges by `moveSelectedBezierPointsBy`; Freeform size keys with the mouse held; the text size reset read
 back per attempt, TW-159; settle waits and retries for text entry, TW-146 rest). Two other applications' windows were
-open at the start of run 26 (logged). Fifteen rows come from follow-up run 25 (19 Oct 2026, 12:19–14:39, 20 units, 556
+open at the start of run 26 (logged). Fourteen rows come from follow-up run 25 (19 Oct 2026, 12:19–14:39, 20 units, 556
 steps, 317 image pairs), preview build `2026-10-19_12-16` from `main` at `a225a01c` (package F48: consecutive key
 nudges of one selection merge into one History row, TW-148; Select Behind draws a crisp hover line and no frame right
 after a click, TW-157), runner R-22 at `72c695dd` (text reset without touching the fill colour and default colours
@@ -135,10 +139,10 @@ than 32 levels). "Was" compares with the unit's previous run; the findings of th
 | `preview-options` | preview / export | equal except for design | run 24: 76.9 % (30 / 39), unchanged |
 | `preview-views` | preview / export | equal except for design | run 24: 69.6 % (16 / 23), unchanged |
 | `color-popup-contexts` | colour | equal except for design | run 24: 68.2 % (15 / 22), unchanged |
-| `tool-path-reshape` | tools | equal except for design | run 27: 100.0 % (23 / 23), unchanged; 13 / 14 canvas pairs within 1 % (`11_rect_to_path` 13.7 % as before; the new pair `04_freeform_size_keys_result` 0.46 %). **TW-159 rest confirmed**: with the mouse held the reference's three Up and two ] keys keep the Freeform tool, and the size read while the button is held is 72 in both programs (the reference's Properties panel field and Firepixel's size field; the keys change the size on neither side). **TW-164 confirmed**: R-24 chooses Freeform through flyout entry 0 and reads the tool back before every Freeform step; `12_inspector_heads_freeform` now shows the Freeform head on the reference side, pixel-identical to its own `01` shot (9.7 %, the design difference of `01`; run 26: 10.8 % with the Path Scrubber head) |
+| `tool-path-reshape` | tools | equal except for design | run 29: 100.0 % (23 / 23), unchanged; every pair value as in run 27 (preview `2026-10-20_06-08` with F51c's Subselection snapping: no change here). Run 27: 13 / 14 canvas pairs within 1 % (`11_rect_to_path` 13.7 % as before; the new pair `04_freeform_size_keys_result` 0.46 %). **TW-159 rest confirmed**: with the mouse held the reference's three Up and two ] keys keep the Freeform tool, and the size read while the button is held is 72 in both programs (the reference's Properties panel field and Firepixel's size field; the keys change the size on neither side). **TW-164 confirmed**: R-24 chooses Freeform through flyout entry 0 and reads the tool back before every Freeform step; `12_inspector_heads_freeform` now shows the Freeform head on the reference side, pixel-identical to its own `01` shot (9.7 %, the design difference of `01`; run 26: 10.8 % with the Path Scrubber head) |
 | `tool-text` | tools | equal except for design | run 28: 85.2 % (23 / 27), unchanged; 13 / 16 canvas pairs within 1 %, all pair values as in run 27 (`11_size_live` 2.35 %, `14_bounds` 1.10 %, `16_overflow` 3.82 %). **TW-146 rest stays open**: R-25's area test now rejects the caret, and no try gives more: in `11` the glyph-box drags, the drags from the end and the word double-click at 89,97 all change 24 pixels of 171.7 expected (ratio 0.14, below 0.60; cover 0.4), so the field, key and dialog routes are all skipped ("no selection highlight", `text_size.method` null), "Abc 123" stays 12 pt and the reference's export equals that of `03`. `07` ("Welt", 24 of 206.2 px, ratio 0.12) and `13` (24 of 171.7 px) log the same; in `13` the grey A0A0A0 is set without a selection and does not reach "123" (export equal to `03`, pair 0.81 %). **TW-165 not confirmed**: the two-sided reset is armed only by a failed field or menu route; with every route skipped neither text tool is reset, so Firepixel's texts in `14` and `16` read 72 pt (F43) against the reference's 12 pt, as in run 27. `15` and `19` fail on both sides (frame handle not found), `12` Firepixel's font field not found, `17` `unmapped` on both sides; 7 `runner error` lines (run 27: 1), all text selections and the size step |
 | `tool-web` | tools | equal except for design | run 25: 96.4 % (27 / 28), unchanged; 14 / 16 canvas pairs within 1 % (`07` guide drag 3.7 % as before); `11` fails on both sides as before |
-| `toolbox` | tools | equal except for design | run 28: 94.6 % (53 / 56), unchanged; 0 / 3 canvas pairs within 1 % (cursor shots, 2.6 % as before). **TW-166 confirmed**: R-25 leaves full screen by F with a window test; from full screen with menus F, F and from full screen one F reach Standard (window 1600 × 1000, not covering the 1800 × 1130 monitor), and `toolbox` has no `runner error` (run 27: one). Mode pairs (window pairs): full 1.97 % (unchanged), full with menus 35.4 % (run 27: 47.4 %), Standard 25.6 % (run 27: 64.3 %). The reference started the unit with its right panel dock collapsed to icons (left over from run 27; `00_overview_normal` 64.3 %, run 27: 25.9 %); R-25 takes this 110 px dock as the reference width, the screen modes expand it to 276 px and the restore logs `restored: []` without acting, so the overview and Standard window pairs have swapped (TW-167, runner). The Window menu does not open in full screen (logged, no error). The reference was not restarted |
+| `toolbox` | tools | equal except for design | run 29: 94.6 % (53 / 56), unchanged; 0 / 3 canvas pairs within 1 % (cursor shots, 2.6 % as before); no `runner error`. **TW-167 confirmed**: the reference started with its dock collapsed to icons (105 px), R-26's unit-start layout check expanded it (271 px read back) and expanded it again after full screen with menus, which leaves it collapsed; window pairs overview 25.5 % (run 28: 64.3 %), Standard 25.9 % (run 28: 25.6 %), full 1.97 % (unchanged), full with menus 47.2 % (run 27: 47.4 %; run 28: 35.4 % with the reference's dock collapsed; Firepixel shows its dock as an icon strip in that mode). Run 28: 0 / 3 canvas pairs within 1 % (cursor shots, 2.6 % as before). **TW-166 confirmed**: R-25 leaves full screen by F with a window test; from full screen with menus F, F and from full screen one F reach Standard (window 1600 × 1000, not covering the 1800 × 1130 monitor), and `toolbox` has no `runner error` (run 27: one). Mode pairs (window pairs): full 1.97 % (unchanged), full with menus 35.4 % (run 27: 47.4 %), Standard 25.6 % (run 27: 64.3 %). The reference started the unit with its right panel dock collapsed to icons (left over from run 27; `00_overview_normal` 64.3 %, run 27: 25.9 %); R-25 takes this 110 px dock as the reference width, the screen modes expand it to 276 px and the restore logs `restored: []` without acting, so the overview and Standard window pairs have swapped (TW-167, runner). The Window menu does not open in full screen (logged, no error). The reference was not restarted |
 | `tool-autoshapes` | tools | equal except for design | run 25: 100.0 % (40 / 40), unchanged; **26 / 27** canvas pairs within 1 % (run 24: 7 / 27, run 17: 27 / 27): the reference draws with fill #ffffff and stroke #000000 again, as Firepixel (TW-153 confirmed). The one pair above 1 % is `05_handle_drag_rounded_corner_result` at 1.01 % (run 17: 0.97 %, the same picture: the reference's shot after the handle drag shows the shape without handles and tooltip, Firepixel with both) |
 | `export-results` | preview / export | equal except for design | run 25: 80.0 % (8 / 10), unchanged; 4 / 4 canvas pairs within 1 %; values as in run 24 (animated GIF and PNG 8/24/32 pairs within 1 %); `13_export_area` `unsupported` on the reference side as before |
 | `color-popup` | colour | equal except for design | run 24: 75.0 % (21 / 28), unchanged; 0 / 2 canvas pairs within 1 %; hex field: the reference's pop-up closes without applying the text the runner sets (#80808000), so Q-49 needs a real keyboard; canvas shots differ by capture method only (TW-117) |
@@ -150,7 +154,7 @@ than 32 levels). "Was" compares with the unit's previous run; the findings of th
 | `panel-swatches-mixer` | panels | equal except for design | run 24: 96.3 % (26 / 27), unchanged; the "add swatches" file dialog now opens on the reference side (TW-129 closed); Swatches menu 229 vs. 226 px |
 | `xs-shortcuts` | cross-cutting | equal except for design | run 26: 92.0 % (23 / 25), was 91.7 % (22 / 24); `10_nudge_point_result` is `ok` on both sides again: R-23 takes "Teilauswahl" as Subselection and nudges the selected point by script, the first node reads 201,210 in both programs (TW-159 b confirmed); `10_nudge_result` reads R1 51,50 and 51,51 in both; `18` and `19` (Duplicate Set dialog not mapped) and `15_in_text` as before |
 | `xs-canvas` | cross-cutting | equal except for design | run 25: 91.7 % (22 / 24), unchanged; 1 / 8 canvas pairs within 1 % (fit zoom and grid phase as reviewed in run 17) |
-| `xs-select-behind` | cross-cutting | equal except for design | run 25: 100.0 % (9 / 9), unchanged; 9 / 9 canvas pairs within 1 % (0.14–0.51 %); was real deviation. TW-157 confirmed by pixel counts: on the vector rectangle FR (`08`) both programs draw 680 px of #E00000 in 398,198–602,302 (run 24: Firepixel 100 px plus an anti-aliased line); right after a click (`05`, `06`) neither shows #E00000 (run 24: Firepixel 100 and 1680 px); the frame on B1 in `02` and `04` is 1680 px at 38,38–522,362 in both, `03` and `07` show none. Whether the blue and the red frame show together stays with the click-test (A4-17) |
+| `xs-select-behind` | cross-cutting | equal except for design | run 29: 100.0 % (9 / 9), unchanged; all 9 pair values as in run 25 (the reference restarted once after a script access violation at the unit start, no step lost). Run 25: 9 / 9 canvas pairs within 1 % (0.14–0.51 %); was real deviation. TW-157 confirmed by pixel counts: on the vector rectangle FR (`08`) both programs draw 680 px of #E00000 in 398,198–602,302 (run 24: Firepixel 100 px plus an anti-aliased line); right after a click (`05`, `06`) neither shows #E00000 (run 24: Firepixel 100 and 1680 px); the frame on B1 in `02` and `04` is 1680 px at 38,38–522,362 in both, `03` and `07` show none. Whether the blue and the red frame show together stays with the click-test (A4-17) |
 
 Totals over all 49 units (newest run per unit): **49 / 0 / 0 / 0** (proven 1:1 100.0 %). Step level: 1077 of 1233
 measurable steps `ok` on both sides (**87.3 %**); over the 48 units before run 24: 1068 of 1224 (87.3 %). In the 2
@@ -161,6 +165,12 @@ canvas pairs of the two units read as in run 27). No class changed. The 7 `runne
 reference-side text selections in `tool-text` (TW-146 rest): `07` ("Welt"), four selections and the size step in `11`,
 and `13`; R-25 no longer accepts the 24-pixel caret as a highlight. `toolbox` has none (TW-166 confirmed). The
 reference was not restarted.
+
+Run 29 over its 3 units: 85 of 88 steps `ok` on both sides (`toolbox` 53 / 56, `tool-path-reshape` 23 / 23,
+`xs-select-behind` 9 / 9; the three `toolbox` misses are the unmapped flyouts and the collapse button, as before), all
+quotas unchanged; no Firepixel-side error; canvas pairs unchanged (0 / 3, 13 / 14 and 9 / 9 within 1 %); no `runner
+error`. The reference was restarted once (script access violation at the start of `xs-select-behind`), without lost
+steps.
 
 Run 27's own totals, for comparison: 49 / 0 / 0 / 0 over 49 units; 1077 of 1233 steps (87.3 %); in its three units
 99 of 106 (93.4 %); 33 reference-side and 21 Firepixel-side errors; 185 of 212 canvas pairs within 1 %
@@ -237,6 +247,12 @@ does not enlarge text, and Ctrl+Shift+E, Ctrl+Alt+Shift+S and Ctrl+Shift+I do ot
 machine (TW-126; the reference machine's active set needs a behaviour description). `panel-optimize` shows one real
 deviation: export formats chosen per slice in the Optimize panel are not stored on the slices (TW-128).
 `xs-preferences` clicks stored settings without a fixed start state (TW-127, runner).
+
+**What run 29 found.** Runner R-26 closes **TW-167**: the layout check now measures the reference's right panel
+dock window and expands it with the dock's own button when it is collapsed to icons; at the start of `toolbox` it
+found 105 px and restored 271 px, and after full screen with menus (which leaves the dock collapsed in the reference)
+it restored it again before the Standard shot. The overview and Standard window pairs are back to 25.5 % and 25.9 %.
+`tool-path-reshape` and `xs-select-behind` are unchanged on preview `2026-10-20_06-08`.
 
 **What run 28 found.** Runner R-25 is confirmed in its screen-mode item. **TW-166**: the reference leaves full screen
 by F (two F from full screen with menus, one from full screen), every Standard reset reads Standard from the window,
@@ -403,9 +419,9 @@ effect, text-tool state carried between units).
 | 26 (5 units) | 19 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.3 % over the 48 old units; one `toolbox` step recounted) |
 | 27 (3 units) | 19 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.3 % over the 48 old units); canvas pairs 185 / 212 |
 | 28 (2 units) | 19 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.3 % over the 48 old units); canvas pairs 185 / 212 |
+| 29 (3 units) | 20 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.3 % over the 48 old units); canvas pairs 185 / 212 |
 
 The next steps are in [ROADMAP.md](../ROADMAP.md): the human click-test, including the macOS re-test by the tester;
-the remaining runner item (the panel dock reference width of TW-167; the text selection and size of TW-146 rest and the
-text tool reset of TW-165 moved to the click-test A1-19 on 20 Oct 2026 as runner measurement gaps, not deviations);
-U-1 rest; and the unmeasured R3 note of the text tool defaults
+the text selection and size of TW-146 rest and the text tool reset of TW-165 (moved to the click-test A1-19 on
+20 Oct 2026 as runner measurement gaps, not deviations; TW-167 was closed by run 29); U-1 rest; and the unmeasured R3 note of the text tool defaults
 (TW-138 rest).

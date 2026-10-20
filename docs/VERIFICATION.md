@@ -116,6 +116,7 @@ Run 28 (19 Oct 2026, 2 units, runner R-25, the same preview) confirmed TW-166, k
 selection try reaches the expected highlight, so no size route runs and no text tool is reset) and added TW-167.
 On 20 Oct 2026 TW-146 rest and TW-165 were moved to the hands-on check A1-19: the runner cannot select text in the
 reference's editor with the mouse, so they are measurement gaps, not deviations.
+Run 29 (20 Oct 2026, 3 units, runner R-26, preview `2026-10-20_06-08`) confirmed TW-167.
 The open checks below come from runs 17 to 28.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
@@ -200,7 +201,7 @@ The open checks below come from runs 17 to 28.
   **Expected:** Both text tools are reset whenever the size does not reach the reference's selection, skipped routes included; `14` and `16` back within 1 %.
 - [x] **TW-166** (`toolbox/13_view_modes_full_normal`; runner R-25 `74d6bfc8`) – confirmed in run 28: the reference leaves full screen by F (F, F from full screen with menus, one F from full screen), each Standard reset reads Standard from the window (1600 × 1000, not covering the monitor), and `toolbox` has no `runner error` (run 27: one). The panel dock part continues as TW-167.
   **Expected:** The runner leaves full screen by key before the button; no `runner error` line in `toolbox/13`.
-- [ ] **TW-167** (`toolbox/00, 13`; runner) – run 28: the reference's right panel dock started collapsed to icons (left over from run 27) and R-25 took its 110 px as the reference width; after the screen modes the dock is expanded (276 px) and not restored (`restored: []`), so `00_overview_normal` (64.3 %) and `13_view_modes_standard_normal` (25.6 %) have swapped.
+- [x] **TW-167** (`toolbox/00, 13`; runner R-26) – confirmed in run 29: the reference started `toolbox` with its dock collapsed to icons (105 px); the unit-start layout check expanded it (one click on the dock's expand button, 271 px read back) and logged it, and after full screen with menus, which leaves the dock collapsed again, the restore expanded it a second time (`restored: ['panel dock expanded (105 -> 271 px)']`, `dock_ref` 276 from an expanded dock). `00_overview_normal` 25.5 % and `13_view_modes_standard_normal` 25.9 % (run 28: 64.3 % and 25.6 %), both with the dock expanded.
   **Expected:** The unit starts and ends with the expanded default dock on the reference side; the dock width after `13` equals the one at unit start.
 
 Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the

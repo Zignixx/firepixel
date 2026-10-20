@@ -1117,6 +1117,48 @@ def rect4(v):
         return None
 
 
+def right_dock(kids, client):
+    """R-26 (TW-167): the reference's right panel dock among the main window's children (`children` with all=True):
+    the dock-class window (`OWL.Dock`) touching the client's right edge (within 12 px), left of it beyond the client
+    middle and at least half the client high. [l, t, r, b] or None (panels hidden, full screen without docks)."""
+    c = rect4(client)
+    if not c:
+        return None
+    best = None
+    for k in kids or []:
+        r = rect4(k.get("rect")) if isinstance(k, dict) else None
+        if not r or k.get("class") != "OWL.Dock":
+            continue
+        if r[2] >= c[2] - 12 and r[0] > (c[0] + c[2]) / 2 and (r[3] - r[1]) >= 0.5 * (c[3] - c[1]):
+            if best is None or (r[3] - r[1]) > (best[3] - best[1]):
+                best = r
+    return best
+
+
+def dock_toggle_point(dock):
+    """R-26 (TW-167): the dock's collapse/expand button (double arrow at the right end of its 12 px top strip; run
+    29 probe: dock [1325, 66, 1596, 996] -> button 1588, 71, the same spot when collapsed [1491, 66, 1596, 996])."""
+    return int(dock[2] - 8), int(dock[1] + 5)
+
+
+def r26_selfcheck() -> str:
+    """R-26: offline check of the right-dock pick and its toggle point with the window rects read in the run-29
+    probe (expanded 271 px, collapsed 105 px; the bottom properties dock and the left tools dock not taken)."""
+    bad = []
+    client = [0, 0, 1600, 1000]
+    kids = [{"class": "OWL.Dock", "rect": [69, 870, 1325, 996]}, {"class": "OWL.Dock", "rect": [4, 35, 1596, 67]},
+            {"class": "OWL.Dock", "rect": [4, 66, 69, 996]}, {"class": "OWL.TabPane", "rect": [1326, 78, 1596, 996]},
+            {"class": "OWL.Dock", "rect": [1325, 66, 1596, 996]}, {"class": "OWL.Dock", "rect": [69, 66, 1325, 870]}]
+    if right_dock(kids, client) != [1325, 66, 1596, 996]:
+        bad.append(f"expanded dock {right_dock(kids, client)}")
+    kids[4] = {"class": "OWL.Dock", "rect": [1491, 66, 1596, 996]}
+    if right_dock(kids, client) != [1491, 66, 1596, 996] or dock_toggle_point([1491, 66, 1596, 996]) != (1588, 71):
+        bad.append(f"collapsed dock {right_dock(kids, client)}")
+    if right_dock(kids[:4], client) is not None or right_dock(kids, None) is not None:
+        bad.append("dock found without a right dock")
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
 def screen_mode_from_window(win: dict):
     """R-24 (TW-163, run 26 `toolbox/13`: the screen-mode buttons read "full screen with menus" in Standard): the
     mode from the main window against the monitor - the primary source. Not covering the monitor -> "standard";
@@ -1733,6 +1775,10 @@ class OrigSide(Side):
                     changed.append(f"toolbar on: {parts[-1]}")
             except OrigError as e:
                 self.r.log(f"layout: toolbar {tb}: {e}")
+        # R-26 (TW-167): the right panel dock expanded (run 28 started `toolbox` with it collapsed to icons)
+        dk = self.dock_expand()
+        if dk.get("changed"):
+            changed.append(f"panel dock expanded ({dk.get('before')} -> {dk.get('after')} px)")
         if not self.tools_visible():
             info = self.panel_info("tools")
             self.h.call("menu", path=split_path(info["menu"]), final="invoke", bar=bar, timeout=40)
@@ -1747,6 +1793,55 @@ class OrigSide(Side):
             self.page = None
             self.r.log(f"orig layout restored: {', '.join(changed)}")
         return changed
+
+    def dock_state(self) -> dict:
+        """R-26 (TW-167): the right panel dock read from the main window's children: {rect, width} (width = dock
+        window width; run 29 probe: 271 expanded, 105 collapsed to icons), {"missing": True} or {"error"}."""
+        try:
+            client = self.h.call("main").get("client")
+            dock = right_dock(self.h.list("children", all=True, timeout=40), client)
+        except OrigError as e:
+            return {"error": str(e)[:80]}
+        if not dock:
+            return {"missing": True}
+        return {"rect": [int(x) for x in dock], "width": int(dock[2] - dock[0])}
+
+    def dock_expand(self) -> dict:
+        """R-26 (TW-167): the right panel dock expanded - narrower than `orig.dock_expanded_min_px` (default 180)
+        -> its double-arrow button (dock_toggle_point) clicked and read back, a second click when still narrow.
+        Result {before, after, clicks, changed, expanded, min} (widths of the dock window), stored as `last_dock`
+        and logged when it clicked (`orig panel dock: ...`)."""
+        lim = float(self.r.cfg["orig"].get("dock_expanded_min_px", 180))
+        st = self.dock_state()
+        out = {"before": st.get("width"), "after": st.get("width"), "clicks": [], "changed": False, "min": lim}
+        if st.get("error") or st.get("missing"):
+            out["note"] = st.get("error") or "no right dock"
+            out["expanded"] = None
+        else:
+            for _ in range(2):
+                if st["width"] >= lim:
+                    break
+                pt = dock_toggle_point(st["rect"])
+                try:
+                    self.click_at(pt)
+                except OrigError as e:
+                    out["clicks"].append({"at": list(pt), "error": str(e)[:80]})
+                    break
+                time.sleep(0.8)
+                st = self.dock_state()
+                out["clicks"].append({"at": list(pt), "width": st.get("width")})
+                if not st.get("width"):
+                    break
+            out["after"] = st.get("width")
+            out["expanded"] = (out["after"] or 0) >= lim
+            out["changed"] = bool(out["clicks"]) and out["expanded"]
+            if out["clicks"]:
+                self.page = None
+                self.tools_anchor = None
+                self.r.log(f"orig panel dock: {out['before']} px (expanded needs >= {lim:g}) -> clicks "
+                           f"{out['clicks']} -> {out['after']} px" + ("" if out["expanded"] else " - STILL COLLAPSED"))
+        self.last_dock = out
+        return out
 
     def ensure_tools(self):
         """The docked tools column must be visible (see ensure_layout); the anchor is measured again."""
@@ -2270,8 +2365,14 @@ class OrigSide(Side):
         """R-25 (TW-166, run 27: after the screen modes the reference's right panel dock stayed collapsed to icons in
         the next Standard shot): the unit-start layout restore (ensure_layout: panels shown, toolbar, tools column)
         and the panel dock's width = client right - view right, compared with the first width read in Standard this
-        run (`dock_ref`); narrower by more than `orig.dock_collapse_px` (default 100) -> `collapsed` (logged)."""
-        out = {}
+        run (`dock_ref`); narrower by more than `orig.dock_collapse_px` (default 100) -> `collapsed` (logged).
+        R-26 (TW-167, run 28: the unit started with the dock collapsed, so the 110 px dock became `dock_ref` and the
+        expanded 276 px after the screen modes was "not collapsed", `restored: []`): the dock window is measured
+        before the restore (`dock_win_before`), ensure_layout expands it when it is narrower than
+        `orig.dock_expanded_min_px` (dock_expand, listed in `restored`), it is measured again (`dock_win`), and
+        `dock_ref` is taken only from an expanded dock (the default layout), so a collapsed dock is never the
+        reference; `collapsed` is also set when the dock window stays narrow."""
+        out = {"dock_win_before": self.dock_state().get("width")}
         try:
             out["restored"] = self.ensure_layout() or []
             self.tools_anchor = None
@@ -2282,13 +2383,17 @@ class OrigSide(Side):
         except OrigError as e:
             c = v = None
             out["dock_error"] = str(e)[:80]
+        last = getattr(self, "last_dock", None) or {}
+        out["dock_win"] = last.get("after")
+        expanded = bool(last.get("expanded"))
         if c and v:
             dock = round(c[2] - v[2])
             ref = getattr(self, "dock_ref", None)
-            if ref is None:
+            if ref is None and expanded:
                 self.dock_ref = ref = dock
             out.update(dock=dock, dock_ref=ref,
-                       collapsed=dock < ref - float(self.r.cfg["orig"].get("dock_collapse_px", 100)))
+                       collapsed=(not expanded) or (ref is not None and
+                                                   dock < ref - float(self.r.cfg["orig"].get("dock_collapse_px", 100))))
         return out
 
     def path_colors(self) -> dict:
@@ -8097,6 +8202,12 @@ class Runner:
                             self.log(f"properties panel: {e}")
                         try:
                             side.reset_unit()
+                            # R-26 (TW-167): what the unit-start layout check measured and restored for the dock
+                            dk = getattr(side, "last_dock", None) or {}
+                            self.log(f"unit start {unit_name}: orig panel dock {dk.get('before')} px -> "
+                                     f"{dk.get('after')} px ({'expanded' if dk.get('expanded') else 'NOT expanded'}"
+                                     + (f", clicks {dk.get('clicks')}" if dk.get("clicks") else ", nothing restored")
+                                     + (f", {dk['note']}" if dk.get("note") else "") + ")")
                         except LayoutError as e:
                             # no guessed anchor (R-2): this unit is not played in the reference program
                             aborted["orig"] = f"unit aborted in the reference program: {e}"
@@ -8280,6 +8391,7 @@ def main(argv=None):
         print(f"screen mode self check: {screen_mode_selfcheck()}")
         print(f"R-24 self check: {r24_selfcheck()}")
         print(f"R-25 self check: {r25_selfcheck()}")
+        print(f"R-26 self check: {r26_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0

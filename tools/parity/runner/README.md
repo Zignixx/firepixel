@@ -1081,3 +1081,27 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   `screen_mode.layout` with `collapsed`). This runs in the `after` of all three `toolbox/13` steps.
 - `--dry-run` prints `R-25 self check: ok` (run 27's caret move rejected and an inverted block accepted by the area
   test, `tail_is_word`, `xheight_y`, the Standard plan per mode).
+
+## R-26 additions (20 Oct 2026)
+
+- **Panel dock in the layout check (TW-167, run 28 `toolbox`: the reference started the unit with its right panel
+  dock collapsed to icons, left over from run 27; R-25 took that 110 px width as `dock_ref`, and after the screen
+  modes the expanded 276 px dock was "not collapsed", `restored: []`):** `ensure_layout` (unit start, after Tab, after
+  the screen modes, whenever the tools anchor is measured again) now reads the right panel dock window (`dock_state`:
+  the `OWL.Dock` child touching the client's right edge, at least half the client high; `right_dock`) and, when it is
+  narrower than `orig.dock_expanded_min_px` (default 180; expanded 271 px, collapsed to icons 105 px), clicks the
+  dock's double-arrow button at the right end of its top strip (`dock_toggle_point`: right - 8, top + 5), reads the
+  width back and clicks once more if it is still narrow (`dock_expand`, log `orig panel dock: <before> px … -> clicks
+  […] -> <after> px`, `STILL COLLAPSED` when it failed). An expansion is listed in the restored items
+  (`panel dock expanded (105 -> 271 px)`).
+- Every unit start logs what the check measured and restored: `unit start <unit>: orig panel dock <before> px ->
+  <after> px (expanded|NOT expanded, clicks […]|nothing restored)`.
+- `layout_after_screen_modes` (the `after` of the three `toolbox/13` steps) logs `dock_win_before` (dock window before
+  the restore), `restored`, `dock_win` (after), `dock` (client right - view right) and `dock_ref`; `dock_ref` is taken
+  only from an expanded dock, and `collapsed` is also set when the dock window stays narrow. Run 29 showed that the
+  reference leaves its dock collapsed after full screen with menus; the restore expands it before the Standard shot.
+- `--dry-run` prints `R-26 self check: ok` (dock pick and toggle point with the window rects of the run-29 probe).
+- Run 29 (20 Oct 2026, `toolbox`, `tool-path-reshape`, `xs-select-behind`): TW-167 confirmed - `00_overview_normal`
+  25.5 % and `13_view_modes_standard_normal` 25.9 % with the dock expanded on both sides. Known gap: after a mid-unit
+  restart of the reference the dock is not checked again until the next layout check (run 29: one restart at the
+  start of `xs-select-behind`, the restarted program came up with the dock expanded).
