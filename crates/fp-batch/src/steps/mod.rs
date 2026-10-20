@@ -11,6 +11,7 @@ pub mod background;
 pub mod condition; // B-4
 pub mod document; // B-3
 pub mod extra; // BA-109
+pub mod face_blur; // BA-109 ai.faceBlur
 pub mod fileops; // B-3
 pub mod files;
 pub mod format; // B-3
@@ -40,6 +41,7 @@ pub fn register_all(r: &mut StepRegistry) {
     gifopt::register(r); // BATCH-8
     vector::register(r); // BATCH-9
     extra::register(r); // BA-109
+    face_blur::register(r); // BA-109 ai.faceBlur
     fileops::register(r); // B-3
     document::register(r); // B-3
     pixel::register(r); // B-3

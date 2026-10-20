@@ -218,6 +218,11 @@ impl Mask {
         }
     }
 
+    /// True when no pixel is selected: empty bounds or every coverage value 0 (BA-109).
+    pub fn is_empty(&self) -> bool {
+        self.data.iter().all(|&v| v == 0)
+    }
+
     /// Kleinstes Rechteck der Werte > 0 (leer, wenn alles 0 ist).
     pub fn tight_bounds(&self) -> IRect {
         let w = self.width();
@@ -548,5 +553,15 @@ mod tests {
         let b = m.border(5, 1).unwrap();
         assert_eq!(b.get(10, 10), 0);
         assert!(b.get(0, 10) > 0);
+    }
+
+    #[test]
+    fn is_empty_means_no_selected_pixel() {
+        assert!(Mask::empty_at(3, 4).is_empty());
+        let mut m = Mask::new(IRect::new(0, 0, 4, 4)).unwrap();
+        assert!(m.is_empty());
+        m.set(2, 2, 1);
+        assert!(!m.is_empty());
+        assert!(!Mask::from_rect(IRect::new(0, 0, 2, 2)).unwrap().is_empty());
     }
 }

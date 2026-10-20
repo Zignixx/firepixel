@@ -19,6 +19,7 @@ pub mod cache;
 pub mod cancel;
 pub mod download;
 pub mod error;
+pub mod face; // BA-109: face detection (Haar cascade) for ai.faceBlur
 pub mod job;
 pub mod models;
 pub mod nn;

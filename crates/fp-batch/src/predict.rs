@@ -23,6 +23,7 @@ const SIZE_NEUTRAL: &[&str] = &[
     "filter.sharpen",
     "filter.blur",
     "filter.pixelate",
+    "ai.faceBlur",
     "metadata.edit",
     "metadata.set",
     "background.remove",
