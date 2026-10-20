@@ -1028,14 +1028,52 @@ pub fn import_pdf(data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
         let settings = pdf_settings();
         let cache = hayro_svg::RenderCache::new();
         let mut result: Option<ImportResult> = None;
+        // optionale Inhalte (OCG): je Gruppe eine Ebene (U-1); ohne Gruppen wie bisher eine Ebene
+        let oc = crate::pdf_layers::OcInfo::read(&pdf, data);
         for (i, page) in pdf.pages().iter().enumerate().take(64) {
+            if let Some(oc) = &oc
+                && let Some(plan) = oc.plan(page, &fp_i18n::tr!("msg-default-layer", n = "1"))
+                // misslingt ein Durchgang, wird die Seite wie bisher als eine Ebene gelesen
+                && let Ok((base, chunks)) = pdf_layer_passes(data, oc, &plan, i, opts)
+            {
+                match &mut result {
+                    None => {
+                        let mut r = base;
+                        r.format = FileFormat::Pdf;
+                        if let Some(p) = r.document.page_mut(0) {
+                            for s in p.root.layers.iter_mut() {
+                                if let fp_model::LayerSlot::Own(l) = s {
+                                    for c in Arc::make_mut(l).cels.iter_mut() {
+                                        Arc::make_mut(c).elements.clear();
+                                    }
+                                }
+                            }
+                        }
+                        fill_page_layers(&mut r.document, 0, chunks);
+                        result = Some(r);
+                    }
+                    Some(acc) => {
+                        let src = &base.document.pages[0];
+                        let idx = acc
+                            .document
+                            .add_page(&fp_i18n::tr!("msg-default-page", n = (i + 1).to_string()));
+                        if let Some(p) = acc.document.page_mut(idx) {
+                            p.canvas.width = src.canvas.width;
+                            p.canvas.height = src.canvas.height;
+                            p.root.background = src.root.background;
+                        }
+                        fill_page_layers(&mut acc.document, idx, chunks);
+                        acc.warnings.extend(base.warnings);
+                    }
+                }
+                continue;
+            }
             let svg = hayro_svg::convert(
                 page,
                 &cache,
                 &settings,
                 &hayro_svg::SvgRenderSettings::default(),
             );
-            // optionale Inhalte (OCG) kommen über hayro nicht als Gruppen an → eine Ebene (K-9, Grenze)
             let r = import_svg_with(svg.as_bytes(), opts, false)?;
             match &mut result {
                 None => {
@@ -1091,6 +1129,107 @@ pub fn import_pdf(data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
             fp_i18n::t("err-import-pdf-aborted"),
         ))
     })
+}
+
+/// Ebene einer PDF-Seite: Name (`None` ⇒ „Ebene n“), ausgeblendet, Elemente oben → unten
+/// (IDs noch aus dem Durchgang, [`fill_page_layers`] vergibt sie neu).
+type PdfLayerChunk = (Option<String>, bool, Vec<Element>);
+
+/// Je Ebene der geplanten Seite einen Durchgang rendern (U-1). Liefert das Ergebnis des ersten
+/// Durchgangs (Leinwand, Warnungen) und die Ebenen unten → oben.
+fn pdf_layer_passes(
+    data: &[u8],
+    oc: &crate::pdf_layers::OcInfo,
+    plan: &crate::pdf_layers::PagePlan,
+    page: usize,
+    opts: &ImportOptions,
+) -> Result<(ImportResult, Vec<PdfLayerChunk>)> {
+    let mut base: Option<ImportResult> = None;
+    let mut chunks = Vec::new();
+    for l in &plan.layers {
+        let bytes = oc.pass_pdf(data, plan, l.target);
+        let pdf = hayro_svg::hayro_syntax::Pdf::new(bytes)
+            .map_err(|_| ImportError::Corrupt(fp_i18n::t("err-import-pdf-unreadable")))?;
+        let p = pdf
+            .pages()
+            .get(page)
+            .ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-pdf-no-page")))?;
+        let mut settings = pdf_settings();
+        // Anmerkungen gehören zu keiner Gruppe: nur einmal, mit dem Inhalt außerhalb
+        settings.render_annotations = l.target.is_none();
+        let svg = hayro_svg::convert(
+            p,
+            &hayro_svg::RenderCache::new(),
+            &settings,
+            &hayro_svg::SvgRenderSettings::default(),
+        );
+        let mut r = import_svg_with(svg.as_bytes(), opts, false)?;
+        let els: Vec<Element> = r.document.pages[0]
+            .root
+            .layers
+            .iter()
+            .filter_map(|s| {
+                if let fp_model::LayerSlot::Own(l) = s {
+                    l.cels.first().map(|c| c.elements.clone())
+                } else {
+                    None
+                }
+            })
+            .flatten()
+            .map(|e| (*e).clone())
+            .collect();
+        chunks.push((l.name.clone(), l.hidden, els));
+        match &mut base {
+            None => base = Some(r),
+            Some(b) => b.warnings.append(&mut r.warnings),
+        }
+    }
+    let base = base.ok_or_else(|| ImportError::Corrupt(fp_i18n::t("err-import-pdf-no-page")))?;
+    Ok((base, chunks))
+}
+
+/// PDF-Ebenen (unten → oben) auf Seite `page` legen: die erste in die vorhandene Ebene, die
+/// übrigen darüber; leere entfallen, ausgeblendete Gruppen werden ausgeblendete Ebenen.
+fn fill_page_layers(doc: &mut fp_model::Document, page: usize, mut chunks: Vec<PdfLayerChunk>) {
+    chunks.retain(|(_, _, e)| !e.is_empty());
+    let mut ids = std::mem::take(&mut doc.ids);
+    if let Some(p) = doc.page_mut(page)
+        && let Some(first) = p.root.layers.iter().position(
+            |s| matches!(s, fp_model::LayerSlot::Own(l) if l.kind != fp_model::LayerKind::Web),
+        )
+    {
+        let frames = match &p.root.layers[first] {
+            fp_model::LayerSlot::Own(l) => l.cels.len().max(1),
+            _ => 1,
+        };
+        for (k, (name, hidden, els)) in chunks.into_iter().enumerate() {
+            let label = name
+                .filter(|n| !n.is_empty())
+                .unwrap_or_else(|| fp_i18n::tr!("msg-default-layer", n = (k + 1).to_string()));
+            if k > 0 {
+                let l = fp_model::Layer::new(&mut ids, &label, fp_model::LayerKind::Normal, frames);
+                p.root
+                    .layers
+                    .insert(first + k, fp_model::LayerSlot::Own(Arc::new(l)));
+            }
+            let els: Vec<Arc<Element>> = els
+                .iter()
+                .map(|e| Arc::new(reassign_ids(&mut ids, e)))
+                .collect();
+            if let Some(fp_model::LayerSlot::Own(l)) = p.root.layers.get_mut(first + k) {
+                let l = Arc::make_mut(l);
+                l.name = label;
+                if hidden {
+                    let n = l.visibility.len().max(1);
+                    l.visibility = vec![false; n];
+                }
+                if let Some(c) = l.cels.first_mut() {
+                    Arc::make_mut(c).elements.extend(els);
+                }
+            }
+        }
+    }
+    doc.ids = ids;
 }
 
 /// Element (rekursiv) mit neuen IDs aus `ids`.

@@ -32,6 +32,7 @@ pub mod isobmff;
 pub mod jpeg_ijg;
 pub mod jpeg_in;
 pub mod modern;
+mod pdf_layers;
 pub mod pe;
 pub mod png_in;
 pub mod psd;

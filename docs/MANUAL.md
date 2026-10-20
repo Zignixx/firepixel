@@ -45,6 +45,9 @@ available in German (`MANUAL.de.md`).
   WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. In PSD files, shape layers become paths
   and groups become sub-layers. Text from AI/EPS and SVG files comes in as editable text objects
   (AI area text in the same place as in the original); the file type in the dialog is "AI (*.ai;*.art)".
+  PDF files (and AI files from version 9) bring their layers (optional content groups) as layers:
+  hidden groups arrive as hidden layers, nested groups are named "Parent / Child", and content outside
+  any group goes to "Layer 1".
 - *File ▸ Save* (Ctrl+S) writes FW-PNG; all layers, pages, states, symbols and Live Filters stay
   editable.
 - The file dialogs (Open, Import, Save As, New from Template, Save as Template) start in the folder

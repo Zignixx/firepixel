@@ -47,6 +47,9 @@ ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\F
   WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. In PSD-Dateien werden Formebenen zu Pfaden
   und Gruppen zu Unterebenen. Texte aus AI-/EPS- und SVG-Dateien kommen als bearbeitbare Textobjekte
   (AI-Flächentext an derselben Stelle wie im Original); der Dateityp heißt im Dialog „AI (*.ai;*.art)“.
+  PDF-Dateien (und AI-Dateien ab Version 9) bringen ihre Ebenen (optionale Inhaltsgruppen) als Ebenen
+  mit: ausgeblendete Gruppen werden ausgeblendete Ebenen, verschachtelte heißen „Eltern / Kind“, Inhalt
+  außerhalb jeder Gruppe landet in „Ebene 1“.
 - *Datei ▸ Speichern* (Strg+S) schreibt FW-PNG; alle Ebenen, Seiten, Status, Symbole und
   Live-Filter bleiben bearbeitbar.
 - Die Datei-Dialoge (Öffnen, Importieren, Speichern unter, Neu von Vorlage, Als Vorlage speichern)
