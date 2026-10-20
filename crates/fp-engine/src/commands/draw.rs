@@ -1896,9 +1896,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 // Pipette mit gewählten Vektoren: sie bekommen die Farbe, Schritt „Füllfarbe“ bzw.
                 // „Strichfarbe“ (PAR 07/11)
                 let vectors = s.doc().map(|d| {
-                    super::selected_elements(d)
-                        .iter()
-                        .any(|(_, e)| !matches!(e.kind, fp_model::element::ElementKind::Bitmap(_)))
+                    super::any_selected(d, |e| {
+                        !matches!(e.kind, fp_model::element::ElementKind::Bitmap(_))
+                    })
                 })?;
                 if p.bool_or("applyToSelection", false)?
                     && vectors

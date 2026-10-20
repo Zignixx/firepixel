@@ -676,18 +676,24 @@ impl Session {
             Requirement::MinSelected(n) => d.is_some_and(|d| d.selection.elements.len() >= *n),
             Requirement::PixelSelection => d.is_some_and(|d| d.selection.has_pixels()),
             Requirement::SelectionOrPixels => d.is_some_and(|d| !d.selection.is_empty()),
+            // ein Durchlauf statt einer Suche je ID (PERF-1: Menüs/Werkzeugleisten fragen das je
+            // Bild), Abbruch beim ersten entscheidenden Element (BA-099)
             Requirement::AllOf(k) => d.is_some_and(|d| {
-                // ein Durchlauf statt einer Suche je ID (PERF-1: Menüs/Werkzeugleisten fragen das je Bild)
-                let els = crate::docops::elements_on_page(&d.doc, d.page, &d.selection.elements);
-                !els.is_empty()
-                    && els
-                        .iter()
-                        .all(|e| crate::command::element_is(e, *k, &d.doc))
+                let (mut any, mut all) = (false, true);
+                crate::docops::visit_on_page(&d.doc, d.page, &d.selection.elements, &mut |_, e| {
+                    any = true;
+                    all = crate::command::element_is(e, *k, &d.doc);
+                    !all
+                });
+                any && all
             }),
             Requirement::AnyOf(k) => d.is_some_and(|d| {
-                crate::docops::elements_on_page(&d.doc, d.page, &d.selection.elements)
-                    .iter()
-                    .any(|e| crate::command::element_is(e, *k, &d.doc))
+                let mut hit = false;
+                crate::docops::visit_on_page(&d.doc, d.page, &d.selection.elements, &mut |_, e| {
+                    hit = crate::command::element_is(e, *k, &d.doc);
+                    hit
+                });
+                hit
             }),
             Requirement::Clipboard => !self.clipboard.is_empty(),
             Requirement::CanUndo => d.is_some_and(|d| d.history.can_undo()),

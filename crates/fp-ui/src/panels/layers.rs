@@ -636,6 +636,29 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         }
                         continue;
                     }
+                    // BA-099: rows outside the visible part of the list only take their place
+                    // (pages with thousands of objects built every row each frame)
+                    let next =
+                        Rect::from_min_size(ui.cursor().min, vec2(ui.available_width(), erow_h));
+                    let renaming_row = rename
+                        .as_ref()
+                        .is_some_and(|k| matches!(k, RowKind::Element { id, .. } if *id == e.id));
+                    if !ui.is_rect_visible(next) && !renaming_row {
+                        ui.advance_cursor_after_rect(next);
+                        if depth == 0 {
+                            rows.push(RowInfo {
+                                kind: RowKind::Element {
+                                    id: e.id,
+                                    layer: l.id,
+                                    index: idx,
+                                    editable,
+                                },
+                                rect: next,
+                                locked: false,
+                            });
+                        }
+                        continue;
+                    }
                     let (r2, resp2) = common::row(ui, erow_h, sel);
                     let eye2 = Rect::from_min_size(r2.min, vec2(20.0, r2.height()));
                     let lock2 = Rect::from_min_size(

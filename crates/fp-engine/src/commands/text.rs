@@ -1,7 +1,7 @@
 //! Menü „Text“: Schrift, Größe, Stil, Ausrichtung (`JSTi`, 09 §3.5), Text an/in Pfad, Richtung,
 //! sowie Textinhalt und -attribute für Texteditor und Eigenschaften-Inspektor.
 
-use super::{DOC, sel_err, selected_elements, target_ids, with_doc};
+use super::{DOC, any_selected, sel_err, selected_elements, target_ids, with_doc};
 use crate::command::{
     CommandOutput, CommandRegistry, ObjectKind, ParamKind, Params, Requirement, cmd,
 };
@@ -82,11 +82,8 @@ fn set_attr(t: &mut TextElem, f: &dyn Fn(&mut TextAttrs)) {
 
 /// Ist ein Text ausgewählt?
 fn has_text(s: &Session) -> bool {
-    s.active().is_some_and(|d| {
-        selected_elements(d)
-            .iter()
-            .any(|(_, e)| matches!(e.kind, ElementKind::Text(_)))
-    })
+    s.active()
+        .is_some_and(|d| any_selected(d, |e| matches!(e.kind, ElementKind::Text(_))))
 }
 
 /// Do all selected texts carry the style on every run? `false` without selected text.
@@ -114,9 +111,10 @@ fn all_texts_have(s: &Session, get: fn(&TextAttrs) -> Option<bool>) -> bool {
 /// Ist ein Text auf Pfad ausgewählt?
 fn has_text_on_path(s: &Session) -> bool {
     s.active().is_some_and(|d| {
-        selected_elements(d)
-            .iter()
-            .any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.on_path.is_some()))
+        any_selected(
+            d,
+            |e| matches!(&e.kind, ElementKind::Text(t) if t.on_path.is_some()),
+        )
     })
 }
 
@@ -709,7 +707,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 .requires(DOC)
                 .checked(move |s| {
                     if has_text(s) {
-                        s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.resolved_runs().first().and_then(|(a, _)| a.alignment).unwrap_or(0) == v)))
+                        s.active().is_some_and(|d| any_selected(d, |e| matches!(&e.kind, ElementKind::Text(t) if t.resolved_runs().first().and_then(|(a, _)| a.alignment).unwrap_or(0) == v)))
                     } else {
                         let ori = s.prefs.get_int("Text_Orientation", 0);
                         let vertical = if ori == 1 || ori == 3 { 0x10 } else { 0 };
@@ -809,7 +807,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 .requires(TEXT_SEL)
                 .available(has_text_on_path)
                 .checked(move |s| {
-                    s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Text(t) if t.on_path.as_ref().and_then(|o| o.mode) == Some(mode))))
+                    s.active().is_some_and(|d| any_selected(d, |e| matches!(&e.kind, ElementKind::Text(t) if t.on_path.as_ref().and_then(|o| o.mode) == Some(mode))))
                 })
                 .run(move |s, _| {
                     edit_texts(s, move |t| {

@@ -180,6 +180,54 @@ pub fn find_many_on_page(
     ids.iter().map(|id| found.get(id).cloned()).collect()
 }
 
+/// Visits the elements `ids` of a page (each at the address [`find_on_page`] gives) without
+/// collecting or sorting them; `f` returns `true` to stop (BA-099: early exit of menu checks with
+/// thousands of selected objects). Order: own layers in stacking walk order, then the rest.
+pub fn visit_on_page(
+    doc: &Document,
+    page: usize,
+    ids: &[ElementId],
+    f: &mut dyn FnMut(&ElementPath, &Arc<Element>) -> bool,
+) {
+    if ids.len() < 4 {
+        for id in ids {
+            if let Some(p) = find_on_page(doc, page, *id)
+                && let Some(e) = doc.element_at(&p)
+                && f(&p, e)
+            {
+                return;
+            }
+        }
+        return;
+    }
+    let Some(pg) = doc.pages.get(page) else {
+        return;
+    };
+    let mut wanted: std::collections::HashSet<ElementId> = ids.iter().copied().collect();
+    let mut stop = false;
+    walk_root(&pg.root, RootRef::Page(page), &mut |_, path, e| {
+        if !stop && wanted.remove(&e.id) {
+            stop = f(path, e);
+        }
+    });
+    if stop || wanted.is_empty() {
+        return;
+    }
+    // not on the own layers (shared layers): the general lookup
+    let rest: Vec<ElementId> = ids
+        .iter()
+        .copied()
+        .filter(|id| wanted.contains(id))
+        .collect();
+    for p in find_many_on_page(doc, page, &rest).into_iter().flatten() {
+        if let Some(e) = doc.element_at(&p)
+            && f(&p, e)
+        {
+            return;
+        }
+    }
+}
+
 /// Elemente vieler IDs einer Seite in einem Durchlauf, in der Reihenfolge von `ids`; fehlende
 /// fallen weg (wie `ids.iter().filter_map(|id| element_on_page(…))`, PERF-1).
 pub fn elements_on_page(doc: &Document, page: usize, ids: &[ElementId]) -> Vec<Arc<Element>> {
@@ -316,6 +364,18 @@ pub fn edit_at<R>(
     let e = doc.element_at_mut(path)?;
     e.cache = None;
     Some(f(e))
+}
+
+/// Verschiebt ein Element um (dx, dy) wie `edit_at(…, translate_element)`, behält aber seinen
+/// gehaltenen Render-Cache (er wird mitverschoben, BA-099: `edit_at` verwarf ihn vorher, das
+/// Verschieben des Caches in [`translate_element`] lief dadurch ins Leere).
+pub fn translate_at(doc: &mut Document, path: &ElementPath, dx: f32, dy: f32) -> Option<()> {
+    if let Some((list, idx)) = parent_list_mut(doc, path) {
+        translate_element(Arc::make_mut(list.get_mut(idx)?), dx, dy);
+        return Some(());
+    }
+    translate_element(doc.element_at_mut(path)?, dx, dy);
+    Some(())
 }
 
 /// Ändert ein Element per ID auf einer Seite.

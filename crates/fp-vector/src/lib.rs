@@ -68,3 +68,10 @@ pub use render::{
     Missing, PathLayer, path_bounds, path_bounds_with_stroke, render_bounds, render_path,
     render_path_layer, render_path_pixels,
 };
+
+/// Least number of rows of width `w` per parallel task: small paths are rasterized on the calling
+/// thread (thousands of small objects otherwise paid the thread hand-off several times each,
+/// BA-099). Rows are independent, so the split does not change any pixel.
+pub(crate) fn par_rows(w: usize) -> usize {
+    (1usize << 14).div_ceil(w.max(1)).max(1)
+}

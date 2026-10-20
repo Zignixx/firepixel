@@ -1,7 +1,8 @@
 //! Menü „Auswählen“ sowie die Auswahlbefehle der Werkzeuge (Objekte, Pfadpunkte, Pixel).
 
 use super::{
-    DOC, SEL, canvas_rect, insert_new, sel_err, selected_elements, shape_attrs, take_ids, with_doc,
+    DOC, SEL, any_selected, canvas_rect, insert_new, sel_err, selected_elements, shape_attrs,
+    take_ids, with_doc,
 };
 use crate::command::{CommandOutput, CommandRegistry, ParamKind, Requirement, cmd};
 use crate::docops;
@@ -532,11 +533,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("select.subselect")
             .requires(SEL)
             .available(|s| {
-                s.active().is_some_and(|d| {
-                    selected_elements(d)
-                        .iter()
-                        .any(|(_, e)| !e.children().is_empty())
-                })
+                s.active()
+                    .is_some_and(|d| any_selected(d, |e| !e.children().is_empty()))
             })
             .run(|s, _| {
                 with_doc(s, |d| {

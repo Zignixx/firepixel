@@ -410,7 +410,7 @@ pub(crate) fn move_selection(
         let paths = docops::find_many_on_page(&d.doc, page, &ids);
         let doc = Arc::make_mut(&mut d.doc);
         for path in paths.iter().flatten() {
-            docops::edit_at(doc, path, |e| docops::translate_element(e, dx, dy));
+            docops::translate_at(doc, path, dx, dy);
         }
         if let Some(m) = &mut d.selection.pixels
             && ids.is_empty()

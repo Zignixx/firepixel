@@ -6,7 +6,8 @@ use super::edit::{
 };
 use super::select::mask_to_data;
 use super::{
-    DOC, SEL, canvas_rect, ids_json, sel_err, selected_elements, selected_paths, take_ids, with_doc,
+    DOC, SEL, any_selected, canvas_rect, ids_json, sel_err, selected_elements, selected_paths,
+    take_ids, with_doc,
 };
 use crate::command::{
     CommandOutput, CommandRegistry, ObjectKind, ParamKind, Params, Requirement, cmd,
@@ -373,7 +374,9 @@ fn align(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
         }
         let doc = Arc::make_mut(&mut d.doc);
         for (id, dx, dy) in moves {
-            docops::edit_by_id(doc, page, id, |e| docops::translate_element(e, dx, dy));
+            if let Some(path) = docops::find_on_page(doc, page, id) {
+                docops::translate_at(doc, &path, dx, dy);
+            }
         }
         Ok(CommandOutput::doc())
     })
@@ -1730,7 +1733,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::MaskGroup)])
             .checked(|s| {
                 s.active().is_some_and(|d| {
-                    super::selected_elements(d).iter().any(|(_, e)| matches!(&e.kind, ElementKind::Group(g) if g.kind.is_mask() && !g.mask_flags.enabled))
+                    super::any_selected(d, |e| matches!(&e.kind, ElementKind::Group(g) if g.kind.is_mask() && !g.mask_flags.enabled))
                 })
             })
             .run(|s, _| {
@@ -2223,15 +2226,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("modify.transform.removeTransformations")
             .requires(SEL)
             .available(|s| {
-                s.active().is_some_and(|d| {
-                    selected_elements(d)
-                        .iter()
-                        .any(|(_, e)| !matches!(e.kind, ElementKind::Bitmap(_)))
-                })
+                s.active()
+                    .is_some_and(|d| any_selected(d, |e| !matches!(e.kind, ElementKind::Bitmap(_))))
             })
             .menu_when(|s| {
                 s.active().is_some_and(|d| {
-                    selected_elements(d).iter().any(|(_, e)| {
+                    any_selected(d, |e| {
                         !matches!(
                             e.kind,
                             ElementKind::Bitmap(_)
@@ -2436,7 +2436,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .requires(SEL)
             .available(|s| {
                 s.active().is_some_and(|d| {
-                    selected_elements(d).iter().any(|(_, e)| {
+                    any_selected(d, |e| {
                         matches!(
                             e.kind,
                             ElementKind::Path(_)
@@ -2635,7 +2635,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 .requires(SEL)
                 .available(|s| {
                     s.active().is_some_and(|d| {
-                        selected_elements(d).iter().any(|(_, e)| {
+                        any_selected(d, |e| {
                             matches!(
                                 &e.kind,
                                 ElementKind::Text(_) | ElementKind::CompoundShape(_)
@@ -2653,7 +2653,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 )
                 .checked(move |s| {
                     s.active().is_some_and(|d| {
-                        super::selected_elements(d).iter().any(|(_, e)| {
+                        super::any_selected(d, |e| {
                             docops::path_attrs_of(e).and_then(|a| a.fill.as_ref().map(|f| f.edge))
                                 == Some(edge)
                         })
@@ -2686,7 +2686,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .requires(SEL)
             .available(|s| {
                 s.active().is_some_and(|d| {
-                    selected_elements(d).iter().any(|(_, e)| {
+                    any_selected(d, |e| {
                         matches!(e.kind, ElementKind::Path(_) | ElementKind::Group(_))
                     })
                 })
@@ -2708,7 +2708,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             }),
     );
     // Gruppen auflösen; Rechteck-Grundformen werden wie im Original zu freien Pfaden
-    r.add(cmd("modify.ungroup").requires(SEL).available(|s| s.active().is_some_and(|d| selected_elements(d).iter().any(|(_, e)| matches!(e.kind, ElementKind::Group(_)) || matches!(&e.kind, ElementKind::Path(p) if p.primitive.is_some())))).run(|s, _| {
+    r.add(cmd("modify.ungroup").requires(SEL).available(|s| s.active().is_some_and(|d| any_selected(d, |e| matches!(e.kind, ElementKind::Group(_)) || matches!(&e.kind, ElementKind::Path(p) if p.primitive.is_some())))).run(|s, _| {
         with_doc(s, |d| {
             let page = d.page;
             let prims: Vec<ElementId> = selected_elements(d).into_iter().filter(|(_, e)| matches!(&e.kind, ElementKind::Path(p) if p.primitive.is_some())).map(|(_, e)| e.id).collect();
@@ -2722,7 +2722,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     });
                 }
             }
-            let has_groups = selected_elements(d).iter().any(|(_, e)| matches!(e.kind, ElementKind::Group(_)));
+            let has_groups = any_selected(d, |e| matches!(e.kind, ElementKind::Group(_)));
             if !has_groups {
                 return Ok(CommandOutput::doc_with(json!({"ids": ids_json(&prims)})));
             }

@@ -5055,8 +5055,10 @@ pub fn register(r: &mut CommandRegistry) {
                     }
                 }
                 for (id, dx, dy) in moves {
-                    if dx != 0.0 || dy != 0.0 {
-                        docops::edit_by_id(doc, page, id, |e| docops::translate_element(e, dx, dy));
+                    if (dx != 0.0 || dy != 0.0)
+                        && let Some(path) = docops::find_on_page(doc, page, id)
+                    {
+                        docops::translate_at(doc, &path, dx, dy);
                     }
                 }
                 for (id, from, to) in scales {

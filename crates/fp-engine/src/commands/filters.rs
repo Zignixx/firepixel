@@ -292,9 +292,7 @@ pub fn live_effect(f: &Filter) -> Effect {
 fn has_vectors(s: &Session) -> bool {
     s.active().is_some_and(|d| {
         !d.selection.has_pixels()
-            && super::selected_elements(d)
-                .iter()
-                .any(|(_, e)| !matches!(e.kind, ElementKind::Bitmap(_)))
+            && super::any_selected(d, |e| !matches!(e.kind, ElementKind::Bitmap(_)))
     })
 }
 

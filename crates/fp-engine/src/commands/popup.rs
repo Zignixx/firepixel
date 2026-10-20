@@ -5,7 +5,7 @@
 //! `fp_model::PopupMenu` (snake_case, z. B. `font`, `size`, `vertical`, `text_up_color`).
 //! Ohne Parameter liefert „Bearbeiten“ das vorhandene Menü.
 
-use super::{selected_elements, with_doc};
+use super::{any_selected, selected_elements, with_doc};
 use crate::command::{
     CommandOutput, CommandRegistry, ObjectKind, ParamKind, Params, Requirement, cmd,
 };
@@ -27,7 +27,7 @@ const WEB_SEL: &[Requirement] = &[
 /// wie im Original (PM-7: ohne Popupmenü grau).
 pub(super) fn has_popup_menu(s: &crate::session::Session) -> bool {
     s.active().is_some_and(|d| {
-        selected_elements(d).iter().any(|(_, e)| match &e.kind {
+        any_selected(d, |e| match &e.kind {
             ElementKind::WebObject(w) => w.behaviors.as_ref().is_some_and(|b| {
                 b.items
                     .iter()

@@ -75,6 +75,7 @@ pub fn fill_layer(path: &VectorPath, rect: IRect) -> Result<Option<Vec<[u8; 4]>>
     }
     out.par_chunks_mut(w)
         .zip(m.data.par_chunks(w))
+        .with_min_len(crate::par_rows(w))
         .enumerate()
         .for_each(|(j, (orow, mrow))| {
             let y = rect.top + j as i32;

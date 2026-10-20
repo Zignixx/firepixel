@@ -231,68 +231,72 @@ pub fn coverage_xor(polys: &[&[Vec2]], rect: IRect) -> Coverage {
     let b = RowBuckets::new(polys, rect.top, h);
     let x0s = rect.left as i64 * SUBSAMPLES;
     let ws = w as i64 * SUBSAMPLES;
-    cov.data.par_chunks_mut(w).enumerate().for_each(|(j, out)| {
-        let row = &b.rows[j];
-        if row.is_empty() {
-            return;
-        }
-        let mut contours: Vec<u32> = row.iter().map(|&i| b.edges[i as usize].0).collect();
-        contours.sort_unstable();
-        contours.dedup();
-        let mut m = vec![0u8; w];
-        let mut xs = Vec::new();
-        for &c in &contours {
-            let (mut lo, mut hi) = (usize::MAX, 0usize);
-            for sr in 0..SUBSAMPLES {
-                let y = sub_y(rect.top, j, sr);
-                crossings(&b, row, y, Some(c), &mut xs);
-                let full: u8 = if sr == 0 { 63 } else { 64 };
-                let dec: u8 = if sr == 0 { 1 } else { 0 };
-                let mut k = 0;
-                while k + 1 < xs.len() {
-                    let mut s = fw_round(xs[k].0 * SUBSAMPLES as f64) - x0s;
-                    let mut e = fw_round(xs[k + 1].0 * SUBSAMPLES as f64) - x0s;
-                    k += 2;
-                    if s < 0 {
-                        s = 0;
-                    }
-                    if e > ws {
-                        e = ws;
-                    }
-                    if s >= ws || s > e {
-                        continue;
-                    }
-                    let (mut ps, pe) = ((s >> 2) as usize, (e >> 2) as usize);
-                    lo = lo.min(ps);
-                    hi = hi.max(pe.min(w - 1));
-                    if ps == pe {
-                        let v = ((e - s) * 16) as u32;
-                        if v != 0 {
-                            let add = (v - dec as u32).min(full as u32) as u8;
-                            m[ps] = m[ps].wrapping_add(add);
+    cov.data
+        .par_chunks_mut(w)
+        .with_min_len(crate::par_rows(w))
+        .enumerate()
+        .for_each(|(j, out)| {
+            let row = &b.rows[j];
+            if row.is_empty() {
+                return;
+            }
+            let mut contours: Vec<u32> = row.iter().map(|&i| b.edges[i as usize].0).collect();
+            contours.sort_unstable();
+            contours.dedup();
+            let mut m = vec![0u8; w];
+            let mut xs = Vec::new();
+            for &c in &contours {
+                let (mut lo, mut hi) = (usize::MAX, 0usize);
+                for sr in 0..SUBSAMPLES {
+                    let y = sub_y(rect.top, j, sr);
+                    crossings(&b, row, y, Some(c), &mut xs);
+                    let full: u8 = if sr == 0 { 63 } else { 64 };
+                    let dec: u8 = if sr == 0 { 1 } else { 0 };
+                    let mut k = 0;
+                    while k + 1 < xs.len() {
+                        let mut s = fw_round(xs[k].0 * SUBSAMPLES as f64) - x0s;
+                        let mut e = fw_round(xs[k + 1].0 * SUBSAMPLES as f64) - x0s;
+                        k += 2;
+                        if s < 0 {
+                            s = 0;
                         }
-                        continue;
+                        if e > ws {
+                            e = ws;
+                        }
+                        if s >= ws || s > e {
+                            continue;
+                        }
+                        let (mut ps, pe) = ((s >> 2) as usize, (e >> 2) as usize);
+                        lo = lo.min(ps);
+                        hi = hi.max(pe.min(w - 1));
+                        if ps == pe {
+                            let v = ((e - s) * 16) as u32;
+                            if v != 0 {
+                                let add = (v - dec as u32).min(full as u32) as u8;
+                                m[ps] = m[ps].wrapping_add(add);
+                            }
+                            continue;
+                        }
+                        if s & 3 != 0 {
+                            m[ps] = m[ps].wrapping_add(((4 - (s & 3)) * 16) as u8 - dec);
+                            ps += 1;
+                        }
+                        for v in &mut m[ps..pe] {
+                            *v = v.wrapping_add(full);
+                        }
+                        if e & 3 != 0 {
+                            m[pe] = m[pe].wrapping_add(((e & 3) * 16) as u8 - dec);
+                        }
                     }
-                    if s & 3 != 0 {
-                        m[ps] = m[ps].wrapping_add(((4 - (s & 3)) * 16) as u8 - dec);
-                        ps += 1;
-                    }
-                    for v in &mut m[ps..pe] {
-                        *v = v.wrapping_add(full);
-                    }
-                    if e & 3 != 0 {
-                        m[pe] = m[pe].wrapping_add(((e & 3) * 16) as u8 - dec);
+                }
+                if lo <= hi {
+                    for i in lo..=hi {
+                        out[i] ^= m[i];
+                        m[i] = 0;
                     }
                 }
             }
-            if lo <= hi {
-                for i in lo..=hi {
-                    out[i] ^= m[i];
-                    m[i] = 0;
-                }
-            }
-        }
-    });
+        });
     cov
 }
 
@@ -306,52 +310,56 @@ pub fn coverage_winding(polys: &[&[Vec2]], rect: IRect) -> Coverage {
     let b = RowBuckets::new(polys, rect.top, h);
     let x0s = rect.left as i64 * SUBSAMPLES;
     let x1s = (rect.left as i64 + w as i64) * SUBSAMPLES;
-    cov.data.par_chunks_mut(w).enumerate().for_each(|(j, out)| {
-        let row = &b.rows[j];
-        if row.is_empty() {
-            return;
-        }
-        let mut xs = Vec::new();
-        for sr in 0..SUBSAMPLES {
-            let y = sub_y(rect.top, j, sr);
-            crossings(&b, row, y, None, &mut xs);
-            let full: u8 = if sr == 0 { 63 } else { 64 };
-            let n = xs.len();
-            let mut i = 0;
-            while i < n {
-                let (xa, mut wn) = xs[i];
-                i += 1;
-                let mut xb = xa;
+    cov.data
+        .par_chunks_mut(w)
+        .with_min_len(crate::par_rows(w))
+        .enumerate()
+        .for_each(|(j, out)| {
+            let row = &b.rows[j];
+            if row.is_empty() {
+                return;
+            }
+            let mut xs = Vec::new();
+            for sr in 0..SUBSAMPLES {
+                let y = sub_y(rect.top, j, sr);
+                crossings(&b, row, y, None, &mut xs);
+                let full: u8 = if sr == 0 { 63 } else { 64 };
+                let n = xs.len();
+                let mut i = 0;
                 while i < n {
-                    let (x, dd) = xs[i];
-                    xb = x;
-                    wn += dd;
+                    let (xa, mut wn) = xs[i];
                     i += 1;
-                    if wn == 0 {
-                        break;
+                    let mut xb = xa;
+                    while i < n {
+                        let (x, dd) = xs[i];
+                        xb = x;
+                        wn += dd;
+                        i += 1;
+                        if wn == 0 {
+                            break;
+                        }
                     }
-                }
-                let s = fw_round(xa * SUBSAMPLES as f64).max(x0s) - x0s;
-                let mut e = fw_round(xb * SUBSAMPLES as f64).min(x1s) - x0s;
-                if e < s {
-                    e = s;
-                }
-                let (mut ps, pe) = ((s >> 2) as usize, (e >> 2) as usize);
-                if ps < pe {
-                    if s & 3 != 0 {
-                        out[ps] = out[ps].wrapping_add(((4 - (s & 3)) * 16) as u8);
-                        ps += 1;
+                    let s = fw_round(xa * SUBSAMPLES as f64).max(x0s) - x0s;
+                    let mut e = fw_round(xb * SUBSAMPLES as f64).min(x1s) - x0s;
+                    if e < s {
+                        e = s;
                     }
-                    for v in &mut out[ps..pe] {
-                        *v = v.wrapping_add(full);
-                    }
-                    if e & 3 != 0 {
-                        out[pe] = out[pe].wrapping_add(((e & 3) * 16) as u8);
+                    let (mut ps, pe) = ((s >> 2) as usize, (e >> 2) as usize);
+                    if ps < pe {
+                        if s & 3 != 0 {
+                            out[ps] = out[ps].wrapping_add(((4 - (s & 3)) * 16) as u8);
+                            ps += 1;
+                        }
+                        for v in &mut out[ps..pe] {
+                            *v = v.wrapping_add(full);
+                        }
+                        if e & 3 != 0 {
+                            out[pe] = out[pe].wrapping_add(((e & 3) * 16) as u8);
+                        }
                     }
                 }
             }
-        }
-    });
+        });
     cov
 }
 
@@ -392,94 +400,98 @@ pub fn coverage_agm(polys: &[&[Vec2]], rect: IRect, nonzero: bool) -> Coverage {
     vys.dedup();
     let ws = w * SUBSAMPLES as usize;
     let x0 = rect.left as f64;
-    cov.data.par_chunks_mut(w).enumerate().for_each(|(j, out)| {
-        let row = &b.rows[j];
-        if row.is_empty() {
-            return;
-        }
-        let mut cnt = vec![0u32; w];
-        let mut diff = vec![0i32; ws + 1];
-        let mut xs = Vec::new();
-        let mut ivs: Vec<(f64, f64)> = Vec::new();
-        let mut ys: Vec<f64> = Vec::new();
-        for sr in 0..SUBSAMPLES as usize {
-            let jj = j * SUBSAMPLES as usize + sr;
-            let y0 = rect.top as f64 + jj as f64 / SUBSAMPLES as f64;
-            let y1 = y0 + 1.0 / SUBSAMPLES as f64;
-            ivs.clear();
-            let mut band: Vec<u32> = Vec::new();
-            for &i in row {
-                let e = &b.edges[i as usize].1;
-                if e.yb <= y0 || e.ya >= y1 {
+    cov.data
+        .par_chunks_mut(w)
+        .with_min_len(crate::par_rows(w))
+        .enumerate()
+        .for_each(|(j, out)| {
+            let row = &b.rows[j];
+            if row.is_empty() {
+                return;
+            }
+            let mut cnt = vec![0u32; w];
+            let mut diff = vec![0i32; ws + 1];
+            let mut xs = Vec::new();
+            let mut ivs: Vec<(f64, f64)> = Vec::new();
+            let mut ys: Vec<f64> = Vec::new();
+            for sr in 0..SUBSAMPLES as usize {
+                let jj = j * SUBSAMPLES as usize + sr;
+                let y0 = rect.top as f64 + jj as f64 / SUBSAMPLES as f64;
+                let y1 = y0 + 1.0 / SUBSAMPLES as f64;
+                ivs.clear();
+                let mut band: Vec<u32> = Vec::new();
+                for &i in row {
+                    let e = &b.edges[i as usize].1;
+                    if e.yb <= y0 || e.ya >= y1 {
+                        continue;
+                    }
+                    band.push(i);
+                    let ta = e.ya.max(y0);
+                    let tb = e.yb.min(y1);
+                    let xa = e.xa + (ta - e.ya) * e.k;
+                    let xb = e.xa + (tb - e.ya) * e.k;
+                    ivs.push((xa.min(xb), xa.max(xb)));
+                }
+                if band.is_empty() {
                     continue;
                 }
-                band.push(i);
-                let ta = e.ya.max(y0);
-                let tb = e.yb.min(y1);
-                let xa = e.xa + (ta - e.ya) * e.k;
-                let xb = e.xa + (tb - e.ya) * e.k;
-                ivs.push((xa.min(xb), xa.max(xb)));
-            }
-            if band.is_empty() {
-                continue;
-            }
-            ys.clear();
-            ys.push(y0 + EPS);
-            ys.push(y1 - EPS);
-            let lo = vys.partition_point(|&v| v <= y0);
-            let hi = vys.partition_point(|&v| v < y1);
-            for &vy in vys.get(lo..hi.max(lo)).unwrap_or(&[]) {
-                ys.push(vy - EPS);
-                ys.push(vy + EPS);
-            }
-            for &y in &ys {
-                crossings(&b, &band, y, None, &mut xs);
-                if nonzero {
-                    let mut wn = 0;
-                    let mut st = 0.0;
-                    for &(x, dd) in &xs {
-                        if wn == 0 {
-                            st = x;
+                ys.clear();
+                ys.push(y0 + EPS);
+                ys.push(y1 - EPS);
+                let lo = vys.partition_point(|&v| v <= y0);
+                let hi = vys.partition_point(|&v| v < y1);
+                for &vy in vys.get(lo..hi.max(lo)).unwrap_or(&[]) {
+                    ys.push(vy - EPS);
+                    ys.push(vy + EPS);
+                }
+                for &y in &ys {
+                    crossings(&b, &band, y, None, &mut xs);
+                    if nonzero {
+                        let mut wn = 0;
+                        let mut st = 0.0;
+                        for &(x, dd) in &xs {
+                            if wn == 0 {
+                                st = x;
+                            }
+                            wn += dd;
+                            if wn == 0 {
+                                ivs.push((st, x));
+                            }
                         }
-                        wn += dd;
-                        if wn == 0 {
-                            ivs.push((st, x));
+                    } else {
+                        let mut k = 0;
+                        while k + 1 < xs.len() {
+                            ivs.push((xs[k].0, xs[k + 1].0));
+                            k += 2;
                         }
                     }
-                } else {
-                    let mut k = 0;
-                    while k + 1 < xs.len() {
-                        ivs.push((xs[k].0, xs[k + 1].0));
-                        k += 2;
+                }
+                diff.iter_mut().for_each(|v| *v = 0);
+                let mut any = false;
+                for &(a, bb) in &ivs {
+                    let s0 = sat_i64(((a - x0) * SUBSAMPLES as f64).floor()).max(0);
+                    let t = sat_i64(((bb - x0) * SUBSAMPLES as f64).ceil()).min(ws as i64);
+                    if t > s0 {
+                        diff[s0 as usize] += 1;
+                        diff[t as usize] -= 1;
+                        any = true;
+                    }
+                }
+                if !any {
+                    continue;
+                }
+                let mut run = 0;
+                for (c, d) in diff.iter().take(ws).enumerate() {
+                    run += d;
+                    if run > 0 {
+                        cnt[c >> 2] += 1;
                     }
                 }
             }
-            diff.iter_mut().for_each(|v| *v = 0);
-            let mut any = false;
-            for &(a, bb) in &ivs {
-                let s0 = sat_i64(((a - x0) * SUBSAMPLES as f64).floor()).max(0);
-                let t = sat_i64(((bb - x0) * SUBSAMPLES as f64).ceil()).min(ws as i64);
-                if t > s0 {
-                    diff[s0 as usize] += 1;
-                    diff[t as usize] -= 1;
-                    any = true;
-                }
+            for (o, c) in out.iter_mut().zip(&cnt) {
+                *o = (16 * c).min(255) as u8;
             }
-            if !any {
-                continue;
-            }
-            let mut run = 0;
-            for (c, d) in diff.iter().take(ws).enumerate() {
-                run += d;
-                if run > 0 {
-                    cnt[c >> 2] += 1;
-                }
-            }
-        }
-        for (o, c) in out.iter_mut().zip(&cnt) {
-            *o = (16 * c).min(255) as u8;
-        }
-    });
+        });
     cov
 }
 
@@ -492,42 +504,46 @@ pub fn coverage_hard(polys: &[&[Vec2]], rect: IRect, nonzero: bool) -> Coverage 
     }
     let b = RowBuckets::new(polys, rect.top, h);
     let x0 = rect.left as f64;
-    cov.data.par_chunks_mut(w).enumerate().for_each(|(j, out)| {
-        let row = &b.rows[j];
-        if row.is_empty() {
-            return;
-        }
-        let y = (rect.top as i64 + j as i64) as f64 + 0.5;
-        let mut xs = Vec::new();
-        crossings(&b, row, y, None, &mut xs);
-        let mut ivs = Vec::new();
-        if nonzero {
-            let mut wn = 0;
-            let mut st = 0.0;
-            for &(x, d) in &xs {
-                if wn == 0 {
-                    st = x;
+    cov.data
+        .par_chunks_mut(w)
+        .with_min_len(crate::par_rows(w))
+        .enumerate()
+        .for_each(|(j, out)| {
+            let row = &b.rows[j];
+            if row.is_empty() {
+                return;
+            }
+            let y = (rect.top as i64 + j as i64) as f64 + 0.5;
+            let mut xs = Vec::new();
+            crossings(&b, row, y, None, &mut xs);
+            let mut ivs = Vec::new();
+            if nonzero {
+                let mut wn = 0;
+                let mut st = 0.0;
+                for &(x, d) in &xs {
+                    if wn == 0 {
+                        st = x;
+                    }
+                    wn += d;
+                    if wn == 0 {
+                        ivs.push((st, x));
+                    }
                 }
-                wn += d;
-                if wn == 0 {
-                    ivs.push((st, x));
+            } else {
+                let mut k = 0;
+                while k + 1 < xs.len() {
+                    ivs.push((xs[k].0, xs[k + 1].0));
+                    k += 2;
                 }
             }
-        } else {
-            let mut k = 0;
-            while k + 1 < xs.len() {
-                ivs.push((xs[k].0, xs[k + 1].0));
-                k += 2;
+            for (a, bb) in ivs {
+                let s = sat_i64((a - x0 - 0.5).ceil()).max(0);
+                let e = sat_i64((bb - x0 - 0.5).ceil()).min(w as i64);
+                if e > s {
+                    out[s as usize..e as usize].fill(255);
+                }
             }
-        }
-        for (a, bb) in ivs {
-            let s = sat_i64((a - x0 - 0.5).ceil()).max(0);
-            let e = sat_i64((bb - x0 - 0.5).ceil()).min(w as i64);
-            if e > s {
-                out[s as usize..e as usize].fill(255);
-            }
-        }
-    });
+        });
     cov
 }
 

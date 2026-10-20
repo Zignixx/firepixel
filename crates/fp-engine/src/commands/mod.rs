@@ -114,6 +114,18 @@ pub(crate) fn selected_elements(d: &DocumentState) -> Vec<(ElementPath, Arc<Elem
         .collect()
 }
 
+/// Is any selected (unlocked) element `pred`? Same answer as
+/// `any_selected(d, |e| pred(e))`, without collecting, sorting and cloning
+/// the whole selection (BA-099: menu checks with thousands of selected objects).
+pub(crate) fn any_selected(d: &DocumentState, pred: impl Fn(&Element) -> bool) -> bool {
+    let mut hit = false;
+    docops::visit_on_page(&d.doc, d.page, &d.selection.elements, &mut |p, e| {
+        hit = pred(e) && !docops::is_locked(&d.doc, d.page, p);
+        hit
+    });
+    hit
+}
+
 /// Fehler „keine passende Auswahl“; `key` = Schlüssel `err-sel-…` bzw. `err-req-…`.
 pub(crate) fn sel_err(key: &str) -> EngineError {
     EngineError::Selection(fp_i18n::t(key))
