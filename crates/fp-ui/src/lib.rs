@@ -258,6 +258,8 @@ impl FirepixelApp {
         }
         // Klick bei offenem Popup gehört dem Popup, nicht der Leinwand (TW-52)
         canvas::note_popup_press(&ctx);
+        // the inspector sets it again while a pop-up slider holds a pending value (FB-09/FB-10)
+        st.inspector_preview = None;
         input::handle(&ctx, st);
         // KI-Steuerkanal (MCP-Brücke, AU): Aufträge im UI-Thread abarbeiten
         crate::bridge::frame(&ctx, st);

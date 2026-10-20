@@ -95,6 +95,9 @@ pub struct AppState {
     pub status: Option<(String, f64)>,
     /// Synchron rendern (Tests, Bildschirmfotos).
     pub sync_render: bool,
+    /// Live preview of a pending inspector slider value on the canvas (FB-09/FB-10); reset at the
+    /// start of every frame, set by the inspector while a slider holds a pending value.
+    pub inspector_preview: Option<crate::inspector::preview::InspectorPreview>,
     /// Theme muss neu auf egui angewendet werden.
     pub theme_dirty: bool,
     /// Beenden bestätigt (alle Rückfragen erledigt).
@@ -152,6 +155,7 @@ impl AppState {
             actions: Vec::new(),
             status: None,
             sync_render: false,
+            inspector_preview: None,
             theme_dirty: true,
             quit_confirmed: false,
             close_window: false,

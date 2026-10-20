@@ -11,6 +11,7 @@ use super::QuadrantRegistry;
 use super::fields::{self, Dl};
 use super::glyphs::Glyph;
 use super::popups::{self, ColorChoice};
+use super::preview::{InspectorPreview, PreviewValue};
 use super::texts::{self, refs, t, tl};
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
@@ -1454,6 +1455,15 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
     ) {
         apply_stroke(ui, st, tgt, json!({"width": v}));
     }
+    // the tip preview beside "Edge" follows the dragged size (as in the reference); on the canvas
+    // a live preview of it (FB-10, Firepixel enhancement)
+    let live_w = fields::slider_live(ui.ctx(), id.with("w")).filter(|_| en && has);
+    if tgt == Target::Selection
+        && let Some(v) = live_w
+    {
+        st.inspector_preview = InspectorPreview::for_selection(st, PreviewValue::StrokeWidth(v));
+    }
+    let width = live_w.map(|v| v.round() as i32).unwrap_or(width);
     let saved = saved_brushes(st);
     let cat_r = d.r(64.0, 0.0, 65.0, 14.0);
     let choice = popups::stroke_category(
@@ -1751,6 +1761,10 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
         en,
     ) {
         st.run("element.setOpacity", json!({"opacity": v}));
+    }
+    // live preview of the dragged value on the canvas (FB-09, Firepixel enhancement)
+    if en && let Some(v) = fields::slider_live(ui.ctx(), "pi-opacity") {
+        st.inspector_preview = InspectorPreview::for_selection(st, PreviewValue::Opacity(v));
     }
     // Objekt-Liste: Namen wie im Original („Sprenkeln“ … „Radieren“, PAR 17/07b)
     let names = texts::blend_labels_obj();

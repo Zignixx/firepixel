@@ -15,6 +15,7 @@ pub mod glyphs;
 pub mod layouts;
 pub mod obj_quads;
 pub mod popups;
+pub mod preview;
 mod quads;
 pub mod scale;
 pub use quads::export_preset_order;
@@ -162,6 +163,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
     let c = theme.colors.clone();
     let full = ui.max_rect();
+    fields::set_panel_rect(ui.ctx(), full);
     ui.painter().rect_filled(full, 0.0, c.frame_bg);
     let header = Rect::from_min_size(
         full.min,

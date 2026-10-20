@@ -124,6 +124,8 @@ pub struct RenderKey {
     pub variant: u64,
     /// Ansicht ▸ Macintosh-Gamma: Bild nur für die Anzeige aufhellen (TW-18).
     pub gamma: bool,
+    /// Key of the inspector slider preview rendered into this image (0 = none, FB-09/FB-10).
+    pub preview: u64,
 }
 
 /// Stand der Leinwand eines Dokuments (Render-Cache und Interaktionszustand der Werkzeuge).

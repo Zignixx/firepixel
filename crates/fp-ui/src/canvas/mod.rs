@@ -1068,11 +1068,14 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let zoom_dev = view.zoom * ppp;
     let (generation, page, frame, docarc) =
         (d.generation, d.page, d.frame, std::sync::Arc::clone(&d.doc));
+    // pending inspector slider value (FB-09/FB-10): rendered from a preview copy of the document
+    let preview = crate::inspector::preview::preview_key(st, id, generation, page);
     let cc = st.canvases.entry(id).or_default();
     // Ergebnisse des Threads übernehmen
     let gamma = view.gamma_preview;
     let fresh = |k: &RenderKey| {
         k.doc == id
+            && k.preview == preview
             && k.generation == generation
             && k.epoch == cc.epoch
             && k.page == page
@@ -1129,8 +1132,15 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             zoom: zoom_dev,
             variant,
             gamma,
+            preview,
         };
         cc.requested = Some(key);
+        let docarc = if preview != 0 {
+            crate::inspector::preview::preview_doc(st, id, generation, page, &docarc)
+                .unwrap_or(docarc)
+        } else {
+            docarc
+        };
         if let Some(res) = st.worker.request(
             RenderJob {
                 key,

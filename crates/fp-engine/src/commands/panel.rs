@@ -3454,7 +3454,7 @@ pub fn register(r: &mut CommandRegistry) {
 
     // Strich (Teilfeld 14010, Strichtextur 14103, Popups 4116/4118)
     r.add(
-        ids(cmd("pi.stroke").label("Strich ändern").requires(DOC))
+        ids(cmd("pi.stroke").label("Pinselstrich").requires(DOC))
             .opt("none", ParamKind::Bool, "kein Strich")
             .opt("color", ParamKind::Color, "Strichfarbe")
             .opt(

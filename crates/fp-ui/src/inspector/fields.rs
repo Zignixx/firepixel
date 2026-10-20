@@ -300,6 +300,50 @@ fn request_commit_now(ctx: &egui::Context) {
     ctx.data_mut(|d| d.insert_temp(Id::new(COMMIT_NOW), true));
 }
 
+const PANEL_RECT: &str = "pi-panel-rect";
+
+/// Screen rect of the Properties inspector in this frame (set by [`crate::inspector::show`]).
+pub fn set_panel_rect(ctx: &egui::Context, r: Rect) {
+    let pass = ctx.cumulative_pass_nr();
+    ctx.data_mut(|d| d.insert_temp(Id::new(PANEL_RECT), (r, pass)));
+}
+
+/// Was the mouse pressed on empty inspector space (no control under it)? Such a click keeps the
+/// focus in the number field and applies nothing (FB-09, measured in the reference: "click on
+/// empty panel space does not take the focus").
+fn press_on_empty_panel(ctx: &egui::Context) -> bool {
+    ctx.input(|i| i.pointer.press_origin().or(i.pointer.interact_pos()))
+        .is_some_and(|pos| empty_panel_at(ctx, pos))
+}
+
+/// Is the mouse pointer over empty inspector space (no control under it)? For tests.
+pub fn pointer_on_empty_panel(ctx: &egui::Context) -> bool {
+    ctx.input(|i| i.pointer.latest_pos())
+        .is_some_and(|pos| empty_panel_at(ctx, pos))
+}
+
+/// `pos` = the current pointer position (the hit test of this frame is used).
+fn empty_panel_at(ctx: &egui::Context, pos: Pos2) -> bool {
+    let pass = ctx.cumulative_pass_nr();
+    let Some((r, at)) = ctx.data(|d| d.get_temp::<(Rect, u64)>(Id::new(PANEL_RECT))) else {
+        return false;
+    };
+    if at + 1 < pass || !r.contains(pos) {
+        return false;
+    }
+    // a pop-up, menu or dialog above the panel is not the panel
+    if ctx
+        .layer_id_at(pos)
+        .is_some_and(|l| l.order != egui::Order::Background)
+    {
+        return false;
+    }
+    let under: Vec<Id> = ctx.interaction_snapshot(|i| i.contains_pointer.iter().copied().collect());
+    under
+        .into_iter()
+        .all(|w| ctx.read_response(w).is_none_or(|r| !r.sense.senses_click()))
+}
+
 /// Soll der Inspektor die Befehle dieses Bildes sofort ausführen? (setzt die Anfrage zurück)
 pub fn take_commit_now(ctx: &egui::Context) -> bool {
     ctx.data_mut(|d| {
@@ -417,10 +461,34 @@ fn buffered_edit(
         return (None, resp);
     }
     let mut out = None;
+    // Click on empty inspector space: the number field keeps the focus and applies nothing (FB-09).
+    // egui itself drops the focus on the release of such a click; it is taken back here.
+    let keep_id = te_id.with("keep-focus");
+    if numeric
+        && has_focus(ui)
+        && !resp.hovered()
+        && !menu_open
+        && ui.input(|i| i.pointer.any_pressed())
+        && press_on_empty_panel(ui.ctx())
+    {
+        ui.data_mut(|d| d.insert_temp(keep_id, true));
+    }
+    let keep = ui.data(|d| d.get_temp::<bool>(keep_id)).unwrap_or(false);
+    if keep && !ui.input(|i| i.pointer.any_down()) {
+        ui.data_mut(|d| d.remove::<bool>(keep_id));
+        if !has_focus(ui) {
+            ui.memory_mut(|m| m.request_focus(te_id));
+        }
+    }
     // Klick daneben (z. B. auf die Leinwand): schon beim Drücken übernehmen – egui nimmt den Fokus
     // erst beim Loslassen weg, und dann hat die Leinwand die Auswahl schon geändert (der Wert
     // ginge ins Leere; Original: übernommen, PARITAET_A F7/F9)
-    if has_focus(ui) && !resp.hovered() && !menu_open && ui.input(|i| i.pointer.any_pressed()) {
+    if !keep
+        && has_focus(ui)
+        && !resp.hovered()
+        && !menu_open
+        && ui.input(|i| i.pointer.any_pressed())
+    {
         ui.memory_mut(|m| m.surrender_focus(te_id));
         ui.data_mut(|d| d.remove::<String>(id));
         let out = (buf != current).then_some(buf);
@@ -758,7 +826,9 @@ pub fn number_unit(
     {
         out = Some(v);
     }
-    out
+    // an unchanged value creates no history step (FB-09: the reference records one even then,
+    // Firepixel deliberately skips it; "305" on 100 is clamped to 100 = unchanged)
+    out.filter(|v| value.is_none_or(|c| (v - c).abs() > 1e-9))
 }
 
 /// Pfeilknopf ▾ mit senkrechtem Popup-Schieber (linear) wie im Original. Übernommen wird beim
@@ -866,6 +936,9 @@ pub fn slider_arrow_vertical(
     let mut out = None;
     let mut done = false;
     let esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
+    // Enter in the open pop-up: apply the pending value and close, like a click beside it
+    // (Firepixel default; the reference was not measured with Enter in the pop-up)
+    let enter = was_open && !esc && ui.input(|i| i.key_pressed(egui::Key::Enter));
     let pointer = ui.input(|i| i.pointer.latest_pos());
     let arrow_drag = resp.dragged() || resp.drag_stopped();
     let arrow_released = resp.drag_stopped();
@@ -931,13 +1004,29 @@ pub fn slider_arrow_vertical(
                 done = true;
                 ui.data_mut(|d| d.remove::<f64>(key));
                 ui.close();
+            } else if enter {
+                out = ui.data_mut(|d| d.remove_temp::<f64>(key));
+                done = true;
+                ui.close();
             }
         });
-    // Klick daneben (oder auf den Pfeil) schloss das Popup: der gezogene Wert gilt; Esc verwirft ihn
-    if was_open && !done && !esc && !egui::Popup::is_id_open(ui.ctx(), popup_id) {
-        out = ui.data_mut(|d| d.remove_temp::<f64>(key));
+    // Klick daneben (oder auf den Pfeil) schloss das Popup: der gezogene Wert gilt; Esc verwirft ihn.
+    // The pending value goes in the same frame, so no live preview outlives the pop-up.
+    if !egui::Popup::is_id_open(ui.ctx(), popup_id) {
+        let pending = ui.data_mut(|d| d.remove_temp::<f64>(key));
+        if was_open && !done && !esc {
+            out = pending;
+        }
     }
     out
+}
+
+/// Pending value of the pop-up slider of the [`number`] field `id` while its thumb is moved or the
+/// pop-up holds a dragged value (`None` otherwise). The inspector shows it as a live preview on the
+/// canvas (FB-09/FB-10); it is applied only on release / close.
+pub fn slider_live(ctx: &egui::Context, id: impl Hash + std::fmt::Debug) -> Option<f64> {
+    let key = Id::new(id).with("arrow").with("val");
+    ctx.data(|d| d.get_temp::<f64>(key))
 }
 
 /// Pfeilknopf ▾ mit Popup-Schieber und Kennlinie des Originals ([`crate::inspector::scale`]).
