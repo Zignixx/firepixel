@@ -1,5 +1,5 @@
 //! BA-108 remaining metadata (B-4): GPS and IPTC in `metadata.set`, TIFF read/write with EXIF
-//! and IPTC, AVIF/HEIF and JPEG XL box reading, collected `metadata.export`.
+//! and IPTC, AVIF/HEIF and JPEG XL box reading and writing, collected `metadata.export`.
 
 mod support;
 
@@ -108,8 +108,7 @@ fn exif_block() -> Vec<u8> {
 
 const XMP: &[u8] = b"<x:xmpmeta xmlns:x=\"x\"><rdf:RDF/></x:xmpmeta>";
 
-#[test]
-fn heif_items_are_read() {
+fn heif_file() -> Vec<u8> {
     let mut exif_item = 0u32.to_be_bytes().to_vec();
     exif_item.extend_from_slice(b"Exif\0\0");
     exif_item.extend_from_slice(&exif_block());
@@ -153,6 +152,12 @@ fn heif_items_are_read() {
     let mut mdat = exif_item.clone();
     mdat.extend_from_slice(XMP);
     file.extend(bx(b"mdat", &mdat));
+    file
+}
+
+#[test]
+fn heif_items_are_read() {
+    let file = heif_file();
     let f = container::read(&file);
     let e = Exif::parse(f.exif.as_deref().expect("exif")).expect("parse");
     assert_eq!(artist(&e).as_deref(), Some("Box"));
@@ -200,4 +205,78 @@ fn export_collects_one_csv() {
     assert!(lines[1].starts_with("m0.png,") && lines[3].starts_with("m2.png,"));
     assert!(!out.join("m0.csv").exists(), "no per-item sidecars");
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn avif_writes_exif_and_xmp_with_iptc_fields() {
+    // BA-108: EXIF/XMP items in the encoded AVIF; IPTC fields travel in XMP
+    let it = tagged();
+    let (bytes, warnings) =
+        fp_batch::output::encode(&it, OutputFormat::Avif, &serde_json::Map::new()).expect("avif");
+    assert!(warnings.is_empty(), "{warnings:?}");
+    let f = container::read(&bytes);
+    let e = Exif::parse(f.exif.as_deref().expect("exif read back")).expect("parse");
+    assert_eq!(artist(&e).as_deref(), Some("Ann"));
+    assert!(e.gps_position().is_some());
+    let x = String::from_utf8(f.xmp.expect("xmp")).expect("utf8");
+    assert!(
+        x.contains("Coast") && x.contains("sea") && x.contains("Ann"),
+        "{x}"
+    );
+    // the file still decodes, also after a second write and after removing everything
+    let back = fp_batch::item::decode_bytes("x.avif", &bytes).expect("decode");
+    assert_eq!(back.dimensions(), (8, 6));
+    let again = container::write_heif(&bytes, &f_with_artist("Bob")).expect("again");
+    let e = Exif::parse(container::read(&again).exif.as_deref().expect("exif")).expect("parse");
+    assert_eq!(artist(&e).as_deref(), Some("Bob"));
+    let back = fp_batch::item::decode_bytes("x.avif", &again).expect("decode again");
+    assert_eq!(back.dimensions(), (8, 6));
+    let none = container::write_heif(&again, &container::Found::default()).expect("strip");
+    assert!(container::read(&none).is_empty());
+    assert!(fp_batch::item::decode_bytes("x.avif", &none).is_ok());
+}
+
+fn f_with_artist(a: &str) -> container::Found {
+    let mut e = Exif::new_empty();
+    e.set_ascii(fp_batch::meta::exif::TAG_ARTIST, a);
+    container::Found {
+        exif: Some(e.write()),
+        xmp: Some(XMP.to_vec()),
+        ..Default::default()
+    }
+}
+
+/// 42-byte JPEG XL codestream from the documentation example of the `jxl-oxide` crate.
+const TINY_JXL: [u8; 42] = [
+    0xff, 0x0a, 0x30, 0x54, 0x10, 0x09, 0x08, 0x06, 0x01, 0x00, 0x78, 0x00, 0x4b, 0x38, 0x41, 0x3c,
+    0xb6, 0x3a, 0x51, 0xfe, 0x00, 0x47, 0x1e, 0xa0, 0x85, 0xb8, 0x27, 0x1a, 0x48, 0x45, 0x84, 0x1b,
+    0x71, 0x4f, 0xa8, 0x3e, 0x8e, 0x30, 0x03, 0x92, 0x84, 0x01,
+];
+
+#[test]
+fn jxl_codestream_is_wrapped_and_still_decodes() {
+    let plain = fp_batch::item::decode_bytes("x.jxl", &TINY_JXL).expect("decode codestream");
+    let boxed = container::write_jxl(&TINY_JXL, &f_with_artist("Jo")).expect("wrap");
+    assert!(boxed.starts_with(b"\0\0\0\x0CJXL \r\n\x87\n"));
+    let f = container::read(&boxed);
+    assert_eq!(
+        artist(&Exif::parse(f.exif.as_deref().expect("exif")).expect("parse")).as_deref(),
+        Some("Jo")
+    );
+    assert_eq!(f.xmp.as_deref(), Some(XMP));
+    let back = fp_batch::item::decode_bytes("x.jxl", &boxed).expect("decode container");
+    assert_eq!(back.dimensions(), plain.dimensions());
+    // replacing inside the container keeps it decodable
+    let again = container::write_jxl(&boxed, &f_with_artist("Kim")).expect("again");
+    assert!(fp_batch::item::decode_bytes("x.jxl", &again).is_ok());
+}
+
+#[test]
+fn heif_items_are_written_back() {
+    let file = heif_file();
+    let out = container::write(&file, &f_with_artist("Neu")).expect("write");
+    let f = container::read(&out);
+    let e = Exif::parse(f.exif.as_deref().expect("exif")).expect("parse");
+    assert_eq!(artist(&e).as_deref(), Some("Neu"));
+    assert_eq!(f.xmp.as_deref(), Some(XMP));
 }

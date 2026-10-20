@@ -468,15 +468,24 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | `metadata.export` | Metadata as file | **A** `format` json/csv *json*: sidecar `<name>.json`/`<name>.csv` next to each output (source path, file, format, bytes, size after the steps before, frames, dpi, transparency, EXIF summary, `meta::info` overview; CSV = header + one row, RFC 4180). **A** `collect` off (B-4): on = one `metadata.csv` (header + one row per item, list order) or `metadata.json` (array) in the common output folder instead of sidecars; existing file → `metadata (2).csv` unless the conflict rule is overwrite; listed in `extraTargets` of the first written item | – | own; executor extra-output hook (`extraTargets`) | P3 |
 
 Rule: when converting, metadata is **carried over** as far as the target format can hold it
-(EXIF/XMP/ICC in JPEG, PNG `eXIf`/`iTXt`, WebP, AVIF, TIFF); GIF/BMP/TGA/QOI/ICO lose it, with the
+(EXIF/XMP/ICC in JPEG, PNG `eXIf`/`iTXt`, WebP, TIFF; EXIF/XMP in AVIF and JPEG XL); GIF/BMP/TGA/QOI/ICO lose it, with the
 hint "Format does not store metadata". Reading (B-4) also covers TIFF (IFD0 descriptive tags, EXIF and GPS
 sub-IFDs, XMP tag 700, ICC 34675, IPTC 33723), AVIF/HEIF (ISOBMFF `meta`: `Exif` item and `mime`
 XMP item via `iinf`/`iloc` construction method 0, ICC from `colr` `prof`/`rICC`) and the JPEG XL
 container (`Exif`, `xml ` boxes; `brob` skipped). Writing TIFF (B-4) adds the descriptive IFD0 tags,
-an EXIF IFD (34665) and a GPS IFD (34853), and IPTC (33723) besides ICC/XMP. AVIF/HEIF/JPEG XL
-metadata is **read only**: writing their boxes is not done (rewriting `iinf`/`iloc`/`iref` with
-shifted offsets), so AVIF output keeps the "Format does not store metadata" hint. Without a "Metadata" step, `keep: all` applies; the
-orientation is applied and set to 1.
+an EXIF IFD (34665) and a GPS IFD (34853), and IPTC (33723) besides ICC/XMP. Writing AVIF/HEIF
+and JPEG XL (BA-108, `meta::container::write_heif`/`write_jxl`, used by the output encoder like the
+other containers; no new step parameters):
+
+| Format | EXIF | XMP | IPTC | ICC | Comment | How |
+|---|---|---|---|---|---|---|
+| AVIF/HEIF | yes | yes | as XMP | no (hint) | no (hint) | old `Exif`/`mime` items removed and their bytes blanked; new `Exif` item (offset 6 + `Exif\0\0` + TIFF) and `mime` item `application/rdf+xml` with `cdsc` → primary item, data in a new `mdat` right after `meta`; `iinf`, `iloc` (versions 0–2, fields widened when needed), `iref`, `ipma` rewritten, `pitm` and all other boxes/items kept; file offsets behind `meta` and `stco`/`co64` of image sequences shifted |
+| JPEG XL | yes | yes | as XMP | no (hint) | no (hint) | `Exif` (4-byte offset 0 + TIFF) and `xml ` boxes after `ftyp`/`jxll`, old ones (also `brob`) replaced, other boxes in order; a bare codestream is wrapped (signature, `ftyp`, metadata, `jxlc`); `jbrd` dropped when the metadata changes |
+
+IPTC "as XMP": by-line, copyright, caption, object name and keywords become `dc:creator`, `dc:rights`,
+`dc:description`, `dc:title` and `dc:subject` unless the packet already has them; other IPTC-only datasets
+are lost with the hint. HEIF is not an output format; its writer serves the container level. Without a
+"Metadata" step, `keep: all` applies; the orientation is applied and set to 1.
 
 Alternative to the own EXIF writer: `little_exif` (MIT/Apache, reads and writes EXIF in JPEG, PNG,
 WebP, JXL, HEIF, TIFF; still pre-1.0, known gaps with JPEG APP12/13). Use `little_exif` only if its

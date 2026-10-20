@@ -170,3 +170,50 @@ pub fn set_fields(xmp: Option<&str>, f: &Fields) -> String {
     s.replace_range(start..=end, &format!("{open}{tail}"));
     s
 }
+
+/// BA-108: carries the IPTC record-2 fields of `irb` (by-line, copyright, caption, object name,
+/// keywords) into the XMP packet for containers without an IPTC block (AVIF/HEIF, JPEG XL).
+/// Properties the packet already has win. Returns `None` when nothing was added.
+pub fn with_iptc(xmp: Option<&[u8]>, irb: &[u8]) -> Option<Vec<u8>> {
+    use super::iptc;
+    let cur = xmp.map(|x| String::from_utf8_lossy(x).into_owned());
+    let missing = |p: &str| !cur.as_deref().is_some_and(|s| has_prop(s, p));
+    let values = |ds: u8| -> Vec<String> {
+        iptc::record2(irb, ds)
+            .into_iter()
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+            .collect()
+    };
+    let one = |p: &str, ds: u8| {
+        if missing(p) {
+            values(ds).into_iter().next()
+        } else {
+            None
+        }
+    };
+    let keywords = values(iptc::DS_KEYWORDS);
+    let f = Fields {
+        creator: one("dc:creator", iptc::DS_BYLINE),
+        rights: one("dc:rights", iptc::DS_COPYRIGHT),
+        description: one("dc:description", iptc::DS_CAPTION),
+        title: one("dc:title", iptc::DS_OBJECT_NAME),
+        keywords: (missing("dc:subject") && !keywords.is_empty()).then_some(keywords),
+        rating: None,
+    };
+    (f != Fields::default()).then(|| set_fields(cur.as_deref(), &f).into_bytes())
+}
+
+/// Does `irb` hold any IPTC record-2 field that [`with_iptc`] carries into XMP?
+pub fn iptc_fits_xmp(irb: &[u8]) -> bool {
+    use super::iptc;
+    [
+        iptc::DS_BYLINE,
+        iptc::DS_COPYRIGHT,
+        iptc::DS_CAPTION,
+        iptc::DS_OBJECT_NAME,
+        iptc::DS_KEYWORDS,
+    ]
+    .iter()
+    .any(|ds| !iptc::record2(irb, *ds).is_empty())
+}

@@ -7,8 +7,9 @@
 //!   `Meta::extra` ab ([`EXTRA_PNG_OPT`], [`EXTRA_TARGET`], [`EXTRA_OUTPUT_OPTIONS`]).
 //! - Beim Kodieren ([`finish_encode`], eingehängt in `output::encode`) werden Formatoptionen ergänzt,
 //!   eigene Kodierer (TIFF mit LZW/Deflate) benutzt, PNG verlustfrei optimiert, die Zielgröße per
-//!   Suche erreicht und zuletzt die Metadaten in die Datei geschrieben (JPEG, PNG/APNG, WebP, TIFF
-//!   nur ICC/XMP). Andere Formate verlieren sie mit Hinweis.
+//!   Suche erreicht und zuletzt die Metadaten in die Datei geschrieben (JPEG, PNG/APNG, WebP, TIFF;
+//!   BA-108: AVIF and JPEG XL with EXIF and XMP, IPTC fields carried into XMP). Andere Formate
+//!   verlieren sie mit Hinweis.
 
 pub mod container;
 pub mod encoders;
@@ -203,6 +204,8 @@ pub fn format_keeps(fmt: OutputFormat) -> (bool, bool, bool) {
             (true, true, true)
         }
         OutputFormat::Tiff => (true, true, true),
+        // BA-108: EXIF and XMP boxes, no ICC
+        OutputFormat::Avif | OutputFormat::Jxl => (true, false, true),
         _ => (false, false, false),
     }
 }
@@ -260,6 +263,36 @@ pub fn embed(bytes: Vec<u8>, fmt: OutputFormat, meta: &Meta) -> (Vec<u8>, Option
                 ..Default::default()
             };
             (bytes, (!rest.is_empty()).then(|| lost(&rest)))
+        }
+        OutputFormat::Avif | OutputFormat::Jxl => {
+            // BA-108: EXIF/XMP as items or boxes; IPTC fields go into XMP
+            let iptc_kept = f.iptc.as_deref().is_some_and(xmp::iptc_fits_xmp);
+            let packet = f
+                .iptc
+                .as_deref()
+                .and_then(|i| xmp::with_iptc(f.xmp.as_deref(), i))
+                .or_else(|| f.xmp.clone());
+            let rest = container::Found {
+                icc: f.icc.clone(),
+                comment: f.comment.clone(),
+                iptc: f.iptc.clone().filter(|_| !iptc_kept),
+                ..Default::default()
+            };
+            let note = (!rest.is_empty()).then(|| lost(&rest));
+            let w = container::Found {
+                exif: f.exif.clone(),
+                xmp: packet,
+                ..Default::default()
+            };
+            let written = if fmt == OutputFormat::Avif {
+                container::write_heif(&bytes, &w)
+            } else {
+                container::write_jxl(&bytes, &w)
+            };
+            match written {
+                Some(b) => (b, note),
+                None => (bytes, (!f.is_empty()).then(|| lost(&f))),
+            }
         }
         _ => (bytes, (!f.is_empty()).then(|| lost(&f))),
     }
