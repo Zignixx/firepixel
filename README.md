@@ -29,7 +29,7 @@ every UI tweak). They are attached to [releases](../../releases) and to issues i
 | Stage | feature-complete preview; parity polishing |
 | Parity (scripted comparison, 49 units) | **49 units equal except for design**, 0 real deviations, 0 unclear, 0 under-measured (run 29, 20 Oct 2026) |
 | Proven 1:1 | **100 %** (49 / 49 units); measurement quota 87.3 %; canvas image pairs within 1 %: 185 / 212 |
-| Tests | **2797 passed, 0 failed, 134 ignored** (last full workspace run, 20 Oct 2026); the run on the latest merged tree is pending (GT-1h); batch and export tests also run on macOS and Linux in CI |
+| Tests | **2818 passed, 1 flaky timing failure, 136 ignored** (full workspace run on the merged tree, 20 Oct 2026, GT-1h); batch and export tests also run on macOS and Linux in CI |
 | Open findings | 11 fixable rows (none open; 9 fixed and waiting for the click-test or the macOS re-test), 2 deferred items open, 20 informational (850+ closed) — see [docs/FINDINGS.md](docs/FINDINGS.md) |
 
 Details and method: [docs/STATUS.md](docs/STATUS.md), [docs/PARITY.md](docs/PARITY.md),
