@@ -4,6 +4,8 @@
 //!   Bild-Encoding wird je Bild zwischengespeichert ([`cache`]), danach läuft pro Klick nur der Decoder.
 //! * [`birefnet`]: Motiv auswählen (BiRefNet bzw. BiRefNet_lite) und Kante verfeinern
 //!   (BiRefNet-Matting-Varianten) mit echter Halbtransparenz.
+//! * [`esrgan`]: KI-Hochskalierung ×2/×4 mit Real-ESRGAN (RRDBNet), gekachelt, Alpha über das Netz
+//!   oder bikubisch.
 //! * [`nn`]: eigene kleine CPU-Inferenz in reinem Rust (Matrixmultiplikation über `faer`, alles andere
 //!   mit `rayon` parallel), ohne DLL und ohne `unsafe`.
 //! * [`models`]/[`download`]: Modellkatalog (offizielle Quellen, Größe, Lizenz, SHA-256), Suche im
@@ -19,6 +21,7 @@ pub mod cache;
 pub mod cancel;
 pub mod download;
 pub mod error;
+pub mod esrgan;
 pub mod face; // BA-109: face detection (Haar cascade) for ai.faceBlur
 pub mod job;
 pub mod models;

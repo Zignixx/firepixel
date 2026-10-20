@@ -120,6 +120,10 @@ pub fn step_size(id: &str, w: u32, h: u32, p: &Value) -> Option<(u32, u32)> {
             Some((w + 2 * bw, h + 2 * bw))
         }
         "background.shadow" | "effect.live" if !b(p, "expandCanvas", true) => Some((w, h)),
+        "ai.upscale" => {
+            let s = crate::steps::upscale::scale_param(p) as i64;
+            Some((clamp(wi * s), clamp(hi * s)))
+        }
         "optimize.targetSize" if s(p, "strategy", "quality") == "quality" => Some((w, h)),
         _ => None,
     }
@@ -209,5 +213,10 @@ mod tests {
         assert_eq!(size("adjust.invert", 10, 20, json!({})), Some((10, 20)));
         assert_eq!(size("trim", 10, 20, json!({})), None);
         assert_eq!(size("background.subjectCenter", 10, 20, json!({})), None);
+        assert_eq!(size("ai.upscale", 10, 20, json!({})), Some((40, 80)));
+        assert_eq!(
+            size("ai.upscale", 10, 20, json!({"scale": "2"})),
+            Some((20, 40))
+        );
     }
 }

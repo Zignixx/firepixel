@@ -546,6 +546,7 @@ fn task_text(task: models::Task) -> String {
         models::Task::Object => "dlg-ai-object",
         models::Task::Subject => "dlg-ai-subject",
         models::Task::Matting => "dlg-ai-refine-edge",
+        models::Task::Upscale => "dlg-ai-upscale",
     })
 }
 
@@ -553,6 +554,7 @@ fn task_text(task: models::Task) -> String {
 fn license_note(m: &models::ModelInfo) -> String {
     match m.task {
         models::Task::Object => fp_i18n::tr!("dlg-ai-license-object", license = m.license),
+        models::Task::Upscale => fp_i18n::tr!("dlg-ai-license-upscale", license = m.license),
         _ => fp_i18n::tr!(
             "dlg-ai-license-matting",
             license = m.license,
@@ -918,7 +920,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         return;
     };
     if d.size == egui::Vec2::ZERO {
-        d.size = vec2(800.0, 540.0);
+        d.size = vec2(800.0, 604.0);
     }
     let mut close = false;
     let mut start: Option<ModelId> = None;
@@ -957,6 +959,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
         models::Task::Object,
         models::Task::Subject,
         models::Task::Matting,
+        models::Task::Upscale,
     ]
     .into_iter()
     .map(task_text)

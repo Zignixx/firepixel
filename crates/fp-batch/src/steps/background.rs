@@ -602,7 +602,7 @@ fn model_id(name: &str) -> ModelId {
     }
 }
 
-fn model_missing(step: &str, model: ModelId) -> BatchError {
+pub(crate) fn model_missing(step: &str, model: ModelId) -> BatchError {
     BatchError::step(
         step,
         fp_i18n::tr!(

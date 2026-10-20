@@ -6,6 +6,7 @@
 use crate::birefnet::BiRefNet;
 use crate::cancel::Progress;
 use crate::error::Result;
+use crate::esrgan::Esrgan;
 use crate::models::{self, ModelId};
 use crate::sam2::{ImageEmbedding, Sam2};
 use crate::weights::Weights;
@@ -16,6 +17,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 pub enum Loaded {
     Sam2(Box<Sam2>),
     BiRefNet(Box<BiRefNet>),
+    Esrgan(Box<Esrgan>),
 }
 
 fn models_map() -> &'static Mutex<HashMap<ModelId, Arc<Loaded>>> {
@@ -56,6 +58,7 @@ pub fn model(id: ModelId) -> Result<Arc<Loaded>> {
     let loaded = crate::nn::pool().install(|| -> Result<Loaded> {
         Ok(match models::info(id).task {
             models::Task::Object => Loaded::Sam2(Box::new(Sam2::load(wt)?)),
+            models::Task::Upscale => Loaded::Esrgan(Box::new(Esrgan::load(wt)?)),
             _ => Loaded::BiRefNet(Box::new(BiRefNet::load(wt)?)),
         })
     })?;

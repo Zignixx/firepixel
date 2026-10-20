@@ -147,12 +147,16 @@ ai-model-birefnet-lite = BiRefNet lite (general)
 ai-model-birefnet = BiRefNet (general, high quality)
 ai-model-birefnet-lite-matting = BiRefNet lite Matting
 ai-model-birefnet-hr-matting = BiRefNet HR Matting (high quality)
+ai-model-realesrgan-x2 = Real-ESRGAN x2plus (×2)
+ai-model-realesrgan-x4 = Real-ESRGAN x4plus (×4)
 ai-model-sam2-tiny-note = Meta (facebookresearch/sam2): code and weights Apache-2.0, commercial use allowed; trained on SA-1B/SA-V
 ai-model-sam2-small-note = Meta (facebookresearch/sam2): code and weights Apache-2.0, commercial use allowed; trained on SA-1B/SA-V
 ai-model-birefnet-lite-note = ZhengPeng7/BiRefNet, Swin-T; weights MIT. Training data according to the author include DIS5K, DUTS, HRSOD, UHRSD, HRS10K, P3M-10k, humans (P3M-10k is licensed for non-commercial research only)
 ai-model-birefnet-note = ZhengPeng7/BiRefNet, Swin-L (slower); weights MIT. Training data as for BiRefNet lite (including P3M-10k, non-commercial research only)
 ai-model-birefnet-lite-matting-note = ZhengPeng7/BiRefNet, Swin-T, for hair and fur; weights MIT. Training data according to the author: P3M-10k, humans, AM-2k, Distinctions-646, HIM2K (partly non-commercial research only)
 ai-model-birefnet-hr-matting-note = ZhengPeng7/BiRefNet, Swin-L, for hair and fur (slower); weights MIT. Training data as for Matting lite (partly non-commercial research only)
+ai-model-realesrgan-x2-note = xinntao/Real-ESRGAN (RRDBNet), weights BSD-3-Clause, commercial use allowed; byte-identical to the official file v0.2.1. Trained on DF2K and OST with synthetic degradations (blur, noise, JPEG)
+ai-model-realesrgan-x4-note = xinntao/Real-ESRGAN (RRDBNet), weights BSD-3-Clause, commercial use allowed; byte-identical to the official file v0.1.0. Trained on DF2K and OST with synthetic degradations (blur, noise, JPEG)
 
 ## Hinweise und Rückgaben von Befehlen
 msg-wizard-animated-gif = several states: animated GIF
@@ -520,6 +524,9 @@ ai-err-d-empty-region = image region is empty
 ai-err-d-no-sam = no SAM model
 ai-err-d-point-or-box = object selection needs a click point or a box
 ai-err-d-no-birefnet = no BiRefNet model
+ai-err-d-no-esrgan = no Real-ESRGAN model
+ai-err-d-esrgan-weights = Real-ESRGAN weights do not match the architecture ({ $name })
+ai-err-d-esrgan-input = Real-ESRGAN needs an image whose sides are multiples of { $unit } (got { $width } × { $height })
 ai-err-d-no-pixel-selection = no pixel selection
 ai-err-d-sam-size = unknown SAM 2 size ({ $n } blocks)
 ai-err-d-sam-input = SAM 2 needs an image of 1024 × 1024

@@ -51,5 +51,5 @@ fn missing_models_give_clear_message() {
         "ohne Pixelauswahl nicht verfügbar"
     );
     let models = ex(&mut s, "ai.models", json!({}));
-    assert_eq!(models["models"].as_array().map(|a| a.len()), Some(6));
+    assert_eq!(models["models"].as_array().map(|a| a.len()), Some(8));
 }

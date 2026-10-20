@@ -13,6 +13,8 @@
 //! Heruntergeladen wird nur nach Zustimmung in den ersten beschreibbaren Ordner (Voreinstellung,
 //! sonst `%LOCALAPPDATA%\Firepixel\Models`). Alle Quellen sind offizielle Veröffentlichungen der
 //! Urheber (Meta auf Hugging Face bzw. `ZhengPeng7`), Prüfsummen = LFS-SHA-256 der Dateien.
+//! Real-ESRGAN veröffentlicht nur `.pth`; dafür stehen hier safetensors-Fassungen auf Hugging Face
+//! (`Comfy-Org`, `hlky`), deren Tensoren byte-gleich mit den offiziellen Dateien sind.
 
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -34,6 +36,10 @@ pub enum ModelId {
     BiRefNetLiteMatting,
     /// BiRefNet_HR-matting (Kante verfeinern, hohe Qualität).
     BiRefNetHrMatting,
+    /// Real-ESRGAN x2plus (KI-Hochskalierung ×2).
+    RealEsrganX2,
+    /// Real-ESRGAN x4plus (KI-Hochskalierung ×4, Vorgabe).
+    RealEsrganX4,
 }
 
 /// Aufgabe eines Modells.
@@ -43,6 +49,8 @@ pub enum Task {
     Object,
     Subject,
     Matting,
+    /// KI-Hochskalierung (Real-ESRGAN, Batch-Schritt `ai.upscale`).
+    Upscale,
 }
 
 /// Beschreibung eines Modells (Dialog „KI-Modell fehlt“ und `docs\MODELLE.md`).
@@ -150,6 +158,35 @@ pub const MODELS: &[ModelInfo] = &[
         note: "ZhengPeng7/BiRefNet, Swin-L, für Haare und Fell (langsamer); Gewichte MIT. Trainingsdaten wie Matting lite (teils nur nichtkommerzielle Forschung)",
         default: false,
     },
+    // Real-ESRGAN (xinntao/Real-ESRGAN, BSD-3-Clause). Die offiziellen Dateien sind PyTorch-.pth;
+    // diese safetensors-Fassungen sind byte-gleich (alle 702 Tensoren geprüft gegen
+    // RealESRGAN_x4plus.pth v0.1.0 bzw. RealESRGAN_x2plus.pth v0.2.1). Adressen auf den Commit fest.
+    ModelInfo {
+        id: ModelId::RealEsrganX4,
+        name: "Real-ESRGAN x4plus (×4)",
+        task: Task::Upscale,
+        file: "RealESRGAN_x4plus.safetensors",
+        url: "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/5fd49b7b278836f48af63ecd314d0f98ab336105/RealESRGAN_x4plus.safetensors",
+        page: "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged",
+        size: 66_857_836,
+        sha256: "37f9a931c215f040aa6d50f711f2cb115f713c46df1d0d6469a8bd7bfe9a60bb",
+        license: "BSD-3-Clause",
+        note: "xinntao/Real-ESRGAN (RRDBNet), Gewichte BSD-3-Clause, kommerzielle Nutzung erlaubt; byte-gleich mit der offiziellen Datei v0.1.0. Trainiert auf DF2K und OST mit künstlichen Bildfehlern (Unschärfe, Rauschen, JPEG)",
+        default: true,
+    },
+    ModelInfo {
+        id: ModelId::RealEsrganX2,
+        name: "Real-ESRGAN x2plus (×2)",
+        task: Task::Upscale,
+        file: "RealESRGAN_x2plus.safetensors",
+        url: "https://huggingface.co/hlky/RealESRGAN_x2plus/resolve/079ebc3dd4fdc6c3bb11882c282602a810214144/diffusion_pytorch_model.safetensors",
+        page: "https://huggingface.co/hlky/RealESRGAN_x2plus",
+        size: 66_878_604,
+        sha256: "a2e3471b47b9d871ad81f045af884d23d477a7474177d6eeed4332d1d7bd082f",
+        license: "BSD-3-Clause",
+        note: "xinntao/Real-ESRGAN (RRDBNet), Gewichte BSD-3-Clause, kommerzielle Nutzung erlaubt; byte-gleich mit der offiziellen Datei v0.2.1. Trainiert auf DF2K und OST mit künstlichen Bildfehlern (Unschärfe, Rauschen, JPEG)",
+        default: false,
+    },
 ];
 
 /// Beschreibung eines Modells.
@@ -167,6 +204,8 @@ impl ModelId {
             ModelId::BiRefNet => "ai-model-birefnet",
             ModelId::BiRefNetLiteMatting => "ai-model-birefnet-lite-matting",
             ModelId::BiRefNetHrMatting => "ai-model-birefnet-hr-matting",
+            ModelId::RealEsrganX2 => "ai-model-realesrgan-x2",
+            ModelId::RealEsrganX4 => "ai-model-realesrgan-x4",
         }
     }
 
@@ -179,6 +218,8 @@ impl ModelId {
             ModelId::BiRefNet => "ai-model-birefnet-note",
             ModelId::BiRefNetLiteMatting => "ai-model-birefnet-lite-matting-note",
             ModelId::BiRefNetHrMatting => "ai-model-birefnet-hr-matting-note",
+            ModelId::RealEsrganX2 => "ai-model-realesrgan-x2-note",
+            ModelId::RealEsrganX4 => "ai-model-realesrgan-x4-note",
         }
     }
 
@@ -371,7 +412,7 @@ mod tests {
 
     #[test]
     fn catalog() {
-        for t in [Task::Object, Task::Subject, Task::Matting] {
+        for t in [Task::Object, Task::Subject, Task::Matting, Task::Upscale] {
             assert_eq!(
                 MODELS.iter().filter(|m| m.task == t && m.default).count(),
                 1
@@ -382,6 +423,10 @@ mod tests {
             assert!(
                 m.url.starts_with("https://huggingface.co/facebook/")
                     || m.url.starts_with("https://huggingface.co/ZhengPeng7/")
+                    || m.url
+                        .starts_with("https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/")
+                    || m.url
+                        .starts_with("https://huggingface.co/hlky/RealESRGAN_x2plus/")
             );
             assert_eq!(
                 by_name(
@@ -394,6 +439,9 @@ mod tests {
             );
         }
         assert_eq!(by_name("birefnet_lite"), Some(ModelId::BiRefNetLite));
+        assert_eq!(by_name("realEsrganX2"), Some(ModelId::RealEsrganX2));
+        assert_eq!(by_name("RealESRGAN_x4plus"), Some(ModelId::RealEsrganX4));
+        assert_eq!(default_for(Task::Upscale), ModelId::RealEsrganX4);
         assert_eq!(human_size(155_908_064), "156 MB");
     }
 
@@ -413,6 +461,8 @@ mod tests {
                     "Gewichte",
                     "Trainingsdaten",
                     "nichtkommerziell",
+                    "kommerzielle Nutzung",
+                    "byte-gleich",
                 ] {
                     assert!(!n.contains(w) && !t.contains(w), "{n} / {t}");
                 }

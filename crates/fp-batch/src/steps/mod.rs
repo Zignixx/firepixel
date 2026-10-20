@@ -25,6 +25,7 @@ pub mod pixel; // B-3
 pub mod script; // BATCH-4
 pub mod script_extra; // B-4
 pub mod straighten; // B-4
+pub mod upscale; // BA-109
 pub mod vector; // BATCH-9
 
 /// Registriert alle eingebauten Schritte.
@@ -50,4 +51,5 @@ pub fn register_all(r: &mut StepRegistry) {
     multipage::register(r); // B-4
     condition::register(r); // B-4
     script_extra::register(r); // B-4
+    upscale::register(r); // BA-109
 }

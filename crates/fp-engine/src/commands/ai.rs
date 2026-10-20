@@ -147,6 +147,7 @@ pub fn model_for(s: &Session, p: Option<&Params>, task: Task) -> Result<ModelId>
         Task::Object => "AiObjectModel",
         Task::Subject => "AiSubjectModel",
         Task::Matting => "AiMattingModel",
+        Task::Upscale => "AiUpscaleModel",
     };
     let name = match p {
         Some(p) => p.opt_str("model")?,
