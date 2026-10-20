@@ -16,7 +16,7 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Canvas image pairs within 1 % | 185 / 212 (unchanged in run 28; run 26: 186 / 211; `tool-text/14, 16` above 1 % because no text tool is reset after the reference's size step fails, TW-165) |
 | Tests | Last full run: 2797 passed, 0 failed, 134 ignored at `901f0a56` (fixes F51a to F51c merged; the code of preview `2026-10-20_06-08`); macOS CI build with the app menu (`e11f8d1b`) green |
 | Latest release | **v0.2.4** pre-release published on 19 Oct 2026 (tag at `1f26223c`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage, with the three screen modes, the text default rules and the macOS fixes; before: **v0.2.3** (19 Oct 2026); Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 12 fixable rows (2 open: U-1 rest and the runner item TW-167; TW-146 rest and TW-165 moved to the click-test A1-19 as runner measurement gaps; TW-138 rest closed except R3; TW-151, TW-160 to TW-162 and TW-168 to TW-172 awaiting the click-test and the macOS re-test) · 5 deferred · 22 informational · 850+ closed |
+| Open findings | 11 fixable rows (0 open: U-1 rest closed by `b7297f1f`, the runner item TW-167 closed by run 29; TW-146 rest and TW-165 moved to the click-test A1-19 as runner measurement gaps; TW-138 rest closed except R3; TW-151, TW-160 to TW-162 and TW-168 to TW-172 awaiting the click-test and the macOS re-test) · 5 deferred · 22 informational · 850+ closed |
 
 Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including the measurement unit
 `xs-select-behind` (9 steps); run 25 repeated 20 of them, run 26 five, run 27 three and run 28 two.
@@ -31,10 +31,10 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
    History rows of key nudges, A4-15 to A4-18, the screen modes, A4-22, the Subselection display, A4-23, tester feedback batch 3: the inspector
    sliders, Pen undo steps, Redo and Subselection snapping, A4-24 to A4-27), and the **macOS re-test of v0.2.4 by the
    tester** (A4-19 to A4-21 on a real Mac).
-2. **Remaining `[F]` items:** U-1 rest (PDF import layers) and the unmeasured R3 note of TW-138 (indent and spacing
-   as text defaults).
-3. **Runner item of run 28:** the reference's panel dock width as reference and restore target (TW-167); then a
-   short follow-up run over `toolbox`. The text selection edits (TW-146 rest, TW-165) are no longer runner items:
+2. **Remaining `[F]` item:** the unmeasured R3 note of TW-138 (indent and spacing as text defaults). U-1 rest (PDF
+   import layers from optional content groups) was closed on 20 Oct 2026.
+3. **Runner:** no item open; TW-167 was closed by run 29 (20 Oct 2026, the layout check expands the reference's
+   collapsed panel dock). The text selection edits (TW-146 rest, TW-165) are no longer runner items:
    the runner cannot select text in the reference's editor with the mouse, so they moved to the click-test (A1-19).
 4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke), BA-108 (writing AVIF/HEIF/JXL metadata
    boxes), BA-110 rest (lossy LZW with an SSIM bound) and BA-083 (resampler hashes on another OS).
@@ -44,8 +44,7 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 ### Fixable remnants (`[F]`)
 
 - PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- Open: the runner item TW-167 (the reference's collapsed panel dock taken as the reference width) and the unmeasured
-  R3 note of TW-138.
+- Open: the unmeasured R3 note of TW-138 (TW-167 and U-1 rest were closed on 20 Oct 2026).
 - Moved to the click-test A1-19 on 20 Oct 2026 (runner measurement gaps, not deviations): TW-146 rest (text selection
   and size in `tool-text/07, 11, 13`) and TW-165 (the text tool reset derived from it).
 - Confirmed and closed in run 28 (runner R-25): TW-166 (the reference leaves full screen by F; no `runner error` in
