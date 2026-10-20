@@ -57,7 +57,8 @@ available in German (`MANUAL.de.md`).
 - *Edit ▸ Undo/Redo* (Ctrl+Z / Ctrl+Y); the History panel shows all steps. Copy and Cut get a row of
   their own ("Copy", "Cut"); Copy does not mark the document as changed. Consecutive arrow-key nudges
   of the same selection form one Move row with the summed offset; selecting something else, another
-  command or an undo starts a new row.
+  command or an undo starts a new row. Redo only redoes an undone step: with nothing undone, Ctrl+Y and
+  Ctrl+Shift+Z do nothing and the Edit menu shows *Can't Redo*.
 - At the top of the window is the application bar with logo, menus, quick buttons and the
   workspace switcher, below it the main toolbar, the tools on the left, the panels on the right
   and the Properties inspector at the bottom.
@@ -110,7 +111,9 @@ outgoing handle, Ctrl moves the point, Shift snaps to 45°). A click on an inter
 corner, a click on an interior corner point deletes it, a click on a segment inserts a point, and a click on the
 end of another open path joins it; with no path in progress, a click on the end of an open path continues it. The
 cursor shows the mode: a "^" for converting a point, a ring with a stub for joining. Points are hit within the
-*Snap distance* set in the preferences. A double-click ends the path.
+*Snap distance* set in the preferences. A double-click, Enter or Escape ends the path. Every point is its own
+History step "Pen": Ctrl+Z (or Backspace) while drawing removes only the last point and you keep drawing from the
+point before; ending the path adds no step.
 
 **Select Behind** (in the Pointer slot): resting the pointer over objects frames in red the object a click would
 select – the next object below the selected one under the pointer, also while the pointer is over the selected
@@ -119,7 +122,8 @@ shows no frame over the selected one.
 
 **Subselection:** a selected path, rectangle or autoshape part shows its outline, a small square on each point
 (filled when the point is selected; *Show solid points* in the preferences reverses this) and the handles of the
-selected points instead of a bounding box; bitmaps, text and symbols keep the box.
+selected points instead of a bounding box; bitmaps, text and symbols keep the box. Dragging a point or handle
+with it is free (not rounded to whole pixels) and snaps only to the grid, guides and smart guides when they are on.
 
 **Default stroke:** Line, Pen, Vector Path, Rectangle, Ellipse and Polygon draw with the stroke
 *Basic ▸ Hard Rounded* (1 px), as in the original; a choice of your own in the inspector still applies.
@@ -132,6 +136,8 @@ selected points instead of a bounding box; bitmaps, text and symbols keep the bo
   image, and an image from another program is pasted as a bitmap. Also Duplicate, Clone, Insert,
   Preferences and Keyboard Shortcuts.
 - **View:** Magnification, Fit Selection/Fit All, Rulers, Grid, Guides, Smart Guides, Theme, Language.
+  *View ▸ Snap to Pixels* (Firepixel's own switch, on by default) rounds Pointer moves and Pen points to whole
+  pixels; Subselection point drags stay free. *Modify ▸ Snap to Pixel* (Ctrl+K) still snaps the selection once.
 - **Select, Modify, Text, Filters:** act on the selection. If a command is grayed out, running it
   via its shortcut shows the reason in the status bar. Commands that can always be chosen but find
   no suitable target (e.g. *Simplify...* without a path) report this with a warning, like the
@@ -228,6 +234,12 @@ Important panels:
 
 The **Properties inspector** at the bottom shows, depending on the selection, fill, stroke,
 opacity, blending mode, Live Filters (+/−) and text or symbol settings.
+
+- **Opacity and stroke width:** while you move the thumb of the ▾ slider, the canvas previews the value live
+  (preview only). Press on the arrow and drag: the value is applied on release. Click the arrow: the slider stays
+  open and the value is applied when you click beside it or press Enter; Esc discards it. A typed value is applied
+  with Enter, Tab or a click into the document; a click on empty panel space applies nothing. Each apply is one
+  History step; an unchanged value makes none.
 
 - **Live Filters (+):** the “+” menu groups the effects as in the original, e.g. *Bevel and Emboss* ▸
   *Inner Bevel*, *Outer Bevel*, *Inset Emboss*, *Raised Emboss*. The kind is part of the menu item;

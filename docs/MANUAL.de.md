@@ -60,7 +60,9 @@ ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\F
   Kopieren und Ausschneiden erhalten eine eigene Zeile („Kopie“, „Ausschneiden“); Kopieren markiert das
   Dokument nicht als geändert. Aufeinanderfolgende Verschiebungen derselben Auswahl mit den Pfeiltasten
   bilden eine gemeinsame Zeile mit dem summierten Versatz; eine andere Auswahl, ein anderer Befehl oder
-  Rückgängig beginnt eine neue Zeile.
+  Rückgängig beginnt eine neue Zeile. Wiederholen stellt nur einen rückgängig gemachten Schritt wieder her:
+  Ist nichts rückgängig gemacht, tun Strg+Y und Strg+Umschalt+Z nichts, und das Menü Bearbeiten zeigt
+  *Wiederholen nicht möglich*.
 - Das Fenster hat oben die Anwendungsleiste mit Logo, Menüs, Schnellknöpfen und dem
   Arbeitsbereich-Umschalter, darunter die Hauptsymbolleiste, links die Werkzeuge, rechts die
   Bedienfelder und unten den Eigenschaften-Inspektor.
@@ -115,7 +117,9 @@ Ein Klick auf einen inneren Kurvenpunkt macht ihn zum Eckpunkt, ein Klick auf ei
 ein Klick auf ein Segment fügt einen Punkt ein, und ein Klick auf das Ende eines anderen offenen Pfads verbindet
 ihn; ohne laufenden Pfad setzt ein Klick auf das Ende eines offenen Pfads diesen fort. Der Mauszeiger zeigt den
 Modus: ein „^“ zum Umwandeln eines Punkts, ein Ring mit Strich zum Verbinden. Punkte werden innerhalb des
-*Ausrichtungsabstands* aus den Voreinstellungen getroffen. Ein Doppelklick beendet den Pfad.
+*Ausrichtungsabstands* aus den Voreinstellungen getroffen. Ein Doppelklick, die Eingabetaste oder Esc beendet den
+Pfad. Jeder Punkt ist ein eigener Schritt „Stift“ im Verlauf: Strg+Z (oder die Rücktaste) entfernt beim Zeichnen nur
+den letzten Punkt, und Sie zeichnen vom vorigen Punkt aus weiter; das Beenden des Pfads erzeugt keinen Schritt.
 
 **Hintere auswählen** (im Platz des Zeigers): Ruht der Mauszeiger über Objekten, umrahmt ein roter Rahmen das
 Objekt, das ein Klick wählen würde – das nächste Objekt unter dem gewählten unter dem Mauszeiger, auch wenn der
@@ -125,7 +129,8 @@ umrahmt nur das oberste Objekt und zeigt über dem gewählten keinen Rahmen.
 **Unterauswahl:** Ein gewählter Pfad, ein Rechteck oder ein Teil einer Autoform zeigt statt eines Begrenzungsrahmens
 seinen Umriss, ein kleines Quadrat auf jedem Punkt (gefüllt, wenn der Punkt gewählt ist; *Einfarbige Punkte anzeigen*
 in den Voreinstellungen kehrt das um) und die Griffe der gewählten Punkte; Bitmaps, Text und Symbole behalten den
-Rahmen.
+Rahmen. Punkte und Griffe zieht die Teilauswahl frei (nicht auf ganze Pixel gerundet); sie rasten nur an Raster,
+Hilfslinien und intelligenten Hilfslinien ein, wenn diese eingeschaltet sind.
 
 **Strich ab Werk:** Linie, Stift, Vektorpfad, Rechteck, Ellipse und Polygon zeichnen wie im Original
 mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Inspektor gilt weiter.
@@ -138,7 +143,9 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Programmen als Bild zur Verfügung, ein Bild aus einem anderen Programm wird als Bitmap eingefügt.
   Dazu Duplizieren, Klonen, Objekt einfügen, Voreinstellungen und Tastaturbefehle.
 - **Ansicht:** Vergrößerung, Einpassen, Lineale, Raster, Hilfslinien, intelligente Hilfslinien,
-  Design, Sprache.
+  Design, Sprache. *Ansicht ▸ An Pixeln einrasten* (ein eigener Schalter von Firepixel, ab Werk an) rundet
+  Verschiebungen mit dem Zeiger und die Punkte des Stifts auf ganze Pixel; Punkte mit der Teilauswahl ziehen bleibt
+  frei. *Modifizieren ▸ An Pixeln ausrichten* (Strg+K) richtet die Auswahl weiterhin einmalig aus.
 - **Auswählen, Modifizieren, Text, Filter:** wirken auf die Auswahl. Ist ein Befehl grau, nennt die
   Statuszeile beim Ausführen über das Kürzel den Grund. Befehle, die immer anwählbar sind, aber
   kein passendes Ziel finden (z. B. *Vereinfachen…* ohne Pfad), melden das wie im Original mit einer
@@ -239,6 +246,12 @@ Wichtige Bedienfelder:
 
 Der **Eigenschaften-Inspektor** unten zeigt je nach Auswahl Füllung, Strich, Deckkraft,
 Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
+
+- **Deckkraft und Strichstärke:** Während Sie den Regler des ▾-Schiebers bewegen, zeigt die Arbeitsfläche den Wert
+  live als Vorschau. Auf den Pfeil drücken und ziehen: Der Wert gilt beim Loslassen. Auf den Pfeil klicken: Der
+  Schieber bleibt offen, und der Wert gilt, wenn Sie daneben klicken oder die Eingabetaste drücken; Esc verwirft ihn.
+  Ein eingetippter Wert gilt mit Eingabetaste, Tab oder einem Klick ins Dokument; ein Klick auf eine leere Stelle des
+  Bedienfelds übernimmt nichts. Jedes Übernehmen ist ein Schritt im Verlauf; ein unveränderter Wert erzeugt keinen.
 
 - **Filter (+):** Das Menü „+“ gliedert die Effekte wie im Original, z. B. *Abgeflachte Kante und
   Relief* ▸ *Abgeflachte Kante innen*, *Abgeflachte Kante außen*, *Relief vertieft*, *Relief erhaben*.

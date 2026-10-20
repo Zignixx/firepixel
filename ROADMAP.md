@@ -14,9 +14,9 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Proven 1:1 | **100.0 %** (49 / 49; 100.0 % over the 48 units before run 24; runs 26 to 28: 100.0 %; run 25: 98.0 %; run 24: 93.9 %) |
 | Measurement quota, all 49 units | **87.3 %** (1077 / 1233 steps; 87.3 % over the 48 old units; unchanged in runs 27 and 28; run 24: 87.0 %; run 17: 86.3 %) |
 | Canvas image pairs within 1 % | 185 / 212 (unchanged in run 28; run 26: 186 / 211; `tool-text/14, 16` above 1 % because no text tool is reset after the reference's size step fails, TW-165) |
-| Tests | Last full run: 2776 passed, 0 failed, 134 ignored at `439a3ec5` (the code of preview `2026-10-19_16-07`); macOS CI build with the app menu (`e11f8d1b`) green |
+| Tests | Last full run: 2776 passed, 0 failed, 134 ignored at `439a3ec5` (the code of preview `2026-10-19_16-07`); fixes F51a to F51c green when run separately, merged tree: see STATUS; macOS CI build with the app menu (`e11f8d1b`) green |
 | Latest release | **v0.2.4** pre-release published on 19 Oct 2026 (tag at `1f26223c`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage, with the three screen modes, the text default rules and the macOS fixes; before: **v0.2.3** (19 Oct 2026); Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 8 fixable rows (2 open: U-1 rest and the runner item TW-167; TW-146 rest and TW-165 moved to the click-test A1-19 as runner measurement gaps; TW-138 rest closed except R3; TW-151, TW-160 to TW-162 and TW-168 awaiting the click-test and the macOS re-test) · 5 deferred · 20 informational · 850+ closed |
+| Open findings | 12 fixable rows (2 open: U-1 rest and the runner item TW-167; TW-146 rest and TW-165 moved to the click-test A1-19 as runner measurement gaps; TW-138 rest closed except R3; TW-151, TW-160 to TW-162 and TW-168 to TW-172 awaiting the click-test and the macOS re-test) · 5 deferred · 22 informational · 850+ closed |
 
 Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including the measurement unit
 `xs-select-behind` (9 steps); run 25 repeated 20 of them, run 26 five, run 27 three and run 28 two.
@@ -28,7 +28,8 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
    checks in section A2), including
    the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
    a double-click, the crop option, the Linux start, the pen anchor modes, the Select Behind hover frame and the
-   History rows of key nudges, A4-15 to A4-18, the screen modes, A4-22, the Subselection display, A4-23), and the **macOS re-test of v0.2.4 by the
+   History rows of key nudges, A4-15 to A4-18, the screen modes, A4-22, the Subselection display, A4-23, tester feedback batch 3: the inspector
+   sliders, Pen undo steps, Redo and Subselection snapping, A4-24 to A4-27), and the **macOS re-test of v0.2.4 by the
    tester** (A4-19 to A4-21 on a real Mac).
 2. **Remaining `[F]` items:** U-1 rest (PDF import layers) and the unmeasured R3 note of TW-138 (indent and spacing
    as text defaults).
@@ -67,6 +68,10 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 - Tester feedback of 20 Oct 2026 (E-Man): TW-168 / FB-06 (the Subselection tool shows the path outline, the anchors
   and the handles of selected points on vector objects instead of the bounding box) is fixed and waits for the
   hands-on comparison A4-23.
+- Tester feedback batch 3 of 20 Oct 2026 (E-Man, RE spec 55): TW-169 / FB-07 (one History step per Pen point),
+  TW-170 / FB-08 (Redo is redo only), TW-171 / FB-09, FB-10 (inspector opacity and stroke width sliders apply once,
+  with a live canvas preview) and TW-172 / FB-11 (free Subselection point drags, View ▸ Snap to Pixels) are fixed in
+  F51a to F51c and wait for A4-24 to A4-27.
 
 ### Deferred expansion items (`[V]`)
 

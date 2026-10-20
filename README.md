@@ -93,7 +93,7 @@ Contributions are welcome — please read [CONTRIBUTING.md](CONTRIBUTING.md) and
 
 Thanks to the people who contributed testing feedback:
 
-- **E-Man** – hands-on testing feedback on the pen tool, Select Behind, macOS and the Subselection display (October 2026)
+- **E-Man** – hands-on testing feedback on the pen tool, Select Behind, macOS and the Subselection display, the Pen undo steps, redo, the inspector sliders and the Subselection snapping (October 2026)
 
 ## License
 

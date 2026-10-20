@@ -25,8 +25,8 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Measurement quota, all 49 units | **87.3 %** (1077 / 1233 measurable steps both `ok`; over the 48 old units 87.3 %, 1068 / 1224; unchanged since run 26; run 24: 87.0 %; run 17 alone 86.3 %; in the 2 units of run 28: 76 / 83, as in run 27) | run 28 |
 | Errors | 33 reference-side, 21 Firepixel-side (both unchanged since run 25); 7 `runner error` lines in run 28 (run 27: 2), all reference-side text selections in `tool-text/07, 11, 13` that R-25 no longer accepts as a highlight (TW-146 rest); none in `toolbox` (TW-166 confirmed) | run 28 |
 | Latest release | **v0.2.4** (19 Oct 2026, pre-release; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; the three screen modes, the text default rules and the macOS fixes TW-160 to TW-162 with the own app menu); before: v0.2.3 (19 Oct 2026) | GitHub releases |
-| Workspace tests | Last full run: **2776 passed, 0 failed, 134 ignored** at `439a3ec5` (runner R-23, package F49, macOS fixes; the code of preview `2026-10-19_16-07`) | `main`, 19 Oct 2026 |
-| Open findings | 8 rows in `[F]`: 2 open (PDF layers, U-1 rest; the runner item TW-167); TW-146 rest and TW-165 moved to the click-test A1-19 on 20 Oct 2026 (runner measurement gaps, not deviations); TW-138 rest closed except the unmeasured R3 note; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test and the macOS re-test by the tester; the Subselection display TW-168 / FB-06 waiting for the click-test A4-23; 5 deferred `[V]`, 20 informational `[N]`; run 28 closed TW-166, run 27 TW-159 rest, TW-163 and TW-164 | [FINDINGS.md](FINDINGS.md) |
+| Workspace tests | Last full run: **2776 passed, 0 failed, 134 ignored** at `439a3ec5` (runner R-23, package F49, macOS fixes; the code of preview `2026-10-19_16-07`); the fixes F51a to F51c, each run separately: 2788 / 2786 / 2785 passed, 0 failed, 134 ignored; the run over the merged tree (GT-1g) is pending | `main`, 20 Oct 2026 |
+| Open findings | 12 rows in `[F]`: 2 open (PDF layers, U-1 rest; the runner item TW-167); TW-146 rest and TW-165 moved to the click-test A1-19 on 20 Oct 2026 (runner measurement gaps, not deviations); TW-138 rest closed except the unmeasured R3 note; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test and the macOS re-test by the tester; the Subselection display TW-168 / FB-06 waiting for the click-test A4-23; tester feedback batch 3, TW-169 to TW-172 (FB-07 to FB-11), waiting for A4-24 to A4-27; 5 deferred `[V]`, 22 informational `[N]`; run 28 closed TW-166, run 27 TW-159 rest, TW-163 and TW-164 | [FINDINGS.md](FINDINGS.md) |
 | Real differences known | None measured open (runs 26 to 28; the last one, full screen mode TW-158, was confirmed fixed in run 26). Unmeasured: whether indent and paragraph spacing on pointer-selected text become text defaults (TW-138 R3) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
@@ -167,6 +167,20 @@ unchanged. Known limits: a whole autoshape or group selected as one element and 
 facing handles of the neighbouring points are shown but cannot be dragged. The runner never captures the
 reference's selection markings, so the comparison is the hands-on check [VERIFICATION.md](VERIFICATION.md) A4-23.
 
+**Tester feedback, batch 3 (20 Oct 2026, E-Man):** FB-07 to FB-11, measured in the reference as RE spec 55 and fixed
+in three commits. F51a (`22f62a54`): every Pen point is its own History step "Pen", Ctrl+Z while drawing removes only
+the last point and drawing goes on from the new last point, finishing adds no step, the closing click is one step,
+Vector Path ignores undo/redo while the button is held (TW-169 / FB-07); Redo is redo only, with "Can't Redo" when
+nothing is undone and no repeat-last-command fallback (TW-170 / FB-08). F51b (`0932f67c`): the inspector opacity and
+stroke width sliders apply once, on release or when the pop-up closes, the number fields on Enter, Tab or a click into
+the document; deliberately beyond the reference, the canvas shows a live render-only preview while dragging, and an
+unchanged value makes no step (TW-171 / FB-09, FB-10). F51c (`901f0a56`): Subselection anchor and handle drags are
+free (no whole-pixel rounding), snapping only to grid, guides and smart guides; the new Firepixel-own toggle View ▸
+Snap to Pixels (on by default) controls the whole-pixel rounding of Pointer moves and Pen points; a hollow
+arrowhead cursor over points (TW-172 / FB-11). Tests: 2788 / 2786 / 2785 passed, 0 failed, 134 ignored for F51a, F51b
+and F51c run separately; the merged-tree run (GT-1g) is pending. Hands-on checks: [VERIFICATION.md](VERIFICATION.md)
+A4-24 (including the re-check of Enter in the opacity field, not reproducible in tests) to A4-27.
+
 After run 25 (on `main` up to `439a3ec5`): runner R-23 (`5f498cd7`) for TW-159 and TW-146 rest; package F49
 (`8a9cf670`, `439a3ec5`) with the three screen modes as in the reference (TW-158: full screen shows only the canvas
 on black, full screen with menus keeps menu bar and toolbar with a floating Tools panel and an icon dock, F needs a
@@ -275,7 +289,8 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 1. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
    typing after a double-click, crop option off, Linux start, pen anchor modes, the Select Behind hover frame,
-   the History rows of key nudges, the screen modes, the Subselection display A4-23) and the open A2 checks, and the macOS re-test of v0.2.4 by the
+   the History rows of key nudges, the screen modes, the Subselection display A4-23, tester feedback batch 3:
+   the inspector sliders, Pen undo steps, Redo and Subselection snapping A4-24 to A4-27) and the open A2 checks, and the macOS re-test of v0.2.4 by the
    tester (A4-19 to A4-21).
 2. Runner item TW-167, then a short follow-up run over `toolbox`; TW-146 rest and TW-165 moved to the click-test A1-19 (runner measurement gaps, not deviations).
 3. Remaining parity items: U-1 rest and the unmeasured R3 note of TW-138 (indent and spacing as text defaults).

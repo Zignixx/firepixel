@@ -71,6 +71,14 @@ like a human. UI-side helpers that belong to one tool (for example the backgroun
 object selection) live in `fp-ui/src/canvas/tools/`. Which parts of the window each screen mode shows (Standard, full screen with
 menus, full screen) is decided in one place, `fp-ui/src/screen_mode.rs`.
 
+A tool whose state mirrors the document implements `ToolMachine::sync`, which the session calls after undo, redo, a
+jump in the History panel, a document command and the tool's own emitted commands. The Pen keeps the path being
+drawn in the document (one History step per point) and rebuilds its nodes, handles included, from it in `sync`, so
+Ctrl+Z while drawing removes only the last point and drawing goes on from there. `ToolMachine::blocks_history`
+reports a running stroke during which undo and redo are ignored (Vector Path with the button held), and
+`ToolResponse.group` runs the response's commands as one named History step (for example the Pen closing a path it
+started, or joining another open path).
+
 Commands that reach outside the document (screen capture through the system's capture tool, the symbol-script
 generator, the shared palette over all open documents) live in `fp-engine/src/commands/extras.rs`.
 
@@ -81,7 +89,11 @@ against the flat PNG preview stored in FW-PNG files (corpus and golden tests). T
 a texture; partial rendering and caches keep large documents interactive. For live bitmap painting the
 canvas renders the changed rectangle with `Renderer::render_region_with` and a `PixelOverride` that swaps in the
 scratch pixels of the painted bitmap, so the preview sits in the right stacking position with its opacity, blend
-mode, effects and masks. Pixel buffers are RGBA8 in
+mode, effects and masks. The inspector's opacity and stroke width sliders preview their pending value the same
+render-only way: the inspector stores it in `AppState::inspector_preview` (`fp-ui/src/inspector/preview.rs`), the
+canvas renders a copy of the document with the value applied to the selection under its own `RenderKey.preview`, and
+the session's document, history and dirty flag are never touched; the preview is reset every frame, and the single
+real apply goes through the normal command on release or when the pop-up closes. Pixel buffers are RGBA8 in
 128 × 128 copy-on-write tiles (cheap undo). `rayon` parallelises filters and large areas; long operations run
 in the background with progress so the UI never blocks.
 
