@@ -25,7 +25,7 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Measurement quota, all 49 units | **87.3 %** (1077 / 1233 measurable steps both `ok`; over the 48 old units 87.3 %, 1068 / 1224; unchanged since run 26; run 24: 87.0 %; run 17 alone 86.3 %; in the 2 units of run 28: 76 / 83, as in run 27) | run 28 |
 | Errors | 33 reference-side, 21 Firepixel-side (both unchanged since run 25); 7 `runner error` lines in run 28 (run 27: 2), all reference-side text selections in `tool-text/07, 11, 13` that R-25 no longer accepts as a highlight (TW-146 rest); none in `toolbox` (TW-166 confirmed) | run 28 |
 | Latest release | **v0.2.4** (19 Oct 2026, pre-release; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; the three screen modes, the text default rules and the macOS fixes TW-160 to TW-162 with the own app menu); before: v0.2.3 (19 Oct 2026) | GitHub releases |
-| Workspace tests | Last full run: **2776 passed, 0 failed, 134 ignored** at `439a3ec5` (runner R-23, package F49, macOS fixes; the code of preview `2026-10-19_16-07`); the fixes F51a to F51c, each run separately: 2788 / 2786 / 2785 passed, 0 failed, 134 ignored; the run over the merged tree (GT-1g) is pending | `main`, 20 Oct 2026 |
+| Workspace tests | Last full run: **2797 passed, 0 failed, 134 ignored** at `901f0a56` (fixes F51a to F51c merged, GT-1g; the code of preview `2026-10-20_06-08`); earlier 2776 passed at `439a3ec5` (preview `2026-10-19_16-07`) | `main`, 20 Oct 2026 |
 | Open findings | 12 rows in `[F]`: 2 open (PDF layers, U-1 rest; the runner item TW-167); TW-146 rest and TW-165 moved to the click-test A1-19 on 20 Oct 2026 (runner measurement gaps, not deviations); TW-138 rest closed except the unmeasured R3 note; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test and the macOS re-test by the tester; the Subselection display TW-168 / FB-06 waiting for the click-test A4-23; tester feedback batch 3, TW-169 to TW-172 (FB-07 to FB-11), waiting for A4-24 to A4-27; 5 deferred `[V]`, 22 informational `[N]`; run 28 closed TW-166, run 27 TW-159 rest, TW-163 and TW-164 | [FINDINGS.md](FINDINGS.md) |
 | Real differences known | None measured open (runs 26 to 28; the last one, full screen mode TW-158, was confirmed fixed in run 26). Unmeasured: whether indent and paragraph spacing on pointer-selected text become text defaults (TW-138 R3) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
@@ -177,8 +177,8 @@ the document; deliberately beyond the reference, the canvas shows a live render-
 unchanged value makes no step (TW-171 / FB-09, FB-10). F51c (`901f0a56`): Subselection anchor and handle drags are
 free (no whole-pixel rounding), snapping only to grid, guides and smart guides; the new Firepixel-own toggle View ▸
 Snap to Pixels (on by default) controls the whole-pixel rounding of Pointer moves and Pen points; a hollow
-arrowhead cursor over points (TW-172 / FB-11). Tests: 2788 / 2786 / 2785 passed, 0 failed, 134 ignored for F51a, F51b
-and F51c run separately; the merged-tree run (GT-1g) is pending. Hands-on checks: [VERIFICATION.md](VERIFICATION.md)
+arrowhead cursor over points (TW-172 / FB-11). Tests on the merged tree (GT-1g): 2797 passed, 0 failed, 134 ignored at
+`901f0a56`; preview `2026-10-20_06-08`. Hands-on checks: [VERIFICATION.md](VERIFICATION.md)
 A4-24 (including the re-check of Enter in the opacity field, not reproducible in tests) to A4-27.
 
 After run 25 (on `main` up to `439a3ec5`): runner R-23 (`5f498cd7`) for TW-159 and TW-146 rest; package F49
