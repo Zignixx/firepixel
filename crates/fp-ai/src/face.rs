@@ -79,7 +79,7 @@ impl Reader<'_> {
         let s = self
             .b
             .get(self.pos..self.pos + N)
-            .ok_or_else(|| AiError::Weights("face cascade truncated".into()))?;
+            .ok_or_else(|| AiError::Weights(fp_i18n::t("ai-err-d-face-cascade-truncated")))?;
         self.pos += N;
         let mut a = [0u8; N];
         a.copy_from_slice(s);
@@ -96,7 +96,7 @@ impl Reader<'_> {
         if v.is_finite() {
             Ok(v)
         } else {
-            Err(AiError::Weights("face cascade: value not finite".into()))
+            Err(AiError::Weights(fp_i18n::t("ai-err-d-face-cascade-not-finite")))
         }
     }
 }
@@ -104,28 +104,28 @@ impl Reader<'_> {
 impl Cascade {
     /// Reads the binary form written by `examples/haar_convert.rs`.
     pub fn parse(bytes: &[u8]) -> Result<Cascade> {
-        let bad = |s: &str| AiError::Weights(format!("face cascade: {s}"));
+        let bad = |key: &str| AiError::Weights(fp_i18n::t(key));
         if bytes.get(..8) != Some(b"FPHAAR01".as_slice()) {
-            return Err(bad("wrong header"));
+            return Err(bad("ai-err-d-face-cascade-header"));
         }
         let mut r = Reader { b: bytes, pos: 8 };
         let (win_w, win_h) = (r.u16()? as usize, r.u16()? as usize);
         let (n_stages, n_feat) = (r.u16()? as usize, r.u16()? as usize);
         if !(4..=255).contains(&win_w) || !(4..=255).contains(&win_h) || n_stages == 0 {
-            return Err(bad("bad window or stage count"));
+            return Err(bad("ai-err-d-face-cascade-counts"));
         }
         let mut features = Vec::with_capacity(n_feat);
         for _ in 0..n_feat {
             let n = r.u8()? as usize;
             if !(1..=3).contains(&n) {
-                return Err(bad("bad rect count"));
+                return Err(bad("ai-err-d-face-cascade-rect-count"));
             }
             let mut rects = Vec::with_capacity(n);
             for _ in 0..n {
                 let [x, y, w, h] = r.take::<4>()?;
                 let weight = r.f32()?;
                 if x as usize + w as usize > win_w || y as usize + h as usize > win_h {
-                    return Err(bad("rect outside the window"));
+                    return Err(bad("ai-err-d-face-cascade-rect-outside"));
                 }
                 rects.push(HaarRect { x, y, w, h, weight });
             }
@@ -139,7 +139,7 @@ impl Cascade {
             for _ in 0..n {
                 let feature = r.u16()?;
                 if feature as usize >= features.len() {
-                    return Err(bad("feature index out of range"));
+                    return Err(bad("ai-err-d-face-cascade-feature"));
                 }
                 stumps.push(Stump {
                     feature,
@@ -151,7 +151,7 @@ impl Cascade {
             stages.push(Stage { threshold, stumps });
         }
         if r.pos != bytes.len() {
-            return Err(bad("trailing bytes"));
+            return Err(bad("ai-err-d-face-cascade-trailing"));
         }
         Ok(Cascade {
             win_w,
@@ -522,9 +522,11 @@ pub fn detect_faces_with(
     cancel: &Cancel,
 ) -> Result<Vec<IRect>> {
     if w == 0 || h == 0 || rgba.len() != w * h {
-        return Err(AiError::Input(format!(
-            "face detection: {w} x {h} does not match {} pixels",
-            rgba.len()
+        return Err(AiError::Input(fp_i18n::tr!(
+            "ai-err-d-face-input",
+            width = w,
+            height = h,
+            len = rgba.len()
         )));
     }
     let cascade = Cascade::frontal_face()?;

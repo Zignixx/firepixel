@@ -127,3 +127,5 @@ text text.rs | runs ≠ text
 
 # Glob example in the Batch Studio name filter (pattern syntax, language-neutral)
 text files.rs | *.png; logo_*
+# Tensorname der Real-ESRGAN-Gewichte (Argument der übersetzten Meldung ai-err-d-esrgan-weights), kein Text
+text esrgan.rs | {prefix}.conv{}
