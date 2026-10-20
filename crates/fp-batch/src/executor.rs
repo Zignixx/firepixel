@@ -544,7 +544,11 @@ impl Job<'_> {
         let written = if fmt == OutputFormat::FwPng {
             output::write_fwpng(item, &output::long_path(&tmp))
         } else {
-            output::encode(item, fmt, &self.recipe.output.options).and_then(|(bytes, w)| {
+            // BA-110: hooked encoders (GIF optimizer) see the token and stop inside one encode
+            output::with_encode_cancel(&self.opts.cancel, || {
+                output::encode(item, fmt, &self.recipe.output.options)
+            })
+            .and_then(|(bytes, w)| {
                 rep.warnings.extend(w);
                 std::fs::write(output::long_path(&tmp), &bytes)
                     .map_err(|e| BatchError::Io(format!("{}: {e}", tmp.display())))
@@ -555,7 +559,7 @@ impl Job<'_> {
             e
         };
         written.map_err(cleanup)?;
-        // Abbrechen: Kodierer laufen zu Ende, ihr Ergebnis wird verworfen
+        // Abbrechen: das Ergebnis wird verworfen (der GIF-Optimierer bricht schon in der Kodierung ab)
         self.opts.cancel.check().map_err(cleanup)?;
         rep.bytes_out = std::fs::metadata(output::long_path(&tmp))
             .map(|m| m.len())

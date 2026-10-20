@@ -640,3 +640,170 @@ fn slow_fade_is_kept() {
         assert_eq!(reds, vec![0, 20, 40, 60], "{preset}: {:?}", r.stats.frames);
     }
 }
+
+/// BA-110: lossy LZW with an SSIM bound (`lossyMinSsim`) – at "best" (loss-free, SSIM ≥ bound)
+/// smaller than flexible parsing alone on the cartoon (never larger on the screen recording, whose
+/// flat colours gain nothing from loss),
+/// and every frame keeps SSIM ≥ the bound against its source frame (within `SLACK` for areas
+/// drawn by earlier frames), unless palette and dithering alone already lose more (then the frame
+/// stays close to the loss-free encode).
+#[test]
+fn lossy_ssim_bound_is_smaller_and_respected() {
+    use fp_batch::steps::gifopt::metrics::ssim;
+    let bound = 0.99;
+    // the bound holds where a frame draws; unchanged areas keep the (bounded) loss of earlier
+    // frames, so the whole frame may sit slightly under it
+    const SLACK: f64 = 0.002;
+    for clip in [screen(160, 120, 12), cartoon(128, 96, 12), pan(96, 72, 8)] {
+        for preset in ["best", "balanced"] {
+            // one decoded frame per source frame (no merging, no split parts)
+            let base = json!({"preset": preset, "lzw": "flexible", "mergeSimilar": false, "splitFrames": false});
+            let with = |extra: Value| {
+                let mut o = opts(base.clone());
+                o.extend(opts(extra));
+                gifopt::optimize(&clip.item(), &o).expect("optimize")
+            };
+            let flexible = with(json!({}));
+            let lossless = with(json!({"lossy": 0}));
+            let bounded = with(json!({"lossyMinSsim": bound}));
+            if clip.name == "cartoon" && preset == "best" {
+                assert!(
+                    bounded.bytes.len() < flexible.bytes.len(),
+                    "{} {preset}: {} vs {}",
+                    clip.name,
+                    bounded.bytes.len(),
+                    flexible.bytes.len()
+                );
+            }
+            if clip.name != "pan" && preset == "best" {
+                assert!(
+                    bounded.bytes.len() <= flexible.bytes.len(),
+                    "{} {preset}",
+                    clip.name
+                );
+            }
+            let (_, _, dec) = decode(&bounded.bytes);
+            let (_, _, dec0) = decode(&lossless.bytes);
+            assert_eq!(dec.len(), clip.frames.len(), "{} {preset}", clip.name);
+            for (i, src) in clip.frames.iter().enumerate() {
+                let s = ssim(src, &dec[i].0, clip.w, clip.h);
+                let s0 = ssim(src, &dec0[i].0, clip.w, clip.h);
+                assert!(
+                    s >= bound - SLACK || (s0 < bound && s >= s0 - 0.005),
+                    "{} {preset} frame {i}: SSIM {s:.5} (loss-free {s0:.5})",
+                    clip.name
+                );
+            }
+        }
+    }
+    // off by default, 0 = off: byte-identical to the output without the option
+    let clip = cartoon(64, 48, 6);
+    let plain = run(&clip, json!({"quality": 70}));
+    let zero = run(&clip, json!({"quality": 70, "lossyMinSsim": 0}));
+    assert_eq!(plain.bytes, zero.bytes);
+    assert_eq!(
+        GifOptions::from_map(&opts(json!({"lossyMinSsim": 2}))).lossy_min_ssim,
+        Some(gifopt::MAX_SSIM_BOUND as f32)
+    );
+}
+
+/// BA-110: cancel inside one GIF encode – the encode stops within about one frame of the cancel
+/// (checked per frame, per search step and per LZW row) and reports "cancelled"; in a batch run the
+/// item is cancelled and neither the output nor its temporary file is left behind.
+#[test]
+fn cancel_stops_inside_one_gif_encode() {
+    use std::time::{Duration, Instant};
+    let n = 24;
+    let clip = pan(192, 144, n);
+    let item = clip.item();
+    let o = opts(json!({"preset": "best", "lossyMinSsim": 0.99}));
+    let t = Instant::now();
+    gifopt::encode_item(&item, &o).expect("full encode");
+    let total = t.elapsed();
+    let per_frame = total / n as u32;
+    let mut seen = false;
+    for div in [3u32, 6, 12] {
+        let token = fp_batch::CancelToken::new();
+        let c2 = token.clone();
+        let delay = total / div;
+        let h = std::thread::spawn(move || {
+            std::thread::sleep(delay);
+            c2.cancel();
+            Instant::now()
+        });
+        let r = fp_batch::output::with_encode_cancel(&token, || gifopt::encode_item(&item, &o));
+        let end = Instant::now();
+        let at = h.join().expect("cancel thread");
+        match r {
+            Ok(_) => assert!(at >= end, "cancelled during the encode but not stopped"),
+            Err(e) => {
+                assert!(e.is_cancelled(), "{e}");
+                let lag = end.saturating_duration_since(at);
+                assert!(
+                    lag <= per_frame * 2 + Duration::from_millis(100),
+                    "lag {lag:?}, frame {per_frame:?}, total {total:?}"
+                );
+                seen = true;
+                break;
+            }
+        }
+    }
+    assert!(seen, "no cancel landed inside the encode ({total:?})");
+
+    // batch run: cancel while the item is being encoded
+    let dir = temp("cancel");
+    let src = dir.join("pan.gif");
+    std::fs::write(
+        &src,
+        gifopt::encode_item(&item, &opts(json!({"quality": 60})))
+            .expect("source")
+            .as_slice(),
+    )
+    .expect("write");
+    let mut r = Recipe::named("gif");
+    r.output.format = "gif".into();
+    r.output.options = o.clone();
+    r.output.target = TargetSpec {
+        kind: TargetKind::Folder,
+        path: Some(dir.join("out")),
+        ..TargetSpec::default()
+    };
+    r.add_step(gifopt::STABILIZE, json!({"threshold": 0}));
+    let info = fp_batch::probe(&src).expect("probe");
+    let (tx, rx) = std::sync::mpsc::channel();
+    let cancel = fp_batch::CancelToken::new();
+    let ro = RunOptions {
+        threads: Some(1),
+        cancel: cancel.clone(),
+        progress: Some(tx),
+        ..RunOptions::default()
+    };
+    let job = std::thread::spawn(move || executor::run(&r, &[info], &ro));
+    // the steps are done when the progress reports an empty step: then the encode runs
+    let mut cancelled_at = None;
+    for p in rx.iter() {
+        if let fp_batch::Progress::ItemProgress { step, .. } = &p
+            && step.is_empty()
+        {
+            std::thread::sleep(total / 4);
+            cancel.cancel();
+            cancelled_at = Some(Instant::now());
+            break;
+        }
+    }
+    let rep = job.join().expect("join").expect("run");
+    let end = Instant::now();
+    assert_eq!(rep.totals.cancelled, 1, "{:#?}", rep.items);
+    let left: Vec<_> = std::fs::read_dir(dir.join("out"))
+        .map(|d| d.flatten().map(|e| e.file_name()).collect())
+        .unwrap_or_default();
+    assert!(left.is_empty(), "{left:?}");
+    if let Some(at) = cancelled_at {
+        assert!(
+            end.saturating_duration_since(at) <= per_frame * 2 + Duration::from_millis(250),
+            "run went on {:?} after the cancel",
+            end.saturating_duration_since(at)
+        );
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}

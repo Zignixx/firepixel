@@ -349,7 +349,9 @@ pub fn preview(
         pipe.apply(&mut full, &mut fctx)?;
         opts.cancel.check()?;
         after_size = full.dimensions();
-        let (bytes, w) = output::encode(&full, format, &recipe.output.options)?;
+        let (bytes, w) = output::with_encode_cancel(&opts.cancel, || {
+            output::encode(&full, format, &recipe.output.options)
+        })?;
         opts.cancel.check()?;
         bytes_after = Some(bytes.len() as u64);
         warnings.extend(w);

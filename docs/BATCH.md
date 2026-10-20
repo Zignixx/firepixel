@@ -831,8 +831,30 @@ zenquant (AGPL). The techniques are known from publications and are implemented 
    0.961; at the export's SSIM the default is −32 %). Both modes stay **off by default** (the spec
    does not define them, so the output of the defaults is unchanged); the gains are small because
    the greedy encoder already looks ahead over equivalent indices. Frame Oklab and edge maps are
-   computed per frame in parallel (rayon, deterministic). Not done: lossy LZW with an SSIM bound,
-   cancel inside one encode.
+   computed per frame in parallel (rayon, deterministic).
+8. **Lossy LZW with an SSIM bound** (BA-110, option `lossyMinSsim` 0.5…0.9999, *0 = off*, replaces
+   `lossy`): per frame a bisection over the loss (`lossy` 0…600, i.e. up to 3× the manual maximum;
+   ≤ 9 encodes per frame) takes the largest loss whose visible frame keeps SSIM ≥ the bound against
+   the frame before temporal smoothing (`metrics::ssim_l_in`, the §5.6 SSIM on Oklab L, measured on
+   the windows the frame draws: its rectangle or parts plus a cleared previous rectangle; unchanged
+   areas keep the already bounded loss of earlier frames, so a whole frame may sit up to ~0.002
+   under the bound). If even loss-free coding misses the bound (palette and dithering lose more),
+   the frame is coded loss-free. Measured (`tests\gifopt_measure.rs`, 320×240×24, `lzw: flexible`):
+   at fixed quality the bound shrinks the cartoon by −25.4 % (q 100, SSIM 1.0000 → 0.9902), −17.9 %
+   (q 90) and −4.7 % (q 80, SSIM 0.9911); screen ±0 % (flat colours: loss-free coding is already
+   smaller, the coder keeps the smaller of both); the camera pan misses 0.99 at every quality (best
+   0.9863), so it stays loss-free there (+4.6 % at q 90, +9.8 % at q 80 vs. the automatic loss, at
+   higher SSIM). Smallest file with mean SSIM ≥ 0.99 (quality bisection): cartoon 6,247 B (−38.1 %
+   vs. the export, −0.4 % vs. default), with `perceptualPalette` 6,179 B (−38.8 %, −1.5 %); screen
+   unchanged at −54.3 %; pan unreachable. Cost: about 2× the encode time (cartoon 386 vs. 219 ms;
+   pan at q 100 3.9 s). Off by default; the output without the option is byte-identical.
+9. **Cancel inside one encode** (BA-110): the executor and the full preview run the encode under
+   `output::with_encode_cancel` (thread-local batch `CancelToken`); the optimizer passes it to the
+   encoder (`GifSettings::cancel`), which checks it per frame (indexing and coding), per step of the
+   SSIM search and per row of the LZW coder (greedy) or every 4,096 pixels (flexible). A cancelled
+   encode returns "cancelled", the executor deletes the temporary file, no output is written (test:
+   stops within about one frame; the batch item ends as cancelled, the output folder stays empty).
+   Not covered: palette building and temporal smoothing before the first frame run to their end.
 
 ### 5.7 UI files (`crates\fp-ui\src\batch\`)
 

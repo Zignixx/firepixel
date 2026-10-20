@@ -10,6 +10,7 @@
 //! nachdem, was den laufenden Code verlängert.
 
 use super::color::{Lab, dist2};
+use crate::executor::CancelToken;
 
 /// Plan eines Pixels für den Kodierer.
 #[derive(Clone, Copy, Debug)]
@@ -52,6 +53,16 @@ pub struct LzwParams<'a> {
     /// B-5: flexible (non-greedy) parsing instead of the greedy longest match
     /// ([`encode_flexible`]).
     pub flexible: bool,
+    /// BA-110: checked once per row (greedy) or every [`CANCEL_EVERY`] pixels (flexible); when it
+    /// is cancelled the encode stops early and its (truncated) output must be discarded.
+    pub cancel: Option<&'a CancelToken>,
+}
+
+/// Pixels between two cancel checks of the flexible parser.
+pub const CANCEL_EVERY: usize = 4096;
+
+fn cancelled(c: Option<&CancelToken>) -> bool {
+    c.is_some_and(CancelToken::is_cancelled)
 }
 
 /// Gewicht der Helligkeit in der Verlust-Toleranz (BATCH-8b): Ersetzungen dürfen den Farbton deutlich
@@ -186,6 +197,9 @@ pub fn encode(plan: &[PlanPx], p: &LzwParams) -> (Vec<u8>, Vec<u8>) {
         let x = i % row;
         if x == 0 {
             carry_right = [0.0; 3];
+            if cancelled(p.cancel) {
+                break;
+            }
         }
         let carry = if lossy {
             let d = carry_down[x];
@@ -470,7 +484,14 @@ fn encode_flexible(plan: &[PlanPx], p: &LzwParams) -> (Vec<u8>, Vec<u8>) {
     let mut i = 0usize;
     // root of the phrase at `i` (chosen by the previous step)
     let (_, mut root) = longest(&trie, plan, p, 0, usize::MAX, &accept, &mut side);
+    let mut next_check = CANCEL_EVERY;
     while i < plan.len() {
+        if i >= next_check {
+            next_check = i + CANCEL_EVERY;
+            if cancelled(p.cancel) {
+                break;
+            }
+        }
         walk(&trie, plan, i, root, usize::MAX, &accept, &mut main);
         let (nodes, picks) = (&main.0, &main.1);
         let len = nodes.len();
@@ -602,6 +623,7 @@ pub(crate) mod tests {
             threshold: 0.0,
             width: 64,
             flexible: false,
+            cancel: None,
         }
     }
 
@@ -660,6 +682,7 @@ pub(crate) mod tests {
             threshold: 0.0,
             width: 4000,
             flexible: false,
+            cancel: None,
         };
         let (bytes, chosen) = encode(&plan, &p);
         let strict: Vec<PlanPx> = plan.iter().map(|q| PlanPx::fixed(q.default)).collect();
@@ -694,6 +717,7 @@ pub(crate) mod tests {
             threshold: t,
             width: 200,
             flexible: false,
+            cancel: None,
         };
         let (lossless, c0) = encode(&plan, &mk(0.0));
         let (lossy, c1) = encode(&plan, &mk(0.08));
@@ -748,6 +772,7 @@ pub(crate) mod tests {
                 threshold: 0.08,
                 width: 200,
                 flexible: false,
+                cancel: None,
             };
             let (bytes, chosen) = encode(&plan, &p);
             (

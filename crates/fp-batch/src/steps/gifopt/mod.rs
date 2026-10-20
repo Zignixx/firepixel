@@ -165,6 +165,22 @@ pub struct Optimized {
 
 /// Kodiert eine Quelle mit festen Einstellungen.
 pub fn encode_source(src: &Source, s: &GifSettings, quality: u8) -> Optimized {
+    // BA-110: the cancel token of the running batch encode (if any) reaches the encoder
+    let mut s2 = s.clone();
+    if s2.cancel.is_none() {
+        s2.cancel = crate::output::encode_cancel();
+    }
+    if s2.cancel.as_ref().is_some_and(|c| c.is_cancelled()) {
+        return Optimized {
+            bytes: Vec::new(),
+            stats: GifStats::default(),
+            quality,
+            scale: s.scale,
+            frame_step: s.frame_step,
+            reached: true,
+            encodes: 1,
+        };
+    }
     let (w, h, frames) = src.canvas_frames(s.scale);
     let prep = frames::PrepSettings {
         transparency: s.transparency,
@@ -172,9 +188,9 @@ pub fn encode_source(src: &Source, s: &GifSettings, quality: u8) -> Optimized {
         frame_step: s.frame_step,
         merge_similar: s.merge_similar,
         threshold: s.diff_threshold,
+        keep_original: s.lossy_min_ssim.is_some_and(|b| b > 0.0),
     };
     let pf = frames::prepare(w, h, frames, &prep);
-    let mut s2 = s.clone();
     s2.loop_count = src.loop_count;
     let (bytes, stats) = encoder::encode(w, h, &pf, &s2);
     Optimized {
@@ -211,6 +227,8 @@ pub struct GifOptions {
     pub lzw_flexible: Option<bool>,
     /// B-5: `perceptualPalette`.
     pub perceptual_palette: Option<bool>,
+    /// BA-110: `lossyMinSsim` (0 = off): lossy LZW bounded by an SSIM per frame.
+    pub lossy_min_ssim: Option<f32>,
 }
 
 fn num(o: &Map<String, Value>, k: &str) -> Option<f64> {
@@ -259,6 +277,9 @@ impl GifOptions {
                 _ => None,
             }),
             perceptual_palette: b("perceptualPalette"),
+            lossy_min_ssim: num(o, "lossyMinSsim")
+                .filter(|v| *v > 0.0)
+                .map(|v| v.clamp(MIN_SSIM_BOUND, MAX_SSIM_BOUND) as f32),
         }
     }
 
@@ -321,9 +342,15 @@ impl GifOptions {
             split_frames: self.split_frames.unwrap_or(q < 95),
             lzw_flexible: self.lzw_flexible.unwrap_or(false),
             perceptual_palette: self.perceptual_palette.unwrap_or(false),
+            lossy_min_ssim: self.lossy_min_ssim,
+            cancel: None,
         }
     }
 }
+
+/// Range of `lossyMinSsim` (BA-110); 0 switches the bound off.
+pub const MIN_SSIM_BOUND: f64 = 0.5;
+pub const MAX_SSIM_BOUND: f64 = 0.9999;
 
 /// Log-lineare Interpolation über Stützstellen `(Qualität, Wert)`.
 fn interp_log(q: f32, pts: &[(f32, f32)]) -> f32 {
@@ -373,13 +400,18 @@ pub fn quality_lossy(q: f32, photo: bool) -> u32 {
 pub fn optimize(item: &Item, options: &Map<String, Value>) -> Result<Optimized> {
     let src = Source::from_item(item)?;
     let opts = GifOptions::from_map(options);
-    Ok(match opts.max_kb {
+    let r = match opts.max_kb {
         Some(kb) => size::encode_to_target(&src, &opts, kb as usize * 1024),
         None => {
             let q = opts.base_quality();
             encode_source(&src, &opts.resolve(q), q)
         }
-    })
+    };
+    // BA-110: a cancelled encode stops early; its partial output is discarded
+    if let Some(c) = crate::output::encode_cancel() {
+        c.check()?;
+    }
+    Ok(r)
 }
 
 /// Kodierer für „Speichern als: GIF“.
@@ -425,6 +457,8 @@ impl Step for GifOutput {
             // B-5: size modes, off by default (output of the defaults unchanged)
             ParamDef::choice("lzw", &["greedy", "flexible"], "greedy"),
             ParamDef::bool("perceptualPalette", false),
+            // BA-110: lossy LZW bounded by an SSIM per frame (0 = off; replaces `lossy`)
+            ParamDef::number("lossyMinSsim", 0.0, MAX_SSIM_BOUND, 0.0),
             // Füllfarbe für halbtransparente Pixel ohne GIF-Transparenz (BATCH-11b: eigenes Feld)
             ParamDef::color("background", "#ffffff").when("transparency", &["false"]),
         ]

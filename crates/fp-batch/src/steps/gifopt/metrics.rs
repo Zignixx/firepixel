@@ -19,6 +19,26 @@ pub fn ssim(a: &[[u8; 4]], b: &[[u8; 4]], w: usize, h: usize) -> f64 {
     }
     let la: Vec<f64> = a.iter().map(|p| rgb_to_lab(flat(*p))[0] as f64).collect();
     let lb: Vec<f64> = b.iter().map(|p| rgb_to_lab(flat(*p))[0] as f64).collect();
+    ssim_l(&la, &lb, w, h)
+}
+
+/// Oklab L of a transparent pixel for [`ssim_l`] (mid grey, as in [`ssim`]).
+pub fn transparent_l() -> f64 {
+    rgb_to_lab([128, 128, 128])[0] as f64
+}
+
+/// SSIM on precomputed Oklab-L planes (the core of [`ssim`]; BA-110: the encoder's lossy LZW with
+/// an SSIM bound measures each frame with it).
+pub fn ssim_l(la: &[f64], lb: &[f64], w: usize, h: usize) -> f64 {
+    ssim_l_in(la, lb, w, h, None)
+}
+
+/// Like [`ssim_l`], but only over the windows that overlap `region` (`[x, y, w, h]`; `None` = all).
+/// No overlapping window (empty region) counts as 1.
+pub fn ssim_l_in(la: &[f64], lb: &[f64], w: usize, h: usize, region: Option<[usize; 4]>) -> f64 {
+    if la.len() != lb.len() || la.len() < w * h || w == 0 || h == 0 {
+        return 0.0;
+    }
     let (c1, c2) = (0.01f64 * 0.01, 0.03f64 * 0.03);
     let win = 8.min(w).min(h);
     let step = (win / 2).max(1);
@@ -27,6 +47,12 @@ pub fn ssim(a: &[[u8; 4]], b: &[[u8; 4]], w: usize, h: usize) -> f64 {
     while y + win <= h {
         let mut x = 0;
         while x + win <= w {
+            if let Some([rx, ry, rw, rh]) = region
+                && !(x < rx + rw && x + win > rx && y < ry + rh && y + win > ry)
+            {
+                x += step;
+                continue;
+            }
             let (mut ma, mut mb, mut va, mut vb, mut cov) = (0.0, 0.0, 0.0, 0.0, 0.0);
             let n = (win * win) as f64;
             for yy in y..y + win {

@@ -477,3 +477,5 @@ batch-value-output-gif-lzw-greedy = Standard (longest match)
 batch-value-output-gif-lzw-flexible = Flexible (smaller)
 batch-param-output-gif-perceptualPalette = Perceptual palette
     .tooltip = Flat areas count more than busy texture, where colour errors are hardly visible, when the colours are chosen.
+batch-param-output-gif-lossyMinSsim = Loss with quality bound (SSIM)
+    .tooltip = 0 = off. Otherwise each frame uses the strongest LZW loss whose image keeps at least this similarity (SSIM, 0.5–0.9999, e.g. 0.99) to the frame; replaces “Loss”.

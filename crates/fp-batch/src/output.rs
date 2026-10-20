@@ -277,6 +277,31 @@ pub fn item_document(item: &Item) -> Result<fp_model::Document> {
     }
 }
 
+thread_local! {
+    static ENCODE_CANCEL: std::cell::RefCell<Option<crate::executor::CancelToken>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// BA-110: runs `f` (an encode) with `cancel` as the current thread's encode cancel token, so a
+/// hooked encoder (GIF optimizer) can stop inside one long encode (restored afterwards, also on
+/// panic). The executor and the full preview wrap their [`encode`] calls with it.
+pub fn with_encode_cancel<R>(cancel: &crate::executor::CancelToken, f: impl FnOnce() -> R) -> R {
+    struct Reset(Option<crate::executor::CancelToken>);
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            let prev = self.0.take();
+            ENCODE_CANCEL.with(|c| *c.borrow_mut() = prev);
+        }
+    }
+    let _reset = Reset(ENCODE_CANCEL.with(|c| c.borrow_mut().replace(cancel.clone())));
+    f()
+}
+
+/// Cancel token of the encode running on this thread ([`with_encode_cancel`]), if any.
+pub fn encode_cancel() -> Option<crate::executor::CancelToken> {
+    ENCODE_CANCEL.with(|c| c.borrow().clone())
+}
+
 /// Kodiert ein Element. Liefert Dateiinhalt und Warnungen (übersetzt). `fmt` darf nicht `Same` sein.
 /// Mit Nachbearbeitung von BATCH-5 (`meta::finish_encode`: Metadaten, PNG-Optimierung, Zielgröße, TIFF).
 pub fn encode(

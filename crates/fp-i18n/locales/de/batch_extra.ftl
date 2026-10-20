@@ -477,3 +477,5 @@ batch-value-output-gif-lzw-greedy = Standard (längster Treffer)
 batch-value-output-gif-lzw-flexible = Flexibel (kleiner)
 batch-param-output-gif-perceptualPalette = Wahrnehmungsgewichtete Palette
     .tooltip = Ruhige Flächen zählen bei der Farbauswahl mehr als unruhige Strukturen, in denen Farbfehler kaum auffallen.
+batch-param-output-gif-lossyMinSsim = Verlust mit Qualitätsgrenze (SSIM)
+    .tooltip = 0 = aus. Sonst nutzt jedes Frame den stärksten LZW-Verlust, bei dem sein Bild mindestens diese Ähnlichkeit (SSIM, 0,5–0,9999, z. B. 0,99) zum Frame behält; ersetzt „Verlust“.

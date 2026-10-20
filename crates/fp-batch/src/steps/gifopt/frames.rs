@@ -14,6 +14,9 @@ pub struct PFrame {
     pub delay_ms: u32,
     /// Gegenüber dem Vorframe unverändert (nach der Glättung).
     pub static_mask: Vec<bool>,
+    /// BA-110: the frame before temporal smoothing (only with [`PrepSettings::keep_original`]),
+    /// reference of the SSIM bound of the lossy LZW.
+    pub original: Option<Vec<u32>>,
 }
 
 /// Einstellungen der Vorverarbeitung.
@@ -28,6 +31,8 @@ pub struct PrepSettings {
     pub merge_similar: bool,
     /// Oklab-Abstand „unverändert“ (0 = nur exakt gleich).
     pub threshold: f32,
+    /// BA-110: keep each frame before smoothing in [`PFrame::original`].
+    pub keep_original: bool,
 }
 
 /// Bereitet Frames vor. `frames`: RGBA-Pixel der Leinwand (Zeilen, `w × h`) und Dauer in ms.
@@ -83,6 +88,7 @@ pub fn prepare(
             .collect();
         let Some(prev) = out.last_mut() else {
             out.push(PFrame {
+                original: s.keep_original.then(|| packed.clone()),
                 px: packed,
                 delay_ms: delay,
                 static_mask: vec![false; n],
@@ -144,6 +150,7 @@ pub fn prepare(
                 }
             }
         }
+        let original = s.keep_original.then(|| packed.clone());
         for i in 0..n {
             if st[i] && kind[i] == 2 {
                 packed[i] = prev.px[i];
@@ -158,6 +165,7 @@ pub fn prepare(
             px: packed,
             delay_ms: delay,
             static_mask: st,
+            original,
         });
         prev_lab = lab;
     }
@@ -483,6 +491,7 @@ mod tests {
             frame_step: 1,
             merge_similar: merge,
             threshold: thr,
+            keep_original: false,
         }
     }
 

@@ -128,9 +128,9 @@ fn measure_against_plain_export() {
 
     // B-5 (BA-110): smallest file with SSIM ≥ 0.99 per mode (quality bisection), against the export
     println!();
-    println!("| Clip | Mode | Quality | Bytes | vs. export | vs. default | SSIM |");
-    println!("|---|---|---:|---:|---:|---:|---:|");
-    let modes: [(&str, Value); 4] = [
+    println!("| Clip | Mode | Quality | Bytes | vs. export | vs. default | SSIM | ms |");
+    println!("|---|---|---:|---:|---:|---:|---:|---:|");
+    let modes: [(&str, Value); 6] = [
         ("default", json!({})),
         ("lzw flexible", json!({"lzw": "flexible"})),
         ("perceptual palette", json!({"perceptualPalette": true})),
@@ -138,43 +138,92 @@ fn measure_against_plain_export() {
             "both",
             json!({"lzw": "flexible", "perceptualPalette": true}),
         ),
+        // BA-110: lossy LZW bounded by SSIM 0.99 per frame
+        (
+            "lossy minSsim 0.99",
+            json!({"lzw": "flexible", "lossyMinSsim": 0.99}),
+        ),
+        (
+            "lossy minSsim 0.99 + both",
+            json!({"lzw": "flexible", "perceptualPalette": true, "lossyMinSsim": 0.99}),
+        ),
     ];
     for (clip, base) in clips.iter().zip(&baseline) {
         let mut default_bytes = 0usize;
         for (name, extra) in &modes {
             let (mut lo, mut hi) = (10u8, 100u8);
-            let mut found: Option<(u8, Vec<u8>, f64)> = None;
+            let mut found: Option<(u8, Vec<u8>, f64, u128)> = None;
+            let mut top = 0f64;
             while lo <= hi {
                 let mid = lo + (hi - lo) / 2;
                 let mut o = opts(extra.clone());
                 o.insert("quality".into(), json!(mid));
+                let t = std::time::Instant::now();
                 let r = gifopt::optimize(&clip.item(), &o).expect("optimize");
+                let ms = t.elapsed().as_millis();
                 let ssim = mean_ssim(clip, &r.bytes);
+                top = top.max(ssim);
                 if ssim >= 0.99 {
-                    found = Some((mid, r.bytes, ssim));
+                    found = Some((mid, r.bytes, ssim, ms));
                     hi = mid - 1;
                 } else {
                     lo = mid + 1;
                 }
             }
             match found {
-                Some((q, bytes, ssim)) => {
+                Some((q, bytes, ssim, ms)) => {
                     if *name == "default" {
                         default_bytes = bytes.len();
                     }
                     println!(
-                        "| {} | {} | {} | {} | {:+.1} % | {:+.1} % | {:.4} |",
+                        "| {} | {} | {} | {} | {:+.1} % | {:+.1} % | {:.4} | {} |",
                         clip.name,
                         name,
                         q,
                         bytes.len(),
                         (bytes.len() as f64 / base.len() as f64 - 1.0) * 100.0,
                         (bytes.len() as f64 / default_bytes.max(1) as f64 - 1.0) * 100.0,
-                        ssim
+                        ssim,
+                        ms
                     );
                 }
-                None => println!("| {} | {} | – | – | – | – | < 0.99 |", clip.name, name),
+                None => println!(
+                    "| {} | {} | – | – | – | – | best {:.4} | – |",
+                    clip.name, name, top
+                ),
             }
+        }
+    }
+
+    // BA-110: at fixed quality, flexible parsing vs. lossy LZW bounded by SSIM 0.99 per frame
+    println!();
+    println!("| Clip | Quality | Flexible B | SSIM | Bounded B | SSIM | vs. flexible | ms |");
+    println!("|---|---:|---:|---:|---:|---:|---:|---:|");
+    for clip in &clips {
+        for q in [100u8, 90, 80] {
+            let flex = gifopt::optimize(
+                &clip.item(),
+                &opts(json!({"quality": q, "lzw": "flexible"})),
+            )
+            .expect("optimize");
+            let t = std::time::Instant::now();
+            let bounded = gifopt::optimize(
+                &clip.item(),
+                &opts(json!({"quality": q, "lzw": "flexible", "lossyMinSsim": 0.99})),
+            )
+            .expect("optimize");
+            let ms = t.elapsed().as_millis();
+            println!(
+                "| {} | {} | {} | {:.4} | {} | {:.4} | {:+.1} % | {} |",
+                clip.name,
+                q,
+                flex.bytes.len(),
+                mean_ssim(clip, &flex.bytes),
+                bounded.bytes.len(),
+                mean_ssim(clip, &bounded.bytes),
+                (bounded.bytes.len() as f64 / flex.bytes.len() as f64 - 1.0) * 100.0,
+                ms
+            );
         }
     }
 }

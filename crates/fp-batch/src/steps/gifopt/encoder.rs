@@ -6,6 +6,7 @@ use super::dither::{DitherMode, FrameInput, OPAQUE, TRANSPARENT, index_frame};
 use super::frames::{PFrame, PlanInput, Rect, change_regions, needs_clear, plan, plan_in};
 use super::lzw_lossy::{self, LzwParams, PlanPx};
 use super::palette::{Histogram, Palette, build_weighted};
+use crate::executor::CancelToken;
 
 /// Palettenart.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -55,6 +56,12 @@ pub struct GifSettings {
     /// B-5: perceptual palette (`perceptualPalette`): colour statistics weighted by visibility (flat
     /// areas count more than busy texture, where quantization errors are masked); off by default.
     pub perceptual_palette: bool,
+    /// BA-110: lossy LZW with an SSIM bound (`lossyMinSsim`): per frame the largest loss whose
+    /// visible frame keeps this SSIM (Oklab L) against the frame; replaces `lossy`. `None` = off.
+    pub lossy_min_ssim: Option<f32>,
+    /// BA-110: cancel inside one encode (checked per frame, per search step and per LZW row); a
+    /// cancelled encode returns empty output, which the caller discards.
+    pub cancel: Option<CancelToken>,
 }
 
 impl Default for GifSettings {
@@ -80,6 +87,8 @@ impl Default for GifSettings {
             split_frames: true,
             lzw_flexible: false,
             perceptual_palette: false,
+            lossy_min_ssim: None,
+            cancel: None,
         }
     }
 }
@@ -202,10 +211,18 @@ struct FileOrder {
     transp: bool,
     /// B-5: flexible LZW parsing ([`GifSettings::lzw_flexible`]).
     flexible: bool,
+    /// BA-110: cancel token for the LZW coder.
+    cancel: Option<CancelToken>,
 }
 
 impl FileOrder {
-    fn new(pal: &Palette, usage: &[u64], transp: bool, flexible: bool) -> FileOrder {
+    fn new(
+        pal: &Palette,
+        usage: &[u64],
+        transp: bool,
+        flexible: bool,
+        cancel: Option<CancelToken>,
+    ) -> FileOrder {
         let k = pal.len();
         let mut colors: Vec<usize> = (0..k).collect();
         colors.sort_by(|a, b| usage[*b].cmp(&usage[*a]).then(a.cmp(b)));
@@ -228,6 +245,7 @@ impl FileOrder {
             rgb: colors.iter().map(|ci| pal.rgb[*ci]).collect(),
             transp,
             flexible,
+            cancel,
         }
     }
 
@@ -255,6 +273,7 @@ impl FileOrder {
             threshold,
             width,
             flexible: false,
+            cancel: self.cancel.as_ref(),
         };
         // B-5: with `lzw: flexible` both parsings run in parallel, the smaller result is kept
         // (flexible parsing alone loses on sub-images where the greedy lookahead over equivalent
@@ -399,6 +418,9 @@ pub fn encode(w: usize, h: usize, frames: &[PFrame], s: &GifSettings) -> (Vec<u8
     // --- Indizieren (Dithering)
     let mut idxs: Vec<Vec<u16>> = Vec::with_capacity(frames.len());
     for (fi, f) in frames.iter().enumerate() {
+        if is_cancelled(&s.cancel) {
+            return (Vec::new(), GifStats::default());
+        }
         let prev = (fi > 0 && pal_of[fi - 1] == pal_of[fi]).then(|| idxs[fi - 1].as_slice());
         let inp = FrameInput {
             w,
@@ -433,17 +455,23 @@ pub fn encode(w: usize, h: usize, frames: &[PFrame], s: &GifSettings) -> (Vec<u8
     let orders: Vec<FileOrder> = palettes
         .iter()
         .zip(&usage)
-        .map(|(p, u)| FileOrder::new(p, u, need_transp, s.lzw_flexible))
+        .map(|(p, u)| FileOrder::new(p, u, need_transp, s.lzw_flexible, s.cancel.clone()))
         .collect();
 
     // --- Planen und Kodieren
     let thr = lossy_to_threshold(lossy);
+    let ssim_bound = s.lossy_min_ssim.filter(|b| *b > 0.0).map(f64::from);
+    let mut used_lossy = 0u32;
     let mut canvas = vec![0u32; n];
     let mut done: Vec<Encoded> = Vec::with_capacity(frames.len());
     let mut pending: Option<Encoded> = None;
     let mut acc_ms = 0u64;
     let mut emitted_cs = 0u64;
     for (fi, f) in frames.iter().enumerate() {
+        // BA-110: cancel between frames (the LZW coder also checks per row)
+        if is_cancelled(&s.cancel) {
+            return (Vec::new(), GifStats::default());
+        }
         let pid = pal_of[fi];
         let pal = &palettes[pid];
         let transparent = transp_of(pid, &palettes);
@@ -472,7 +500,7 @@ pub fn encode(w: usize, h: usize, frames: &[PFrame], s: &GifSettings) -> (Vec<u8
         };
         // mit Verlust zusätzlich ohne Verlust kodieren und das kleinere nehmen: In Flächen und Verläufen
         // kann eine Ersetzung neue, seltene Folgen erzeugen – der Verlust darf nie größer machen
-        let lzw = |planv: &[PlanPx], rect: Rect| -> LzwOut {
+        let lzw = |planv: &[PlanPx], rect: Rect, thr: f32| -> LzwOut {
             let a = orders[pid].encode(planv, rect.w, thr);
             if thr <= 0.0 {
                 return a;
@@ -504,26 +532,14 @@ pub fn encode(w: usize, h: usize, frames: &[PFrame], s: &GifSettings) -> (Vec<u8
             // erstes Frame mit Löschbedarf kann es nicht geben (Leinwand beginnt transparent)
             options.push((1, canvas.clone(), None));
         }
-        let mut best: Option<(usize, Part)> = None;
-        for (oi, (_, base, _)) in options.iter().enumerate() {
-            let (rect, planv) = plan(&inp, base);
-            let (data, chosen, mcs) = lzw(&planv, rect);
-            if best.as_ref().is_none_or(|b| data.len() < b.1.2.len()) {
-                best = Some((oi, (rect, chosen, data, mcs)));
-            }
-        }
-        let Some((oi, (rect, chosen, data, mcs))) = best else {
-            continue;
-        };
-        let (disp, base, expand) = options.swap_remove(oi);
-        acc_ms += f.delay_ms as u64;
-        let target_cs = (acc_ms + 5) / 10;
+        // Dauer (unabhängig vom Verlust)
+        let next_acc_ms = acc_ms + f.delay_ms as u64;
+        let target_cs = (next_acc_ms + 5) / 10;
         let cs = if f.delay_ms == 0 {
             0
         } else {
             target_cs.saturating_sub(emitted_cs).max(2)
         };
-        emitted_cs += cs;
         // Getrennte Änderungen (Bildschirmaufnahmen: Zeiger, Eingabezeile, Fortschrittsbalken) als
         // Teilbilder statt eines großen, fast leeren Rechtecks – nur ohne Transparenz im Bild, mit
         // „nicht entsorgen“ und wenn die Teilbilder zusammen deutlich kleiner sind. Die vorderen
@@ -531,18 +547,94 @@ pub fn encode(w: usize, h: usize, frames: &[PFrame], s: &GifSettings) -> (Vec<u8
         // letzte genau zur Zeit des Frames: Zu jedem Frame-Zeitpunkt ist das Bild vollständig.
         let prev_cs = pending.as_ref().map_or(0, |p| p.delay_cs as usize);
         let max_parts = (prev_cs.saturating_sub(MIN_PART_CS) / MIN_PART_CS + 1).min(MAX_PARTS);
-        let parts = if s.split_frames
-            && s.crop_changed
-            && fi > 0
-            && disp == 1
-            && !has_alpha
-            && cs >= MIN_PART_CS as u64
-            && max_parts >= 2
-        {
-            split_parts(&inp, &base, max_parts, data.len(), &lzw)
-        } else {
-            None
+        // Kodierung des Frames mit einer Verlust-Schwelle: beste Entsorgung, ggf. Teilbilder
+        let attempt = |inp: &PlanInput, thr: f32| -> Option<Attempt> {
+            let mut best: Option<(usize, Part)> = None;
+            for (oi, (_, base, _)) in options.iter().enumerate() {
+                let (rect, planv) = plan(inp, base);
+                let (data, chosen, mcs) = lzw(&planv, rect, thr);
+                if best.as_ref().is_none_or(|b| data.len() < b.1.2.len()) {
+                    best = Some((oi, (rect, chosen, data, mcs)));
+                }
+            }
+            let (oi, (rect, chosen, data, mcs)) = best?;
+            let (disp, base, _) = &options[oi];
+            let parts = if s.split_frames
+                && s.crop_changed
+                && fi > 0
+                && *disp == 1
+                && !has_alpha
+                && cs >= MIN_PART_CS as u64
+                && max_parts >= 2
+            {
+                split_parts(
+                    inp,
+                    base,
+                    max_parts,
+                    data.len(),
+                    &|p: &[PlanPx], r: Rect| lzw(p, r, thr),
+                )
+            } else {
+                None
+            };
+            Some(Attempt {
+                oi,
+                whole: (rect, chosen, data, mcs),
+                parts,
+            })
         };
+        let picked = match ssim_bound {
+            None => attempt(&inp, thr),
+            Some(bound) => {
+                // BA-110: lossy LZW with an SSIM bound – the largest loss whose visible frame keeps
+                // SSIM ≥ bound against this frame (bisection over `lossy` 0…SSIM_MAX_LOSSY)
+                let src_l = canvas_l(f.original.as_deref().unwrap_or(&f.px));
+                // measured where this frame draws (its rectangle or parts, plus a cleared previous
+                // rectangle): the loss of earlier frames in unchanged areas was bounded when they
+                // were drawn and is not charged again (no repair cascade)
+                let visible_ssim = |a: &Attempt| -> f64 {
+                    let (_, base, cleared) = &options[a.oi];
+                    let mut c = base.clone();
+                    let mut region = *cleared;
+                    let mut add = |r: Rect| region = Some(region.map_or(r, |g| g.union(r)));
+                    match &a.parts {
+                        Some(ps) => ps.iter().for_each(|p| {
+                            paint_into(&mut c, w, p.0, &p.1, transparent, &pal.rgb);
+                            add(p.0);
+                        }),
+                        None => {
+                            paint_into(&mut c, w, a.whole.0, &a.whole.1, transparent, &pal.rgb);
+                            add(a.whole.0);
+                        }
+                    }
+                    let region = region.map(|r| [r.x, r.y, r.w, r.h]);
+                    super::metrics::ssim_l_in(&src_l, &canvas_l(&c), w, h, region)
+                };
+                let found = search_lossy(bound, &s.cancel, |l| {
+                    let a = attempt(&inp, lossy_to_threshold_unclamped(l))?;
+                    let v = visible_ssim(&a);
+                    Some((a, v))
+                });
+                found.map(|(a, l, _)| {
+                    used_lossy = used_lossy.max(l);
+                    a
+                })
+            }
+        };
+        if is_cancelled(&s.cancel) {
+            return (Vec::new(), GifStats::default());
+        }
+        let Some(Attempt {
+            oi,
+            whole: (rect, chosen, data, mcs),
+            parts,
+        }) = picked
+        else {
+            continue;
+        };
+        let (disp, base, expand) = options.swap_remove(oi);
+        acc_ms = next_acc_ms;
+        emitted_cs += cs;
         if let Some(mut pd) = pending.take() {
             pd.disposal = disp;
             if let Some(p) = &parts {
@@ -557,12 +649,7 @@ pub fn encode(w: usize, h: usize, frames: &[PFrame], s: &GifSettings) -> (Vec<u8
         }
         canvas = base;
         let paint = |canvas: &mut Vec<u32>, rect: Rect, chosen: &[u8]| {
-            for (k, c) in chosen.iter().enumerate() {
-                let (x, y) = (rect.x + k % rect.w, rect.y + k / rect.w);
-                if Some(*c) != transparent {
-                    canvas[y * w + x] = OPAQUE | super::color::pack(pal.rgb[*c as usize]);
-                }
-            }
+            paint_into(canvas, w, rect, chosen, transparent, &pal.rgb)
         };
         match parts {
             Some(parts) => {
@@ -609,8 +696,116 @@ pub fn encode(w: usize, h: usize, frames: &[PFrame], s: &GifSettings) -> (Vec<u8
     }
     let (bytes, mut stats) = write_gif(w, h, &orders, s.loop_count, &done, frames.len() > 1);
     stats.photo = photo;
-    stats.lossy = lossy;
+    // with an SSIM bound: the largest loss a frame used
+    stats.lossy = if ssim_bound.is_some() {
+        used_lossy
+    } else {
+        lossy
+    };
     (bytes, stats)
+}
+
+/// Encoding of one frame at one loss threshold: chosen disposal option, the whole rectangle and
+/// optionally its split parts.
+struct Attempt {
+    oi: usize,
+    whole: Part,
+    parts: Option<Vec<Part>>,
+}
+
+fn is_cancelled(c: &Option<CancelToken>) -> bool {
+    c.as_ref().is_some_and(CancelToken::is_cancelled)
+}
+
+/// Bisection steps of [`search_lossy`] stop below this `lossy` interval.
+pub const SSIM_SEARCH_STEP: u32 = 8;
+/// Upper end of the loss searched under an SSIM bound (`lossy` units, 3× the manual maximum: the
+/// bound guards the quality, so flat content may merge colours further apart).
+pub const SSIM_MAX_LOSSY: u32 = 600;
+
+/// Oklab threshold for a `lossy` value without the manual cap of 200 (SSIM-bounded search).
+pub fn lossy_to_threshold_unclamped(lossy: u32) -> f32 {
+    lossy as f32 / 200.0 * 0.09
+}
+
+/// BA-110: searches the largest `lossy` (0…[`SSIM_MAX_LOSSY`]) whose encode keeps `ssim ≥ bound`
+/// (at most 9 encodes). `eval` encodes with a `lossy` value and returns the attempt with its SSIM. If even `lossy` 0 is below the bound
+/// (palette and dithering alone lose more), the loss-free encode is used. Among the passing
+/// attempts the smallest one wins. Returns the attempt, its `lossy` and its SSIM; `None` when
+/// cancelled.
+fn search_lossy(
+    bound: f64,
+    cancel: &Option<CancelToken>,
+    eval: impl Fn(u32) -> Option<(Attempt, f64)>,
+) -> Option<(Attempt, u32, f64)> {
+    let size = |a: &Attempt| -> usize {
+        match &a.parts {
+            Some(ps) => ps.iter().map(|p| p.2.len() + 20).sum(),
+            None => a.whole.2.len(),
+        }
+    };
+    let (top, top_ssim) = eval(SSIM_MAX_LOSSY)?;
+    if top_ssim >= bound {
+        return Some((top, SSIM_MAX_LOSSY, top_ssim));
+    }
+    let (zero, zero_ssim) = eval(0)?;
+    if zero_ssim < bound {
+        return Some((zero, 0, zero_ssim));
+    }
+    let mut best = (size(&zero), zero, 0u32, zero_ssim);
+    let (mut lo, mut hi) = (0u32, SSIM_MAX_LOSSY);
+    while hi - lo > SSIM_SEARCH_STEP {
+        if is_cancelled(cancel) {
+            return None;
+        }
+        let mid = lo + (hi - lo) / 2;
+        let (a, v) = eval(mid)?;
+        if v >= bound {
+            lo = mid;
+            let sz = size(&a);
+            if sz <= best.0 {
+                best = (sz, a, mid, v);
+            }
+        } else {
+            hi = mid;
+        }
+    }
+    Some((best.1, best.2, best.3))
+}
+
+/// Oklab L of a packed frame or visible canvas for [`super::metrics::ssim_l`] (0 = transparent →
+/// mid grey, as in the metric).
+fn canvas_l(px: &[u32]) -> Vec<f64> {
+    let t = super::metrics::transparent_l();
+    let mut cache: super::color::ColorMap<f64> = Default::default();
+    px.iter()
+        .map(|p| {
+            if *p & OPAQUE == 0 {
+                t
+            } else {
+                *cache
+                    .entry(*p)
+                    .or_insert_with(|| rgb_to_lab(unpack(*p))[0] as f64)
+            }
+        })
+        .collect()
+}
+
+/// Paints chosen indices of a rectangle onto a canvas (transparency keeps what is there).
+fn paint_into(
+    canvas: &mut [u32],
+    w: usize,
+    rect: Rect,
+    chosen: &[u8],
+    transparent: Option<u8>,
+    rgb: &[[u8; 3]],
+) {
+    for (k, c) in chosen.iter().enumerate() {
+        let (x, y) = (rect.x + k % rect.w, rect.y + k / rect.w);
+        if Some(*c) != transparent {
+            canvas[y * w + x] = OPAQUE | super::color::pack(rgb[*c as usize]);
+        }
+    }
 }
 
 /// Kürzeste Dauer eines Teilbilds in 1/100 s (kürzere Werte spielen Browser als 1/10 s ab).
