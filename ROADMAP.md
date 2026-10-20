@@ -34,8 +34,8 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 3. **Preview** `2026-10-20_09-25` (GT-1h) built; the next pre-release waits for the tester's macOS re-test.
 4. **Next full parity run** over all 49 units; it also checks whether the tiled canvas (BA-098) shifts a sampling
    position by one device pixel at fractional zoom. No runner item is open.
-5. **Remaining deferred items:** BA-101 (PSD stroke; JPEG 2000 in PDF done in `974af253`) and BA-109
-   (`ai.upscale` without a model; `ai.faceBlur` closed by `4f811360`).
+5. **Remaining deferred items:** BA-101 (PSD stroke; JPEG 2000 in PDF done in `974af253`); BA-109 closed
+   (`ai.upscale` `9f3a1647`, `ai.faceBlur` `4f811360`).
 
 ## What remains
 
@@ -74,7 +74,8 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 
 ### Deferred expansion items (`[V]`)
 
-- **Batch studio:** `ai.upscale` and `ai.faceBlur` (need models). Done on 20 Oct 2026: EXIF/XMP written into
+- **Batch studio:** none open. Done on 20 Oct 2026: `ai.upscale` (Real-ESRGAN, `9f3a1647`), `ai.faceBlur` (Haar
+  cascade, `4f811360`), EXIF/XMP written into
   AVIF/HEIF and JPEG XL (BA-108) and lossy LZW with an SSIM bound plus cancel inside one encode in the GIF
   optimiser (BA-110, `lossyMinSsim`). Done in wave 3: 27 new steps (file, document, perspective with auto-straighten,
   tiles, noise, LUT, style, JPEG/web-safe, boomerang/crossfade, colour depth/profile, multi-page, metadata export,
