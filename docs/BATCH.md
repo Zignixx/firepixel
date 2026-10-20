@@ -917,6 +917,7 @@ is read or written (`fp_batch::security`).
 | `re_mp4` | 0.3+ | MIT | MP4/MOV demux | P2 |
 | `rusty_h264-decoder` | 0.16 (without `asm`) | BSD-2-Clause | H.264 | P2 (feature) |
 | `matroska-demuxer` | 0.x | MIT/Apache (to check) | WebM/MKV demux | P2 |
+| `openjp2` | =0.6.1 (`default-features = false`, `std` + `file-io`) | BSD-2-Clause | JPEG 2000 (`/JPXDecode`) in the PDF export (fp-export, BA-101); pure-Rust port of OpenJPEG, no C | present |
 | already present | `rayon`, `serde`, `serde_json`, `sha2`, `png`, `webp`, `ravif`, `sqzer-rav1d`, `zune-jpeg`, `image-webp`, `jxl-oxide`, `heic-decoder`, `visioncortex` | permissive | | |
 
 Not allowed: gifski, gifsicle, libimagequant/imagequant, zenquant, ffmpeg bindings (`ffmpeg-next`

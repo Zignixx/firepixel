@@ -1973,6 +1973,8 @@ dependencies = [
  "fp-raster",
  "fp-render",
  "fp-text",
+ "hayro-jpeg2000",
+ "openjp2",
  "png",
  "ravif",
  "serde_json",
@@ -4396,6 +4398,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "openjp2"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8940f4ff209130c7b374730e83cc7e31062706520e3960001e7eedc982bc554"
+dependencies = [
+ "bitflags 1.3.2",
+ "byteorder",
+ "libc",
+ "log",
+ "smallvec",
+ "sprintf",
+]
+
+[[package]]
 name = "openssl"
 version = "0.10.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5836,6 +5852,12 @@ checksum = "d9571ea910ebd84c86af4b3ed27f9dbdc6ad06f17c5f96146b2b671e2976744f"
 dependencies = [
  "bitflags 2.13.2",
 ]
+
+[[package]]
+name = "sprintf"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c0cdea5a20a06e7c57f627094e7b1618e5665592cd88f2d45fa4014e348db58"
 
 [[package]]
 name = "sqzer-rav1d"

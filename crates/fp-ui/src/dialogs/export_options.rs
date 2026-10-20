@@ -527,8 +527,8 @@ fn show_pdf(ctx: &egui::Context, o: &mut PdfOpts) -> Option<bool> {
         l("dlg-export-none"),
         "ZIP".into(),
         "JPEG".into(),
-        // no JPEG 2000 encoder: the entry writes JPEG (DCT) and says so (BA-101)
-        "JPEG 2000 (JPEG)".into(),
+        // JP2 image streams with /JPXDecode (fp_export::jpx, BA-101)
+        "JPEG 2000".into(),
     ];
     let qual_items: Vec<String> = ["high", "medium-high", "medium", "medium-low", "low"]
         .iter()

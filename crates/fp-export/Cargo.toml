@@ -28,8 +28,13 @@ zune-jpeg = "0.5.15"
 webp = { version = "=0.3.1", default-features = false }
 # AVIF: rav1e ohne Assembler (reines Rust)
 ravif = { version = "=0.13.0", default-features = false, features = ["threading"] }
+# JPEG 2000 (/JPXDecode) in the PDF export: pure-Rust port of OpenJPEG, BSD-2-Clause, no C (BA-101);
+# "file-io" = the only safe output stream of the crate (see src/jpx.rs)
+openjp2 = { version = "=0.6.1", default-features = false, features = ["std", "file-io"] }
 
 [dev-dependencies]
+# independent JPEG 2000 decoder (the one fp-io's PDF import uses via hayro) to check the PDF image streams
+hayro-jpeg2000 = { version = "=0.4.1", default-features = false, features = ["std", "simd"] }
 png = { workspace = true }
 serde_json = { workspace = true }
 

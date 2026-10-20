@@ -355,8 +355,10 @@ Datei schreiben (styles.css)“ legt die Seitenstile in `styles.css` neben der H
 *Allgemeines HTML5* schreibt eine HTML5-Seite; Schaltflächen behalten in jedem Stil ihr
 Navigationsleisten-Skript. *Als Standard festlegen* speichert die Werte des Dialogs für neue Dokumente
 und für Dokumente ohne eigene HTML-Einstellungen.
-In den PDF-Exportoptionen schreibt die Komprimierung „JPEG 2000 (JPEG)“ normales JPEG (DCT), weil
-Firepixel keinen JPEG-2000-Kodierer hat; der Eintrag „Producer“ des PDFs vermerkt das.
+In den PDF-Exportoptionen schreibt die Komprimierung „JPEG 2000“ die Seitenbilder als JPEG 2000 (JP2,
+`/JPXDecode`). „Qualität“ bestimmt die Kompressionsrate, von etwa 10:1 (Hoch) bis etwa 40:1
+(Niedrig). Transparenz kommt wie bei JPEG in eine eigene weiche Maske. JPEG 2000 gibt es erst ab
+PDF 1.5; mit „PDF 1.3“ oder „PDF 1.4“ wird die Datei daher als PDF 1.5 geschrieben.
 
 **PDF- und PSD-Exportoptionen:**
 

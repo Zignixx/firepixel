@@ -24,6 +24,7 @@
 //! | [`behavior`], [`popup`] | Verhalten (Rollover, Austauschbild, Statusleiste, Pop-up) und Pop-up-Menüs (CSS/HTML/JS), eigene Laufzeit-Skripte | 15 |
 //! | [`doc_export`] | Dokument-Export: je Seite/Status/Ebene, Slices + HTML, Dateinamen | 08 §1.5, §6.4 |
 //! | [`psd_out`], [`vector_out`] | PSD (Ebenen), PDF, SVG | 08 §5.4 |
+//! | [`jpx`] | JPEG 2000 (JP2) für die PDF-Komprimierung „JPEG 2000“ (`/JPXDecode`) | 18 §4.1 |
 //! | [`sprites`] | CSS-Sprites | ARCHITEKTUR §5 |
 //! | [`px`] | ARGB-Hilfen (Matte, Websnap) | – |
 //!
@@ -41,6 +42,7 @@ pub mod gif;
 pub mod html;
 pub mod jpeg;
 pub mod jpeg_tables;
+pub mod jpx; // BA-101: JPEG 2000 (JPXDecode) for the PDF export
 pub mod modern;
 pub mod options;
 pub mod palette_edit;

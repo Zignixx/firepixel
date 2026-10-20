@@ -541,6 +541,7 @@ err-export-d-webp-anim = animated WebP: { $error }
 err-export-d-apng-no-frame = APNG without a frame
 err-export-d-apng-first-frame = the first APNG frame must cover the canvas
 err-export-d-pdf-no-page = PDF without a page
+err-export-d-jpx = JPEG 2000 encoding failed
 err-export-d-psd-background = Background
 err-import-d-av1 = AV1 decoder: { $error }
 # <<< UE-3 Detailtexte

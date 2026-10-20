@@ -234,14 +234,8 @@ fn text_ops(layer: &PdfTextLayer, w: f64, h: f64, kx: f64, ky: f64, b: f64) -> S
     out
 }
 
-/// Producer string of the document info; notes the JPEG fallback of "JPEG 2000" (no encoder).
-pub fn pdf_producer(opt: &PdfOptions) -> &'static str {
-    if opt.compression == PdfCompression::Jpeg2000 {
-        "Firepixel (JPEG 2000 not available: images written with DCT/JPEG)"
-    } else {
-        "Firepixel"
-    }
-}
+/// Producer string of the document info.
+pub const PDF_PRODUCER: &str = "Firepixel";
 
 /// Bildkomprimierung im PDF (re\18 §4.1 „Komprimierung:“).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -250,8 +244,9 @@ pub enum PdfCompression {
     #[default]
     Zip,
     Jpeg,
-    /// „JPEG 2000“: Firepixel hat keinen JPEG-2000-Kodierer und schreibt JPEG (DCT) in der
-    /// gewählten Qualität.
+    /// „JPEG 2000“: JP2-Bildstrom mit `/JPXDecode` ([`crate::jpx`]; Qualität 100 verlustfrei,
+    /// sonst Kompressionsrate aus der Qualität). Gibt es erst ab PDF 1.5: bei niedrigerer
+    /// Kompatibilität wird die Datei als PDF 1.5 geschrieben.
     Jpeg2000,
 }
 
@@ -305,7 +300,9 @@ pub fn write_pdf_with(pages: &[PdfPage], title: &str, opt: &PdfOptions) -> Resul
     if pages.is_empty() {
         return Err(ExportError::Encode(fp_i18n::t("err-export-d-pdf-no-page")));
     }
-    let minor = opt.minor_version.clamp(3, 6);
+    let jpx = opt.compression == PdfCompression::Jpeg2000;
+    // JPXDecode is defined from PDF 1.5 on: JPEG 2000 raises a lower compatibility setting
+    let minor = opt.minor_version.clamp(3, 6).max(if jpx { 5 } else { 3 });
     // Weiche Masken (SMask) gibt es erst ab PDF 1.4: bei 1.3 über Weiß gemischt
     let smask_ok = minor >= 4;
     let protect = !opt.open_password.is_empty()
@@ -359,10 +356,10 @@ pub fn write_pdf_with(pages: &[PdfPage], title: &str, opt: &PdfOptions) -> Resul
             format!(
                 "<< /Title <{}> /Producer <{}> >>",
                 enc(3, &t),
-                enc(3, pdf_producer(opt))
+                enc(3, PDF_PRODUCER)
             )
         }
-        None => format!("<< /Title ({t}) /Producer ({}) >>", pdf_producer(opt)),
+        None => format!("<< /Title ({t}) /Producer ({PDF_PRODUCER}) >>"),
     };
     objs.push(info.into_bytes());
     let b = opt.bleed_pt.max(0.0);
@@ -457,7 +454,32 @@ pub fn write_pdf_with(pages: &[PdfPage], title: &str, opt: &PdfOptions) -> Resul
             "/DeviceRGB"
         };
         let img = match opt.compression {
-            PdfCompression::Jpeg | PdfCompression::Jpeg2000 => {
+            PdfCompression::Jpeg2000 => {
+                // like the JPEG path: alpha goes into the separate /SMask (or is mixed over white
+                // below PDF 1.4), the JP2 stream carries only the colour (one component in
+                // grayscale). /ColorSpace is written although the JP2 `colr` box says the same,
+                // so readers that ignore the box agree.
+                let comps = if opt.grayscale { 1 } else { 3 };
+                let samples: Vec<u8> = p
+                    .image
+                    .data()
+                    .iter()
+                    .flat_map(|q| {
+                        let c = rgb_of(q);
+                        c.into_iter().take(comps)
+                    })
+                    .collect();
+                let jp2 =
+                    crate::jpx::encode_jp2(&samples, w as u32, h as u32, comps, opt.jpeg_quality)?;
+                stream(
+                    base + 2,
+                    &format!(
+                        "/Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace {cs} /BitsPerComponent 8 /Filter /JPXDecode{smask}"
+                    ),
+                    jp2,
+                )
+            }
+            PdfCompression::Jpeg => {
                 let px: Vec<u32> = p
                     .image
                     .data()
@@ -914,14 +936,146 @@ endstream",
         assert!(!String::from_utf8_lossy(&off).contains("/Font"));
     }
 
+    /// Pattern image `w × h` with alpha `a` (every pixel different in each channel).
+    fn pattern_image(w: i32, h: i32, a: u8) -> RgbaImage {
+        let mut bytes = Vec::new();
+        for y in 0..h {
+            for x in 0..w {
+                bytes.extend_from_slice(&[
+                    (x * 37 + y * 5) as u8,
+                    (y * 29 + x * 3) as u8,
+                    ((x ^ y) * 7) as u8,
+                    a,
+                ]);
+            }
+        }
+        RgbaImage::from_rgba_bytes(fp_geom::IRect::new(0, 0, w, h), &bytes).unwrap()
+    }
+
+    fn pdf_of(img: &RgbaImage, opt: &PdfOptions) -> Vec<u8> {
+        write_pdf_with(
+            &[PdfPage {
+                image: img,
+                width_pt: img.width() as f64,
+                height_pt: img.height() as f64,
+                text: None,
+            }],
+            "t",
+            opt,
+        )
+        .unwrap()
+    }
+
+    /// Dictionary and raw data of the first stream whose dictionary contains `key` (byte search:
+    /// earlier streams are binary).
+    fn stream_with<'a>(pdf: &'a [u8], key: &str) -> (String, &'a [u8]) {
+        let find = |needle: &[u8], from: usize| {
+            pdf[from..]
+                .windows(needle.len())
+                .position(|w| w == needle)
+                .map(|i| i + from)
+        };
+        let k = find(key.as_bytes(), 0).unwrap_or_else(|| panic!("{key} missing"));
+        let start = (0..k).rev().find(|&i| pdf[i..].starts_with(b"<<")).unwrap();
+        const HEAD: &[u8] = b">>\nstream\n";
+        let st = find(HEAD, k).unwrap();
+        let dict = String::from_utf8_lossy(&pdf[start..st + 2]).to_string();
+        let len: usize = dict
+            .split("/Length ")
+            .nth(1)
+            .and_then(|r| r.split_whitespace().next())
+            .unwrap()
+            .parse()
+            .unwrap();
+        let data = st + HEAD.len();
+        (dict, &pdf[data..data + len])
+    }
+
     #[test]
-    fn pdf_jpeg2000_falls_back_to_dct_and_says_so() {
-        let pdf = text_page_pdf(false, PdfCompression::Jpeg2000);
+    fn pdf_jpeg2000_lossless_is_jpxdecode_and_pixel_equal() {
+        let img = pattern_image(37, 21, 255);
+        let pdf = pdf_of(
+            &img,
+            &PdfOptions {
+                compression: PdfCompression::Jpeg2000,
+                jpeg_quality: 100,
+                ..PdfOptions::default()
+            },
+        );
+        // JPXDecode needs PDF 1.5: the default 1.4 is raised
+        assert!(pdf.starts_with(b"%PDF-1.5"));
         let s = String::from_utf8_lossy(&pdf);
-        assert!(s.contains("/Filter /DCTDecode"));
-        assert!(!s.contains("JPXDecode"));
-        assert!(s.contains("/Producer (Firepixel (JPEG 2000 not available"));
+        assert!(!s.contains("DCTDecode"));
+        assert!(s.contains("/Producer (Firepixel)"));
+        let (dict, jp2) = stream_with(&pdf, "/Filter /JPXDecode");
+        assert!(
+            dict.contains("/Width 37 /Height 21 /ColorSpace /DeviceRGB"),
+            "{dict}"
+        );
+        assert!(!dict.contains("/SMask"), "opaque: no mask");
+        assert!(jp2.starts_with(openjp2::JP2_RFC3745_MAGIC), "JP2 file");
+        let src: Vec<u8> = img.data().iter().flat_map(|q| [q[0], q[1], q[2]]).collect();
+        // decoded with the JPEG 2000 decoder of the PDF import
+        let (w, h, n, px) = crate::jpx::tests::decode(jp2);
+        assert_eq!((w, h, n), (37, 21, 3));
+        assert_eq!(px, src, "lossless = pixel-equal");
+    }
+
+    #[test]
+    fn pdf_jpeg2000_lossy_alpha_and_grayscale() {
+        // half-transparent: alpha goes into the /SMask as in the JPEG path
+        let img = pattern_image(40, 30, 128);
+        let opt = PdfOptions {
+            compression: PdfCompression::Jpeg2000,
+            minor_version: 6,
+            jpeg_quality: 60,
+            ..PdfOptions::default()
+        };
+        let pdf = pdf_of(&img, &opt);
+        assert!(pdf.starts_with(b"%PDF-1.6"), "higher versions stay");
+        let (dict, jp2) = stream_with(&pdf, "/Filter /JPXDecode");
+        assert!(dict.contains("/SMask "), "{dict}");
+        let (w, h, n, _) = crate::jpx::tests::decode(jp2);
+        assert_eq!((w, h, n), (40, 30, 3));
+        let lossless = pdf_of(
+            &img,
+            &PdfOptions {
+                jpeg_quality: 100,
+                ..opt.clone()
+            },
+        );
+        assert!(stream_with(&lossless, "/Filter /JPXDecode").1.len() > jp2.len());
+        // grayscale: one component, /DeviceGray
+        let gray = pdf_of(
+            &img,
+            &PdfOptions {
+                grayscale: true,
+                jpeg_quality: 100,
+                ..opt.clone()
+            },
+        );
+        let (dict, jp2) = stream_with(&gray, "/Filter /JPXDecode");
+        assert!(dict.contains("/ColorSpace /DeviceGray"), "{dict}");
+        let (_, _, n, px) = crate::jpx::tests::decode(jp2);
+        assert_eq!(n, 1);
+        let want: Vec<u8> = img
+            .data()
+            .iter()
+            .map(|q| ((q[0] as u32 * 299 + q[1] as u32 * 587 + q[2] as u32 * 114) / 1000) as u8)
+            .collect();
+        assert_eq!(px, want);
+        // PDF 1.3 (no SMask): raised to 1.5, which allows the mask again
+        let old = pdf_of(
+            &img,
+            &PdfOptions {
+                minor_version: 3,
+                ..opt
+            },
+        );
+        assert!(old.starts_with(b"%PDF-1.5"));
+        // other compressions keep their version and the plain producer
         let zip = text_page_pdf(false, PdfCompression::Zip);
+        assert!(zip.starts_with(b"%PDF-1.4"));
         assert!(String::from_utf8_lossy(&zip).contains("/Producer (Firepixel)"));
     }
 }

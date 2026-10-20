@@ -336,8 +336,10 @@ is entered relative to it. "Write page styles to an external file (styles.css)" 
 into `styles.css` next to the HTML; the style *Generic HTML5* writes an HTML5 page; buttons keep their
 navigation-bar script in every style. *Set Defaults* stores the dialog's values for new documents and
 for documents without HTML settings of their own.
-In the PDF export options, the compression "JPEG 2000 (JPEG)" writes plain JPEG (DCT), because
-Firepixel has no JPEG 2000 encoder; the PDF's producer entry notes this.
+In the PDF export options, the compression "JPEG 2000" writes the page images as JPEG 2000 (JP2,
+`/JPXDecode`). "Quality" sets the compression ratio, from about 10:1 (High) to about 40:1 (Low).
+Transparency goes into a separate soft mask, as with JPEG. JPEG 2000 exists from PDF 1.5 on, so with
+"PDF 1.3" or "PDF 1.4" the file is written as PDF 1.5.
 
 **PDF and PSD export options:**
 
