@@ -90,8 +90,8 @@ against the flat PNG preview stored in FW-PNG files (corpus and golden tests). T
 one view fit together and equal a whole render): scrolling uploads only new tiles, an edit only the changed
 rectangle of the tiles it touches, and after a zoom the visible tiles come first and the margin follows (BA-098;
 without a GPU, texture upload runs at only ~30 MB/s). The drag preview texture likewise holds only the part of the
-dragged objects in view plus a margin (BA-097). Partial rendering and caches keep large documents interactive. For live bitmap painting the
-canvas renders the changed rectangle with `Renderer::render_region_with` and a `PixelOverride` that swaps in the
+dragged objects in view plus half a view of margin and is re-cut when scrolling or zooming leaves it (BA-097).
+Partial rendering and caches keep large documents interactive. For live bitmap painting the canvas renders the changed rectangle with `Renderer::render_region_with` and a `PixelOverride` that swaps in the
 scratch pixels of the painted bitmap, so the preview sits in the right stacking position with its opacity, blend
 mode, effects and masks. The inspector's opacity and stroke width sliders preview their pending value the same
 render-only way: the inspector stores it in `AppState::inspector_preview` (`fp-ui/src/inspector/preview.rs`), the

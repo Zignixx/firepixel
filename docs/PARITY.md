@@ -423,5 +423,9 @@ effect, text-tool state carried between units).
 
 The next steps are in [ROADMAP.md](../ROADMAP.md): the human click-test, including the macOS re-test by the tester;
 the text selection and size of TW-146 rest and the text tool reset of TW-165 (moved to the click-test A1-19 on
-20 Oct 2026 as runner measurement gaps, not deviations; TW-167 was closed by run 29); U-1 rest; and the unmeasured R3 note of the text tool defaults
-(TW-138 rest).
+20 Oct 2026 as runner measurement gaps, not deviations; TW-167 was closed by run 29); the text tool reset of RE spec 56
+(TW-138 R5 to R7, F52, click-test A4-29; known difference: for a new text the reference writes two History rows,
+"Text" and "Text Change", Firepixel one; the leading conversion from px back to % is not measured); and the next full
+run, which also has to show whether the tiled canvas of BA-098 (512-px tiles on a device-pixel grid) shifts a
+sampling position by one device pixel at fractional zoom levels. U-1 rest (PDF layers) and the R3 note of TW-138 were
+closed on 20 Oct 2026.

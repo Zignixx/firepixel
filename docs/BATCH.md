@@ -486,6 +486,9 @@ IPTC "as XMP": by-line, copyright, caption, object name and keywords become `dc:
 `dc:description`, `dc:title` and `dc:subject` unless the packet already has them; other IPTC-only datasets
 are lost with the hint. HEIF is not an output format; its writer serves the container level. Without a
 "Metadata" step, `keep: all` applies; the orientation is applied and set to 1.
+Limits of the AVIF/HEIF/JPEG XL writer: no ICC profile is written (the hint stays); replaced payload
+bytes are blanked, not removed, so a file does not shrink when metadata is dropped; JPEG XL output has no
+batch encoder yet, so the JXL writer runs only on bytes from a registered encoder.
 
 Alternative to the own EXIF writer: `little_exif` (MIT/Apache, reads and writes EXIF in JPEG, PNG,
 WebP, JXL, HEIF, TIFF; still pre-1.0, known gaps with JPEG APP12/13). Use `little_exif` only if its
@@ -538,6 +541,7 @@ smallest file ..."; during a run the warning goes into the report (`batch-warn-g
 | `dither` | none / ordered / blueNoise / floydSteinberg / temporal *temporal* | `temporal`: temporally stable dithering (§5.6) |
 | `ditherAmount` | 0…100 *70* | |
 | `lossy` | 0…200 *automatic* (graphics (100 − q)·2, photo (100 − q)·5) | lossy LZW (§5.6, own implementation) |
+| `lossyMinSsim` | 0 (off) or 0.5…0.9999 *0* | BA-110: lossy LZW with a quality bound instead of `lossy`: per frame the largest loss (0…600) whose drawn area keeps SSIM ≥ the bound against the frame before smoothing; loss-free when even that misses it; about 2× the encode time (§5.6 point 8) |
 | `diffTransparency` | on | unchanged pixels → transparent (better LZW runs) |
 | `diffThreshold` | 0…32 *3* (distance in Oklab × 100) | "unchanged" for small differences |
 | `cropChanged` | on | store only the rectangle of changes per frame |

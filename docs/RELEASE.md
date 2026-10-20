@@ -99,6 +99,12 @@ subfolders); macOS uses its system fonts. Tests that compare against the referen
 font is not installed. Test input paths are built platform-natively (`C:\in\x.png` on Windows,
 `/in/x.png` elsewhere).
 
+Result (20 Oct 2026, BA-083 closed): the second runs with `tests` were green on both systems (Linux run
+39374765108, macOS run 39374760635); all golden hashes, the Lanczos resampler included, are equal on Windows,
+macOS and Linux, so nothing had to be regenerated. The failures of the first runs were test assumptions (Windows
+path literals, the reference font, no font at all on Linux), fixed as described above. Run the job again with
+`tests` after changes to resampling, text layout or golden files.
+
 ## Notes
 
 - macOS: not notarized – first launch via right-click ▸ Open, or

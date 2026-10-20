@@ -267,6 +267,13 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   aus dem Bedienfeld Stile macht bei Text Schrift, Fett/Kursiv/Unterstrichen, Zeilenabstand und Glättung
   zur Vorgabe (nicht die Größe). Die Grundlinienverschiebung wird nur über die Einstellungen des
   Textwerkzeugs zur Vorgabe, nicht über den Inspektor.
+  Beim Wählen des Textwerkzeugs (Werkzeugleiste, T oder Wechsel von einem anderen Werkzeug) werden Einzug,
+  Abstand davor und danach, Zeilenabstand (zurück auf den Standard-Prozentwert), Laufweite, horizontale
+  Skalierung und Grundlinienverschiebung auf die Werkseinstellung zurückgesetzt; Schrift, Größe, Stil und
+  Ausrichtung bleiben. Absatzwerte, die bei aktivem Textwerkzeug gesetzt werden, gelten also für den nächsten
+  Text, mit dem Zeiger gesetzte nicht. Die Voreinstellung `TextEditor_RememberALLSettings` (aus, keine Zeile im Dialog
+  Voreinstellungen) behält sie. Ein neuer Text beginnt mit Laufweite 0, und jede Änderung in einem Textfeld des
+  Inspektors ist ein eigener Schritt „Textänderung“ im Verlauf.
 - **Schriftsuche:** Die aufgeklappte Schriftliste (Text-Inspektor, Textwerkzeug, Texteditor) hat oben
   ein Suchfeld. Tippen filtert (Teilwort, ohne Groß-/Kleinschreibung), ↑/↓ wählen, Eingabe
   übernimmt, Esc schließt ohne Änderung.

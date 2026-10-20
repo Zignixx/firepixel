@@ -25,9 +25,9 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Measurement quota, all 49 units | **87.3 %** (1077 / 1233 measurable steps both `ok`; over the 48 old units 87.3 %, 1068 / 1224; unchanged since run 26; run 24: 87.0 %; run 17 alone 86.3 %; in the 2 units of run 28: 76 / 83, as in run 27; in the 3 units of run 29: 85 / 88, unchanged) | run 28 |
 | Errors | 33 reference-side, 21 Firepixel-side (both unchanged since run 25); 7 `runner error` lines in run 28 (run 27: 2), all reference-side text selections in `tool-text/07, 11, 13` that R-25 no longer accepts as a highlight (TW-146 rest); none in `toolbox` (TW-166 confirmed); none in run 29 | run 29 |
 | Latest release | **v0.2.4** (19 Oct 2026, pre-release; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; the three screen modes, the text default rules and the macOS fixes TW-160 to TW-162 with the own app menu); before: v0.2.3 (19 Oct 2026) | GitHub releases |
-| Workspace tests | Last full run: **2797 passed, 0 failed, 134 ignored** at `901f0a56` (fixes F51a to F51c merged, GT-1g; the code of preview `2026-10-20_06-08`); earlier 2776 passed at `439a3ec5` (preview `2026-10-19_16-07`) | `main`, 20 Oct 2026 |
-| Open findings | 11 rows in `[F]`: 0 open (U-1 rest, PDF layers, closed by `b7297f1f` on 20 Oct 2026); TW-146 rest and TW-165 moved to the click-test A1-19 on 20 Oct 2026 (runner measurement gaps, not deviations); TW-138 rest closed except the unmeasured R3 note; TW-151 / FB-01 and the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03) waiting for the click-test and the macOS re-test by the tester; the Subselection display TW-168 / FB-06 waiting for the click-test A4-23; tester feedback batch 3, TW-169 to TW-172 (FB-07 to FB-11), waiting for A4-24 to A4-27; 5 deferred `[V]`, 20 informational `[N]`; run 29 closed TW-167, run 28 TW-166, run 27 TW-159 rest, TW-163 and TW-164 | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | None measured open (runs 26 to 29; the last one, full screen mode TW-158, was confirmed fixed in run 26). Unmeasured: whether indent and paragraph spacing on pointer-selected text become text defaults (TW-138 R3) | [PARITY.md](PARITY.md) |
+| Workspace tests | Merged tree after the roadmap items of 20 Oct 2026: **pending (GT-1h)**. Runs on `main` after each merge: F52 (text tool reset) 2809 passed, 0 failed, 134 ignored; PERF 2802 / 0 / 136 (two new ignored performance tests); BA-110 2803 / 0 / 134. Last full run: 2797 passed, 0 failed, 134 ignored at `901f0a56` (fixes F51a to F51c merged, GT-1g; the code of preview `2026-10-20_06-08`); macOS and Linux CI run the batch and export crates (green, BA-083) | `main`, 20 Oct 2026 |
+| Open findings | 11 rows in `[F]`, none open: U-1 rest (PDF layers, `9c6a52b9`) and TW-138 rest (R3 measured, text tool reset F52 `f5e61c58`) are fixed; TW-151 / FB-01, the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03), the Subselection display TW-168 / FB-06 and tester feedback batch 3, TW-169 to TW-172 (FB-07 to FB-11), wait for the click-test (A4-15, A4-19 to A4-21, A4-23 to A4-27) and the macOS re-test; TW-146 rest and TW-165 are click-test item A1-19. 5 rows in `[V]`: open BA-101 and BA-109; BA-083, BA-108 and BA-110 closed on 20 Oct 2026. 20 informational `[N]` (BA-092 and BA-087 closed by `612b34bd`) | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | None measured open (runs 26 to 29). Known from RE spec 56, not measured by the runner: for a new text the reference writes two History rows ("Text" and "Text Change"), Firepixel one; the leading conversion from px back to % is unmeasured; the text tool's own opacity/blend reset is not done (Firepixel's text tool has no own opacity) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -266,6 +266,49 @@ proven 1:1 100.0 %, quota 87.3 % (1077 / 1233), canvas pairs 185 / 212, all unch
 sides, no `runner error`. Confirmed and closed: TW-167 (the layout check expands the reference's collapsed panel dock
 at unit start and after the screen modes; overview 25.5 %, Standard 25.9 %).
 
+**20 Oct 2026, roadmap items 9–19 (after tester batch 3, `main` from `7d51762c` to `612b34bd`):**
+
+- *Runner R-26* (`f4f41991`): TW-167 closed by run 29; the layout check expands the reference's collapsed panel
+  dock (figures above, unchanged).
+- *PDF layers* (U-1 rest, `9c6a52b9`): PDF (and AI ≥ 9) import creates one layer per optional content group, per
+  page: names from `/Name`, nested groups as "Parent / Child", groups that are off by default as hidden layers,
+  content outside any group in "Layer 1". Limits: visibility expressions (OCMDs) are not split, groups used only
+  inside form XObjects stay with the layer of the `Do`, `/Intent`, `/Usage` and `/AS` are ignored, one render per
+  layer; only hand-made test files so far, so a real layered PDF is click-test A4-28.
+- *Tests on three systems* (BA-083, `c326d7c0`/`e830a9c2`, `c9cf143f`): the macOS and Linux workflows run the
+  batch, export, text and other platform-neutral crates with the input `tests` (artifacts `tests-macos`,
+  `tests-linux`); all golden hashes are equal on Windows, macOS and Linux. Test fixes: a platform-native path
+  helper, skips without the reference font, `fp-text` indexes the Linux font folders (`/usr/share/fonts` and
+  others) with Liberation/DejaVu fallbacks, and the Linux job installs `fonts-liberation` and `fonts-dejavu-core`
+  ([RELEASE.md](RELEASE.md)).
+- *Metadata in AVIF, HEIF and JPEG XL* (BA-108, `9f00f3fb`): EXIF and XMP are written (AVIF/HEIF: `Exif`/`mime`
+  items with `iinf`/`iloc`/`iref`/`ipma` updated and old payloads blanked; JPEG XL: `Exif`/`xml ` boxes, a bare
+  codestream is wrapped, `jbrd` dropped); IPTC core fields are mirrored into XMP. Limits: no ICC, files do not
+  shrink, the JXL writer runs only with a registered encoder ([BATCH.md](BATCH.md) §3.7).
+- *GIF optimizer* (BA-110 rest, `f83a621f`): option `lossyMinSsim` (0.5–0.9999, 0 = off) bisects the loss per frame
+  over 0…600 and keeps the SSIM of the drawn area against the frame before smoothing at or above the bound; cartoon
+  −38.1 % vs. the export at SSIM ≥ 0.99, screen unchanged at −54.3 %, the camera pan never reaches 0.99 and stays
+  loss-free; about 2× the encode time. Cancel now works inside one encode (per frame, search step and LZW row; the
+  temporary file is deleted). Limits in [BATCH.md](BATCH.md) §5.6.
+- *Text tool defaults* (TW-138 rest, F52, RE spec 56, `f5e61c58`): activating the Text tool resets indent, spacing
+  before/after, leading (`DefaultLeading`, % mode), tracking, horizontal scale and baseline shift unless the
+  preference `TextEditor_RememberALLSettings` is on, so values set with the Text tool active survive and values set
+  with the Pointer are lost; new text gets tracking 0; each field change is a "Text Change" History row (nothing
+  selected or pointer selection), an editor session one row; `Text_RangeKerning` is stored as field / 100; the %→px
+  leading switch rounds; `draw.text` honours `Text_LeadingMode`. Open: the reference's two rows for a new text
+  against Firepixel's one, the unmeasured px→% conversion and the opacity/blend part of the reset (no own text tool
+  opacity in Firepixel); click-test A4-29.
+- *Performance* (PERF-3, `090abd30`, `852e00eb`; 6000 × 1600 page, 3200 objects, release, software rendering):
+  BA-097 drag preview limited to the view (first drag step 5.4 s → 1.7 s; the `fp-raster` composite thread hand-off
+  5.2 s → 0.06 s; residue: a full preview when the whole selection is in view); BA-098 canvas in 512-px tiles on a
+  device-pixel grid anchored at the page corner (worst frame after a zoom 1.0–2.5 s → 0.44–0.77 s, after a scroll
+  1.2–2.4 s → 0.31–0.58 s; a possible one-device-pixel sampling shift at fractional zoom is to be watched in the
+  next full parity run); BA-099 virtualised Layers panel rows (frame 281 → 112 ms), early exit in the command state
+  checks (all 641 commands 252 → 46 ms), the render cache kept on move and small paths rasterised on the calling
+  thread (render after a move 3.7 s → 0.26 s).
+- *Maintenance* (`612b34bd`): image series and function-test reports regenerated after the hinting change; BA-092
+  and BA-087 closed (nothing tracked changed).
+
 ## How tests run
 
 - Every crate has unit tests; `fp-ui` and `fp-engine` bundle their integration tests into one program `all`
@@ -295,12 +338,14 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
 
 1. Human click-test of [VERIFICATION.md](VERIFICATION.md), including section A4 (wave-4 features, URL panel menu,
    typing after a double-click, crop option off, Linux start, pen anchor modes, the Select Behind hover frame,
-   the History rows of key nudges, the screen modes, the Subselection display A4-23, tester feedback batch 3:
-   the inspector sliders, Pen undo steps, Redo and Subselection snapping A4-24 to A4-27) and the open A2 checks, and the macOS re-test of v0.2.4 by the
-   tester (A4-19 to A4-21).
-2. No runner item open (TW-167 closed by run 29); TW-146 rest and TW-165 moved to the click-test A1-19 (runner measurement gaps, not deviations).
-3. Remaining parity item: the unmeasured R3 note of TW-138 (indent and spacing as text defaults).
-4. Remaining deferred items: BA-101 (JPEG 2000, PSD stroke) and BA-109 (AI batch steps without models); BA-108, BA-110 rest and BA-083 closed on 20 Oct 2026.
+   the History rows of key nudges, the screen modes, the Subselection display A4-23, tester feedback batch 3 A4-24
+   to A4-27, a real layered PDF A4-28 and the text tool reset A4-29), the text selection edits of A1-19 and the open
+   A2 checks.
+2. The macOS re-test of v0.2.4 by the tester (A4-19 to A4-21).
+3. The test run on the merged tree (GT-1h), then a preview build on request.
+4. The next full parity run over all 49 units, which also checks whether the tiled canvas (BA-098) shifts a
+   sampling position by one device pixel at fractional zoom; no runner item is open.
+5. Remaining deferred items: BA-101 (JPEG 2000 in PDF, PSD stroke) and BA-109 (two AI batch steps without models).
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external
 programs and unsandboxed scripts, opt-in GIF optimiser modes, the remaining Batch Studio UI conveniences, selectable

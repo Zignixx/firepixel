@@ -27,10 +27,10 @@ every UI tweak). They are attached to [releases](../../releases) and to issues i
 | | |
 |---|---|
 | Stage | feature-complete preview; parity polishing |
-| Parity (scripted comparison, 48 units) | **42 units equal except for design**, 2 real deviations, 2 unclear, 2 under-measured (runner bugs, fixed, not yet re-run) |
-| Proven 1:1 | **88 %** (42 / 48 units); canvas image pairs within 1 %: 155 / 196 |
-| Tests | **2486 green, 0 red, 133 ignored** (full workspace run, 17 Oct 2026) |
-| Open findings | 4 fixable, 19 deferred, 16 informational (830+ closed) — see [docs/FINDINGS.md](docs/FINDINGS.md) |
+| Parity (scripted comparison, 49 units) | **49 units equal except for design**, 0 real deviations, 0 unclear, 0 under-measured (run 29, 20 Oct 2026) |
+| Proven 1:1 | **100 %** (49 / 49 units); measurement quota 87.3 %; canvas image pairs within 1 %: 185 / 212 |
+| Tests | **2797 passed, 0 failed, 134 ignored** (last full workspace run, 20 Oct 2026); the run on the latest merged tree is pending (GT-1h); batch and export tests also run on macOS and Linux in CI |
+| Open findings | 11 fixable rows (none open; 9 fixed and waiting for the click-test or the macOS re-test), 2 deferred items open, 20 informational (850+ closed) — see [docs/FINDINGS.md](docs/FINDINGS.md) |
 
 Details and method: [docs/STATUS.md](docs/STATUS.md), [docs/PARITY.md](docs/PARITY.md),
 [ROADMAP.md](ROADMAP.md). The German working notes, run reports and screenshots of the development phase are
@@ -59,11 +59,11 @@ cargo test -p fp-neutral        # neutrality guard, must stay green
 
 ## Downloads
 
-Latest release: **v0.2.2** pre-release (18 Oct 2026) with Windows x64 ZIP, macOS universal ZIP and Linux x86_64
+Latest release: **v0.2.4** pre-release (19 Oct 2026) with Windows x64 ZIP, macOS universal ZIP and Linux x86_64
 tar.gz and AppImage (Linux tested in CI only). There are no public binaries yet: **preview builds are available on
 request** (open an issue), and releases will appear under [Releases](../../releases) once the repository is
-public; CI runs on demand only
-(see [docs/RELEASE.md](docs/RELEASE.md)).
+public; CI runs on demand only and tests on Windows, macOS and Linux (the batch and export crates on all
+three, the UI on Windows; see [docs/RELEASE.md](docs/RELEASE.md)).
 
 ## Documentation
 

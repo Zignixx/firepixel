@@ -10,41 +10,41 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **49 / 49** (0 real deviations, 0 unclear, 0 under-measured; run 28 over 2 units on top of runs 27, 26, 25 and 24, 19 Oct 2026) |
-| Proven 1:1 | **100.0 %** (49 / 49; 100.0 % over the 48 units before run 24; runs 26 to 28: 100.0 %; run 25: 98.0 %; run 24: 93.9 %) |
-| Measurement quota, all 49 units | **87.3 %** (1077 / 1233 steps; 87.3 % over the 48 old units; unchanged in runs 27 and 28; run 24: 87.0 %; run 17: 86.3 %) |
-| Canvas image pairs within 1 % | 185 / 212 (unchanged in run 28; run 26: 186 / 211; `tool-text/14, 16` above 1 % because no text tool is reset after the reference's size step fails, TW-165) |
-| Tests | Last full run: 2797 passed, 0 failed, 134 ignored at `901f0a56` (fixes F51a to F51c merged; the code of preview `2026-10-20_06-08`); macOS CI build with the app menu (`e11f8d1b`) green |
+| Parity units equal except for design | **49 / 49** (0 real deviations, 0 unclear, 0 under-measured; run 29 over 3 units on top of runs 28, 27, 26, 25 and 24, 20 Oct 2026) |
+| Proven 1:1 | **100.0 %** (49 / 49; 100.0 % over the 48 units before run 24; runs 26 to 29: 100.0 %; run 25: 98.0 %; run 24: 93.9 %) |
+| Measurement quota, all 49 units | **87.3 %** (1077 / 1233 steps; 87.3 % over the 48 old units; unchanged in runs 27 to 29; run 24: 87.0 %; run 17: 86.3 %) |
+| Canvas image pairs within 1 % | 185 / 212 (unchanged in runs 28 and 29; run 26: 186 / 211; `tool-text/14, 16` above 1 % because no text tool is reset after the reference's size step fails, TW-165) |
+| Tests | Merged tree after the roadmap items of 20 Oct 2026: pending (GT-1h); per merge on `main`: F52 2809 / 0 / 134, PERF 2802 / 0 / 136, BA-110 2803 / 0 / 134 (passed / failed / ignored). Last full run: 2797 passed, 0 failed, 134 ignored at `901f0a56`. Batch and export tests also run on macOS and Linux CI, all golden hashes equal (BA-083) |
 | Latest release | **v0.2.4** pre-release published on 19 Oct 2026 (tag at `1f26223c`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage, with the three screen modes, the text default rules and the macOS fixes; before: **v0.2.3** (19 Oct 2026); Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 11 fixable rows (0 open: U-1 rest closed by `b7297f1f`, the runner item TW-167 closed by run 29; TW-146 rest and TW-165 moved to the click-test A1-19 as runner measurement gaps; TW-138 rest closed except R3; TW-151, TW-160 to TW-162 and TW-168 to TW-172 awaiting the click-test and the macOS re-test) · 5 deferred · 20 informational · 850+ closed |
+| Open findings | 11 fixable rows, none open (U-1 rest and TW-138 rest fixed on 20 Oct 2026; TW-151, TW-160 to TW-162 and TW-168 to TW-172 awaiting the click-test and the macOS re-test; TW-146 rest and TW-165 are click-test item A1-19) · 5 deferred rows, 2 open (BA-101, BA-109) · 20 informational · 850+ closed |
 
 Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including the measurement unit
-`xs-select-behind` (9 steps); run 25 repeated 20 of them, run 26 five, run 27 three and run 28 two.
+`xs-select-behind` (9 steps); run 25 repeated 20 of them, run 26 five, run 27 three, run 28 two and run 29 three.
 
 ## Next (in order)
 
 1. **Human click-test** of [docs/VERIFICATION.md](docs/VERIFICATION.md) (embedded panel dialogs, real keyboard
    paths, brush strokes with a real mouse, drag and drop between windows, the text selection edits of A1-19, the open
-   checks in section A2), including
-   the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4 features, URL panel menu, typing after
-   a double-click, the crop option, the Linux start, the pen anchor modes, the Select Behind hover frame and the
-   History rows of key nudges, A4-15 to A4-18, the screen modes, A4-22, the Subselection display, A4-23, tester feedback batch 3: the inspector
-   sliders, Pen undo steps, Redo and Subselection snapping, A4-24 to A4-27), and the **macOS re-test of v0.2.4 by the
-   tester** (A4-19 to A4-21 on a real Mac).
-2. **Remaining `[F]` item:** the unmeasured R3 note of TW-138 (indent and spacing as text defaults). U-1 rest (PDF
-   import layers from optional content groups) was closed on 20 Oct 2026.
-3. **Runner:** no item open; TW-167 was closed by run 29 (20 Oct 2026, the layout check expands the reference's
-   collapsed panel dock). The text selection edits (TW-146 rest, TW-165) are no longer runner items:
-   the runner cannot select text in the reference's editor with the mouse, so they moved to the click-test (A1-19).
-4. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke) and BA-109 (two AI batch steps without
-   models). BA-108, BA-110 rest and BA-083 were closed on 20 Oct 2026.
+   checks in section A2), including the wave-3 Batch Studio UI, the PDF/PSD export options and section A4 (wave-4
+   features, URL panel menu, typing after a double-click, the crop option, the Linux start, the pen anchor modes, the
+   Select Behind hover frame and the History rows of key nudges, A4-15 to A4-18, the screen modes, A4-22, the
+   Subselection display, A4-23, tester feedback batch 3, A4-24 to A4-27, a real layered PDF, A4-28, and the text
+   tool reset, A4-29).
+2. **macOS re-test of v0.2.4 by the tester** (A4-19 to A4-21 on a real Mac).
+3. **Test run on the merged tree** (GT-1h), then a preview build on request.
+4. **Next full parity run** over all 49 units; it also checks whether the tiled canvas (BA-098) shifts a sampling
+   position by one device pixel at fractional zoom. No runner item is open.
+5. **Remaining deferred items:** BA-101 (JPEG 2000 in PDF, PSD stroke) and BA-109 (two AI batch steps without
+   models).
 
 ## What remains
 
 ### Fixable remnants (`[F]`)
 
-- PDF import: no layers (the pure-Rust PDF reader exposes no optional content groups).
-- Open: the unmeasured R3 note of TW-138 (TW-167 and U-1 rest were closed on 20 Oct 2026).
+- None open. Closed on 20 Oct 2026: U-1 rest (PDF import creates layers from optional content groups; a real
+  layered PDF is click-test A4-28), TW-138 rest (R3 measured; the text tool reset of RE spec 56 in F52, click-test
+  A4-29; known: the reference writes two History rows for a new text, Firepixel one) and the runner item TW-167
+  (run 29).
 - Moved to the click-test A1-19 on 20 Oct 2026 (runner measurement gaps, not deviations): TW-146 rest (text selection
   and size in `tool-text/07, 11, 13`) and TW-165 (the text tool reset derived from it).
 - Confirmed and closed in run 28 (runner R-25): TW-166 (the reference leaves full screen by F; no `runner error` in
@@ -74,8 +74,9 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 
 ### Deferred expansion items (`[V]`)
 
-- **Batch studio:** `ai.upscale` and `ai.faceBlur`, writing AVIF/HEIF/JXL metadata boxes, lossy LZW with an SSIM
-  bound in the GIF optimiser. Done in wave 3: 27 new steps (file, document, perspective with auto-straighten,
+- **Batch studio:** `ai.upscale` and `ai.faceBlur` (need models). Done on 20 Oct 2026: EXIF/XMP written into
+  AVIF/HEIF and JPEG XL (BA-108) and lossy LZW with an SSIM bound plus cancel inside one encode in the GIF
+  optimiser (BA-110, `lossyMinSsim`). Done in wave 3: 27 new steps (file, document, perspective with auto-straighten,
   tiles, noise, LUT, style, JPEG/web-safe, boomerang/crossfade, colour depth/profile, multi-page, metadata export,
   contact sheet, script steps with opt-ins), chained collect steps, TIFF/AVIF/HEIF/JXL metadata reading, TIFF
   EXIF/GPS/IPTC writing, MCP refusal of external/IO scripts with a deep script sandbox, opt-in GIF optimiser modes
@@ -86,7 +87,8 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 - Done in wave 4: HTML setup (Set Defaults, external `styles.css`, Generic HTML5 style, nav-bar tests), CMD-1
   (screen capture, symbol scripts, shared palette), the ffmpeg row in Preferences, the optional AI hover preview
   and the brush preview in stacking order.
-- Brush pressure and speed from a real tablet; resampler golden hashes on other operating systems (needs CI).
+- Brush pressure and speed from a real tablet. Done on 20 Oct 2026: the batch and export tests run on macOS and
+  Linux CI and all golden hashes are equal on the three systems (BA-083).
 
 ### Not feasible / informational (`[N]`)
 
