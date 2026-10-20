@@ -5,8 +5,8 @@
 | File | Trigger | Content |
 |---|---|---|
 | `windows-ci.yml` | manual only (`workflow_dispatch`) or called from `prerelease.yml` (`workflow_call`, inputs `ref` and `package`); push and PR trigger nothing | four jobs in parallel: *cargo check (warning-free)*, *Tests (without fp-ui)*, *Tests fp-ui (kittest)*, *Release build (x64)* as the artifact `Firepixel-Windows-x64`. Called with `package: true` only the release build runs and uploads the ZIP as `release-windows` |
-| `macos-preview.yml` | manual only (input `tests`, default off) or called from `prerelease.yml` (input `ref`) | job *Firepixel.app (universal)*: `Firepixel.app` as a universal binary (arm64 + x86_64, macOS 10.15+, merged with `lipo` and verified), ad-hoc signed, ZIP with universal CLI, manuals, licence (artifact `Firepixel-macOS-universal`), plus a 20 s startup probe (arm64 slice only, the runner is Apple Silicon); optional job *Tests (platform-neutral crates)* |
-| `linux-build.yml` | manual only (input `tests`, default off) or called from `prerelease.yml` (inputs `ref` and `package`) | job *Linux x86_64 (tar.gz + AppImage)* on `ubuntu-22.04` (glibc 2.35 baseline): `Firepixel-Linux-x64-X.Y.Z.tar.gz` (`firepixel`, `firepixel-cli`, manuals, licence, `share/applications/firepixel.desktop`, hicolor icons) and `Firepixel-x86_64.AppImage` (packed with a pinned, checksum-verified `appimagetool`), artifact `Firepixel-Linux-x64`; plus a startup probe under Xvfb (software rendering) that checks that `firepixel --mcp` writes `mcp-bridge.json` (artifact `startprobe-linux`, may fail without failing the run); optional job *Tests (platform-neutral crates)* |
+| `macos-preview.yml` | manual only (input `tests`, default off) or called from `prerelease.yml` (input `ref`) | job *Firepixel.app (universal)*: `Firepixel.app` as a universal binary (arm64 + x86_64, macOS 10.15+, merged with `lipo` and verified), ad-hoc signed, ZIP with universal CLI, manuals, licence (artifact `Firepixel-macOS-universal`), plus a 20 s startup probe (arm64 slice only, the runner is Apple Silicon); optional job *Tests (platform-neutral, batch and export crates)* (input `tests`, see below) |
+| `linux-build.yml` | manual only (input `tests`, default off) or called from `prerelease.yml` (inputs `ref` and `package`) | job *Linux x86_64 (tar.gz + AppImage)* on `ubuntu-22.04` (glibc 2.35 baseline): `Firepixel-Linux-x64-X.Y.Z.tar.gz` (`firepixel`, `firepixel-cli`, manuals, licence, `share/applications/firepixel.desktop`, hicolor icons) and `Firepixel-x86_64.AppImage` (packed with a pinned, checksum-verified `appimagetool`), artifact `Firepixel-Linux-x64`; plus a startup probe under Xvfb (software rendering) that checks that `firepixel --mcp` writes `mcp-bridge.json` (artifact `startprobe-linux`, may fail without failing the run); optional job *Tests (platform-neutral, batch and export crates)* (input `tests`, see below) |
 | `prerelease.yml` | manual only (input `version`, optional) | jobs *Set version*, *Windows x64*, *macOS universal*, *Linux x86_64*, *Tag and pre-release* |
 
 ## Triggering a pre-release
@@ -63,7 +63,7 @@ Steps in the workflow:
 | `windows-ci` per run (4 parallel jobs, warm cache) | 35–40 min wall time, 110 job minutes | ×2 | approx. 220 min |
 | `windows-ci` with cold cache | approx. 50 min wall time, 166 job minutes | ×2 | approx. 330 min |
 | `macos-preview` (build, without tests) | 10–14 min | **×10** | approx. 100–140 min |
-| `macos-preview` with tests | +12 min | ×10 | +120 min |
+| `macos-preview` with tests (batch/export crates included, estimate) | +20–25 min | ×10 | +200–250 min |
 | `linux-build` (build + packages + probe, estimate, not measured yet) | 12–20 min | ×1 | approx. 12–20 min |
 | `prerelease` total (version job + Windows build + macOS build + Linux build) | 25–35 min wall time | – | approx. 150–200 min |
 
@@ -78,6 +78,21 @@ gh run watch
 Alternatively on GitHub: *Actions ▸ windows-ci ▸ Run workflow*. `prerelease.yml` still calls the
 Windows CI itself; macOS and Linux run only manually or via `prerelease.yml`
 (`gh workflow run linux-build.yml --ref main [-f tests=true]`).
+
+## Tests on macOS and Linux
+
+With the input `tests` (`gh workflow run macos-preview.yml --ref main -f tests=true`, same for
+`linux-build.yml`) the job *Tests (platform-neutral, batch and export crates)* runs
+`cargo test --locked --no-fail-fast` for `fp-model`, `fp-geom`, `fp-raster`, `fp-vector`, `fp-script`,
+`fp-batch`, `fp-export`, `fp-io`, `fp-effects`, `fp-color`, `fp-fwpng`, `fp-text` and `fp-trace`
+(macOS: native arm64; Linux: `ubuntu-22.04`) with the same environment as the Windows CI
+(`FP_NO_SHELL_OPEN=1`, `CARGO_PROFILE_DEV_DEBUG=0`). A failing test fails the run, so a golden hash
+that differs on another OS (BA-083, e.g. the Lanczos resampler) shows up directly. The job uploads the
+artifact `tests-macos` / `tests-linux` (`summary-<os>.txt`: result lines, failures and assertion
+messages, last 150 lines; plus the full `cargo-test.log`) and writes the result and failure lines to
+the run's summary page. The other crates (among them `fp-ui` and the GUI exe) are tested by the
+Windows CI only. No test in this job opens a window; text tests skip or fall back when the reference
+fonts are missing (on Linux the font index finds no system fonts at all).
 
 ## Notes
 

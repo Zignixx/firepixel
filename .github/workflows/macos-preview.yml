@@ -1,5 +1,5 @@
 # macOS preview: Firepixel.app as a universal binary (arm64 + x86_64) in a ZIP artifact, optionally
-# plus tests of the platform-neutral crates. No push trigger: manual only (workflow_dispatch) or from
+# plus tests of the platform-neutral, batch and export crates. No push trigger: manual only (workflow_dispatch) or from
 # the release workflow (workflow_call), because macOS minutes count ten times.
 name: macos-preview
 
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tests:
-        description: "Also run the tests of the platform-neutral crates (costs ~12 macOS minutes)"
+        description: "Also run the tests of the platform-neutral, batch and export crates (approx. 20-25 macOS minutes, estimate)"
         type: boolean
         default: false
   workflow_call:
@@ -198,13 +198,18 @@ jobs:
           retention-days: 7
 
   tests:
-    name: Tests (platform-neutral crates)
+    name: Tests (platform-neutral, batch and export crates)
     runs-on: macos-14
-    timeout-minutes: 45
-    # only on request (input tests); report failing tests without failing the run.
+    timeout-minutes: 60
+    # Only on request (input tests). A failing test (for example a golden hash that differs on this
+    # OS, BA-083) fails the run; the artifact tests-macos holds a short summary and the log tail.
     # Native arm64 only (host target of the Apple Silicon runner), no universal build here.
-    continue-on-error: true
+    continue-on-error: false
     if: ${{ inputs.tests == true }}
+    env:
+      # Same as the Windows CI: tests never open a file manager or browser, no debug line tables
+      FP_NO_SHELL_OPEN: "1"
+      CARGO_PROFILE_DEV_DEBUG: "0"
     steps:
       - uses: actions/checkout@v4
 
@@ -218,7 +223,50 @@ jobs:
           shared-key: macos-arm64-test
           cache-on-failure: true
 
+      # No crate here opens a window (fp-ui is not included), so no Xvfb or graphics runtime is needed.
+      # Text tests skip or fall back when the reference fonts are not installed (as on the Windows
+      # runner). The batch/export crates carry the golden hashes (resampler, colour steps, background,
+      # GIF optimizer, export).
       - name: cargo test
         env:
-          FP_NO_SHELL_OPEN: "1"
-        run: cargo test --locked -p fp-model -p fp-geom -p fp-raster -p fp-vector -p fp-script --no-fail-fast
+          CARGO_TERM_COLOR: never
+        run: |
+          set -o pipefail
+          mkdir -p test-out
+          PKGS="-p fp-model -p fp-geom -p fp-raster -p fp-vector -p fp-script"
+          PKGS="$PKGS -p fp-batch -p fp-export -p fp-io -p fp-effects -p fp-color -p fp-fwpng -p fp-text -p fp-trace"
+          cargo test --locked --no-fail-fast $PKGS 2>&1 | tee test-out/cargo-test.log
+
+      # Short summary (result lines, failures, assertion messages, then the log tail) as an artifact
+      # and on the run's summary page, so a hash mismatch is visible without the full log.
+      - name: Test summary
+        if: always()
+        run: |
+          LOG=test-out/cargo-test.log
+          OUT=test-out/summary-macos.txt
+          [ -f "$LOG" ] || { echo "no test log" > "$OUT"; exit 0; }
+          {
+            echo "== macos: $(uname -sm), commit $GITHUB_SHA"
+            echo "== Result lines"
+            grep -E '^ *Running |^test result:' "$LOG" || true
+            echo "== Failures"
+            grep -E ' FAILED$|^---- .* stdout ----$|panicked at|assertion|left:|right:|^error' "$LOG" | head -n 200 || true
+            echo "== Last 150 lines"
+            tail -n 150 "$LOG"
+          } > "$OUT"
+          {
+            echo '### cargo test (macos)'
+            echo '```'
+            grep -E '^test result:| FAILED$|panicked at' "$LOG" | head -n 80 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-macos
+          path: |
+            test-out/summary-macos.txt
+            test-out/cargo-test.log
+          if-no-files-found: ignore
+          retention-days: 14
