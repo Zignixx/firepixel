@@ -34,8 +34,8 @@ Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including 
 3. **Preview** `2026-10-20_09-25` (GT-1h) built; the next pre-release waits for the tester's macOS re-test.
 4. **Next full parity run** over all 49 units; it also checks whether the tiled canvas (BA-098) shifts a sampling
    position by one device pixel at fractional zoom. No runner item is open.
-5. **Remaining deferred items:** BA-101 (PSD stroke; JPEG 2000 in PDF done in `974af253`) and BA-109 (two AI
-   batch steps without models).
+5. **Remaining deferred items:** BA-101 (PSD stroke; JPEG 2000 in PDF done in `974af253`) and BA-109
+   (`ai.upscale` without a model; `ai.faceBlur` closed by `4f811360`).
 
 ## What remains
 
