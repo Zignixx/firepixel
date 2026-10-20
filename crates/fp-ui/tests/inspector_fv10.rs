@@ -424,9 +424,13 @@ fn o8_horizontal_scale_with_percent() {
     h.state_mut().state.session.execute("select.none", json!({})).expect("nichts");
     tool(&mut h, ToolId::Text);
     // Text tool without a selection shows the tool defaults. Values set on text objects selected
-    // with the pointer are stored as defaults (TW-138, RE spec 49 section 2.5) and undo does not
-    // reset preferences, so the last typed value (109 %) is the default now.
-    assert!(input_with(&h, "109%").1, "tool: default from the last object edit");
+    // with the pointer are stored as defaults (TW-138), but activating the text tool resets the
+    // paragraph defaults (R5, RE spec 56 section 3): the horizontal scale is 100 % again.
+    assert!(input_with(&h, "100%").1, "tool: reset on activating the text tool");
+    assert!(
+        (st(&h).session.prefs.get_real("Text_HorizScale", 0.0) - 1.0).abs() < 1e-9,
+        "Text_HorizScale reset"
+    );
 }
 
 // ------------------------------------------------------------------ O16 Stil-Liste

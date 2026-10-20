@@ -251,7 +251,12 @@ pub fn new_text_pref_attrs(prefs: &crate::prefs::Preferences) -> TextAttrs {
         let v = prefs.get_real(k, d);
         ((v - d).abs() > 1e-6).then_some(v as f32)
     };
-    a.tracking = real("Text_RangeKerning", 0.0);
+    // R6 (re 56 section 3): new text never takes `Text_RangeKerning` as its tracking (range
+    // kerning 0). The original puts it on the first typed character as pair kerning; the
+    // Firepixel text layout does not apply per-character kerning, so it is not applied at all.
+    if prefs.get_int("Text_LeadingMode", 0) == 1 {
+        a.leading_mode = Some(1);
+    }
     a.indent = real("Text_ParagraphIndent", 0.0);
     a.space_before = real("Text_ParagraphSpacingBefore", 0.0);
     a.space_after = real("Text_ParagraphSpacingAfter", 0.0);
@@ -1139,15 +1144,18 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 .requires(crate::commands::DOC),
         )
         .run(|s, p| {
+            // R7 (re 56 section 3): every field change is its own "Text change" row, also
+            // with nothing selected (then a step without a document change)
             if has_text(s) {
                 let out = set_attributes(s, p)?;
                 store_text_tool_defaults(s, p, true, false)?;
                 s.prefs_changed();
-                return Ok(out);
+                return Ok(out.labeled(fp_i18n::t("msg-step-text-change")));
             }
             store_text_tool_defaults(s, p, true, false)?;
             s.prefs_changed();
-            Ok(CommandOutput::session())
+            s.force_history_step();
+            Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-text-change")))
         }),
     );
 }
@@ -1407,10 +1415,51 @@ fn store_text_tool_defaults(
             continue;
         }
         if let Some(v) = p.opt_f64(k)? {
+            // the tracking field value is stored divided by 100 (field 15 -> 0.15, re 56 section 0)
+            let v = if k == "tracking" { v / 100.0 } else { v };
             s.prefs.set(pref, PrefValue::Real(v));
         }
     }
     Ok(())
+}
+
+/// R5 (re 56 section 2.4/3): activating the text tool resets the paragraph defaults (indent,
+/// spacing before/after, leading to `DefaultLeading` in % mode, tracking, horizontal scale,
+/// baseline shift) unless `TextEditor_RememberALLSettings` is on. Size, style, font and alignment
+/// stay. Firepixel has no text-tool-only opacity/blend option (the tool opacity/blend fields are
+/// shared with other tools and not applied to new text), so that part of the reset is omitted.
+pub(crate) fn reset_text_tool_paragraph_defaults(s: &mut Session) {
+    use crate::prefs::PrefValue;
+    if s.prefs.get_bool("TextEditor_RememberALLSettings", false) {
+        return;
+    }
+    let leading = s.prefs.get_real("DefaultLeading", 1.2);
+    let before = s.prefs.clone();
+    s.prefs.set("Text_Leading", PrefValue::Real(leading));
+    s.prefs.set("Text_LeadingMode", PrefValue::Int(0));
+    for (pref, v) in [
+        ("Text_RangeKerning", 0.0),
+        ("Text_HorizScale", 1.0),
+        ("Text_BaselineShift", 0.0),
+        ("Text_ParagraphIndent", 0.0),
+        ("Text_ParagraphSpacingBefore", 0.0),
+        ("Text_ParagraphSpacingAfter", 0.0),
+    ] {
+        s.prefs.set(pref, PrefValue::Real(v));
+    }
+    if s.prefs != before {
+        s.prefs_changed();
+    }
+}
+
+/// Leading value after switching the Properties panel unit (re 56 section 2.5): % -> px is
+/// `round(factor * size)` (120 % at 30 pt -> 36), px -> % is `px / size`; same unit unchanged.
+pub fn convert_leading(leading: f32, size: f32, from_px: bool, to_px: bool) -> f32 {
+    match (from_px, to_px) {
+        (false, true) => (leading * size).round(),
+        (true, false) => leading / size.max(1.0),
+        _ => leading,
+    }
 }
 
 /// Number attributes of the text tool defaults: parameter and preference key.

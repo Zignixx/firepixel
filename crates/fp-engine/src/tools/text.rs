@@ -560,7 +560,8 @@ impl TextTool {
                 .as_ref()
                 .is_none_or(|(s, sp)| *s != v.text || *sp != v.spans)
             {
-                let mut p = json!({"id": id, "text": v.text});
+                // the editor session ends as one "Text change" row (R7, re 56 section 3)
+                let mut p = json!({"id": id, "text": v.text, "step": "text-change"});
                 if !v.text.is_empty() {
                     p["runs"] = runs;
                 }

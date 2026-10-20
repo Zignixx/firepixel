@@ -1292,6 +1292,10 @@ impl Session {
                 self.tools.slot_memory.insert(g.to_string(), id);
             }
             self.events.push(SessionEvent::ToolChanged(id));
+            // R5 (re 56 section 3): activating the text tool resets its paragraph defaults
+            if id == ToolId::Text {
+                crate::commands::reset_text_tool_paragraph_defaults(self);
+            }
         }
         Ok(resp)
     }
@@ -1533,12 +1537,16 @@ impl Session {
         }
         resp.commands = cmds;
         if let Some(t) = resp.switch_tool.take() {
+            let activates_text = t == ToolId::Text && self.tools.active != ToolId::Text;
             self.tools.active = t;
             self.tools.machine = tools::make_machine(t);
             if let Some(g) = tools::info(t).map(|i| i.flyout) {
                 self.tools.slot_memory.insert(g.to_string(), t);
             }
             self.events.push(SessionEvent::ToolChanged(t));
+            if activates_text {
+                crate::commands::reset_text_tool_paragraph_defaults(self);
+            }
             resp.switch_tool = Some(t);
         }
         if let Some(e) = first_err {

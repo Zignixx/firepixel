@@ -254,7 +254,8 @@ fn text_tool_without_selection_updates_the_defaults() {
         "text.applyAttributes",
         json!({"size": 20, "color": "#0000ff", "alignment": 1, "leading": 1.5}),
     );
-    assert_eq!(s.active().unwrap().history.len(), n, "no history row");
+    // R7 (re 56 section 3): one "Text change" row also with nothing selected
+    assert_eq!(s.active().unwrap().history.len(), n + 1, "one history row");
     assert_eq!(s.tools.options.text_size, 20.0);
     assert_eq!(s.prefs.get_real("Text_Size", 12.0), 20.0);
     assert_eq!(s.prefs.get_int("Text_Justification", 0), 1);

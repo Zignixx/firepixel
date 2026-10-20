@@ -43,7 +43,7 @@ fn text_defaults_panel_never_writes_baseline_shift() {
     select(&mut s, &[id]);
     ex(&mut s, "text.applyAttributes", json!({"baselineShift": 5, "tracking": 20}));
     assert!(!s.prefs.values.contains_key("Text_BaselineShift"), "pointer selection");
-    assert_eq!(s.prefs.get_real("Text_RangeKerning", 0.0), 20.0, "tracking still written");
+    assert!((s.prefs.get_real("Text_RangeKerning", 0.0) - 0.2).abs() < 1e-9, "tracking still written (field / 100)");
     ex(&mut s, "select.none", json!({}));
     s.set_tool(ToolId::Text).expect("text tool");
     ex(&mut s, "text.applyAttributes", json!({"baselineShift": 7}));

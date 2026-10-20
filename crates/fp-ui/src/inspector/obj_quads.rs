@@ -3022,7 +3022,8 @@ fn text_vals(st: &AppState, _ctx: &egui::Context, tgt: Target) -> Option<TextVal
                 bold: tool_style(st, "Text_Bold"),
                 italic: tool_style(st, "Text_Italic"),
                 underline: tool_style(st, "Text_Underline"),
-                tracking: pr("Text_RangeKerning", 0.0),
+                // stored as field value / 100 (re 56 section 0)
+                tracking: pr("Text_RangeKerning", 0.0) * 100.0,
                 leading,
                 leading_px,
                 align: tool_align(st),
@@ -3098,8 +3099,8 @@ fn tool_leading(st: &AppState) -> (f32, bool) {
 
 /// Absatz-/Zeichenvorgaben des Textwerkzeugs: Voreinstellung und Parameter von `text.setAttributes`
 /// (wie im Original in den Voreinstellungen gemerkt, UX-A W15).
-const TEXT_TOOL_PREFS: [(&str, &str, f64); 6] = [
-    ("Text_RangeKerning", "tracking", 0.0),
+/// Not the tracking: new text gets range kerning 0 (R6, re 56 section 3).
+const TEXT_TOOL_PREFS: [(&str, &str, f64); 5] = [
     ("Text_ParagraphIndent", "indent", 0.0),
     ("Text_ParagraphSpacingBefore", "spaceBefore", 0.0),
     ("Text_ParagraphSpacingAfter", "spaceAfter", 0.0),
@@ -3325,17 +3326,8 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         Some(v.leading_px as usize),
         en,
     ) {
-        let val = if i == 1 {
-            v.leading * v.size
-        } else {
-            v.leading / v.size.max(1.0)
-        };
-        set_text(
-            ui,
-            st,
-            tgt,
-            json!({"leading": if (i == 1) == v.leading_px { v.leading } else { val }, "leadingMode": i}),
-        );
+        let val = fp_engine::commands::convert_leading(v.leading, v.size, v.leading_px, i == 1);
+        set_text(ui, st, tgt, json!({"leading": val, "leadingMode": i}));
     }
     if fields::toggle(
         ui,

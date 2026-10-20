@@ -415,7 +415,7 @@ fn w15_text_tool_defaults_before_typing() {
     type_into(&mut h, hs, "80");
     key(&mut h, Key::Enter, Modifiers::NONE);
     // Vorgaben in den Voreinstellungen des Textwerkzeugs (wie im Original)
-    assert_eq!(st(&h).session.prefs.get_real("Text_RangeKerning", 0.0), 25.0);
+    assert!((st(&h).session.prefs.get_real("Text_RangeKerning", 0.0) - 0.25).abs() < 1e-9, "Feldwert / 100");
     assert!((st(&h).session.prefs.get_real("Text_HorizScale", 1.0) - 0.8).abs() < 1e-6);
     // neuen Text tippen
     let n0 = undo_count(&h);
@@ -429,7 +429,7 @@ fn w15_text_tool_defaults_before_typing() {
     let t = fp_engine::docops::selectable_ids(&d.doc, d.page, d.frame).into_iter().find_map(|id| fp_engine::docops::element_on_page(&d.doc, d.page, id).and_then(|e| if let fp_model::ElementKind::Text(t) = &e.kind { Some(t.clone()) } else { None })).expect("Text");
     assert_eq!(t.plain_text(), "Hallo");
     let a = t.resolved_runs().first().map(|(a, _)| a.clone()).expect("Lauf");
-    assert_eq!(a.tracking, Some(25.0), "Laufweite aus der Vorgabe");
+    assert_eq!(a.tracking.unwrap_or(0.0), 0.0, "neuer Text: Laufweite 0 (R6)");
     assert_eq!(a.leading, Some(1.5), "Zeilenabstand aus der Vorgabe");
     assert!((a.horizontal_scale.unwrap_or(1.0) - 0.8).abs() < 1e-6, "Horizontalskala");
 }
