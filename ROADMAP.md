@@ -16,7 +16,7 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 | Canvas image pairs within 1 % | 185 / 212 (unchanged in run 28; run 26: 186 / 211; `tool-text/14, 16` above 1 % because no text tool is reset after the reference's size step fails, TW-165) |
 | Tests | Last full run: 2797 passed, 0 failed, 134 ignored at `901f0a56` (fixes F51a to F51c merged; the code of preview `2026-10-20_06-08`); macOS CI build with the app menu (`e11f8d1b`) green |
 | Latest release | **v0.2.4** pre-release published on 19 Oct 2026 (tag at `1f26223c`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage, with the three screen modes, the text default rules and the macOS fixes; before: **v0.2.3** (19 Oct 2026); Linux tested in CI only, the Intel macOS slice verified by tools only |
-| Open findings | 11 fixable rows (0 open: U-1 rest closed by `b7297f1f`, the runner item TW-167 closed by run 29; TW-146 rest and TW-165 moved to the click-test A1-19 as runner measurement gaps; TW-138 rest closed except R3; TW-151, TW-160 to TW-162 and TW-168 to TW-172 awaiting the click-test and the macOS re-test) · 5 deferred · 22 informational · 850+ closed |
+| Open findings | 11 fixable rows (0 open: U-1 rest closed by `b7297f1f`, the runner item TW-167 closed by run 29; TW-146 rest and TW-165 moved to the click-test A1-19 as runner measurement gaps; TW-138 rest closed except R3; TW-151, TW-160 to TW-162 and TW-168 to TW-172 awaiting the click-test and the macOS re-test) · 5 deferred · 20 informational · 850+ closed |
 
 Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including the measurement unit
 `xs-select-behind` (9 steps); run 25 repeated 20 of them, run 26 five, run 27 three and run 28 two.
