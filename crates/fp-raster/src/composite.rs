@@ -11,7 +11,7 @@ use fp_geom::IRect;
 
 use crate::image::RgbaImage;
 use crate::mask::Mask;
-use crate::par::for_each_row;
+use crate::par::for_each_row_span;
 
 /// Einstellungen für [`composite`] und [`composite_color`]. **Stabil.**
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,7 +67,7 @@ pub fn composite_color(dst: &mut RgbaImage, color: Rgba8, coverage: &Mask, opt: 
     let (y0, y1) = ((r.top - db.top) as usize, (r.bottom - db.top) as usize);
     let rows = &mut dst.data_mut()[y0 * dw..y1 * dw];
     let (mode, op, variant) = (opt.mode, opt.opacity.0, opt.variant);
-    for_each_row(rows, dw, |i, row| {
+    for_each_row_span(rows, dw, x1 - x0, |i, row| {
         let y = r.top + i as i32;
         for (k, d) in row[x0..x1].iter_mut().enumerate() {
             let m = coverage.get(r.left + k as i32, y);
@@ -106,7 +106,7 @@ pub fn composite(
     let (y0, y1) = ((r.top - db.top) as usize, (r.bottom - db.top) as usize);
     let rows = &mut dst.data_mut()[y0 * dw..y1 * dw];
     let (mode, op, variant) = (opt.mode, opt.opacity.0, opt.variant);
-    for_each_row(rows, dw, |i, row| {
+    for_each_row_span(rows, dw, x1 - x0, |i, row| {
         let y = r.top + i as i32;
         let srow = match src.row(y) {
             Some(s) => s,

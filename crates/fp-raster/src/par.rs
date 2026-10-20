@@ -29,3 +29,25 @@ where
             .for_each(|(i, row)| f(i, row));
     }
 }
+
+/// Like [`for_each_row`], when `f` only touches `span` pixels of each row: the decision for threads
+/// counts the touched pixels, not the whole rows (a small image on a wide target, e.g. thousands
+/// of small objects mixed onto one large image, otherwise paid the thread hand-off each time).
+pub(crate) fn for_each_row_span<T, F>(data: &mut [T], width: usize, span: usize, f: F)
+where
+    T: Send,
+    F: Fn(usize, &mut [T]) + Sync + Send,
+{
+    if width == 0 || data.is_empty() {
+        return;
+    }
+    if (data.len() / width) * span >= PAR_MIN_PIXELS && rayon::current_num_threads() > 1 {
+        data.par_chunks_mut(width)
+            .enumerate()
+            .for_each(|(i, row)| f(i, row));
+    } else {
+        data.chunks_mut(width)
+            .enumerate()
+            .for_each(|(i, row)| f(i, row));
+    }
+}

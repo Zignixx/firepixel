@@ -62,16 +62,13 @@ fn document_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
             Color32::from_rgb((bg.0 >> 16) as u8, (bg.0 >> 8) as u8, bg.0 as u8),
         );
     }
-    if let Some(tex) = st.canvases.get(&doc.id).and_then(|cc| cc.texture.clone()) {
-        let ts = tex.size_vec2();
+    if let Some(cc) = st.canvases.get(&doc.id)
+        && let Some(k) = cc.shown.filter(|_| !cc.tiles.is_empty())
+    {
+        let ts = egui::vec2(k.dev.width() as f32, k.dev.height() as f32);
         let s = (thumb.width() / ts.x).min(thumb.height() / ts.y);
         let ir = Rect::from_center_size(thumb.center(), ts * s);
-        ui.painter().image(
-            tex.id(),
-            ir,
-            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-            Color32::WHITE,
-        );
+        crate::canvas::render::paint_tiles(ui.painter(), cc, ir);
     }
     let row = d.r(0.0, 3.0, 1.0, 8.0);
     fields::label(

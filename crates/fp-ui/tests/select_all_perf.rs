@@ -414,3 +414,68 @@ fn select_all_3000_objects_stays_light() {
         assert!((a.left - b.left - 1.0).abs() < 1e-3 && (a.top - b.top).abs() < 1e-3, "um 1 px nach rechts: {b:?} → {a:?}");
     }
 }
+
+/// Frames after a view change until the canvas image is settled (no render request pending):
+/// (largest frame time, frame count, wall time to settle) in ms.
+fn settle(h: &mut H, last: &Arc<Mutex<(f64, usize)>>) -> (f64, usize, f64) {
+    let t0 = Instant::now();
+    let (mut worst, mut n, mut calm) = (0.0f64, 0, 0);
+    while n < 400 && calm < 3 {
+        let (ui, gpu, _) = frame(h, last);
+        worst = worst.max(ui + gpu);
+        n += 1;
+        let s = &h.state().state;
+        let settled = s.session.active_id().and_then(|id| s.canvases.get(&id)).is_some_and(|cc| cc.requested.is_some() && cc.requested == cc.shown);
+        calm = if settled { calm + 1 } else { 0 };
+        std::thread::sleep(std::time::Duration::from_millis(8));
+    }
+    (worst, n, ms(t0))
+}
+
+/// BA-098: first frames after zoom and scroll on a large page (software rendering).
+#[test]
+#[ignore = "Messung (Release): cargo test -p fp-ui --release --test all select_all_perf::zoom_scroll -- --ignored --nocapture"]
+fn zoom_scroll_frame_time() {
+    let (mut h, last) = harness_gpu(many_rects_state(3000));
+    h.input_mut().max_texture_side = Some(8192);
+    for zoom in [1.0, 2.0, 4.0, 1.5] {
+        let _ = h.state_mut().state.session.execute("view.setZoom", json!({ "zoom": zoom }));
+        let (w, n, t) = settle(&mut h, &last);
+        eprintln!("   zoom {:>3.0} %: worst frame {w:.1} ms, {n} frames, settled after {t:.0} ms", zoom * 100.0);
+        let mut worst = Vec::new();
+        for dx in [-1700.0, 1700.0, 1700.0, -1700.0] {
+            let _ = h.state_mut().state.session.execute("view.pan", json!({ "dx": dx, "dy": 0.0 }));
+            worst.push(settle(&mut h, &last).0);
+        }
+        eprintln!("   scroll at {:>3.0} % (4 × one view): worst frames {:?}", zoom * 100.0, worst.iter().map(|w| format!("{w:.1}")).collect::<Vec<_>>());
+    }
+}
+
+/// BA-097: parts of the first drag step with 3200 selected objects (CPU, without drawing).
+#[test]
+#[ignore = "Messung (Release): cargo test -p fp-ui --release --test all select_all_perf::drag_parts -- --ignored --nocapture"]
+fn drag_parts_with_large_selection() {
+    let mut st = many_rects_state(3000);
+    st.session.execute("select.all", json!({})).expect("all");
+    let d = st.session.active().expect("doc");
+    let ids: Vec<u64> = d.selection.elements.iter().map(|e| e.0).collect();
+    let (doc, page, frame) = (Arc::clone(&d.doc), d.page, d.frame);
+    let t = Instant::now();
+    let plan = fp_ui::canvas::stack::plan(&doc, page, frame, &ids, false);
+    eprintln!("   stack::plan: {:.1} ms ({} runs)", ms(t), plan.as_ref().map(|p| p.runs.len()).unwrap_or(0));
+    let els: Vec<_> = ids.iter().filter_map(|id| fp_engine::docops::element_on_page(&doc, page, fp_model::ElementId(*id))).collect();
+    for pass in 0..2 {
+        let t = Instant::now();
+        let img = fp_ui::canvas::render::render_elements(&st.renderer, &doc, frame, &els);
+        eprintln!("   render_elements pass {pass}: {:.1} ms ({:?})", ms(t), img.map(|i| (i.width(), i.height())));
+    }
+    let t = Instant::now();
+    let _ = st.renderer.render_page(&doc, page, frame);
+    eprintln!("   render_page: {:.1} ms", ms(t));
+    let t = Instant::now();
+    let img = fp_ui::canvas::render::render_elements(&st.renderer, &doc, frame, &els);
+    eprintln!("   render_elements after page render: {:.1} ms", ms(t));
+    let t = Instant::now();
+    let _ = img.map(|i| fp_ui::canvas::render::to_color_image(&i));
+    eprintln!("   to_color_image: {:.1} ms", ms(t));
+}

@@ -213,3 +213,61 @@ fn corpus_tiles_and_timing() {
         );
     }
 }
+
+/// BA-098: `render_device` with the grid at the region equals `render_region`, and device tiles of
+/// one grid put together equal the whole render (also with direct mixing and fractional zoom).
+#[test]
+fn device_tiles_equal_region_render() {
+    let doc = doc_with_rects(90, 1300.0, 900.0);
+    let page = fp_geom::IRect::new(0, 0, 1300, 900);
+    for opts in [
+        RenderOptions::default(),
+        RenderOptions {
+            tile_cache: false,
+            ..RenderOptions::default()
+        },
+    ] {
+        let r = Renderer::new(opts);
+        for z in [0.37, 1.0, 1.5, 2.5] {
+            let reg = fp_geom::IRect::new(13, 7, 911, 655);
+            let whole = r.render_region(&doc, 0, 0, reg, z).image;
+            let dev = fp_geom::IRect::new(0, 0, whole.width() as i32, whole.height() as i32);
+            let same = r
+                .render_device(&doc, 0, 0, reg, (reg.left, reg.top), z, dev)
+                .image;
+            assert!(whole.data() == same.data(), "zoom {z}: grid at the region");
+            // page grid: whole device area vs. 4 uneven parts
+            let pw = (1300.0 * z).ceil() as i32;
+            let ph = (900.0 * z).ceil() as i32;
+            let all = r
+                .render_device(
+                    &doc,
+                    0,
+                    0,
+                    page,
+                    (0, 0),
+                    z,
+                    fp_geom::IRect::new(0, 0, pw, ph),
+                )
+                .image;
+            let (cx, cy) = (pw / 3, ph / 2 + 1);
+            for part in [
+                fp_geom::IRect::new(0, 0, cx, cy),
+                fp_geom::IRect::new(cx, 0, pw, cy),
+                fp_geom::IRect::new(0, cy, cx, ph),
+                fp_geom::IRect::new(cx, cy, pw, ph),
+            ] {
+                let img = r.render_device(&doc, 0, 0, page, (0, 0), z, part).image;
+                for y in 0..part.height() as i32 {
+                    for x in 0..part.width() as i32 {
+                        assert_eq!(
+                            img.get(x, y),
+                            all.get(part.left + x, part.top + y),
+                            "zoom {z}, part {part:?}, pixel ({x}, {y})"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}

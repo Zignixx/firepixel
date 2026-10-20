@@ -1116,11 +1116,17 @@ fn burst_input_keeps_press_position_and_modifiers() {
 fn drawn_canvas_rect(h: &Harness<'static, FirepixelApp>) -> Option<egui::Rect> {
     let st = &h.state().state;
     let id = st.session.active_id()?;
-    let tex = st.canvases.get(&id)?.texture.as_ref()?.id();
+    let tex: Vec<egui::TextureId> = st
+        .canvases
+        .get(&id)?
+        .tiles
+        .iter()
+        .map(|t| t.texture.id())
+        .collect();
     let mut r: Option<egui::Rect> = None;
     for cs in &h.output().shapes {
         if let egui::epaint::Shape::Mesh(m) = &cs.shape
-            && m.texture_id == tex
+            && tex.contains(&m.texture_id)
         {
             let b = m.calc_bounds();
             r = Some(r.map_or(b, |x| x.union(b)));

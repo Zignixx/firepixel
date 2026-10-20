@@ -386,6 +386,76 @@ impl Renderer {
         self.region_of(doc, page, frame, region, zoom, None)
     }
 
+    /// Device pixels `dev` of the canvas grid anchored at `anchor` (document point of device pixel
+    /// (0, 0)) with zoom `zoom`: device pixel (i, j) shows the document pixel
+    /// `anchor + ⌊(i + ½) / zoom⌋` (the sampling rule of [`Self::render_region`], whose grid starts at
+    /// the region). Only document pixels inside `clip` are drawn, the rest stays transparent. The
+    /// grid does not depend on the part rendered, so parts of one view fit together without seams
+    /// and equal their pixels in a whole render (UI canvas tiles, BA-098).
+    #[allow(clippy::too_many_arguments)] // Dokument, Lage, Gitter, Ausschnitt
+    pub fn render_device(
+        &self,
+        doc: &Document,
+        page: usize,
+        frame: usize,
+        clip: IRect,
+        anchor: (i32, i32),
+        zoom: f64,
+        dev: IRect,
+    ) -> RenderOutput {
+        let zoom = if zoom.is_finite() && zoom > 0.0 {
+            zoom.clamp(1.0 / 256.0, 256.0)
+        } else {
+            1.0
+        };
+        let w = dev.width().min(32768) as i32;
+        let h = dev.height().min(32768) as i32;
+        let sample = |a: i32, i: i32| a + (((i as f64) + 0.5) / zoom).floor() as i32;
+        let region = if w > 0 && h > 0 {
+            IRect::new(
+                sample(anchor.0, dev.left),
+                sample(anchor.1, dev.top),
+                sample(anchor.0, dev.left + w - 1) + 1,
+                sample(anchor.1, dev.top + h - 1) + 1,
+            )
+            .intersect(&clip)
+        } else {
+            IRect::default()
+        };
+        let mut out = RgbaImage::new(IRect::new(0, 0, w.max(0), h.max(0)))
+            .unwrap_or_else(|_| RgbaImage::empty_at(0, 0));
+        if region.is_empty() || out.width() == 0 {
+            return RenderOutput {
+                image: out,
+                report: RenderReport::default(),
+            };
+        }
+        let (grid, base_img, report) = self.compose_rect(doc, page, frame, region, None);
+        let ow = out.width();
+        let xs: Vec<i32> = (0..w).map(|i| sample(anchor.0, dev.left + i)).collect();
+        let ys: Vec<i32> = (0..h).map(|j| sample(anchor.1, dev.top + j)).collect();
+        use rayon::prelude::*;
+        out.data_mut()
+            .par_chunks_mut(ow)
+            .enumerate()
+            .for_each(|(j, row)| {
+                let y = ys[j];
+                let inside_y = y >= region.top && y < region.bottom;
+                for (i, p) in row.iter_mut().enumerate() {
+                    let x = xs[i];
+                    *p = if inside_y && x >= region.left && x < region.right {
+                        match &grid {
+                            Some(g) => g.get(x, y),
+                            None => base_img.get(x, y).unwrap_or([0, 0, 0, 0]),
+                        }
+                    } else {
+                        [0, 0, 0, 0]
+                    };
+                }
+            });
+        RenderOutput { image: out, report }
+    }
+
     /// Like [`Self::render_region`], with the pixels of one bitmap replaced (live paint preview,
     /// BA-039). `None` when the bitmap is not drawn as part of the page (e.g. it is not on this
     /// page or lies inside a symbol); the caller then shows its own preview.

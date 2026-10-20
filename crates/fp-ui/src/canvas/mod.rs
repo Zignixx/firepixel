@@ -1056,16 +1056,44 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         .get(d.page)
         .map(|p| p.root.background)
         .unwrap_or(fp_color::Argb(0xffffffff));
-    // Rendern: sichtbarer Ausschnitt plus Rand
-    let vis = view.visible_rect();
-    let want = IRect::new(
-        vis.left.floor() as i32,
-        vis.top.floor() as i32,
-        vis.right.ceil() as i32,
-        vis.bottom.ceil() as i32,
-    );
-    let visible = want.intersect(&pr);
+    // Rendern: Gerätepixel im Gitter der Seite (Ursprung: linke obere Seitenecke, auf ganze
+    // Gerätepixel gerundet), als Kacheln ([`render::TILE`]); sichtbarer Teil plus Rand
     let zoom_dev = view.zoom * ppp;
+    let ppf = ppp as f32;
+    let origin = to_screen(&view, area.min, pr.left as f64, pr.top as f64);
+    let (gx0, gy0) = (
+        (origin.x * ppf).round() as f64,
+        (origin.y * ppf).round() as f64,
+    );
+    let extent = IRect::new(
+        0,
+        0,
+        render::device_edge(pr.left as i64, pr.right as i64, zoom_dev) as i32,
+        render::device_edge(pr.top as i64, pr.bottom as i64, zoom_dev) as i32,
+    );
+    // sichtbare Gerätepixel (relativ zum Gitterursprung)
+    let visible_dev = IRect::new(
+        ((area.min.x as f64 * ppp) - gx0).floor() as i32,
+        ((area.min.y as f64 * ppp) - gy0).floor() as i32,
+        ((area.max.x as f64 * ppp) - gx0).ceil() as i32,
+        ((area.max.y as f64 * ppp) - gy0).ceil() as i32,
+    )
+    .intersect(&extent);
+    let around = |f: f64| {
+        let (mx, my) = (
+            ((view.viewport.0 * ppp * f) as i32).min(4096),
+            ((view.viewport.1 * ppp * f) as i32).min(4096),
+        );
+        render::snap_to_tiles(
+            IRect::new(
+                visible_dev.left - mx,
+                visible_dev.top - my,
+                visible_dev.right + mx,
+                visible_dev.bottom + my,
+            ),
+            extent,
+        )
+    };
     let (generation, page, frame, docarc) =
         (d.generation, d.page, d.frame, std::sync::Arc::clone(&d.doc));
     // pending inspector slider value (FB-09/FB-10): rendered from a preview copy of the document
@@ -1082,53 +1110,59 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             && k.frame == frame
             && k.variant == variant
             && k.gamma == gamma
+            && k.page_rect == pr
             && (k.zoom - zoom_dev).abs() < 1e-9
     };
-    let covered = cc
+    let holds = |k: &RenderKey, r: IRect| fresh(k) && k.dev.intersect(&r) == r;
+    let covered = cc.shown.as_ref().is_some_and(|k| holds(k, visible_dev));
+    let pending_ok = cc.requested.as_ref().is_some_and(|k| holds(k, visible_dev));
+    // Rand erst, wenn der sichtbare Teil steht (BA-098: nach dem Zoomen zuerst nur die sichtbaren
+    // Kacheln hochladen); nachgefordert, sobald der Rand auf ein Viertel der Ansicht schrumpft
+    let same_zoom = cc
         .shown
         .as_ref()
-        .is_some_and(|k| fresh(k) && k.region.intersect(&visible) == visible);
-    let pending_ok = cc
-        .requested
-        .as_ref()
-        .is_some_and(|k| fresh(k) && k.region.intersect(&visible) == visible);
-    if !visible.is_empty() && !covered && !pending_ok {
-        // Rand: halber Sichtbereich je Seite, Textur höchstens 8000 Gerätepixel
-        let mx = ((view.viewport.0 / view.zoom) * 0.5) as i32;
-        let my = ((view.viewport.1 / view.zoom) * 0.5) as i32;
-        let mut region = IRect::new(
-            visible.left - mx,
-            visible.top - my,
-            visible.right + mx,
-            visible.bottom + my,
-        )
-        .intersect(&pr);
-        // höchstens die größte Texturseite des Grafikadapters (sonst Absturz beim Hochladen)
-        let max_tex = (ui.ctx().input(|i| i.max_texture_side) as f64).min(8000.0);
-        let max_side = ((max_tex / zoom_dev).floor() as i32).max(1);
-        if region.width() as i32 > max_side || region.height() as i32 > max_side {
-            region = visible;
-        }
-        if region.width() as i32 > max_side || region.height() as i32 > max_side {
-            // sehr großes Fenster bei hoher Vergrößerung: um die Mitte des Sichtbereichs begrenzen
-            let cx = (visible.left + visible.right) / 2;
-            let cy = (visible.top + visible.bottom) / 2;
-            let hw = (region.width() as i32).min(max_side) / 2;
-            let hh = (region.height() as i32).min(max_side) / 2;
-            region = IRect::new(
-                cx - hw,
-                cy - hh,
-                cx - hw + (region.width() as i32).min(max_side),
-                cy - hh + (region.height() as i32).min(max_side),
+        .is_some_and(|k| k.doc == id && k.page == page && (k.zoom - zoom_dev).abs() < 1e-9);
+    // höchstens die größte Texturseite des Grafikadapters (die Schichten über der Vorschau sind
+    // eine Textur je Bild): sonst nur der sichtbare Teil, notfalls um seine Mitte begrenzt
+    let max_tex = (ui.ctx().input(|i| i.max_texture_side) as i32).min(8000);
+    let fits = |r: &IRect| r.width() as i32 <= max_tex && r.height() as i32 <= max_tex;
+    let cap = |dev: IRect| {
+        let vis = render::snap_to_tiles(visible_dev, extent);
+        if fits(&dev) {
+            dev
+        } else if fits(&vis) {
+            vis
+        } else {
+            let (w, h) = (
+                (visible_dev.width() as i32).min(max_tex),
+                (visible_dev.height() as i32).min(max_tex),
             );
+            let cx = (visible_dev.left + visible_dev.right) / 2;
+            let cy = (visible_dev.top + visible_dev.bottom) / 2;
+            IRect::new(cx - w / 2, cy - h / 2, cx - w / 2 + w, cy - h / 2 + h)
         }
+    };
+    let margin_due = covered
+        && cc.requested == cc.shown
+        && cc
+            .shown
+            .as_ref()
+            .is_some_and(|k| !holds(k, around(0.25)) && k.dev != cap(around(0.5)));
+    if !visible_dev.is_empty() && ((!covered && !pending_ok) || margin_due) {
+        let dev = cap(if same_zoom || margin_due {
+            around(0.5)
+        } else {
+            render::snap_to_tiles(visible_dev, extent)
+        });
         let key = RenderKey {
             doc: id,
             generation,
             epoch: cc.epoch,
             page,
             frame,
-            region,
+            region: render::covered_region(pr, dev, zoom_dev),
+            page_rect: pr,
+            dev,
             zoom: zoom_dev,
             variant,
             gamma,
@@ -1165,49 +1199,33 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         ui.ctx()
             .request_repaint_after(std::time::Duration::from_millis(16));
     }
-    let tex_now = match (&cc.texture, &cc.shown) {
-        (Some(tex), Some(k)) if k.doc == id && k.page == page => Some((tex.clone(), *k)),
+    let tex_now = match &cc.shown {
+        Some(k) if k.doc == id && k.page == page && !cc.tiles.is_empty() => Some(*k),
         _ => None,
     };
-    let ppf = ppp as f32;
-    let fresh_tex = tex_now
-        .as_ref()
-        .filter(|(_, k)| (k.zoom - zoom_dev).abs() < 1e-9);
+    let fresh_tex = tex_now.filter(|k| (k.zoom - zoom_dev).abs() < 1e-9);
     // Ursprung des Abtastgitters (Gerätepixel, ganzzahlig) und Bezugs-Dokumentpunkt
     let (gx, gy, rl, rt) = match fresh_tex {
-        Some((_, k)) => {
-            let a = to_screen(&view, area.min, k.region.left as f64, k.region.top as f64);
+        Some(k) => {
+            let a = to_screen(
+                &view,
+                area.min,
+                k.page_rect.left as f64,
+                k.page_rect.top as f64,
+            );
             (
                 (a.x * ppf).round() as f64,
                 (a.y * ppf).round() as f64,
-                k.region.left as f64,
-                k.region.top as f64,
+                k.page_rect.left as f64,
+                k.page_rect.top as f64,
             )
         }
-        None => {
-            let a = to_screen(&view, area.min, pr.left as f64, pr.top as f64);
-            (
-                (a.x * ppf).round() as f64,
-                (a.y * ppf).round() as f64,
-                pr.left as f64,
-                pr.top as f64,
-            )
-        }
+        None => (gx0, gy0, pr.left as f64, pr.top as f64),
     };
     // erster Gerätepixel i (ab dem Gitterursprung), dessen Abtastpunkt bei oder hinter der Kante `e`
     // liegt – mit genau den Gleitkomma-Schritten von fp-render (sonst kippt die letzte Zeile)
-    let edge = |g: f64, r: f64, e: f64| {
-        let (r, e) = (r as i64, e as i64);
-        let sample = |i: i64| r + ((i as f64 + 0.5) / zoom_dev).floor() as i64;
-        let mut i = ((e - r) as f64 * zoom_dev - 0.5).ceil() as i64;
-        while sample(i - 1) >= e {
-            i -= 1;
-        }
-        while sample(i) < e {
-            i += 1;
-        }
-        g + i as f64
-    };
+    let edge =
+        |g: f64, r: f64, e: f64| g + render::device_edge(r as i64, e as i64, zoom_dev) as f64;
     let page_screen = Rect::from_min_max(
         pos2(
             (edge(gx, rl, pr.left as f64) / ppp) as f32,
@@ -1244,28 +1262,38 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         area,
         &view,
     );
-    if let Some((tex, k)) = &tex_now {
+    if let Some(k) = &tex_now {
         let page_painter = painter.with_clip_rect(page_screen.intersect(area));
-        let rect = if fresh_tex.is_some() {
-            // aktuelle Textur: Pixel genau auf dem Gerätepixelgitter
-            Rect::from_min_size(
-                pos2((gx / ppp) as f32, (gy / ppp) as f32),
-                vec2(tex.size()[0] as f32 / ppf, tex.size()[1] as f32 / ppf),
-            )
+        let (a, scale) = if fresh_tex.is_some() {
+            // aktuelle Kacheln: Pixel genau auf dem Gerätepixelgitter
+            (pos2((gx / ppp) as f32, (gy / ppp) as f32), 1.0)
         } else {
-            // alte Textur mit ihrem eigenen Zoom auf die neue Ansicht abbilden, bis die neue da ist
-            let a = to_screen(&view, area.min, k.region.left as f64, k.region.top as f64);
-            let size = vec2(tex.size()[0] as f32 / ppf, tex.size()[1] as f32 / ppf)
-                * (view.zoom * ppp / k.zoom.max(1e-9)) as f32;
-            Rect::from_min_size(a, size)
+            // alte Kacheln mit ihrem eigenen Zoom auf die neue Ansicht abbilden, bis die neuen da sind
+            let a = to_screen(
+                &view,
+                area.min,
+                k.page_rect.left as f64,
+                k.page_rect.top as f64,
+            );
+            (a, (view.zoom * ppp / k.zoom.max(1e-9)) as f32)
         };
-        page_painter.image(
-            tex.id(),
-            rect,
-            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-            Color32::WHITE,
-        );
-        st.canvases.entry(id).or_default().tex_rect = Some(rect);
+        let place = |r: IRect| {
+            Rect::from_min_size(
+                a + vec2(r.left as f32, r.top as f32) / ppf * scale,
+                vec2(r.width() as f32, r.height() as f32) / ppf * scale,
+            )
+        };
+        if let Some(cc) = st.canvases.get(&id) {
+            for t in &cc.tiles {
+                page_painter.image(
+                    t.texture.id(),
+                    place(t.dev),
+                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            }
+        }
+        st.canvases.entry(id).or_default().tex_rect = Some(place(k.dev));
     }
     preview_stack(ui, st, page_screen.intersect(area), area, &view, &feedback);
     if theme.glow {
@@ -3129,6 +3157,8 @@ fn preview_stack(
                 }
                 let runs: Vec<Vec<u64>> = plan.runs.iter().map(|r| r.ids.clone()).collect();
                 let layers = if ready { cc.layers.clone() } else { Vec::new() };
+                // BA-097: only the part in view (plus a margin) goes into the texture
+                let need = ghost::needed_part(*rect, quad, view.visible_rect());
                 let sprites = cc.ghosts.drag_sprites(
                     &ctx,
                     &st.renderer,
@@ -3138,6 +3168,7 @@ fn preview_stack(
                     frame_i,
                     &runs,
                     view.zoom,
+                    need,
                 );
                 for i in 0..sprites.len().max(layers.len()) {
                     if let Some(Some(s)) = sprites.get(i) {

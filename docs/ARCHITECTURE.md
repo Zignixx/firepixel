@@ -86,7 +86,11 @@ generator, the shared palette over all open documents) live in `fp-engine/src/co
 
 `fp-render` is a CPU reference compositor, bit-exact to the measured behaviour where it is known, and tested
 against the flat PNG preview stored in FW-PNG files (corpus and golden tests). The canvas shows its result as
-a texture; partial rendering and caches keep large documents interactive. For live bitmap painting the
+512-px texture tiles on a device-pixel grid anchored at the page corner (`Renderer::render_device`, so parts of
+one view fit together and equal a whole render): scrolling uploads only new tiles, an edit only the changed
+rectangle of the tiles it touches, and after a zoom the visible tiles come first and the margin follows (BA-098;
+without a GPU, texture upload runs at only ~30 MB/s). The drag preview texture likewise holds only the part of the
+dragged objects in view plus a margin (BA-097). Partial rendering and caches keep large documents interactive. For live bitmap painting the
 canvas renders the changed rectangle with `Renderer::render_region_with` and a `PixelOverride` that swaps in the
 scratch pixels of the painted bitmap, so the preview sits in the right stacking position with its opacity, blend
 mode, effects and masks. The inspector's opacity and stroke width sliders preview their pending value the same

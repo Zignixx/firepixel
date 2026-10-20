@@ -83,6 +83,18 @@ pub fn render_elements(
     frame: usize,
     elements: &[Arc<Element>],
 ) -> Option<RgbaImage> {
+    render_elements_in(r, doc, frame, elements, None).0
+}
+
+/// Like [`render_elements`], only the part inside `clip` (document pixels; same pixels there).
+/// Also returns the bounds of the whole result (empty when nothing is visible).
+pub fn render_elements_in(
+    r: &fp_render::Renderer,
+    doc: &Document,
+    frame: usize,
+    elements: &[Arc<Element>],
+    clip: Option<IRect>,
+) -> (Option<RgbaImage>, IRect) {
     let map = fp_render::PointMap::identity();
     let parts: Vec<(RgbaImage, &Arc<Element>)> = elements
         .iter()
@@ -90,13 +102,19 @@ pub fn render_elements(
         .map(|e| (r.render_element(doc, e, &map, frame).image, e))
         .filter(|(i, _)| i.width() > 0)
         .collect();
-    let bounds = parts
+    let full = parts
         .iter()
         .fold(IRect::default(), |acc, (i, _)| acc.union(&i.bounds()));
+    let bounds = match clip {
+        Some(c) => full.intersect(&c),
+        None => full,
+    };
     if bounds.is_empty() {
-        return None;
+        return (None, full);
     }
-    let mut out = RgbaImage::new(bounds).ok()?;
+    let Ok(mut out) = RgbaImage::new(bounds) else {
+        return (None, full);
+    };
     for (p, e) in &parts {
         let opt = fp_raster::CompositeOptions {
             mode: e.common.blend,
@@ -105,7 +123,7 @@ pub fn render_elements(
         };
         fp_raster::composite(&mut out, p, None, &opt);
     }
-    Some(out)
+    (Some(out), full)
 }
 
 /// Schlüssel eines gerenderten Ausschnitts.
@@ -116,8 +134,13 @@ pub struct RenderKey {
     pub epoch: u64,
     pub page: usize,
     pub frame: usize,
-    /// Ausschnitt in Dokumentpixeln.
+    /// Dokumentpixel, deren Gerätepixel alle im Bild liegen (für Prüfungen in Dokumentkoordinaten).
     pub region: IRect,
+    /// Seitenrechteck: sein linker oberer Punkt ist der Ursprung des Gerätepixelgitters, außerhalb
+    /// bleibt das Bild durchsichtig.
+    pub page_rect: IRect,
+    /// Gerätepixel des Bilds im Gitter der Seite (BA-098: Kacheln eines Gitters passen zusammen).
+    pub dev: IRect,
     /// Zoom in Gerätepixeln (Ansichtszoom × Pixel pro Punkt).
     pub zoom: f64,
     /// Kennung der ausgeblendeten Elemente (0 = keine).
@@ -131,7 +154,8 @@ pub struct RenderKey {
 /// Stand der Leinwand eines Dokuments (Render-Cache und Interaktionszustand der Werkzeuge).
 #[derive(Default)]
 pub struct CanvasCache {
-    pub texture: Option<egui::TextureHandle>,
+    /// Kacheln der angezeigten Leinwand (BA-098, [`show_result`]).
+    pub tiles: Vec<CanvasTile>,
     /// Schlüssel der angezeigten Textur.
     pub shown: Option<RenderKey>,
     /// Bild der angezeigten Textur (für das Hochladen nur geänderter Bereiche, [`show_result`]).
@@ -224,6 +248,92 @@ impl CanvasCache {
     /// Inhalt hat sich geändert: neu rendern.
     pub fn invalidate(&mut self) {
         self.epoch = self.epoch.wrapping_add(1);
+    }
+}
+
+/// Seitenlänge einer Leinwandkachel in Gerätepixeln.
+pub const TILE: i32 = 512;
+
+/// Eine Kachel der Leinwandtextur: Gerätepixel `dev` im Gitter der Seite ([`RenderKey::dev`]).
+pub struct CanvasTile {
+    pub dev: IRect,
+    pub texture: egui::TextureHandle,
+}
+
+/// Erster Gerätepixel i (ab dem Gitterursprung beim Dokumentpunkt `origin`), dessen Abtastpunkt
+/// `origin + ⌊(i + ½) / zoom⌋` bei oder hinter der Kante `e` liegt – mit genau den
+/// Gleitkomma-Schritten von fp-render (sonst kippt die letzte Zeile).
+pub fn device_edge(origin: i64, e: i64, zoom: f64) -> i64 {
+    let sample = |i: i64| origin + ((i as f64 + 0.5) / zoom).floor() as i64;
+    let mut i = ((e - origin) as f64 * zoom - 0.5).ceil() as i64;
+    while sample(i - 1) >= e {
+        i -= 1;
+    }
+    while sample(i) < e {
+        i += 1;
+    }
+    i
+}
+
+/// Gerätepixel `dev` auf ganze Kacheln erweitert, begrenzt auf `extent`.
+pub fn snap_to_tiles(dev: IRect, extent: IRect) -> IRect {
+    let down = |v: i32| v.div_euclid(TILE) * TILE;
+    let up = |v: i32| (v + TILE - 1).div_euclid(TILE) * TILE;
+    IRect::new(down(dev.left), down(dev.top), up(dev.right), up(dev.bottom)).intersect(&extent)
+}
+
+/// Dokumentpixel, deren Gerätepixel alle in `dev` liegen (Gitter am Ursprung von `page`).
+pub fn covered_region(page: IRect, dev: IRect, zoom: f64) -> IRect {
+    if dev.is_empty() {
+        return IRect::default();
+    }
+    let sample = |o: i32, i: i32| o + (((i as f64) + 0.5) / zoom).floor() as i32;
+    let full_w = device_edge(page.left as i64, page.right as i64, zoom) as i32;
+    let full_h = device_edge(page.top as i64, page.bottom as i64, zoom) as i32;
+    let l = if dev.left <= 0 {
+        page.left
+    } else {
+        sample(page.left, dev.left - 1) + 1
+    };
+    let t = if dev.top <= 0 {
+        page.top
+    } else {
+        sample(page.top, dev.top - 1) + 1
+    };
+    let r = if dev.right >= full_w {
+        page.right
+    } else {
+        sample(page.left, dev.right)
+    };
+    let b = if dev.bottom >= full_h {
+        page.bottom
+    } else {
+        sample(page.top, dev.bottom)
+    };
+    IRect::new(l, t, r.max(l), b.max(t)).intersect(&page)
+}
+
+/// Malt die Kacheln von `cc` so, dass das ganze Bild (`shown.dev`) das Rechteck `target` füllt.
+pub fn paint_tiles(painter: &egui::Painter, cc: &CanvasCache, target: egui::Rect) {
+    let Some(k) = cc.shown else { return };
+    let (w, h) = (k.dev.width().max(1) as f32, k.dev.height().max(1) as f32);
+    let sx = target.width() / w;
+    let sy = target.height() / h;
+    for t in &cc.tiles {
+        let r = egui::Rect::from_min_size(
+            target.min
+                + egui::vec2(
+                    (t.dev.left - k.dev.left) as f32 * sx,
+                    (t.dev.top - k.dev.top) as f32 * sy,
+                ),
+            egui::vec2(t.dev.width() as f32 * sx, t.dev.height() as f32 * sy),
+        );
+        painter.image(
+            t.texture.id(),
+            r,
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            egui::Color32::WHITE,
+        );
     }
 }
 
@@ -399,10 +509,21 @@ fn render_plain(
     hidden: &[super::stack::Atom],
     clear: bool,
 ) -> RgbaImage {
+    let device = |d: &Document| {
+        let pr = key.page_rect;
+        r.render_device(
+            d,
+            key.page,
+            key.frame,
+            pr,
+            (pr.left, pr.top),
+            key.zoom,
+            key.dev,
+        )
+        .image
+    };
     if hidden.is_empty() && !clear {
-        return r
-            .render_region(doc, key.page, key.frame, key.region, key.zoom)
-            .image;
+        return device(doc);
     }
     // Kopie mit ausgeblendeten Teilen (Copy-on-Write: nur die betroffenen Zweige werden neu)
     let mut d = doc.clone();
@@ -410,8 +531,7 @@ fn render_plain(
     if clear && let Some(p) = d.pages.get_mut(key.page) {
         Arc::make_mut(p).root.background = fp_color::Argb(0);
     }
-    r.render_region(&d, key.page, key.frame, key.region, key.zoom)
-        .image
+    device(&d)
 }
 
 /// RGBA-Bild → egui-Bild.
@@ -419,38 +539,69 @@ pub fn to_color_image(img: &RgbaImage) -> egui::ColorImage {
     egui::ColorImage::from_rgba_unmultiplied([img.width(), img.height()], img.as_bytes())
 }
 
-/// Fertiges Renderergebnis als Leinwandtextur zeigen. Zeigt die Textur schon denselben Ausschnitt
-/// im selben Zoom, wird nur das geänderte Rechteck hochgeladen: Auf Rechnern ohne Grafikkarte
-/// schafft das Hochladen nur etwa 30 MB/s, eine ganze Leinwandtextur bei 400 % (bis 4400×2500)
-/// brauchte dort über 1 s je Bearbeitung (FV-8).
+/// Fertiges Renderergebnis als Leinwandtextur zeigen: als Kacheln von [`TILE`] Gerätepixeln im
+/// Gitter der Seite. Auf Rechnern ohne Grafikkarte schafft das Hochladen nur etwa 30 MB/s; eine
+/// ganze Leinwandtextur bei 400 % (bis 4400×2500) brauchte dort über 1 s je Bearbeitung (FV-8) und
+/// je Rollen oder Zoomen (BA-098). Darum wird nur hochgeladen, was neu ist: Kacheln, die schon zu
+/// sehen waren, bleiben stehen (Rollen) bzw. bekommen nur ihr geändertes Rechteck (Bearbeitung).
 pub fn show_result(ctx: &egui::Context, cc: &mut CanvasCache, res: RenderResult) {
-    let same_layout = cc
-        .shown
-        .is_some_and(|k| k.region == res.key.region && (k.zoom - res.key.zoom).abs() < 1e-12);
-    match (&mut cc.texture, &cc.shown_image) {
-        (Some(tex), Some(prev))
-            if same_layout
-                && prev.width() == res.image.width()
-                && prev.height() == res.image.height()
-                && tex.size() == [res.image.width(), res.image.height()] =>
-        {
-            if let Some((x, y, w, h)) = changed_rect(prev, &res.image) {
-                tex.set_partial(
-                    [x, y],
-                    sub_image(&res.image, x, y, w, h),
-                    egui::TextureOptions::NEAREST,
-                );
-            }
+    let k = res.key;
+    let same_grid = cc.shown.is_some_and(|s| {
+        s.doc == k.doc && s.page_rect == k.page_rect && (s.zoom - k.zoom).abs() < 1e-12
+    });
+    let mut old = std::mem::take(&mut cc.tiles);
+    let prev = match (same_grid, cc.shown, cc.shown_image.as_ref()) {
+        (true, Some(s), Some(img)) if img.width() as u32 == s.dev.width() => Some((s, img)),
+        _ => {
+            old.clear();
+            None
         }
-        (Some(tex), _) => tex.set(to_color_image(&res.image), egui::TextureOptions::NEAREST),
-        (None, _) => {
-            cc.texture = Some(ctx.load_texture(
-                format!("canvas-{}", res.key.doc.0),
-                to_color_image(&res.image),
-                egui::TextureOptions::NEAREST,
-            ))
+    };
+    let img = &res.image;
+    let ok = img.width() as u32 == k.dev.width() && img.height() as u32 == k.dev.height();
+    let mut tiles = Vec::new();
+    if ok && !k.dev.is_empty() {
+        let mut ty = k.dev.top.div_euclid(TILE) * TILE;
+        while ty < k.dev.bottom {
+            let mut tx = k.dev.left.div_euclid(TILE) * TILE;
+            while tx < k.dev.right {
+                let t = IRect::new(tx, ty, tx + TILE, ty + TILE).intersect(&k.dev);
+                let (ox, oy) = ((t.left - k.dev.left) as usize, (t.top - k.dev.top) as usize);
+                let (w, h) = (t.width() as usize, t.height() as usize);
+                let reuse = prev.and_then(|(s, pimg)| {
+                    let pos = old.iter().position(|o| o.dev == t)?;
+                    (s.dev.intersect(&t) == t).then_some((pos, s, pimg))
+                });
+                match reuse {
+                    Some((pos, s, pimg)) => {
+                        let mut tile = old.swap_remove(pos);
+                        let p = ((t.left - s.dev.left) as usize, (t.top - s.dev.top) as usize);
+                        if let Some((x, y, cw, ch)) =
+                            changed_rect_at(pimg, p, img, (ox, oy), (w, h))
+                        {
+                            tile.texture.set_partial(
+                                [x, y],
+                                sub_image(img, ox + x, oy + y, cw, ch),
+                                egui::TextureOptions::NEAREST,
+                            );
+                        }
+                        tiles.push(tile);
+                    }
+                    None => tiles.push(CanvasTile {
+                        dev: t,
+                        texture: ctx.load_texture(
+                            format!("canvas-{}-{}-{}", k.doc.0, t.left, t.top),
+                            sub_image(img, ox, oy, w, h),
+                            egui::TextureOptions::NEAREST,
+                        ),
+                    }),
+                }
+                tx += TILE;
+            }
+            ty += TILE;
         }
     }
+    cc.tiles = tiles;
     cc.layers = res
         .layers
         .iter()
@@ -467,6 +618,46 @@ pub fn show_result(ctx: &egui::Context, cc: &mut CanvasCache, res: RenderResult)
         .collect();
     cc.shown = Some(res.key);
     cc.shown_image = Some(res.image);
+}
+
+/// Kleinstes Rechteck (x, y, Breite, Höhe) im Teil der Größe `size` ab `at_b` von `b`, in dem er
+/// sich vom gleich großen Teil ab `at_a` von `a` unterscheidet (relativ zum Teil); `None` bei
+/// gleichem Inhalt.
+pub fn changed_rect_at(
+    a: &RgbaImage,
+    at_a: (usize, usize),
+    b: &RgbaImage,
+    at_b: (usize, usize),
+    size: (usize, usize),
+) -> Option<(usize, usize, usize, usize)> {
+    let (w, h) = size;
+    if w == 0 || h == 0 {
+        return None;
+    }
+    let (sa, sb) = (a.width() * 4, b.width() * 4);
+    let row_a = |y: usize| {
+        let o = (at_a.1 + y) * sa + at_a.0 * 4;
+        &a.as_bytes()[o..o + w * 4]
+    };
+    let row_b = |y: usize| {
+        let o = (at_b.1 + y) * sb + at_b.0 * 4;
+        &b.as_bytes()[o..o + w * 4]
+    };
+    let rows: Vec<usize> = (0..h).filter(|&y| row_a(y) != row_b(y)).collect();
+    let (&top, &bottom) = (rows.first()?, rows.last()?);
+    let (mut left, mut right) = (w, 0);
+    for &r in &rows {
+        let (x, y) = (row_a(r), row_b(r));
+        let px = |i: usize| x[i * 4..i * 4 + 4] != y[i * 4..i * 4 + 4];
+        if let Some(l) = (0..left.min(w)).find(|&i| px(i)) {
+            left = l;
+        }
+        if let Some(rr) = (right..w).rev().find(|&i| px(i)) {
+            right = rr;
+        }
+    }
+    let right = right.max(left);
+    Some((left, top, right + 1 - left, bottom + 1 - top))
 }
 
 /// Kleinstes Rechteck (x, y, Breite, Höhe) in Bildpixeln, in dem sich zwei gleich große Bilder

@@ -34,6 +34,10 @@ pub struct GhostCache {
     pub drag: Vec<Option<Sprite>>,
     /// Schlüssel von `drag`.
     pub drag_key: u64,
+    /// Ausschnitt (Dokumentpixel), auf den `drag` begrenzt ist; `None` = ganz (BA-097).
+    pub drag_clip: Option<IRect>,
+    /// Grenzen der ganzen Vorschau aller Läufe (auch außerhalb von `drag_clip`).
+    pub drag_full: IRect,
     pub text: Option<Sprite>,
     /// Objekt mit live gezogenen Füllgriffen (Zeiger, re 40 §1).
     pub fill: Option<Sprite>,
@@ -67,6 +71,12 @@ fn texture_of(
 impl GhostCache {
     /// Vorschauen der Läufe `runs` (je Lauf die gezogenen Elemente, unten → oben; Seite `page`,
     /// Status `frame`) – gecacht je Generation. Ein Lauf ohne sichtbaren Inhalt liefert `None`.
+    ///
+    /// `need`: der Teil der Vorschau (Dokumentpixel vor dem Ziehen), der gerade im Bild liegt.
+    /// Die Textur hält nur ihn plus einen Rand (je Seite die halbe Größe); erst wenn `need` den
+    /// Ausschnitt verlässt (Rollen, Zoomen, weites Ziehen), wird neu geschnitten. Ohne Grafikkarte
+    /// lädt die Textur nur mit ~30 MB/s hoch, eine Vorschau von 6000 × 1500 px brauchte über 1 s
+    /// (BA-097). Innerhalb des Ausschnitts sind die Pixel dieselben.
     #[allow(clippy::too_many_arguments)] // Kontext der Vorschau (egui, Renderer, Dokument, Lage)
     pub fn drag_sprites(
         &mut self,
@@ -78,13 +88,28 @@ impl GhostCache {
         frame: usize,
         runs: &[Vec<u64>],
         zoom: f64,
+        need: Option<IRect>,
     ) -> &[Option<Sprite>] {
         let flat: Vec<u64> = runs
             .iter()
             .flat_map(|ids| ids.iter().copied().chain(std::iter::once(u64::MAX)))
             .collect();
         let key = hash_ids(generation, &flat);
-        if self.drag.is_empty() || self.drag_key != key {
+        let fresh = !self.drag.is_empty() && self.drag_key == key;
+        let covered = match (self.drag_clip, need) {
+            (None, _) => true,
+            (Some(_), None) => false,
+            (Some(c), Some(n)) => {
+                let n = n.intersect(&self.drag_full);
+                n.is_empty() || c.intersect(&n) == n
+            }
+        };
+        if !fresh || !covered {
+            let clip = need.map(|n| {
+                let (mx, my) = ((n.width() / 2) as i32, (n.height() / 2) as i32);
+                IRect::new(n.left - mx, n.top - my, n.right + mx, n.bottom + my)
+            });
+            let mut full = IRect::default();
             self.drag = runs
                 .iter()
                 .enumerate()
@@ -95,7 +120,9 @@ impl GhostCache {
                             fp_engine::docops::element_on_page(doc, page, ElementId(*id))
                         })
                         .collect();
-                    let img = super::render::render_elements(r, doc, frame, &els)?;
+                    let (img, f) = super::render::render_elements_in(r, doc, frame, &els, clip);
+                    full = full.union(&f);
+                    let img = img?;
                     Some(Sprite {
                         key,
                         texture: texture_of(ctx, &format!("canvas-ghost-{i}"), &img, zoom),
@@ -104,6 +131,8 @@ impl GhostCache {
                 })
                 .collect();
             self.drag_key = key;
+            self.drag_clip = clip;
+            self.drag_full = full;
         }
         &self.drag
     }
@@ -163,6 +192,42 @@ impl GhostCache {
         }
         self.text.as_ref()
     }
+}
+
+/// Teil einer Vorschau (Dokumentpixel vor dem Ziehen), der im Sichtbereich `visible`
+/// (Dokumentkoordinaten) landet, wenn `rect` auf `quad` abgebildet wird (BA-097); `None` bei
+/// projektiver Abbildung (dann ganz).
+pub fn needed_part(
+    rect: fp_geom::Rect,
+    quad: &[Point; 4],
+    visible: fp_geom::Rect,
+) -> Option<IRect> {
+    let m = Matrix3::rect_to_quad(&rect, quad)?;
+    if !m.is_affine() {
+        return None;
+    }
+    let inv = m.inverse()?;
+    let corners = [
+        Point::new(visible.left, visible.top),
+        Point::new(visible.right, visible.top),
+        Point::new(visible.left, visible.bottom),
+        Point::new(visible.right, visible.bottom),
+    ]
+    .map(|p| inv.apply(p));
+    let (mut l, mut t, mut r, mut b) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
+    for p in corners {
+        if !p.x.is_finite() || !p.y.is_finite() {
+            return None;
+        }
+        (l, t, r, b) = (l.min(p.x), t.min(p.y), r.max(p.x), b.max(p.y));
+    }
+    let lim = 1.0e7;
+    Some(IRect::new(
+        (l.floor().max(-lim) as i32) - 1,
+        (t.floor().max(-lim) as i32) - 1,
+        (r.ceil().min(lim) as i32) + 1,
+        (b.ceil().min(lim) as i32) + 1,
+    ))
 }
 
 /// Zeichnet eine Vorschau: Dokumentrechteck `rect` wird auf das Viereck `quad` abgebildet;
