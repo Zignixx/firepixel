@@ -6,6 +6,7 @@ use crate::command::{CommandOutput, CommandRegistry, ParamKind, Requirement, cmd
 use crate::docops;
 use crate::error::{EngineError, Result};
 use crate::session::{DocumentState, Session};
+use crate::tools::snap::SNAP_TO_PIXELS_PREF;
 use crate::view::ViewState;
 use fp_model::{Grid, Guides};
 use std::sync::Arc;
@@ -252,6 +253,22 @@ pub(super) fn register(r: &mut CommandRegistry) {
         r,
         "view.smartGuides.snapToSmartGuides",
         snap_to_smart_guides
+    );
+    // Firepixel's own switch (re 55 §5.5, beyond the reference): whole-pixel rounding of Pointer
+    // moves, Pen points and the other users of the snapper; Subselection point drags are always
+    // free. Not the one-off command Modify ▸ Snap to Pixel (Ctrl+K).
+    r.add(
+        cmd("view.snapToPixels")
+            .label("An Pixeln einrasten")
+            .describe("Rundet das Verschieben mit dem Zeiger und die Punkte des Stifts auf ganze Pixel; Punkte mit der Teilauswahl ziehen bleibt immer frei")
+            .checked(|s| s.prefs.get_bool(SNAP_TO_PIXELS_PREF, true))
+            .run(|s, _| {
+                let on = s.prefs.get_bool(SNAP_TO_PIXELS_PREF, true);
+                s.prefs
+                    .set(SNAP_TO_PIXELS_PREF, crate::prefs::PrefValue::Bool(!on));
+                s.prefs_changed();
+                Ok(CommandOutput::session())
+            }),
     );
     toggle!(
         r,

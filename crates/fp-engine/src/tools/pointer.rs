@@ -657,9 +657,19 @@ impl PointerTool {
 
     fn idle_cursor(&self) -> Cursor {
         match self.id {
-            ToolId::Subselection => Cursor::Subselect,
+            // Subselection: plain black arrow over fill, segment and empty space (re 55 §5.4)
             ToolId::SelectBehind => Cursor::SelectBehind,
             _ => Cursor::Arrow,
+        }
+    }
+
+    /// Cursor over a path point and while dragging one: the Subselection shows a hollow
+    /// arrowhead without shaft (re 55 §5.4), the Pointer its point cursor.
+    fn point_cursor(&self) -> Cursor {
+        if self.id == ToolId::Subselection {
+            Cursor::SubselectPoint
+        } else {
+            Cursor::PointerPoint
         }
     }
 
@@ -759,7 +769,7 @@ impl PointerTool {
         if self.id != ToolId::SelectBehind
             && point_hit(ctx, p, false, self.id == ToolId::Subselection).is_some()
         {
-            self.hover_cursor = Cursor::PointerPoint;
+            self.hover_cursor = self.point_cursor();
             return ToolResponse {
                 cursor: self.hover_cursor,
                 ..ToolResponse::default()
@@ -780,17 +790,13 @@ impl PointerTool {
             if let Some(e) = ctx.doc.element_at(&path) {
                 let selected = ctx.selection.contains(e.id);
                 let after_click = self.click_pos == Some(p);
+                // over a segment of the selected path the Subselection shows no marker and
+                // keeps the plain arrow (re 55 §5.4)
                 if !selected
                     && !after_click
                     && ctx.prefs.get_bool("SelectionMouseOverPreview", true)
                 {
                     self.hover = Some(outline_overlay(ctx.doc, e));
-                }
-                if self.id == ToolId::Subselection
-                    && matches!(e.kind, ElementKind::Path(_))
-                    && selected
-                {
-                    self.hover_cursor = Cursor::PointerSegment;
                 }
             }
         }
@@ -886,7 +892,7 @@ impl PointerTool {
             }
             return ToolResponse {
                 commands: cmds,
-                cursor: Cursor::PointerPoint,
+                cursor: self.point_cursor(),
                 ..ToolResponse::default()
             };
         }
@@ -1154,10 +1160,15 @@ impl PointerTool {
             PState::DraggingPoint {
                 start, hit, pull, ..
             } => {
-                let sp = Snapper::new(ctx, &[hit.id]).point(Point::new(
-                    hit.at.x + p.x - start.x,
-                    hit.at.y + p.y - start.y,
-                ));
+                // Point/handle drags are free like in the reference: delta = screen delta / zoom,
+                // no whole-pixel rounding (independent of `SnapToPixelGrid`); grid, guides and
+                // smart guides still snap when their View switch is on (re 55 §5.5)
+                let sp = Snapper::new(ctx, &[hit.id])
+                    .without_pixels()
+                    .point(Point::new(
+                        hit.at.x + p.x - start.x,
+                        hit.at.y + p.y - start.y,
+                    ));
                 let target = if ev.mods.shift && hit.part != Part::Anchor {
                     // Henkel auf 45° zum Anker einrasten
                     self.anchor_of(ctx, &hit)
@@ -1183,7 +1194,7 @@ impl PointerTool {
                     ev.mods.alt,
                 );
                 self.overlay.extend(sp.guides);
-                ToolResponse::with_overlay(self.overlay.clone(), Cursor::PointerPoint)
+                ToolResponse::with_overlay(self.overlay.clone(), self.point_cursor())
             }
             _ => ToolResponse::default(),
         }

@@ -1,5 +1,5 @@
 //! Eigene Mauszeiger der Leinwand – selbst gezeichnet in Anlehnung an die Formen des Originals
-//! (Pfeil schwarz mit weißem Rand, Teilauswahl weiß, Stift mit Zusatzzeichen ×/○/+/−, Fadenkreuz,
+//! (Pfeil schwarz mit weißem Rand, Teilauswahl-Anker als hohle Pfeilspitze, Stift mit Zusatzzeichen ×/○/+/−, Fadenkreuz,
 //! Lupe, Hand, Pipette, Farbeimer …), keine übernommenen Grafiken. Der Systemzeiger wird über der
 //! Leinwand ausgeblendet und der Zeiger auf einer Ebene über allem gemalt. Mit
 //! `UsePrecisionCursors` (bzw. Feststelltaste) erscheint für Zeichenwerkzeuge das Fadenkreuz.
@@ -83,6 +83,9 @@ fn line(p: &Painter, at: Pos2, a: (f32, f32), b: (f32, f32), c: &Palette) {
     p.line_segment([a, b], Stroke::new(3.0, c.cursor_outline));
     p.line_segment([a, b], Stroke::new(1.0, c.cursor_fill));
 }
+
+/// Arrowhead of [`ARROW`] without the shaft (Subselection over an anchor).
+const ARROW_HEAD: [(f32, f32); 4] = [(0.0, 0.0), (0.0, 15.0), (3.6, 11.6), (10.8, 10.8)];
 
 /// Pfeil (Spitze im Hotspot).
 const ARROW: [(f32, f32); 7] = [
@@ -573,6 +576,14 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
     match c {
         Cursor::Arrow => arrow(p, at, colors, false),
         Cursor::Subselect => arrow(p, at, colors, true),
+        // hollow (white) arrowhead without shaft, black border, tip in the hotspot (re 55 §5.4)
+        Cursor::SubselectPoint => poly(
+            p,
+            at,
+            &ARROW_HEAD,
+            colors.cursor_outline,
+            colors.cursor_fill,
+        ),
         Cursor::SelectBehind => {
             arrow(p, at, colors, false);
             badge_square(p, at, colors, false);
@@ -702,6 +713,7 @@ mod tests {
                 Cursor::PointerPoint,
                 Cursor::PointerSegment,
                 Cursor::Subselect,
+                Cursor::SubselectPoint,
                 Cursor::SelectBehind,
                 Cursor::PenAdd,
                 Cursor::PenRemove,

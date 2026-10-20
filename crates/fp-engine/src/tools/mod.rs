@@ -354,8 +354,10 @@ pub enum Cursor {
     PointerPoint,
     /// Zeiger über einem Pfadsegment.
     PointerSegment,
-    /// Teilauswahl (heller Pfeil).
+    /// Heller Pfeil (Zeiger über einem Eckgriff der Auswahl).
     Subselect,
+    /// Subselection over an anchor and while dragging one: hollow arrowhead without shaft.
+    SubselectPoint,
     /// Hintere auswählen.
     SelectBehind,
     /// Stift: Punkt hinzufügen / entfernen / Pfad fortsetzen.

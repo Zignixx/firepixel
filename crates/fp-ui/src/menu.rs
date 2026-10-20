@@ -768,6 +768,16 @@ pub fn build_main_menu_where(
         let mut nodes = convert(st, top.children.as_deref().unwrap_or(&[]));
         match top.key.as_str() {
             "menu-view" => {
+                // Firepixel's own switch "Snap to Pixels" after the snap submenus (re 55 §5.5)
+                let smart = clean_label(&t("menu-view-smartGuides")).0;
+                if st.session.registry().get("view.snapToPixels").is_some() {
+                    let pos = nodes
+                        .iter()
+                        .position(|n| matches!(n, Node::Sub { label, .. } if *label == smart))
+                        .map(|i| i + 1)
+                        .unwrap_or(nodes.len());
+                    nodes.insert(pos, runtime_item("view.snapToPixels"));
+                }
                 nodes.push(Node::Separator);
                 let children = ThemeKind::ALL
                     .iter()

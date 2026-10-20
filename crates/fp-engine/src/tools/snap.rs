@@ -12,6 +12,10 @@ use fp_geom::{Point, Rect};
 use fp_model::ElementId;
 use fp_model::layer::LayerKind;
 
+/// Preference behind View ▸ Snap to Pixels (Firepixel's own switch, default on): whole-pixel
+/// rounding of Pointer moves, Pen points and the other users of [`Snapper`].
+pub const SNAP_TO_PIXELS_PREF: &str = "SnapToPixelGrid";
+
 /// Herkunft einer Fanglinie.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Source {
@@ -133,7 +137,7 @@ impl Snapper {
             page: page_rect,
             smart,
             show_smart: v.show_smart_guides,
-            pixels: ctx.prefs.get_bool("SnapToPixelGrid", true),
+            pixels: ctx.prefs.get_bool(SNAP_TO_PIXELS_PREF, true),
         }
     }
 
