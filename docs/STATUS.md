@@ -8,10 +8,11 @@ came about is kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)).
 Firepixel is feature-complete as a preview: all menus, tools, panels, the property inspector and the dialogs of
 the reference application exist and work, FW-PNG files round-trip, and everything is drivable over CLI, JSF and
 MCP. Work is now parity polishing: a scripted comparison runner measures Firepixel against the reference
-application unit by unit, and the remaining differences are tracked as findings. Release **v0.2.4** was published on
-19 Oct 2026 for Windows x64, macOS universal arm64 + x86_64 (macOS 10.15 or later) and Linux x86_64 (tar.gz and
-AppImage), with the three screen modes, the text default rules and the macOS fixes; the earlier release v0.2.2
-(18 Oct 2026) was the first with Linux. Further preview builds are made on request. The Intel slice of the macOS bundle is verified with tools only, not yet
+application unit by unit, and the remaining differences are tracked as findings. Release **v0.2.5** was published on
+20 Oct 2026 for Windows x64, macOS universal arm64 + x86_64 (macOS 10.15 or later) and Linux x86_64 (tar.gz and
+AppImage), with tester feedback batch 3, PDF layers, the text default reset, the performance work and the Linux and
+macOS test jobs; v0.2.4 (19 Oct 2026) brought the three screen modes and the macOS fixes, and v0.2.2 (18 Oct 2026)
+was the first with Linux. The repository is public since 20 Oct 2026. Further preview builds are made on request. The Intel slice of the macOS bundle is verified with tools only, not yet
 run on Intel hardware, and the Linux build has run only in CI, not yet on a real Linux desktop.
 
 ## Figures
@@ -24,8 +25,8 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Canvas image pairs within 1 % | **185 / 212** (unchanged in runs 28 and 29; run 26: 186 / 211; run 27 added `tool-path-reshape/04` within 1 %, while `tool-text/14, 16` stay above 1 % because Firepixel's text tool keeps 72 pt after the reference's size step fails, TW-165) | run 28 |
 | Measurement quota, all 49 units | **87.3 %** (1077 / 1233 measurable steps both `ok`; over the 48 old units 87.3 %, 1068 / 1224; unchanged since run 26; run 24: 87.0 %; run 17 alone 86.3 %; in the 2 units of run 28: 76 / 83, as in run 27; in the 3 units of run 29: 85 / 88, unchanged) | run 28 |
 | Errors | 33 reference-side, 21 Firepixel-side (both unchanged since run 25); 7 `runner error` lines in run 28 (run 27: 2), all reference-side text selections in `tool-text/07, 11, 13` that R-25 no longer accepts as a highlight (TW-146 rest); none in `toolbox` (TW-166 confirmed); none in run 29 | run 29 |
-| Latest release | **v0.2.4** (19 Oct 2026, pre-release; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; the three screen modes, the text default rules and the macOS fixes TW-160 to TW-162 with the own app menu); before: v0.2.3 (19 Oct 2026) | GitHub releases |
-| Workspace tests | Merged tree after the roadmap items of 20 Oct 2026: **2818 passed, 1 failed, 136 ignored** at `612b34bd` (GT-1h, 20 Oct 2026, the code of preview `2026-10-20_09-25`): 2674 + 144 from the `fp-ui` lib binary, whose process crashed once with an access violation next to `canvas::tests::space_during_drag_moves_the_shape_in_ui` and passed on the rerun; the one failure is the timing test `image_preview_p1::worker_cancels_outdated_jobs_and_ui_stays_fluid`, green on the rerun (see BA-117). Runs on `main` after each merge: F52 (text tool reset) 2809 passed, 0 failed, 134 ignored; PERF 2802 / 0 / 136 (two new ignored performance tests); BA-110 2803 / 0 / 134. Last full run: 2797 passed, 0 failed, 134 ignored at `901f0a56` (fixes F51a to F51c merged, GT-1g; the code of preview `2026-10-20_06-08`); macOS and Linux CI run the batch and export crates (green, BA-083) | `main`, 20 Oct 2026 |
+| Latest release | **v0.2.5** (20 Oct 2026, pre-release from `30da1158`, the code of preview `2026-10-20_09-25`; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; tester feedback batch 3 FB-07 to FB-11, PDF layers, text tool reset, performance BA-097 to BA-099, metadata and GIF batch work, CI tests on three OS); before: v0.2.4 (19 Oct 2026; the three screen modes, the text default rules and the macOS fixes TW-160 to TW-162 with the own app menu). The macOS re-test by the tester is still pending; the release notes ask for it | GitHub releases |
+| Workspace tests | Tree with JPEG 2000 (BA-101) and the AI batch steps (BA-109): **2852 passed, 1 failed, 141 ignored** at `3b7386fa` (GT-1i, 20 Oct 2026, the code of preview `2026-10-20_19-06`); the one failure was the scanner `i18n_no_hardcoded_texts` over eleven fixed English error texts in the new `fp-ai` modules, translated in `8ab8564d` (scanner, `fp-i18n`, `fp-ai`, `fp-batch` and `fp-neutral` green again). Before: merged tree after the roadmap items of 20 Oct 2026: 2818 passed, 1 failed, 136 ignored at `612b34bd` (GT-1h, 20 Oct 2026, the code of preview `2026-10-20_09-25`): 2674 + 144 from the `fp-ui` lib binary, whose process crashed once with an access violation next to `canvas::tests::space_during_drag_moves_the_shape_in_ui` and passed on the rerun; the one failure is the timing test `image_preview_p1::worker_cancels_outdated_jobs_and_ui_stays_fluid`, green on the rerun (see BA-117). Runs on `main` after each merge: F52 (text tool reset) 2809 passed, 0 failed, 134 ignored; PERF 2802 / 0 / 136 (two new ignored performance tests); BA-110 2803 / 0 / 134. Last full run: 2797 passed, 0 failed, 134 ignored at `901f0a56` (fixes F51a to F51c merged, GT-1g; the code of preview `2026-10-20_06-08`); macOS and Linux CI run the batch and export crates (green, BA-083) | `main`, 20 Oct 2026 |
 | Open findings | 11 rows in `[F]`, none open: U-1 rest (PDF layers, `9c6a52b9`) and TW-138 rest (R3 measured, text tool reset F52 `f5e61c58`) are fixed; TW-151 / FB-01, the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03), the Subselection display TW-168 / FB-06 and tester feedback batch 3, TW-169 to TW-172 (FB-07 to FB-11), wait for the click-test (A4-15, A4-19 to A4-21, A4-23 to A4-27) and the macOS re-test; TW-146 rest and TW-165 are click-test item A1-19. 5 rows in `[V]`: open BA-101 (PSD stroke only; JPEG 2000 part closed by `974af253`) and BA-109 (closed: `ai.faceBlur` `4f811360`, `ai.upscale` `9f3a1647`); BA-083, BA-108 and BA-110 closed on 20 Oct 2026. 20 informational `[N]` (BA-092 and BA-087 closed by `612b34bd`) | [FINDINGS.md](FINDINGS.md) |
 | Real differences known | None measured open (runs 26 to 29). Known from RE spec 56, not measured by the runner: for a new text the reference writes two History rows ("Text" and "Text Change"), Firepixel one; the leading conversion from px back to % is unmeasured; the text tool's own opacity/blend reset is not done (Firepixel's text tool has no own opacity) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
@@ -33,7 +34,17 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 
 ## Last test build
 
-Release **v0.2.4** was published on 19 Oct 2026 as a pre-release (tag `v0.2.4` at `1f26223c`, the version bump on top
+Latest test build: preview build **`2026-10-20_19-06`** (release profile, `firepixel.exe` plus `firepixel-cli.exe`) from
+`main` at `3b7386fa` (version 0.2.5 plus JPEG 2000 in the PDF export, BA-101, and the AI batch steps `ai.upscale` and
+`ai.faceBlur`, BA-109). The full workspace test run on its code (GT-1i) gave 2852 passed, 1 failed, 141 ignored; the
+failure was the hardcoded-text scanner over the new `fp-ai` error texts, translated in `8ab8564d` right after the build
+(the preview carries the English texts for those eleven internal weight-file errors, nothing a user can reach). It is
+the build for full parity run 30. Before it: preview `2026-10-20_09-25` from `612b34bd` (GT-1h), the code of release
+v0.2.5.
+
+Release **v0.2.5** was published on 20 Oct 2026 as a pre-release from `30da1158` (version bump `0af5ffc6`, run
+39412818493): Windows x64 ZIP, macOS universal ZIP and Linux x86_64 tar.gz and AppImage; the release notes thank the
+tester and ask for the macOS re-test. Release **v0.2.4** was published on 19 Oct 2026 as a pre-release (tag `v0.2.4` at `1f26223c`, the version bump on top
 of `aaa9b3b5`): Windows x64 ZIP, macOS universal ZIP and Linux x86_64 tar.gz and AppImage. It contains package F49 (the
 three screen modes as in the reference, TW-158; the text default rules, TW-138 rest) and the macOS fixes TW-160 to
 TW-162 with Firepixel's own macOS app menu (`e11f8d1b`); the Mac checks wait for the tester's re-test (A4-19 to
@@ -53,7 +64,7 @@ the app under Xvfb and checks that the control channel comes up. The first CI ru
 real Linux desktop; file dialogs need `xdg-desktop-portal`. v0.2.2 is the first release with Windows x64, macOS
 universal and Linux x86_64.
 
-Latest test build: preview build **`2026-10-19_16-07`** (release profile, single `firepixel.exe` plus
+Earlier test build: preview build **`2026-10-19_16-07`** (release profile, single `firepixel.exe` plus
 `firepixel-cli.exe`) from `main` at `37c0ee81` (package F49: the three screen modes as in the reference, full screen
 shows only the canvas on black; text preference rules, TW-138 rest; runner R-23). The full workspace test run on its
 code (`439a3ec5`) gave 2776 passed, 0 failed, 134 ignored. Follow-up runs 26 and 27 used this build. Since then `main`

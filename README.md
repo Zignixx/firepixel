@@ -59,11 +59,10 @@ cargo test -p fp-neutral        # neutrality guard, must stay green
 
 ## Downloads
 
-Latest release: **v0.2.4** pre-release (19 Oct 2026) with Windows x64 ZIP, macOS universal ZIP and Linux x86_64
-tar.gz and AppImage (Linux tested in CI only). There are no public binaries yet: **preview builds are available on
-request** (open an issue), and releases will appear under [Releases](../../releases) once the repository is
-public; CI runs on demand only and tests on Windows, macOS and Linux (the batch and export crates on all
-three, the UI on Windows; see [docs/RELEASE.md](docs/RELEASE.md)).
+Latest release: **v0.2.5** pre-release (20 Oct 2026) with Windows x64 ZIP, macOS universal ZIP and Linux x86_64
+tar.gz and AppImage (Linux tested in CI only), under [Releases](../../releases). Preview builds between releases
+are available on request (open an issue). CI runs on demand only and tests on Windows, macOS and Linux (the batch
+and export crates on all three, the UI on Windows; see [docs/RELEASE.md](docs/RELEASE.md)).
 
 ## Documentation
 
