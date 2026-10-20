@@ -3,13 +3,14 @@
 Firepixel aims to behave like the reference application button by button. This page explains how that is
 measured, what the figures mean, where the method stops, and gives the current per-unit result.
 
-**Current state (run 29 over 3 units on top of runs 28, 27, 26, 25 and 24, 20 Oct 2026, all 49 units):** **49 equal except
-for design**, 0 real deviations, 0 unclear, 0 under-measured. **Proven 1:1: 100.0 %** (49 / 49; all 49 units are
-sufficiently measured). Measurement quota over all 49 units: **87.3 %** (1077 / 1233 steps). Canvas image pairs within
-1 %: **185 / 212**.
+**Current state (full run 30 over all 49 units, 20/21 Oct 2026):** **48 equal except for design**, 1 real deviation
+(`menu-edit`: Ctrl+Y no longer repeats a clone, TW-173), 0 unclear, 0 under-measured. **Proven 1:1: 98.0 %** (48 / 49;
+all 49 units are sufficiently measured). Measurement quota over all 49 units: **87.2 %** (1075 / 1233 steps). Canvas
+image pairs within 1 %: **185 / 212**. The tiled canvas of BA-098 shows no one-pixel sampling offset at fractional
+zoom (see `xs-canvas` below).
 
 **Units: 49.** Over the 48 units classified before run 24 (without the measurement unit `xs-select-behind`, added on
-19 Oct 2026): 48 / 0 / 0 / 0, proven 1:1 100.0 %, quota 87.3 % (1068 / 1224; run 17 alone: 86.3 %), canvas pairs
+19 Oct 2026): 47 / 1 / 0 / 0, proven 1:1 97.9 %, quota 87.1 % (1066 / 1224; run 17 alone: 86.3 %), canvas pairs
 176 / 203.
 
 ## Method: scripted comparison runs
@@ -29,7 +30,9 @@ one Windows machine, unattended:
 3. **Comparison.** Per step: status of each side (`ok`, `error`, `unsupported`, `unmapped`, `skipped`); values
    compared one by one; texts as word sets; export files by pixels, colour depth, frame count and PNG row
    filters; every image pair with an offset search (± 3 px) and the share of pixels deviating by more than
-   32 levels. Canvas pairs below 1 % count as equal.
+   32 levels. Canvas pairs below 1 % count as equal. The runner's own `tools/parity/compare.py` writes only the
+   share at a 16-level threshold without offset search (`cmp/summary.csv`: mean and maximum difference, differing
+   pixels, share, `equal`, size notes); the offset search and the 32-level share are recomputed in the evaluation.
 4. **Evaluation.** A script-only evaluation per run (no eyeballing except a handful of sampled pairs) classifies
    each unit and lists new deviations as tweaks (`TW-…`) and open questions (`Q-…`). Deviations become findings
    ([FINDINGS.md](FINDINGS.md)); non-trivial ones are first written down as a behaviour description from
@@ -49,7 +52,7 @@ state for a unit is always its newest run.
 
 **Measurement quota** = steps with both sides `ok` / steps without an `unsupported` or `skipped` side (repeated
 steps count with their second attempt). **Proven 1:1** = units "equal except for design" / sufficiently
-measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 and 27); since
+measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 to 29, 98.0 % after run 30); since
 run 15 no unit is under-measured, so both figures are the same.
 
 ## Limits
@@ -70,107 +73,108 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images
   cannot be captured.
 
-## Per-unit result (run 29 on top of runs 28, 27, 26, 25 and 24)
+## Per-unit result (run 30)
 
-Each row is the unit's newest run. Three rows (`toolbox`, `tool-path-reshape`, `xs-select-behind`) come from
-follow-up run 29 (20 Oct 2026, 06:17–06:43, 3 units, 88 steps, 54 image pairs), preview build `2026-10-20_06-08`
-from `main` at `901f0a56` (fixes F51a to F51c), runner R-26 (the reference's right panel dock measured at every
-layout check and expanded by its own button when it is collapsed to icons, at unit start and after the screen modes
-of `toolbox/13`; the reference dock width read only from an expanded dock). One row (`tool-text`) comes from follow-up run 28 (19 Oct 2026,
-21:57–22:21, 2 units, 83 steps, 42 image pairs) with the same preview build as runs 26 and 27 and runner R-25 at
-`74d6bfc8` (glyph-box drags for all sizes, a word double-click as the last selection try, a highlight of at least 60 %
-of the expected inverted area required, size routes only on a checked selection, a text tool reset on both sides after
-a failed size step, the Standard reset from full screen by F with a window test, the panel layout restored after
-`toolbox/13` with the dock width logged). Run 29 replaced the last row of follow-up run
-27 (19 Oct 2026, 20:49–21:18, 3 units, 106 steps, 62 image pairs) with the same preview build as run 26 and runner
-R-24 at `f7d13d61` (the size on a text selection by three routes: size field, size keys and the Text Editor dialog;
-drags over the glyph box of 72 pt text; the Freeform size keys with the mouse held, a size read-back and a shot while
-the button is held; the reference's Standard screen mode read from the window; Freeform chosen through flyout entry 0
-and read back). Two rows (`menu-text`, `xs-shortcuts`) come from follow-up run 26 (19 Oct 2026, 16:11–16:55, 5 units,
-155 steps, 72 image pairs), preview build `2026-10-19_16-07` from `main` at `37c0ee81` (package F49: three screen modes,
-full screen shows only the canvas on black, TW-158; text preference rules, TW-138 rest), runner R-23 at `5f498cd7`
-(screen mode read back from the screen-mode buttons, the window against the monitor and the application properties;
-Subselection nudges by `moveSelectedBezierPointsBy`; Freeform size keys with the mouse held; the text size reset read
-back per attempt, TW-159; settle waits and retries for text entry, TW-146 rest). Two other applications' windows were
-open at the start of run 26 (logged). Fourteen rows come from follow-up run 25 (19 Oct 2026, 12:19–14:39, 20 units, 556
-steps, 317 image pairs), preview build `2026-10-19_12-16` from `main` at `a225a01c` (package F48: consecutive key
-nudges of one selection merge into one History row, TW-148; Select Behind draws a crisp hover line and no frame right
-after a click, TW-157), runner R-22 at `72c695dd` (text reset without touching the fill colour and default colours
-restored, TW-153; `menu-text/05` and `menu-view/20` unsupported on the reference side, TW-154; arrow substitutes only
-with the Pointer or Subselection tool or `nudge: true`, hover in `inspector-stroke/01`, `close_all` in `menu-edit`,
-TW-155; standard screen mode around `toolbox/13`, TW-156; text entry retries at 35 ms per character, TW-146 rest;
-Firepixel's text reset falls back to another layer, TW-149). The other 29 rows come from full run 24 (19 Oct 2026,
-06:09–11:10, preview `2026-10-19_06-06` from `44d7c5f5`, runner R-21). Another application's window was open at the
-start of run 25 (logged). Canvas pairs are compared with the offset search (± 3 px, share of pixels deviating by more
-than 32 levels). "Was" compares with the unit's previous run; the findings of the earlier runs are summarised below the table.
+All 49 rows come from full run 30 (20/21 Oct 2026, 19:22–00:40, 49 units, 1295 scripted steps, 699 image pairs
+plus 51 shots without a partner), preview build `2026-10-20_19-06` from `main` at `3b7386fa` (version 0.2.5 plus JPEG
+2000 in the PDF export, BA-101, and the AI batch steps, BA-109; the first full run with fixes F51a to F51c, the text
+tool reset F52 and the performance work BA-097 to BA-099, among it the canvas texture in 512-px tiles, BA-098), runner
+R-26 (unchanged since run 29). "Was" compares each unit with its newest earlier run: run 29 for `toolbox`,
+`tool-path-reshape` and `xs-select-behind`, run 28 for `tool-text`, run 26 for `menu-text` and `xs-shortcuts`, run 25
+for fourteen units and run 24 for the other 29. Canvas pairs are compared with the offset search (± 3 px, share of
+pixels deviating by more than 32 levels); the percentages of non-canvas pairs are the runner's own `cmp/summary.csv`
+values. Two other applications' windows were open at the start (logged). The reference was restarted four times:
+three planned restarts before the script-heavy units `menu-view`, `panel-misc` and `xs-file-formats`, and once after a
+script access violation at the start of `xs-windows-tabs`, without lost steps. Its right panel dock read 271 px
+(expanded) at every unit start, but its docked panels have other sizes than in runs 24 and 25 (Layers panel shot
+270 × 113 px, run 25: 245 × 389), so the panel and overview pairs moved (overviews 19–23 %, runs 24 and 25: 29–34 %)
+and two owner-drawn panel steps hit other rows (TW-174, runner). The findings of the earlier runs are summarised below
+the table.
 
 | Unit | Area | Class | Note |
 |---|---|---|---|
-| `dialogs-d01-d10` | dialogs | equal except for design | run 24: 92.9 % (26 / 28), unchanged |
-| `dialogs-d11-d20` | dialogs | equal except for design | run 24: 88.9 % (32 / 36), unchanged |
-| `dialogs-d21-d30` | dialogs | equal except for design | run 24: 100.0 % (27 / 27), unchanged; text runs fixed (TW-02) |
-| `dialogs-d31-d40` | dialogs | equal except for design | run 24: 92.0 % (23 / 25), unchanged; 2 / 2 canvas pairs within 1 %; Feather, Expand, Save and Restore Bitmap Selection now open on the reference side after the marquee drag (TW-129 closed); `06_d33` equal (twelve I1 on both sides, Ctrl+Shift+D clones, TW-126 closed); `11` and `16` fail on both sides as before (the dialog is closed before the read-back); history read-backs differ only by the runner's own script steps in the reference's history |
-| `dialogs-d41-d50` | dialogs | equal except for design | run 24: 91.3 % (21 / 23), unchanged |
-| `filters-adjust-color` | filters | equal except for design | run 24: 69.6 % (16 / 23), unchanged; 4 / 4 canvas pairs within 1 % |
-| `filters-blur-sharpen-noise` | filters | equal except for design | run 25: 79.3 % (23 / 29), unchanged; 10 / 11 canvas pairs within 1 % (`16_preview_box_on_result` 19.9 % as before) |
-| `fx-bevel-emboss-fill` | live effects | equal except for design | run 24: 90.5 % (19 / 21), unchanged; 2 / 4 canvas pairs within 1 % |
-| `fx-shadow-glow` | live effects | equal except for design | run 24: 100.0 % (23 / 23), unchanged; 5 / 6 canvas pairs within 1 % |
-| `fx-stack` | live effects | equal except for design | run 24: 92.0 % (23 / 25), unchanged; 2 / 2 canvas pairs within 1 % |
-| `inspector-bitmap` | property inspector | equal except for design | run 24: 100.0 % (15 / 15), unchanged; 3 / 3 canvas pairs within 1 % |
-| `inspector-fields` | property inspector | equal except for design | run 24: 86.7 % (26 / 30), unchanged; 1 / 1 canvas pairs within 1 %; the ten reference-side field errors of run 11 are gone; one error per side remains (`10_edge_popup`, `20_undo_each`) |
-| `inspector-stroke` | property inspector | equal except for design | run 25: 88.2 % (45 / 51), unchanged; 31 / 31 canvas pairs within 1 %; `01` now hovers the Airbrush entry, no real Down key and no runner error (TW-155 confirmed); `03` and `12` fail on the reference side as before (script errors); values as in run 24 |
-| `inspector-text` | property inspector | equal except for design | run 25: 90.0 % (27 / 30), unchanged; 10 / 11 canvas pairs within 1 % (`21_live_result` 1.88 % as before) |
-| `inspector-web` | property inspector | equal except for design | run 25: 81.2 % (13 / 16), unchanged |
-| `menu-commands-window-help` | menus | equal except for design | run 24: 75.0 % (15 / 20), unchanged |
-| `menu-edit` | menus | equal except for design | run 25: 91.7 % (22 / 24), unchanged; with `close_all` one document is open and the reference's History reads again: `01` the runner's select script and Clone (Firepixel: Clone), `22` the script, Clone, Copy, Paste and Delete (Firepixel: Clone, Copy, Paste, Clear), so the rows are equal apart from the runner's script row (TW-155 confirmed); `16` and `17` fail as before (Crop Document and Crop Selected Bitmap grey in the reference, Firepixel opens no dialog the bridge finds) |
-| `menu-file` | menus | equal except for design | run 24: 81.8 % (18 / 22), unchanged; `04_reopen_open` is `unmapped` on the reference side instead of an error (Revert was grey in run 17); File menu with Share submenu 637 vs. 613 px (Firepixel's longer own item "Browse in file browser…"); arrow and shortcut gaps equal |
-| `menu-modify-a` | menus | equal except for design | run 24: 96.2 % (25 / 26), unchanged; 4 / 6 canvas pairs within 1 %; `11_symbol_tween` equal (twelve I1 on both sides, TW-126 closed); `24`: Group as Mask is grey in the reference (unchanged) |
-| `menu-modify-b` | menus | equal except for design | run 24: 92.0 % (23 / 25), unchanged; 5 / 5 canvas pairs within 1 % |
-| `menu-select` | menus | equal except for design | run 24: 100.0 % (16 / 16), unchanged; 6 / 6 canvas pairs within 1 %; `06_feather_result` now 0.90 % (run 17: 10.3 %) |
-| `menu-text` | menus | equal except for design | run 26: 90.9 % (20 / 22), unchanged; 4 / 4 canvas pairs within 1 %; the reference's unit-start reset reads 72 pt before (taken over from `tool-text`) and Arial 12 pt after, read back per attempt (TW-159 d confirmed); `05_editor_open` `unsupported` on the reference side, `01` (Firepixel's scrolled font menu not found) and `07` (Attach to Path grey in the reference) as before |
-| `menu-view` | menus | equal except for design | run 25: 96.0 % (24 / 25), was 92.3 % (24 / 26); 6 / 6 canvas pairs within 1 %; `20_edit_guides_dialog_open` is `unsupported` on the reference side and Firepixel opens Edit Guides by command, shot present (TW-154 confirmed) |
-| `panel-info-align-path` | panels | equal except for design | run 24: 83.3 % (30 / 36), unchanged; 2 / 2 canvas pairs within 1 %; rewritten `for`-loop read-backs equal; the reference's undo step-count read-back is unchanged (runner) |
-| `panel-layers` | panels | equal except for design | run 25: 74.1 % (20 / 27), unchanged; Firepixel's text tool reset now succeeds at unit start (Arial 12 pt, layer fallback; TW-149 rest confirmed); read-backs equal as in run 24 |
-| `panel-layers-menu` | panels | equal except for design | run 25: 81.0 % (17 / 21), unchanged; Firepixel's text tool reset succeeds (TW-149 rest confirmed); `10_options_open` still opens no dialog the bridge finds; values as in run 24 |
-| `panel-misc` | panels | equal except for design | run 24: 87.5 % (14 / 16), unchanged; embedded panels `unsupported`; panel menus now read from the pop-up (R-12) |
-| `panel-optimize` | panels | equal except for design | run 24: 83.3 % (20 / 24), unchanged; `19` equal: both slices report JPEG and GIF as export format (TW-128 closed); Optimize menu 289 vs. 284 px |
-| `panel-library-styles` | panels | equal except for design | run 24: 93.3 % (14 / 15), unchanged; 1 / 1 canvas pairs within 1 %; all values as in run 21 (`16`: nine URL menu entries with equal labels, `ellipsis` and `enabled`); shot 327 × 248 vs. 321 × 231 px (≡ row and shadow included, TW-136) |
-| `panel-pages-states-history` | panels | equal except for design | run 25: 75.0 % (18 / 24), unchanged; was real deviation. `21` confirms TW-148 from the History row labels: after Shift+Right, Shift+Right, Shift+Down on R1 and Shift+Right on E1 the reference lists the select script for R1, `moveSelectionBy({x:20, y:10})`, the select script for E1 and `moveSelectionBy({x:10, y:0})`; Firepixel lists Move, Deselect, Move (run 24: Move, Move, Move, Deselect, Move), so both have one row per selection with the summed offset (the remaining rows are the runner's selection steps). `16` stays not comparable (script substitutes on the reference side; Firepixel's replay reads one `edit.move` 2,1 and one 10,0). Firepixel's text tool reset succeeds (TW-149 rest confirmed). Errors as before (reference: onion-skin and loop pop-ups not found; Firepixel: `18` Save as Command opens no dialog the bridge finds) |
-| `preview-options` | preview / export | equal except for design | run 24: 76.9 % (30 / 39), unchanged |
-| `preview-views` | preview / export | equal except for design | run 24: 69.6 % (16 / 23), unchanged |
-| `color-popup-contexts` | colour | equal except for design | run 24: 68.2 % (15 / 22), unchanged |
-| `tool-path-reshape` | tools | equal except for design | run 29: 100.0 % (23 / 23), unchanged; every pair value as in run 27 (preview `2026-10-20_06-08` with F51c's Subselection snapping: no change here). Run 27: 13 / 14 canvas pairs within 1 % (`11_rect_to_path` 13.7 % as before; the new pair `04_freeform_size_keys_result` 0.46 %). **TW-159 rest confirmed**: with the mouse held the reference's three Up and two ] keys keep the Freeform tool, and the size read while the button is held is 72 in both programs (the reference's Properties panel field and Firepixel's size field; the keys change the size on neither side). **TW-164 confirmed**: R-24 chooses Freeform through flyout entry 0 and reads the tool back before every Freeform step; `12_inspector_heads_freeform` now shows the Freeform head on the reference side, pixel-identical to its own `01` shot (9.7 %, the design difference of `01`; run 26: 10.8 % with the Path Scrubber head) |
-| `tool-text` | tools | equal except for design | run 28: 85.2 % (23 / 27), unchanged; 13 / 16 canvas pairs within 1 %, all pair values as in run 27 (`11_size_live` 2.35 %, `14_bounds` 1.10 %, `16_overflow` 3.82 %). **TW-146 rest stays open**: R-25's area test now rejects the caret, and no try gives more: in `11` the glyph-box drags, the drags from the end and the word double-click at 89,97 all change 24 pixels of 171.7 expected (ratio 0.14, below 0.60; cover 0.4), so the field, key and dialog routes are all skipped ("no selection highlight", `text_size.method` null), "Abc 123" stays 12 pt and the reference's export equals that of `03`. `07` ("Welt", 24 of 206.2 px, ratio 0.12) and `13` (24 of 171.7 px) log the same; in `13` the grey A0A0A0 is set without a selection and does not reach "123" (export equal to `03`, pair 0.81 %). **TW-165 not confirmed**: the two-sided reset is armed only by a failed field or menu route; with every route skipped neither text tool is reset, so Firepixel's texts in `14` and `16` read 72 pt (F43) against the reference's 12 pt, as in run 27. `15` and `19` fail on both sides (frame handle not found), `12` Firepixel's font field not found, `17` `unmapped` on both sides; 7 `runner error` lines (run 27: 1), all text selections and the size step |
-| `tool-web` | tools | equal except for design | run 25: 96.4 % (27 / 28), unchanged; 14 / 16 canvas pairs within 1 % (`07` guide drag 3.7 % as before); `11` fails on both sides as before |
-| `toolbox` | tools | equal except for design | run 29: 94.6 % (53 / 56), unchanged; 0 / 3 canvas pairs within 1 % (cursor shots, 2.6 % as before); no `runner error`. **TW-167 confirmed**: the reference started with its dock collapsed to icons (105 px), R-26's unit-start layout check expanded it (271 px read back) and expanded it again after full screen with menus, which leaves it collapsed; window pairs overview 25.5 % (run 28: 64.3 %), Standard 25.9 % (run 28: 25.6 %), full 1.97 % (unchanged), full with menus 47.2 % (run 27: 47.4 %; run 28: 35.4 % with the reference's dock collapsed; Firepixel shows its dock as an icon strip in that mode). Run 28: 0 / 3 canvas pairs within 1 % (cursor shots, 2.6 % as before). **TW-166 confirmed**: R-25 leaves full screen by F with a window test; from full screen with menus F, F and from full screen one F reach Standard (window 1600 × 1000, not covering the 1800 × 1130 monitor), and `toolbox` has no `runner error` (run 27: one). Mode pairs (window pairs): full 1.97 % (unchanged), full with menus 35.4 % (run 27: 47.4 %), Standard 25.6 % (run 27: 64.3 %). The reference started the unit with its right panel dock collapsed to icons (left over from run 27; `00_overview_normal` 64.3 %, run 27: 25.9 %); R-25 takes this 110 px dock as the reference width, the screen modes expand it to 276 px and the restore logs `restored: []` without acting, so the overview and Standard window pairs have swapped (TW-167, runner). The Window menu does not open in full screen (logged, no error). The reference was not restarted |
-| `tool-autoshapes` | tools | equal except for design | run 25: 100.0 % (40 / 40), unchanged; **26 / 27** canvas pairs within 1 % (run 24: 7 / 27, run 17: 27 / 27): the reference draws with fill #ffffff and stroke #000000 again, as Firepixel (TW-153 confirmed). The one pair above 1 % is `05_handle_drag_rounded_corner_result` at 1.01 % (run 17: 0.97 %, the same picture: the reference's shot after the handle drag shows the shape without handles and tooltip, Firepixel with both) |
-| `export-results` | preview / export | equal except for design | run 25: 80.0 % (8 / 10), unchanged; 4 / 4 canvas pairs within 1 %; values as in run 24 (animated GIF and PNG 8/24/32 pairs within 1 %); `13_export_area` `unsupported` on the reference side as before |
-| `color-popup` | colour | equal except for design | run 24: 75.0 % (21 / 28), unchanged; 0 / 2 canvas pairs within 1 %; hex field: the reference's pop-up closes without applying the text the runner sets (#80808000), so Q-49 needs a real keyboard; canvas shots differ by capture method only (TW-117) |
-| `xs-context-menus` | cross-cutting | equal except for design | run 25: 70.4 % (19 / 27), unchanged |
-| `xs-preferences` | cross-cutting | equal except for design | run 24: 85.0 % (17 / 20), unchanged; 2 / 3 canvas pairs within 1 % (`06` 3.10 %, Firepixel's selection handles and cursor; `07` 0.13 %, `08` 0.09 %); all values as in run 22: `06` crops the page to 280 × 220 with P1, E1, R2, R1 left in both programs; the Escape substitutes keep the selection (`15`) or close nothing (`16`) |
-| `xs-windows-tabs` | cross-cutting | equal except for design | run 24: 73.7 % (14 / 19), unchanged; `08_unsaved_prompt_open` is `unmapped` on the reference side instead of an error |
-| `xs-file-formats` | cross-cutting | equal except for design | run 24: 85.7 % (18 / 21), unchanged; 4 / 4 canvas pairs within 1 %; import by dragging equal (TW-101) |
-| `inspector-group-symbol` | property inspector | equal except for design | run 24: 90.0 % (18 / 20), unchanged; 1 / 1 canvas pairs within 1 %; steps 05–14 all `ok` on both sides with equal values |
-| `panel-swatches-mixer` | panels | equal except for design | run 24: 96.3 % (26 / 27), unchanged; the "add swatches" file dialog now opens on the reference side (TW-129 closed); Swatches menu 229 vs. 226 px |
-| `xs-shortcuts` | cross-cutting | equal except for design | run 26: 92.0 % (23 / 25), was 91.7 % (22 / 24); `10_nudge_point_result` is `ok` on both sides again: R-23 takes "Teilauswahl" as Subselection and nudges the selected point by script, the first node reads 201,210 in both programs (TW-159 b confirmed); `10_nudge_result` reads R1 51,50 and 51,51 in both; `18` and `19` (Duplicate Set dialog not mapped) and `15_in_text` as before |
-| `xs-canvas` | cross-cutting | equal except for design | run 25: 91.7 % (22 / 24), unchanged; 1 / 8 canvas pairs within 1 % (fit zoom and grid phase as reviewed in run 17) |
-| `xs-select-behind` | cross-cutting | equal except for design | run 29: 100.0 % (9 / 9), unchanged; all 9 pair values as in run 25 (the reference restarted once after a script access violation at the unit start, no step lost). Run 25: 9 / 9 canvas pairs within 1 % (0.14–0.51 %); was real deviation. TW-157 confirmed by pixel counts: on the vector rectangle FR (`08`) both programs draw 680 px of #E00000 in 398,198–602,302 (run 24: Firepixel 100 px plus an anti-aliased line); right after a click (`05`, `06`) neither shows #E00000 (run 24: Firepixel 100 and 1680 px); the frame on B1 in `02` and `04` is 1680 px at 38,38–522,362 in both, `03` and `07` show none. Whether the blue and the red frame show together stays with the click-test (A4-17) |
+| `dialogs-d01-d10` | dialogs | equal except for design | run 30: 89.3 % (25 / 28), was 92.9 % (26 / 28): `19_tab_enter_esc_focus_d10` fails on the reference side ("no dialog open"; Firepixel `ok`); `18_d10_effect` fails on the reference side as before |
+| `dialogs-d11-d20` | dialogs | equal except for design | run 30: 88.9 % (32 / 36), unchanged |
+| `dialogs-d21-d30` | dialogs | equal except for design | run 30: 100.0 % (27 / 27), unchanged; text runs fixed (TW-02) |
+| `dialogs-d31-d40` | dialogs | equal except for design | run 30: 92.0 % (23 / 25), unchanged; 2 / 2 canvas pairs within 1 %; `11` and `16` fail on both sides as before (the dialog is closed before the read-back) |
+| `dialogs-d41-d50` | dialogs | equal except for design | run 30: 91.3 % (21 / 23), unchanged |
+| `filters-adjust-color` | filters | equal except for design | run 30: 69.6 % (16 / 23), unchanged; 4 / 4 canvas pairs within 1 % |
+| `filters-blur-sharpen-noise` | filters | equal except for design | run 30: 79.3 % (23 / 29), unchanged; 10 / 11 canvas pairs within 1 % (`16_preview_box_on_result` 20.0 % as before) |
+| `fx-bevel-emboss-fill` | live effects | equal except for design | run 30: 90.5 % (19 / 21), unchanged; 2 / 4 canvas pairs within 1 % (the live pop-up shots `01` and `09` as before); `11` fails on both sides as before |
+| `fx-shadow-glow` | live effects | equal except for design | run 30: 100.0 % (23 / 23), unchanged; 5 / 6 canvas pairs within 1 % |
+| `fx-stack` | live effects | equal except for design | run 30: 92.0 % (23 / 25), unchanged; 2 / 2 canvas pairs within 1 % |
+| `inspector-bitmap` | property inspector | equal except for design | run 30: 100.0 % (15 / 15), unchanged; 3 / 3 canvas pairs within 1 % |
+| `inspector-fields` | property inspector | equal except for design | run 30: 83.3 % (25 / 30), was 86.7 % (26 / 30); 0 / 1 canvas pairs within 1 % (run 24: 1 / 1). `14_popup_drag_live_canvas_pressed` 2.03 % (run 24: 0.64 %): with the mouse held on the opacity pop-up slider at 30 % Firepixel now previews the opacity on R1 (lighter fill), while the reference's canvas stays unchanged as in run 24; this is the deliberate live preview of TW-171 (F51b, listed in `[N]`), not a new deviation. The reference's pop-up shot `14_popup_drag_live_popup_pressed` fails this time ("no popup slider open"). `10_edge_popup` (reference) and `20_undo_each` (Firepixel: no text field at the stroke size) fail as before |
+| `inspector-stroke` | property inspector | equal except for design | run 30: 88.2 % (45 / 51), unchanged; 31 / 31 canvas pairs within 1 %; `03` and `12` fail on the reference side as before (script errors); in `03` Firepixel now records no History step for the clamped width (TW-171, deliberate) |
+| `inspector-text` | property inspector | equal except for design | run 30: 90.0 % (27 / 30), unchanged; 10 / 11 canvas pairs within 1 % (`21_live_result` 1.88 % as before) |
+| `inspector-web` | property inspector | equal except for design | run 30: 81.2 % (13 / 16), unchanged |
+| `menu-commands-window-help` | menus | equal except for design | run 30: 75.0 % (15 / 20), unchanged; `01` (Firepixel's Commands submenu not found) as before |
+| `menu-edit` | menus | **real deviation** | run 30: 91.7 % (22 / 24), unchanged; was equal except for design. `02_redo_last_result` (select R1, Ctrl+Shift+D, Ctrl+Y): the reference ends with three R1 (the clone and a second clone from Ctrl+Y), as in every run since run 1; Firepixel now ends with two, because F51a made Ctrl+Y redo only (TW-170); runs 24 and 25 read three R1 in both programs. New **TW-173**. The other values as in run 25; `16` and `17` fail as before |
+| `menu-file` | menus | equal except for design | run 30: 81.8 % (18 / 22), unchanged |
+| `menu-modify-a` | menus | equal except for design | run 30: 96.2 % (25 / 26), unchanged; 4 / 6 canvas pairs within 1 % (`05_rotate_canvas` and `20_marquee_to_path` as before); `24`: Group as Mask is grey in the reference (unchanged) |
+| `menu-modify-b` | menus | equal except for design | run 30: 92.0 % (23 / 25), unchanged; 5 / 5 canvas pairs within 1 % |
+| `menu-select` | menus | equal except for design | run 30: 100.0 % (16 / 16), unchanged; 6 / 6 canvas pairs within 1 % |
+| `menu-text` | menus | equal except for design | run 30: 90.9 % (20 / 22), unchanged; 4 / 4 canvas pairs within 1 %; `01` (Firepixel's scrolled font menu not found), `05_editor_open` (`unsupported` on the reference side) and `07` (Attach to Path grey in the reference) as before |
+| `menu-view` | menus | equal except for design | run 30: 96.0 % (24 / 25), unchanged; 6 / 6 canvas pairs within 1 % (`11_slice_guides` 0.30 %, `12_slice_overlay` 0.57 %; run 25: 0.18 % and 0.46 %); window pair `15_hide_panels_result` 56.2 % (run 25: 39.5 %; the reference's shot changed, Firepixel's is pixel-identical) |
+| `panel-info-align-path` | panels | equal except for design | run 30: 83.3 % (30 / 36), unchanged; 2 / 2 canvas pairs within 1 % |
+| `panel-layers` | panels | equal except for design | run 30: 74.1 % (20 / 27), unchanged. `04_eye_drag_result`: the reference's eye drag now leaves "Unterebene" and "Gemeinsam" visible (Firepixel, and the reference in run 25: hidden), with the reference's Layers panel shot at 270 × 113 px (run 25: 245 × 389), so its panel pairs rise to 82–89 % (TW-174, runner; Firepixel's shots unchanged) |
+| `panel-layers-menu` | panels | equal except for design | run 30: 81.0 % (17 / 21), unchanged; `10_options_open` still opens no dialog the bridge finds. The layer context menu `03` now reads the same 23 entries and states in both programs (run 25: a stray "Page 1" entry in Firepixel's read-back). The object context menu `04` reads as in run 25: the reference enables Flatten Selection and Add Mask, Firepixel greys both (Q-59, not new) |
+| `panel-misc` | panels | equal except for design | run 30: 87.5 % (14 / 16), unchanged; embedded panels `unsupported` |
+| `panel-optimize` | panels | equal except for design | run 30: 83.3 % (20 / 24), unchanged |
+| `panel-library-styles` | panels | equal except for design | run 30: 93.3 % (14 / 15), unchanged; 1 / 1 canvas pairs within 1 % |
+| `panel-pages-states-history` | panels | equal except for design | run 30: 75.0 % (18 / 24), unchanged; `18_history_save_cmd_open` now fails on both sides (the reference opens no dialog, run 25: `ok`; Firepixel's Save as Command dialog is not found by the bridge, as before); the onion-skin and loop pop-ups are not found on the reference side as before |
+| `preview-options` | preview / export | equal except for design | run 30: 76.9 % (30 / 39), unchanged; Firepixel-side errors as in run 24 (`08` and `13`: no text field at dither / smoothing; `24_result_hash_gif/jpeg/png8/png32`: no file dialog for the bridge) |
+| `preview-views` | preview / export | equal except for design | run 30: 69.6 % (16 / 23), unchanged; Firepixel's shots pixel-identical to run 24 except the running animation `17_anim_buttons_play_pressed`, so the small rises (about +0.4 points) are on the reference side |
+| `color-popup-contexts` | colour | equal except for design | run 30: 68.2 % (15 / 22), unchanged |
+| `tool-path-reshape` | tools | equal except for design | run 30: 100.0 % (23 / 23), unchanged; 13 / 14 canvas pairs within 1 % (`11_rect_to_path` as before; `04_freeform_size_keys` 0.46 %); `12_inspector_heads_freeform` 9.7 % with the Freeform head on both sides, as in run 29 |
+| `tool-text` | tools | equal except for design | run 30: 85.2 % (23 / 27), unchanged; 13 / 16 canvas pairs within 1 %, all as in run 28 (`11_size_live` 2.35 %, `14_bounds` 1.09 %, `16_overflow` 3.77 %; TW-146 rest and TW-165, click-test A1-19). 11 `runner error` lines (run 28: 7): the six selection tries in `07`, `11`, `13` and the size step of `11` as in run 28, and four new text-entry lines: in `03`, `04`, `05` and `20` the reference's first "A" did not arrive in two attempts (the first attempt selected the Subselection tool, so the editor did not have the keys), so these steps compare Firepixel's text with an empty reference text; `03_typing_result` stays at 0.10 % because the text is small. `15` and `19` fail on both sides (frame handle not found), `12` Firepixel's font field not found, `17` `unmapped`, as before |
+| `tool-web` | tools | equal except for design | run 30: 96.4 % (27 / 28), unchanged; 14 / 16 canvas pairs within 1 % (`07` guide drag 3.7 % as before); `11` fails on both sides as before |
+| `toolbox` | tools | equal except for design | run 30: 94.6 % (53 / 56), unchanged; 0 / 3 canvas pairs within 1 % (cursor shots, 2.5 % as before); no `runner error`. Window pairs: overview 23.5 %, full 1.97 %, full with menus 45.6 %, Standard 23.0 % (run 29: 25.5, 1.97, 47.2 and 25.9 %); Firepixel's full screen and cursor shots are pixel-identical to run 29 |
+| `tool-autoshapes` | tools | equal except for design | run 30: 100.0 % (40 / 40), unchanged; **27 / 27** canvas pairs within 1 % (run 25: 26 / 27): `05_handle_drag_rounded_corner_result` 0.97 % (run 25: 1.01 %). Firepixel's shots are unchanged; the reference's shapes moved by about one pixel (in run 25 the offset search improved 13 of the 27 pairs with a 1–2 px offset, now one; all 27 pairs 0.13–0.97 %) |
+| `export-results` | preview / export | equal except for design | run 30: 80.0 % (8 / 10), unchanged; 4 / 4 canvas pairs within 1 %; `13_export_area` `unsupported` on the reference side as before. JPEG 2000 in the PDF export (BA-101) is not exercised: `10_pdf_result` is `unsupported` on both sides |
+| `color-popup` | colour | equal except for design | run 30: 75.0 % (21 / 28), unchanged; 0 / 2 canvas pairs within 1 % (capture method only, TW-117); `21_undo` fails on the reference side as before |
+| `xs-context-menus` | cross-cutting | equal except for design | run 30: 70.4 % (19 / 27), unchanged |
+| `xs-preferences` | cross-cutting | equal except for design | run 30: 85.0 % (17 / 20), unchanged; 2 / 3 canvas pairs within 1 % (`06` 3.1 % as before) |
+| `xs-windows-tabs` | cross-cutting | equal except for design | run 30: 73.7 % (14 / 19), unchanged |
+| `xs-file-formats` | cross-cutting | equal except for design | run 30: 85.7 % (18 / 21), unchanged; 4 / 4 canvas pairs within 1 %; `05` and `15` fail on both sides as before |
+| `inspector-group-symbol` | property inspector | equal except for design | run 30: 90.0 % (18 / 20), unchanged; 1 / 1 canvas pairs within 1 % |
+| `panel-swatches-mixer` | panels | equal except for design | run 30: 96.3 % (26 / 27), unchanged; `19_selected_object_result`: the reference's swatch 5 sits elsewhere in its resized panel and reads #ffffbf, Firepixel #efffbf as both read in run 24 (TW-174, runner) |
+| `xs-shortcuts` | cross-cutting | equal except for design | run 30: 92.0 % (23 / 25), unchanged. `02_edit_result` is now equal throughout: after Ctrl+Z and Ctrl+Shift+Z, Ctrl+Y adds nothing in either program (8 elements; run 26: Firepixel repeated the paste, 9, and every later count was one higher), and `17_menu_display` reads the disabled "Can't Redo" in both (run 26: Firepixel an enabled "Redo: Select"); both from F51a (TW-170). `18`, `19` and `15_in_text` as before |
+| `xs-canvas` | cross-cutting | equal except for design | run 30: 91.7 % (22 / 24), unchanged; 1 / 8 canvas pairs within 1 % (fit zoom and grid phase as reviewed in run 17). Tiled canvas check (BA-098): Firepixel's shots at the fit zoom 42.83 % (`03`, `11`, `13`, `14`, `16`) are pixel-identical to run 25, and `02_zoom_center` (zoomed in from fit) differs from run 25 only in the anti-aliasing of the cell labels (grid lines on the same device pixels); its share fell from 1.57 % to 1.50 % at the same offset (−2, −3) that run 25 found. No new offset |
+| `xs-select-behind` | cross-cutting | equal except for design | run 30: 100.0 % (9 / 9), unchanged; 9 / 9 canvas pairs within 1 % (0.22–0.63 %, run 29: 0.14–0.51 %). The rise is on the reference side: its front rectangle FR, drawn by `addNewRectangle`, has a 2 px black stroke centred on the edge this time (selection read-back 399,199–601,301; run 29: a 1 px stroke inside, 400,200–600,300), while Firepixel draws FR without a stroke in both runs (Q-58) |
 
-Totals over all 49 units (newest run per unit): **49 / 0 / 0 / 0** (proven 1:1 100.0 %). Step level: 1077 of 1233
-measurable steps `ok` on both sides (**87.3 %**); over the 48 units before run 24: 1068 of 1224 (87.3 %). In the 2
-units of run 28: 76 of 83 (91.6 %), the same as in run 27; no quota changed. Reference-side errors: 33,
-Firepixel-side errors: 21 (both unchanged; in the two units 2 and 3: `tool-text/15, 19` frame handle not found on
-both sides, `tool-text/12` Firepixel's font field). Canvas image pairs within 1 %: **185 of 212** (unchanged; the 19
-canvas pairs of the two units read as in run 27). No class changed. The 7 `runner error` lines (run 27: 2) are all
-reference-side text selections in `tool-text` (TW-146 rest): `07` ("Welt"), four selections and the size step in `11`,
-and `13`; R-25 no longer accepts the 24-pixel caret as a highlight. `toolbox` has none (TW-166 confirmed). The
-reference was not restarted.
+Totals over all 49 units (run 30): **48 / 1 / 0 / 0** (proven 1:1 **98.0 %**). Step level: 1075 of 1233
+measurable steps `ok` on both sides (**87.2 %**; counted as before, with the Firepixel-only step
+`toolbox/17_ai_tools_normal` as `ok`); over the 48 units before run 24: 1066 of 1224 (87.1 %). Two quotas dropped by
+one step each, both by a reference-side miss (`dialogs-d01-d10/19`, `inspector-fields/14_popup_drag_live_popup`);
+none rose. Only three step statuses changed against the baseline runs, all on the reference side (those two `ok` →
+`error`, and `panel-pages-states-history/18` `ok` → `error`, where Firepixel's error is unchanged). Reference-side
+errors: 36 (run 29: 33); Firepixel-side errors: 21, unchanged: the same 21 steps failed with the same error text in the
+baseline runs, and no step that was `ok` there fails on Firepixel's side now. Canvas image pairs within 1 %: **185 of
+212** (count unchanged; `inspector-fields/14_popup_drag_live_canvas` moved above 1 %, 2.03 %, from the deliberate live
+preview of TW-171, and `tool-autoshapes/05_handle_drag_rounded_corner` moved below, 0.97 %); over the 48 old units
+176 of 203. One class changed: `menu-edit` equal except for design → real deviation (TW-173). Value read-backs that
+changed on Firepixel's side: `menu-edit/02` (TW-173), `xs-shortcuts/02, 17` and `panel-layers-menu/03` (now equal to
+the reference) and `inspector-stroke/03` (no step for a clamped value, TW-171); the reference-side changes in
+`panel-layers/04`, `panel-swatches-mixer/19` and `xs-select-behind` come from its panel layout and tool state
+(TW-174, Q-58). 11 `runner error` lines (run 29: 0; run 28: 7), all reference-side text entry and selection in
+`tool-text`: four lost first characters in `03`, `04`, `05` and `20` (new; the entry part had worked in runs 26 to
+28), six selection tries in `07`, `11` and `13` and the size step of `11` (TW-146 rest, click-test A1-19).
 
-Run 29 over its 3 units: 85 of 88 steps `ok` on both sides (`toolbox` 53 / 56, `tool-path-reshape` 23 / 23,
-`xs-select-behind` 9 / 9; the three `toolbox` misses are the unmapped flyouts and the collapse button, as before), all
-quotas unchanged; no Firepixel-side error; canvas pairs unchanged (0 / 3, 13 / 14 and 9 / 9 within 1 %); no `runner
+Run 29's own totals, for comparison: 49 / 0 / 0 / 0 over 49 units; 1077 of 1233 steps (87.3 %); in its 3 units 85 of
+88 steps `ok` on both sides (`toolbox` 53 / 56, `tool-path-reshape` 23 / 23, `xs-select-behind` 9 / 9; the three
+`toolbox` misses are the unmapped flyouts and the collapse button, as before), all quotas unchanged; 33 reference-side
+and 21 Firepixel-side errors (no Firepixel-side error in its units); 185 of 212 canvas pairs within 1 %; no `runner
 error`. The reference was restarted once (script access violation at the start of `xs-select-behind`), without lost
 steps.
+
+Run 28's own totals, for comparison: 49 / 0 / 0 / 0 over 49 units; 1077 of 1233 steps (87.3 %); in its 2 units 76 of
+83 (91.6 %), the same as in run 27; 33 reference-side and 21 Firepixel-side errors (in the two units 2 and 3:
+`tool-text/15, 19` frame handle not found on both sides, `tool-text/12` Firepixel's font field); 185 of 212 canvas
+pairs within 1 % (the 19 canvas pairs of the two units read as in run 27). No class changed. The 7 `runner error`
+lines (run 27: 2) are all reference-side text selections in `tool-text` (TW-146 rest): `07` ("Welt"), four selections
+and the size step in `11`, and `13`; R-25 no longer accepts the 24-pixel caret as a highlight. `toolbox` has none
+(TW-166 confirmed). The reference was not restarted.
 
 Run 27's own totals, for comparison: 49 / 0 / 0 / 0 over 49 units; 1077 of 1233 steps (87.3 %); in its three units
 99 of 106 (93.4 %); 33 reference-side and 21 Firepixel-side errors; 185 of 212 canvas pairs within 1 %
@@ -247,6 +251,26 @@ does not enlarge text, and Ctrl+Shift+E, Ctrl+Alt+Shift+S and Ctrl+Shift+I do ot
 machine (TW-126; the reference machine's active set needs a behaviour description). `panel-optimize` shows one real
 deviation: export formats chosen per slice in the Optimize panel are not stored on the slices (TW-128).
 `xs-preferences` clicks stored settings without a fixed start state (TW-127, runner).
+
+**What run 30 found.** The first full run since run 24, on preview `2026-10-20_19-06` with fixes F51a to F51c, F52
+and the performance work, confirms 48 units with unchanged values and no new Firepixel-side error: all 21
+Firepixel-side errors are the same steps with the same texts as in the baseline runs. New: **TW-173** (real
+deviation): in `menu-edit/02` the reference repeats a clone with Ctrl+Y when nothing was undone (three R1 in every run
+since run 1), Firepixel no longer does since F51a made Redo redo only (TW-170); the redo cases of `xs-shortcuts/02, 17`
+(Ctrl+Y right after a redo adds nothing, the Edit menu reads "Can't Redo") became equal with the same fix. The
+deliberate live opacity preview of TW-171 moves `inspector-fields/14_popup_drag_live_canvas` above 1 % (2.03 %).
+**TW-174** (runner): the reference's docked panels have other sizes than in runs 24 and 25, so `panel-layers/04`
+(eye drag) and `panel-swatches-mixer/19` (swatch 5) hit other rows on its side. **Q-58**: the reference draws the
+script rectangle FR of `xs-select-behind` with the current stroke (2 px this time), Firepixel without one. **Q-59**
+(not new, seen while reading the values): with an object row right-clicked, the reference's Layers context menu
+enables Flatten Selection and Add Mask, Firepixel's greys them. The reference's text entry lost the first character
+in four `tool-text` steps (`03`, `04`, `05`, `20`; four new `runner error` lines). **Tiled canvas (BA-098): no
+offset.** Firepixel's canvas shots at the fit zoom 42.83 % (`xs-canvas/03, 11, 13, 14, 16`), at 50 %
+(`menu-modify-a/02`) and at 35 % (`xs-preferences/06`) and the `toolbox` full screen and cursor shots are
+pixel-identical to the baseline runs, which were rendered without tiles; `xs-canvas/02_zoom_center` changed only in the
+anti-aliasing of its labels (grid lines on the same device pixels), and its share fell from 1.57 % to 1.50 % at the
+same offset (−2, −3) that run 25 found. No canvas pair of a zoom step rose and the offset search found no offset that
+it had not found before; the `preview-views` and window pairs that moved changed on the reference side only.
 
 **What run 29 found.** Runner R-26 closes **TW-167**: the layout check now measures the reference's right panel
 dock window and expands it with the dock's own button when it is collapsed to icons; at the start of `toolbox` it
@@ -420,12 +444,14 @@ effect, text-tool state carried between units).
 | 27 (3 units) | 19 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.3 % over the 48 old units); canvas pairs 185 / 212 |
 | 28 (2 units) | 19 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.3 % over the 48 old units); canvas pairs 185 / 212 |
 | 29 (3 units) | 20 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.3 % over the 48 old units); canvas pairs 185 / 212 |
+| 30 (full, 49 units) | 20/21 Oct 2026 | 48 of 49 (0 under-measured; 1 real deviation, 0 unclear) | **98.0 %** (48 / 49); 97.9 % over the 48 old units; step level 87.2 % (87.1 % over the 48 old units); canvas pairs 185 / 212 |
 
 The next steps are in [ROADMAP.md](../ROADMAP.md): the human click-test, including the macOS re-test by the tester;
 the text selection and size of TW-146 rest and the text tool reset of TW-165 (moved to the click-test A1-19 on
 20 Oct 2026 as runner measurement gaps, not deviations; TW-167 was closed by run 29); the text tool reset of RE spec 56
 (TW-138 R5 to R7, F52, click-test A4-29; known difference: for a new text the reference writes two History rows,
-"Text" and "Text Change", Firepixel one; the leading conversion from px back to % is not measured); and the next full
-run, which also has to show whether the tiled canvas of BA-098 (512-px tiles on a device-pixel grid) shifts a
-sampling position by one device pixel at fractional zoom levels. U-1 rest (PDF layers) and the R3 note of TW-138 were
-closed on 20 Oct 2026.
+"Text" and "Text Change", Firepixel one; the leading conversion from px back to % is not measured); TW-173 (Ctrl+Y
+repeats a clone in the reference when nothing was undone: first an RE spec addendum on which commands the reference
+repeats, then the fix and a `menu-edit` follow-up run); the runner item TW-174 (the reference's panel layout) and the
+questions Q-58 and Q-59. Run 30 answered the BA-098 question: the tiled canvas shifts no sampling position at
+fractional zoom. U-1 rest (PDF layers) and the R3 note of TW-138 were closed on 20 Oct 2026.

@@ -1,6 +1,6 @@
 # Status
 
-Last updated: **20 Oct 2026**. This page is the single place for the current figures; the history of how they
+Last updated: **21 Oct 2026**. This page is the single place for the current figures; the history of how they
 came about is kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)).
 
 ## In one paragraph
@@ -20,15 +20,15 @@ run on Intel hardware, and the Linux build has run only in CI, not yet on a real
 | Area | Value | Source |
 |---|---|---|
 | Parity units | 49 (all classified since full run 24; the measurement unit `xs-select-behind` was added on 19 Oct 2026) | [PARITY.md](PARITY.md) |
-| Equal except for design | **49** (0 real deviations, 0 unclear, 0 under-measured) | run 29 (3 units) on top of runs 28, 27, 26, 25 and 24, 20 Oct 2026 |
-| Proven 1:1 | **100.0 %** (49 / 49; no unit under-measured; over the 48 units before run 24: 100.0 %; runs 26 to 29: 100.0 %; run 25: 98.0 %; run 24: 93.9 %; run 17: 87.5 %) | run 29 |
-| Canvas image pairs within 1 % | **185 / 212** (unchanged in runs 28 and 29; run 26: 186 / 211; run 27 added `tool-path-reshape/04` within 1 %, while `tool-text/14, 16` stay above 1 % because Firepixel's text tool keeps 72 pt after the reference's size step fails, TW-165) | run 28 |
-| Measurement quota, all 49 units | **87.3 %** (1077 / 1233 measurable steps both `ok`; over the 48 old units 87.3 %, 1068 / 1224; unchanged since run 26; run 24: 87.0 %; run 17 alone 86.3 %; in the 2 units of run 28: 76 / 83, as in run 27; in the 3 units of run 29: 85 / 88, unchanged) | run 28 |
-| Errors | 33 reference-side, 21 Firepixel-side (both unchanged since run 25); 7 `runner error` lines in run 28 (run 27: 2), all reference-side text selections in `tool-text/07, 11, 13` that R-25 no longer accepts as a highlight (TW-146 rest); none in `toolbox` (TW-166 confirmed); none in run 29 | run 29 |
+| Equal except for design | **48** (1 real deviation: `menu-edit`, Ctrl+Y no longer repeats a clone, TW-173; 0 unclear, 0 under-measured) | full run 30 over all 49 units, 20/21 Oct 2026 |
+| Proven 1:1 | **98.0 %** (48 / 49; no unit under-measured; over the 48 units before run 24: 97.9 %; runs 26 to 29: 100.0 %; run 25: 98.0 %; run 24: 93.9 %; run 17: 87.5 %) | run 30 |
+| Canvas image pairs within 1 % | **185 / 212** (count unchanged; run 30 moved `inspector-fields/14_popup_drag_live_canvas` above 1 %, 2.03 %, by the deliberate live opacity preview of TW-171, and `tool-autoshapes/05` below, 0.97 %; `tool-text/14, 16` stay above 1 %, TW-165, click-test A1-19). Tiled canvas (BA-098): no one-pixel sampling offset at fractional zoom; Firepixel's zoom shots are pixel-identical to the untiled baseline or changed only in label anti-aliasing | run 30 |
+| Measurement quota, all 49 units | **87.2 %** (1075 / 1233 measurable steps both `ok`; over the 48 old units 87.1 %, 1066 / 1224; runs 26 to 29: 87.3 %; run 24: 87.0 %; run 17 alone 86.3 %; the two lost steps are reference-side misses in `dialogs-d01-d10/19` and `inspector-fields/14`) | run 30 |
+| Errors | 36 reference-side (runs 25 to 29: 33), 21 Firepixel-side (unchanged since run 25; the same 21 steps with the same error texts as in the baseline runs, no new Firepixel-side error); 11 `runner error` lines in run 30 (run 29: 0, run 28: 7), all reference-side text entry and selection in `tool-text`: four lost first characters in `03`, `04`, `05`, `20` (new) and the seven selection and size lines of TW-146 rest | run 30 |
 | Latest release | **v0.2.5** (20 Oct 2026, pre-release from `30da1158`, the code of preview `2026-10-20_09-25`; Windows x64 ZIP, macOS universal ZIP, Linux x86_64 tar.gz and AppImage; tester feedback batch 3 FB-07 to FB-11, PDF layers, text tool reset, performance BA-097 to BA-099, metadata and GIF batch work, CI tests on three OS); before: v0.2.4 (19 Oct 2026; the three screen modes, the text default rules and the macOS fixes TW-160 to TW-162 with the own app menu). The macOS re-test by the tester is still pending; the release notes ask for it | GitHub releases |
 | Workspace tests | Tree with JPEG 2000 (BA-101) and the AI batch steps (BA-109): **2852 passed, 1 failed, 141 ignored** at `3b7386fa` (GT-1i, 20 Oct 2026, the code of preview `2026-10-20_19-06`); the one failure was the scanner `i18n_no_hardcoded_texts` over eleven fixed English error texts in the new `fp-ai` modules, translated in `8ab8564d` (scanner, `fp-i18n`, `fp-ai`, `fp-batch` and `fp-neutral` green again). Before: merged tree after the roadmap items of 20 Oct 2026: 2818 passed, 1 failed, 136 ignored at `612b34bd` (GT-1h, 20 Oct 2026, the code of preview `2026-10-20_09-25`): 2674 + 144 from the `fp-ui` lib binary, whose process crashed once with an access violation next to `canvas::tests::space_during_drag_moves_the_shape_in_ui` and passed on the rerun; the one failure is the timing test `image_preview_p1::worker_cancels_outdated_jobs_and_ui_stays_fluid`, green on the rerun (see BA-117). Runs on `main` after each merge: F52 (text tool reset) 2809 passed, 0 failed, 134 ignored; PERF 2802 / 0 / 136 (two new ignored performance tests); BA-110 2803 / 0 / 134. Last full run: 2797 passed, 0 failed, 134 ignored at `901f0a56` (fixes F51a to F51c merged, GT-1g; the code of preview `2026-10-20_06-08`); macOS and Linux CI run the batch and export crates (green, BA-083) | `main`, 20 Oct 2026 |
-| Open findings | 11 rows in `[F]`, none open: U-1 rest (PDF layers, `9c6a52b9`) and TW-138 rest (R3 measured, text tool reset F52 `f5e61c58`) are fixed; TW-151 / FB-01, the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03), the Subselection display TW-168 / FB-06 and tester feedback batch 3, TW-169 to TW-172 (FB-07 to FB-11), wait for the click-test (A4-15, A4-19 to A4-21, A4-23 to A4-27) and the macOS re-test; TW-146 rest and TW-165 are click-test item A1-19. 5 rows in `[V]`: open BA-101 (PSD stroke only; JPEG 2000 part closed by `974af253`) and BA-109 (closed: `ai.faceBlur` `4f811360`, `ai.upscale` `9f3a1647`); BA-083, BA-108 and BA-110 closed on 20 Oct 2026. 20 informational `[N]` (BA-092 and BA-087 closed by `612b34bd`) | [FINDINGS.md](FINDINGS.md) |
-| Real differences known | None measured open (runs 26 to 29). Known from RE spec 56, not measured by the runner: for a new text the reference writes two History rows ("Text" and "Text Change"), Firepixel one; the leading conversion from px back to % is unmeasured; the text tool's own opacity/blend reset is not done (Firepixel's text tool has no own opacity) | [PARITY.md](PARITY.md) |
+| Open findings | 15 rows in `[F]`, 4 open from run 30: TW-173 (real deviation, Ctrl+Y repeat), the runner item TW-174 (the reference's panel layout) and the questions Q-58 and Q-59. Closed: U-1 rest (PDF layers, `9c6a52b9`) and TW-138 rest (R3 measured, text tool reset F52 `f5e61c58`) are fixed; TW-151 / FB-01, the macOS fixes TW-160 to TW-162 (FB-04, FB-05, FB-03), the Subselection display TW-168 / FB-06 and tester feedback batch 3, TW-169 to TW-172 (FB-07 to FB-11), wait for the click-test (A4-15, A4-19 to A4-21, A4-23 to A4-27) and the macOS re-test; TW-146 rest and TW-165 are click-test item A1-19. 5 rows in `[V]`: open BA-101 (PSD stroke only; JPEG 2000 part closed by `974af253`) and BA-109 (closed: `ai.faceBlur` `4f811360`, `ai.upscale` `9f3a1647`); BA-083, BA-108 and BA-110 closed on 20 Oct 2026. 20 informational `[N]` (BA-092 and BA-087 closed by `612b34bd`) | [FINDINGS.md](FINDINGS.md) |
+| Real differences known | One measured open: TW-173 (run 30, `menu-edit/02`: after a Clone with nothing undone the reference's Ctrl+Y clones again, Firepixel's does nothing since F51a / TW-170). Open questions Q-58 (`addNewRectangle` and the current stroke) and Q-59 (Layers context menu on an object row). Known from RE spec 56, not measured by the runner: for a new text the reference writes two History rows ("Text" and "Text Change"), Firepixel one; the leading conversion from px back to % is unmeasured; the text tool's own opacity/blend reset is not done (Firepixel's text tool has no own opacity) | [PARITY.md](PARITY.md) |
 | Closed findings (history) | 850+ | kept outside the repository ([ARCHIVE_NOTE.md](ARCHIVE_NOTE.md)) |
 | Startup time | about 0.8 s to the first frame (release build, warm) | smoke test 17 Oct 2026 |
 
@@ -277,6 +277,16 @@ proven 1:1 100.0 %, quota 87.3 % (1077 / 1233), canvas pairs 185 / 212, all unch
 sides, no `runner error`. Confirmed and closed: TW-167 (the layout check expands the reference's collapsed panel dock
 at unit start and after the screen modes; overview 25.5 %, Standard 25.9 %).
 
+**Full run 30 (20/21 Oct 2026, 19:22–00:40, 49 units, 1295 steps, 699 image pairs)** used preview
+`2026-10-20_19-06` (`main` at `3b7386fa`: v0.2.5 plus JPEG 2000 in the PDF export and the AI batch steps) and runner
+R-26: 48 / 1 / 0 / 0, proven 1:1 98.0 % (48 / 49), quota 87.2 % (1075 / 1233), canvas pairs 185 / 212; 36
+reference-side and 21 Firepixel-side errors (the same 21 steps and texts as before), 11 `runner error` lines in
+`tool-text`. New: TW-173 (real deviation, `menu-edit/02`: the reference repeats a clone with Ctrl+Y when nothing was
+undone, Firepixel no longer since F51a), the runner item TW-174 (the reference's panel sizes) and the questions Q-58
+and Q-59. Equal now: the redo cases of TW-170 (`xs-shortcuts/02, 17`) and the Layers context menu `03`. The tiled
+canvas of BA-098 shows no sampling offset at fractional zoom. JPEG 2000 in PDF (BA-101) is not exercised by the runner
+(`export-results/10` is `unsupported` on both sides).
+
 **20 Oct 2026, roadmap items 9–19 (after tester batch 3, `main` from `7d51762c` to `612b34bd`):**
 
 - *Runner R-26* (`f4f41991`): TW-167 closed by run 29; the layout check expands the reference's collapsed panel
@@ -313,8 +323,8 @@ at unit start and after the screen modes; overview 25.5 %, Standard 25.9 %).
   BA-097 drag preview limited to the view (first drag step 5.4 s → 1.7 s; the `fp-raster` composite thread hand-off
   5.2 s → 0.06 s; residue: a full preview when the whole selection is in view); BA-098 canvas in 512-px tiles on a
   device-pixel grid anchored at the page corner (worst frame after a zoom 1.0–2.5 s → 0.44–0.77 s, after a scroll
-  1.2–2.4 s → 0.31–0.58 s; a possible one-device-pixel sampling shift at fractional zoom is to be watched in the
-  next full parity run); BA-099 virtualised Layers panel rows (frame 281 → 112 ms), early exit in the command state
+  1.2–2.4 s → 0.31–0.58 s; full run 30 found no one-device-pixel sampling shift at fractional zoom: the zoom shots
+  are pixel-identical to the untiled baseline or changed only in label anti-aliasing, with no new offset); BA-099 virtualised Layers panel rows (frame 281 → 112 ms), early exit in the command state
   checks (all 641 commands 252 → 46 ms), the render cache kept on move and small paths rasterised on the calling
   thread (render after a move 3.7 s → 0.26 s).
 - *Maintenance* (`612b34bd`): image series and function-test reports regenerated after the hinting change; BA-092
@@ -354,8 +364,9 @@ with a real mouse and drag and drop between windows need a human click-test: [VE
    A2 checks.
 2. The macOS re-test of v0.2.4 by the tester (A4-19 to A4-21).
 3. Preview `2026-10-20_09-25` (GT-1h) is on the Desktop; the next pre-release waits for the tester's macOS re-test.
-4. The next full parity run over all 49 units, which also checks whether the tiled canvas (BA-098) shifts a
-   sampling position by one device pixel at fractional zoom; no runner item is open.
+4. After full run 30: TW-173 (RE spec addendum on the commands the reference repeats with Ctrl+Y, then the fix and a
+   follow-up run over `menu-edit` and `xs-shortcuts`), the runner item TW-174 (a fixed panel layout on the reference
+   side) and the questions Q-58 and Q-59. The tiled canvas (BA-098) shows no sampling offset at fractional zoom.
 5. Remaining deferred items: BA-101 (PSD stroke; JPEG 2000 in PDF done in `974af253`); BA-109 closed (`ai.upscale` `9f3a1647`, `ai.faceBlur` `4f811360`).
 
 Wave 3 (18 Oct 2026) added 27 batch steps, chained collect steps, more metadata formats, the MCP gate for external
