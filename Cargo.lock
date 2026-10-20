@@ -2133,6 +2133,7 @@ dependencies = [
  "fp-model",
  "fp-raster",
  "fp-render",
+ "fp-text",
  "png",
  "serde",
  "serde_json",

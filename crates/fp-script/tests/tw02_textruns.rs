@@ -3,6 +3,18 @@
 
 use fp_script::{ScriptOptions, run_source};
 
+/// Myriad Pro installiert? Die Metrik-Werte stammen aus dem Original mit Myriad Pro; ohne die Schrift
+/// (z. B. auf den macOS-/Linux-Testläufern) wird der Test übersprungen.
+fn has_myriad() -> bool {
+    let ok = fp_text::FontDb::shared()
+        .find_ps("MyriadPro-Regular")
+        .is_some();
+    if !ok {
+        eprintln!("skipped: MyriadPro-Regular not installed");
+    }
+    ok
+}
+
 fn result(src: &str) -> String {
     let mut s = fp_engine::Session::default();
     let o = run_source(&mut s, src, &ScriptOptions::default());
@@ -33,6 +45,9 @@ fn initial_attrs_have_all_original_keys() {
 
 #[test]
 fn default_values_like_original() {
+    if !has_myriad() {
+        return;
+    }
     let src = format!(
         "{NEW} dom.setTextRuns({{initialAttrs: {{face: 'MyriadPro-Regular', size: '24pt', leading: 1.2, leadingMode: 'percentage'}}, textRuns: [{{changedAttrs: {{}}, characters: 'Abc 123'}}]}});\n\
          var a = fw.selection[0].textRuns.initialAttrs;\n\
@@ -101,6 +116,9 @@ fn round_trip_through_set_text_runs_keeps_values() {
 
 #[test]
 fn face_is_postscript_name_for_family_names() {
+    if !has_myriad() {
+        return;
+    }
     let src = format!(
         "{NEW} dom.setTextRuns({{initialAttrs: {{face: 'Myriad Pro', size: '24pt'}}, textRuns: [{{changedAttrs: {{}}, characters: 'Abc'}}]}});\n\
          fw.selection[0].textRuns.initialAttrs.face"
@@ -110,6 +128,9 @@ fn face_is_postscript_name_for_family_names() {
 
 #[test]
 fn text_runs_to_source_has_original_shape() {
+    if !has_myriad() {
+        return;
+    }
     let src = format!(
         "{NEW} dom.setTextRuns({{initialAttrs: {{face: 'MyriadPro-Regular', size: '24pt', leading: 1.2}}, textRuns: [{{changedAttrs: {{}}, characters: 'Abc 123'}}]}});\n\
          fw.selection[0].textRuns.toSource()"

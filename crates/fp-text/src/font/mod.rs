@@ -3,7 +3,9 @@
 //!
 //! Es werden keine Schriften eingebettet. [`FontDb::system`] durchsucht `%WINDIR%\Fonts`, den
 //! Benutzer-Schriftordner (`%LOCALAPPDATA%\Microsoft\Windows\Fonts`) und die Ordner aus der
-//! Umgebungsvariablen `FP_FONT_DIRS` (durch `;` getrennt). Der Index liest nur Tabellenverzeichnis,
+//! Umgebungsvariablen `FP_FONT_DIRS` (durch `;` getrennt); unter macOS die System-, Rechner- und
+//! Benutzerordner, unter Linux `/usr/share/fonts`, `/usr/local/share/fonts`, `~/.local/share/fonts`
+//! und `~/.fonts` samt Unterordnern. Der Index liest nur Tabellenverzeichnis,
 //! `name`, `OS/2` und `head`; die Schrift selbst wird erst bei Bedarf geladen und geteilt.
 //!
 //! Auflösung ([`FontDb::resolve`]):
@@ -12,7 +14,7 @@
 //! 2. Familienname (+ Stil fett/kursiv), z. B. der Anzeigename aus `TXTv/FONs`;
 //! 3. PostScript-Name der Form `Familie-Stil` gegen Familie (ohne Leerzeichen) und Stil;
 //! 4. Rückfall-Schrift (Vorgabe Myriad Pro, wie die Ersatzschrift von ATE, 09 §5.3), dann Arial,
-//!    Segoe UI, Tahoma, sonst die erste indizierte Schrift.
+//!    Segoe UI, Tahoma, Liberation Sans, DejaVu Sans, sonst die erste indizierte Schrift.
 //!
 //! Type-1-Schriften (`.pfb`/`.pfm`) und Bitmap-Schriften (`.fon`) werden nicht unterstützt.
 
@@ -101,14 +103,41 @@ impl std::fmt::Debug for FontDb {
     }
 }
 
+/// Ein Ordner und seine Unterordner (sortiert, höchstens vier Ebenen tief) für [`FontDb::system_dirs`].
+fn collect_font_dirs(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+    };
+    out.push(dir.to_path_buf());
+    if depth >= 4 {
+        return;
+    }
+    let mut subs: Vec<PathBuf> = rd
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
+        .map(|e| e.path())
+        .collect();
+    subs.sort();
+    for d in subs {
+        collect_font_dirs(&d, depth + 1, out);
+    }
+}
+
 impl FontDb {
     /// Leerer Index mit den Standard-Rückfallnamen.
     pub fn new() -> Self {
         Self {
-            fallback_names: ["MyriadPro-Regular", "ArialMT", "SegoeUI", "Tahoma"]
-                .iter()
-                .map(|s| s.to_string())
-                .collect(),
+            fallback_names: [
+                "MyriadPro-Regular",
+                "ArialMT",
+                "SegoeUI",
+                "Tahoma",
+                "LiberationSans",
+                "DejaVuSans",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
             ..Self::default()
         }
     }
@@ -127,6 +156,28 @@ impl FontDb {
                 .map(PathBuf::from),
             );
             dirs.extend(fp_i18n::profile::mac_user_fonts_dir());
+        } else if cfg!(unix) {
+            // Linux/BSD: System-, lokale und Benutzerschriften; die Ordner sind dort verschachtelt
+            // (z. B. truetype/dejavu), daher mit allen Unterordnern
+            let env = |k: &str| {
+                std::env::var_os(k)
+                    .filter(|v| !v.is_empty())
+                    .map(PathBuf::from)
+            };
+            let home = env("HOME");
+            let mut roots = vec![
+                PathBuf::from("/usr/share/fonts"),
+                PathBuf::from("/usr/local/share/fonts"),
+            ];
+            roots.extend(
+                env("XDG_DATA_HOME")
+                    .or_else(|| home.as_ref().map(|h| h.join(".local").join("share")))
+                    .map(|d| d.join("fonts")),
+            );
+            roots.extend(home.map(|h| h.join(".fonts")));
+            for r in roots {
+                collect_font_dirs(&r, 0, &mut dirs);
+            }
         } else {
             let windir = std::env::var_os("WINDIR")
                 .map(PathBuf::from)

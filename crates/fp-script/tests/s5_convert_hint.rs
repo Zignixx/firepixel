@@ -15,6 +15,9 @@ const NEW: &str = "var dom = fw.createFirepixelDocument({x: 800, y: 600}, {pixel
 /// `pixelRect` rechts 106 (vorher ungehintet 104,868–106,408 → 107).
 #[test]
 fn convert_to_paths_tx2_is_hinted() {
+    if !has_myriad() {
+        return;
+    }
     let src = format!(
         "{NEW} dom.addNewText({{left: 50, top: 150, right: 250, bottom: 198}}, true);\n\
          dom.setTextRuns({{initialAttrs: {{face: 'MyriadPro-Regular', size: '14pt'}}, textRuns: [{{changedAttrs: {{}}, characters: 'Zeile eins\\rZeile zwei\\rZeile drei'}}]}});\n\
@@ -31,11 +34,6 @@ fn convert_to_paths_tx2_is_hinted() {
         .split(',')
         .map(|x| x.parse().unwrap_or(f64::NAN))
         .collect();
-    if !fp_text_has_myriad() {
-        // Schrift-Ersatz: nur Lage grob prüfen
-        assert!((v[2] - 106.0).abs() <= 3.0, "{r}");
-        return;
-    }
     assert_eq!(v[2], 106.0, "pixelRect rechts 106 wie im Original: {r}");
     assert_eq!((v[0], v[1], v[3]), (50.0, 150.0, 194.0), "{r}");
     let xs: Vec<&str> = xs.split(',').collect();
@@ -51,8 +49,14 @@ fn convert_to_paths_tx2_is_hinted() {
     );
 }
 
-fn fp_text_has_myriad() -> bool {
-    std::env::var_os("WINDIR")
-        .map(std::path::PathBuf::from)
-        .is_some_and(|w| w.join("Fonts").join("MyriadPro-Regular.otf").exists())
+/// Myriad Pro installiert? Die Metrik-Werte stammen aus dem Original mit Myriad Pro; ohne die Schrift
+/// (z. B. auf den macOS-/Linux-Testläufern) wird der Test übersprungen.
+fn has_myriad() -> bool {
+    let ok = fp_text::FontDb::shared()
+        .find_ps("MyriadPro-Regular")
+        .is_some();
+    if !ok {
+        eprintln!("skipped: MyriadPro-Regular not installed");
+    }
+    ok
 }

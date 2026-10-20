@@ -38,9 +38,22 @@ fn now() -> chrono::NaiveDateTime {
         .expect("date")
 }
 
+/// Turns a Windows-style test path (`C:\in\x.png`) into a platform-native absolute
+/// path: unchanged on Windows, `/in/x.png` elsewhere, so the expected names stay the same everywhere.
+fn native(path: &str) -> PathBuf {
+    if cfg!(windows) {
+        return PathBuf::from(path);
+    }
+    let rest = match path.as_bytes() {
+        [d, b':', ..] if d.is_ascii_alphabetic() => &path[2..],
+        _ => path,
+    };
+    PathBuf::from(rest.replace('\\', "/"))
+}
+
 fn info(path: &str) -> ItemInfo {
     ItemInfo {
-        path: PathBuf::from(path),
+        path: native(path),
         root: None,
         kind: ItemKind::Image,
         format: "png".into(),
@@ -611,7 +624,7 @@ fn same_names_from_two_folders_and_extension_options() {
     r.output.format = "jpeg".into();
     r.output.target = TargetSpec {
         kind: TargetKind::Folder,
-        path: Some(PathBuf::from("Z:\\nowhere\\out")),
+        path: Some(native("Z:\\nowhere\\out")),
         keep_structure: false,
         ..TargetSpec::default()
     };
@@ -676,7 +689,7 @@ fn plan_of_10000_files_is_fast() {
     r.output.format = "webp".into();
     r.output.target = TargetSpec {
         kind: TargetKind::Folder,
-        path: Some(PathBuf::from("Z:\\nowhere\\out")),
+        path: Some(native("Z:\\nowhere\\out")),
         ..TargetSpec::default()
     };
     r.rename.parts.push(NamePart::Counter {

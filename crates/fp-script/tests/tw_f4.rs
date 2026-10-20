@@ -3,6 +3,18 @@
 
 use fp_script::{ScriptOptions, run_source};
 
+/// Myriad Pro installiert? Die Metrik-Werte stammen aus dem Original mit Myriad Pro; ohne die Schrift
+/// (z. B. auf den macOS-/Linux-Testläufern) wird der Test übersprungen.
+fn has_myriad() -> bool {
+    let ok = fp_text::FontDb::shared()
+        .find_ps("MyriadPro-Regular")
+        .is_some();
+    if !ok {
+        eprintln!("skipped: MyriadPro-Regular not installed");
+    }
+    ok
+}
+
 fn result(src: &str) -> String {
     let mut s = fp_engine::Session::default();
     let o = run_source(&mut s, src, &ScriptOptions::default());
@@ -24,6 +36,9 @@ fn rect(r: &str) -> [f64; 4] {
 /// Original 50,150–107,194 (Läufer menu-text/06).
 #[test]
 fn text_pixel_rect_is_ink() {
+    if !has_myriad() {
+        return;
+    }
     let src = format!(
         "{NEW} dom.addNewText({{left: 50, top: 150, right: 250, bottom: 198}}, true);\n\
          dom.setTextRuns({{initialAttrs: {{face: 'MyriadPro-Regular', size: '14pt'}}, textRuns: [{{changedAttrs: {{}}, characters: 'Zeile eins\\rZeile zwei\\rZeile drei'}}]}});\n\

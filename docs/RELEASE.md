@@ -91,8 +91,13 @@ that differs on another OS (BA-083, e.g. the Lanczos resampler) shows up directl
 artifact `tests-macos` / `tests-linux` (`summary-<os>.txt`: result lines, failures and assertion
 messages, last 150 lines; plus the full `cargo-test.log`) and writes the result and failure lines to
 the run's summary page. The other crates (among them `fp-ui` and the GUI exe) are tested by the
-Windows CI only. No test in this job opens a window; text tests skip or fall back when the reference
-fonts are missing (on Linux the font index finds no system fonts at all).
+Windows CI only. No test in this job opens a window. The Linux job installs `fonts-liberation` and
+`fonts-dejavu-core`, because the text and script tests need at least one sans font (the font index
+reads `/usr/share/fonts`, `/usr/local/share/fonts`, `~/.local/share/fonts` and `~/.fonts` with their
+subfolders); macOS uses its system fonts. Tests that compare against the reference font's metrics
+(Myriad Pro: tw02_textruns, tw_f4 `text_pixel_rect_is_ink`, s5_convert_hint) skip themselves when the
+font is not installed. Test input paths are built platform-natively (`C:\in\x.png` on Windows,
+`/in/x.png` elsewhere).
 
 ## Notes
 

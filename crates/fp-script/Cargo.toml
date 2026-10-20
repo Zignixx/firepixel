@@ -26,6 +26,10 @@ thiserror = { workspace = true }
 # reine Rust-JS-Engine; ohne ICU/Temporal, mit Annex B (Altsyntax wie in SpiderMonkey 1.x)
 boa_engine = { version = "0.22", default-features = false, features = ["annex-b"] }
 
+[dev-dependencies]
+# Tests mit Myriad-Pro-Metrik prüfen, ob die Schrift installiert ist
+fp-text = { workspace = true }
+
 [features]
 default = ["formats"]
 # Import fremder Formate (fp-io) und Export GIF/JPEG/WebP/AVIF/… (fp-export); ohne: nur FW-PNG/PNG

@@ -33,9 +33,22 @@ fn now() -> chrono::NaiveDateTime {
         .expect("date")
 }
 
+/// Turns a Windows-style test path (`C:\in\x.png`) into a platform-native absolute
+/// path: unchanged on Windows, `/in/x.png` elsewhere, so the expected names stay the same everywhere.
+fn native(path: &str) -> PathBuf {
+    if cfg!(windows) {
+        return PathBuf::from(path);
+    }
+    let rest = match path.as_bytes() {
+        [d, b':', ..] if d.is_ascii_alphabetic() => &path[2..],
+        _ => path,
+    };
+    PathBuf::from(rest.replace('\\', "/"))
+}
+
 fn info(path: &str) -> ItemInfo {
     ItemInfo {
-        path: PathBuf::from(path),
+        path: native(path),
         root: None,
         kind: ItemKind::Image,
         format: "png".into(),

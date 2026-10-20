@@ -241,10 +241,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # fonts-liberation + fonts-dejavu-core: the text/script tests need at least one sans font
+      # (fp-text reads /usr/share/fonts); tests that need the reference font's metrics skip without it
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends pkg-config nasm
+          sudo apt-get install -y --no-install-recommends pkg-config nasm fonts-liberation fonts-dejavu-core
 
       - name: Rust stable
         run: |
