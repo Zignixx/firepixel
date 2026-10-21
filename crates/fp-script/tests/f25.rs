@@ -1,5 +1,5 @@
 //! F25: Deckkraft 8-bittig (Nutzerentscheidung 17.10., re 29 §7), TW-02 Textläufe nach einer Bearbeitung
-//! (Lauf 10 `menu-text/02,03,15,19`) und Enter auf der Leinwand (Lauf 10 `xs-shortcuts/22`).
+//! (Lauf 10 `menu-text/02,03,15,19`) und Enter auf der Leinwand (TW-189, run 31 `xs-shortcuts/22`).
 //! Die Fälle mit `par_text.fw.png` werden übersprungen, wenn die Testdatei fehlt (anderer Rechner).
 
 use fp_engine::{Session, ToolEvent, ToolKey};
@@ -195,7 +195,7 @@ fn edited_text_reports_all_attrs_and_32bit_leading() {
 // ------------------------------------------------------------------ Enter auf der Leinwand
 
 #[test]
-fn enter_on_canvas_with_group_selected_clears_selection() {
+fn enter_on_canvas_with_group_selected_keeps_selection() {
     let mut s = Session::default();
     run(
         &mut s,
@@ -210,17 +210,25 @@ fn enter_on_canvas_with_group_selected_clears_selection() {
         ),
         "[object Group]"
     );
+    let rows = s.active().map(|d| d.history.undo_count()).unwrap_or(0);
     s.tool_event(&ToolEvent::key(ToolKey::Enter))
         .expect("Enter");
-    // Lauf 10 `xs-shortcuts/22`: Original `null`
+    // TW-189 (run 31 `xs-shortcuts/22`, real Enter key): the reference keeps the group selected;
+    // run 10's `null` came from an Enter that arrived as a letter.
     assert_eq!(
         run(
             &mut s,
             "fw.selection.length ? fw.selection[0].toString() : null"
         ),
-        "null"
+        "[object Group]"
     );
-    // Enter ohne Auswahl tut nichts
+    assert_eq!(
+        s.active().map(|d| d.history.undo_count()).unwrap_or(0),
+        rows,
+        "no History row"
+    );
+    // Enter without a selection does nothing
+    run(&mut s, "fw.getDocumentDOM().selectNone(); 0");
     s.tool_event(&ToolEvent::key(ToolKey::Enter))
         .expect("Enter");
     assert_eq!(run(&mut s, "fw.selection.length"), "0");

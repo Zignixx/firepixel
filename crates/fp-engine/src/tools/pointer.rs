@@ -1773,23 +1773,9 @@ impl ToolMachine for PointerTool {
                             ToolResponse::default()
                         }
                     }
-                    // Enter auf der Leinwand hebt die Auswahl auf wie im Original (Lauf 10
-                    // `xs-shortcuts/22`: gewählte Gruppe + Enter → `fw.selection` leer); eine einzelne
-                    // Bitmap bleibt wie bei Esc gewählt (Bitmapmodus, `xs-shortcuts/12`).
-                    ToolKey::Enter if self.state == PState::Idle => {
-                        let single_bitmap = ctx.selection.elements.len() == 1
-                            && docops::element_on_page(
-                                ctx.doc,
-                                ctx.page,
-                                ctx.selection.elements[0],
-                            )
-                            .is_some_and(|e| matches!(e.kind, fp_model::ElementKind::Bitmap(_)));
-                        if ctx.selection.is_empty() || single_bitmap {
-                            ToolResponse::default()
-                        } else {
-                            ToolResponse::commit(vec![Invocation::new("select.none", json!({}))])
-                        }
-                    }
+                    // Enter on the canvas with the Pointer idle changes nothing: the selection
+                    // (group, single object or bitmap) stays as it is, no command, no History row
+                    // (TW-189, measured with the real Enter key in run 31, `xs-shortcuts/22`).
                     _ => ToolResponse::default(),
                 }
             }
