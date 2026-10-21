@@ -1146,3 +1146,30 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   in `15_in_text_tx2` (existing text TX2) the reference lost the typed "V" or the following plain R in 3 of 4 runs
   (full run and three single-step reruns; once both arrived like Firepixel's "Vr"); new texts and the probe never
   lost a key, and run 30 lost first keys on the vk path in `tool-text` too (TW-146 rest, not shown to be path related).
+
+## R-28 additions (21 Oct 2026)
+
+- **View ▸ Tooltips off in Firepixel (TW-190):** Firepixel draws its coordinate tag "x:… y:…" at the pointer while
+  View ▸ Tooltips is on (default on since TW-184); the reference's switch is off during the runs, so 35 canvas pairs
+  of run 31 carried the tag on one side only. After every Firepixel start (unit start, restart after a crash) the
+  runner reads the switch with `describe_command view.tooltips` (`checked`), runs the command `view.tooltips` when
+  it differs from config `fp.view_tooltips` (default false) and reads it back; log line `fp View > Tooltips: switched
+  on -> off (view.tooltips, wanted off)` or `… off already`. Not restored at the end: the instance and its profile are
+  private to the unit and the state is not stored in the profile.
+- **No hover tooltip in flyout shots (TW-190, `toolbox/02_flyouts_*`):** after the press-and-hold that opens a tool
+  flyout (`open` of a target with `hold_ms`) the pointer rested on the tool button, and the description tooltip
+  (0.6 s delay) lay over the flyout in the shot (+1.2 to +25.7 points). The Firepixel side now sends `pointer_gone`
+  after the hold: the flyout stays open (it closes only on a click outside), no row is hovered, no tooltip appears.
+  Log line `fp toolbox.<x>_flyout: pointer off the window after the hold`.
+- **No re-selection before a checked key (TW-191):** the R-14 key check re-selected the step's last `select` on the
+  reference side when Delete / Backspace / an arrow found nothing selected (`xs-shortcuts/02`: Delete after Ctrl+A /
+  Ctrl+D removed the three R1 in the reference, nothing in Firepixel). With the real keys of R-27 this is not needed:
+  the key is pressed as scripted on both sides (`key_check` carries `reselect: "nothing selected - key pressed as
+  scripted …"`, log line `orig key Delete: nothing selected - pressed as scripted`). Config `orig.key_reselect: true`
+  restores the old re-selection. The focus-click retry for a key without effect on an existing selection is unchanged.
+- **Preferences category row on the Firepixel side (Q-60, `xs-preferences/20_tab_focus_focus`):** `{"pref_category":
+  "Allgemein"}` took the first `ui_find` hit, the bold page heading (painted text, `source: "text"`) drawn after the
+  list; the click on it took the keyboard focus away and the following Down did nothing, while the reference clicked
+  the list row. The Firepixel side now takes the hit with `source: "accesskit"` (the row's accessibility node; up to
+  three tries, then the first hit as before) and logs `fp pref_category <name>: list row [..] (accesskit, n other
+  hit(s) left out)`.

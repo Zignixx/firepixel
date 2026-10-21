@@ -130,6 +130,36 @@ class Firepixel:
         self.url, self.token = info["url"], info["token"]
         self.initialize()
         self.place()
+        self.view_tooltips_reset()
+
+    def view_tooltips_state(self) -> bool | None:
+        """Check state of View > Tooltips (`view.tooltips`, the coordinate tag "x:.. y:.." at the pointer)."""
+        val, _ = self.call("describe_command", {"name": "view.tooltips"}, timeout=20)
+        v = val.get("checked") if isinstance(val, dict) else None
+        return None if v is None else bool(v)
+
+    def view_tooltips_reset(self):
+        """R-28 (TW-190): the reference's View > Tooltips switch is off during the runs, Firepixel's defaults to on
+        (TW-184) and drew its coordinate tag into the canvas shots. After every start (unit start, restart after a
+        crash) the switch is set to `view_tooltips` (config, default false) with the command `view.tooltips` when its
+        read-back state differs, then read back again. Not restored: the instance and its profile are private to the
+        run and the state is not stored in the profile."""
+        want = bool(self.cfg.get("view_tooltips", False))
+        try:
+            before = self.view_tooltips_state()
+            if before is None:
+                self.log("fp View > Tooltips: state not readable (describe_command gave no `checked`) - left as is")
+                return
+            if before == want:
+                self.log(f"fp View > Tooltips: {'on' if before else 'off'} already (wanted {'on' if want else 'off'})")
+                return
+            self.call("run_command", {"name": "view.tooltips"}, timeout=20)
+            after = self.view_tooltips_state()
+            self.log(f"fp View > Tooltips: switched {'on' if before else 'off'} -> {'on' if after else 'off'} "
+                     f"(view.tooltips, wanted {'on' if want else 'off'})"
+                     + ("" if after == want else " - NOT SWITCHED"))
+        except (BridgeError, OSError, ValueError) as e:
+            self.log(f"fp View > Tooltips: {e}")
 
     def hwnd(self) -> int | None:
         if not self.alive():

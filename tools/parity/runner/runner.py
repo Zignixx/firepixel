@@ -2937,8 +2937,15 @@ class OrigSide(Side):
         rec = {"key": combo, "kind": kind, "focus": {"class": f.get("class"), "text": f.get("title"),
                "parent": (f.get("parent") or {}).get("class")}, "before": st0}
         if int(st0.get("sel") or 0) == 0 and kind != "deselect" and getattr(self, "last_select", None):
-            rec["reselected_before"] = self.restore_selection(kind, st0)
-            st0 = rec["before_reselected"] = self.key_state()
+            # R-28 (TW-191, run 31 xs-shortcuts/02: Delete after Ctrl+A / Ctrl+D re-selected R1 on the reference side
+            # only and removed the three R1, Firepixel's Delete with nothing selected removed nothing): the key is
+            # pressed as scripted, like on the Firepixel side; `orig.key_reselect: true` restores the R-14 re-selection
+            if self.r.cfg["orig"].get("key_reselect", False):
+                rec["reselected_before"] = self.restore_selection(kind, st0)
+                st0 = rec["before_reselected"] = self.key_state()
+            else:
+                rec["reselect"] = "nothing selected - key pressed as scripted (no re-selection, like Firepixel)"
+                self.r.log(f"  orig key {combo}: nothing selected - pressed as scripted (no re-selection)")
         self.key(combo, log_tool=False)
         time.sleep(0.25)
         st1 = rec["after"] = self.key_state()
@@ -6330,6 +6337,26 @@ class FpSide(Side):
                         if target.get("icon"):
                             return [hit["rect"][0] - float(target.get("icon_dx", 12)), hit["center"][1]]
                         return hit["center"]
+                    if k == "pref_category":
+                        # R-28 (Q-60, xs-preferences/20_tab_focus_focus): the first ui_find hit was the bold page
+                        # heading (painted text, `source: "text"`), not the list row; a click on it took the keyboard
+                        # focus away and the following Down did nothing. The row's accessibility node is taken
+                        hits = []
+                        for _ in range(3):
+                            for exact in (True, False):
+                                hits = (self.call("ui_find", {"text": clean_label(str(v)), "exact": exact, "limit": 20})
+                                        or {}).get("hits") or []
+                                if hits:
+                                    break
+                            if any(h.get("source") == "accesskit" for h in hits):
+                                break
+                            time.sleep(0.4)
+                        row = next((h for h in hits if h.get("source") == "accesskit"), None)
+                        if row:
+                            self.r.log(f"  fp pref_category {v}: list row {[round(x) for x in row['rect']]} (accesskit"
+                                       f", {len(hits) - 1} other hit(s) left out)")
+                            return at(row)
+                        self.r.log(f"  fp pref_category {v}: no accesskit row among {len(hits)} hit(s) - first hit")
                     try:
                         if region:
                             try:
@@ -7198,8 +7225,17 @@ class FpSide(Side):
             except Exception:  # noqa: BLE001
                 self.open_before = None
         if loc.get("hold_ms") and verb in ("click", "open"):
-            self.inp([{"type": "move", "pos": pos}, {"type": "down"}, {"type": "wait", "ms": int(loc["hold_ms"])},
-                      {"type": "up"}, {"type": "wait", "ms": 250}])
+            ev = [{"type": "move", "pos": pos}, {"type": "down"}, {"type": "wait", "ms": int(loc["hold_ms"])},
+                  {"type": "up"}, {"type": "wait", "ms": 250}]
+            if verb == "open":
+                # R-28 (TW-190, run 31 toolbox/02_flyouts_*): the pointer resting on the tool button / first row put
+                # the button's or row's description tooltip (0.6 s delay) over the flyout in the shot; the reference
+                # shows none. The pointer leaves the window (pointer_gone): the flyout stays open (it closes only on a
+                # click outside), no row is hovered, no tooltip
+                ev += [{"type": "pointer_gone"}, {"type": "wait", "ms": 100}]
+                self.r.log(f"  fp {arg if isinstance(arg, str) else ''}: pointer off the window after the hold "
+                           f"(no hover tooltip in the shot)")
+            self.inp(ev)
             return
         if verb in ("hover", "hover_text", "canvas_hover", "canvas_move"):
             ev = [{"type": "move", "pos": pos}]
