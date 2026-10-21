@@ -121,7 +121,9 @@ Full run 30 (20/21 Oct 2026, 49 units, runner R-26, preview `2026-10-20_19-06`) 
 TW-174 (runner) and the questions Q-58 and Q-59 ([FINDINGS.md](FINDINGS.md)).
 Follow-up run 31 (21 Oct 2026, 8 units, runner R-27, preview `2026-10-21_06-27`) confirmed TW-173 and TW-189, closed
 TW-188 as a runner matter and added TW-190 and TW-191 (runner) and the questions Q-60 and Q-61.
-The open checks below come from runs 17 to 31.
+Follow-up run 32 (21 Oct 2026, 3 units, runner R-28, preview `2026-10-21_08-16`) confirmed TW-189 (fixed in F55) and
+closed TW-190, TW-191 and Q-60 (runner matters).
+The open checks below come from runs 17 to 32.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -211,13 +213,13 @@ The open checks below come from runs 17 to 31.
   **Expected:** Ctrl+Y with an empty redo stack repeats a repeatable last command (here the Clone) as in the reference; the redo-only cases of TW-170 stay equal.
 - [ ] **TW-174** (`panel-layers/04`, `panel-swatches-mixer/19`; runner) – run 30: the reference's docked panels had other sizes than in runs 24 and 25 (Layers panel shot 270 × 113 px, was 245 × 389), so its eye drag left two layers visible and swatch 5 read #ffffbf instead of #efffbf; Firepixel unchanged.
   **Expected:** The reference starts each panel unit with a fixed panel layout; both steps read the same rows as in run 25.
-- [ ] **TW-189** (`xs-shortcuts/22_enter_canvas_result`; real deviation; needs: fix in the Pointer tool, follow-up run over `xs-shortcuts`) – R-27 test run and run 31: with the group G of T06 selected, Enter keeps the group selected in the reference (`[object Group]`); Firepixel reads no selection.
+- [x] **TW-189** (`xs-shortcuts/22_enter_canvas_result`; fixed in F55 `f543d7b9`) – confirmed in run 32: Enter keeps the group selected in both programs (`[object Group]` on both sides). R-27 test run and run 31: with the group G of T06 selected, Enter keeps the group selected in the reference (`[object Group]`); Firepixel reads no selection.
   **Expected:** Enter on the canvas leaves the selection unchanged; both read `[object Group]`.
-- [ ] **TW-190** (canvas pairs of all units, `toolbox/02_flyouts_*`; runner) – run 31: Firepixel's shots carry the View ▸ Tooltips coordinate tag (on by default since TW-184) and the flyout description tooltip; the reference's tag is switched off.
+- [x] **TW-190** (canvas pairs of all units, `toolbox/02_flyouts_*`; runner R-28 `4e1a35af`) – closed by run 32: View ▸ Tooltips is off in Firepixel at each unit start, its canvas shots are pixel-identical to run 30 and its flyout shots carry no tooltip. Run 31: Firepixel's shots carry the View ▸ Tooltips coordinate tag (on by default since TW-184) and the flyout description tooltip; the reference's tag is switched off.
   **Expected:** View ▸ Tooltips in the same state on both sides at unit start; flyout shots without the description tooltip; Firepixel's canvas shots pixel-identical to run 30.
-- [ ] **TW-191** (`xs-shortcuts/02_edit_result`; runner) – run 31: the reference's key check re-selected R1 before the final Delete and deleted the three R1; Firepixel's Delete with nothing selected did nothing.
+- [x] **TW-191** (`xs-shortcuts/02_edit_result`; runner R-28 `4e1a35af`) – closed by run 32: no re-selection on either side; the Delete removes nothing and both documents keep 9 elements. Run 31: the reference's key check re-selected R1 before the final Delete and deleted the three R1; Firepixel's Delete with nothing selected did nothing.
   **Expected:** the key is pressed as scripted on both sides; both documents keep 9 elements.
-- [ ] **Q-60** (`xs-preferences/20_tab_focus_focus`) – run 31: after a click on "Allgemein" the real Down moves the reference's category list to "Bearbeitung"; Firepixel stays on "Allgemein" without a focus frame.
+- [x] **Q-60** (`xs-preferences/20_tab_focus_focus`; runner R-28, F55 UI test `q60_pref_category_click`) – closed by run 32 as a runner matter: the runner's click had hit the page heading; with the list row the Down moves both lists to "Bearbeitung". Run 31: after a click on "Allgemein" the real Down moves the reference's category list to "Bearbeitung"; Firepixel stays on "Allgemein" without a focus frame.
   **Expected:** after a click on a category, Down selects the next category in both programs (check by UI test and by hand).
 
 Questions answered after run 16: **Q-49** (the colour pop-up HEX field now parses every keystroke like the
