@@ -573,6 +573,11 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
 - **Key scan codes:** the host sends every virtual key (`Combo`, held modifiers) with its scan code
   (`MapVirtualKey`, Escape = 0x01). With scan code 0 an Escape after typed text left a stray "c" in the reference's
   text (`xs-shortcuts/15` "Vrc", `tool-text/07` "Hallo Weltc"); both steps log the texts before Escape now.
+  **R-27 correction:** the stray "c" was not caused by the scan code or by the reference: the host's `Combo` sent
+  every unmodified named key as the last letter of its name (Delete -> E = Eraser, Right -> T = Text, Down -> N =
+  Line, Up -> P = Pen, Escape -> E, `esc` -> C = Crop, Enter -> R); the bug was in the host from its first version in
+  this repository and was fixed in R-27, so the cleanup's plain `esc` arrived as the letter C. Since R-27 the real
+  Escape ends the edit without a stray character.
 - **`xs-shortcuts/15_in_text_result`** is `unsupported` on both sides (TX1 of T05 has zero width and an invalid
   pixelRect in the reference file; T05 needs a rebuild); `15_in_text_tx2_result` does the same on TX2.
 
@@ -648,11 +653,18 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   - host verb `view_focus`: keyboard focus to the document view (`SetFocus` with attached input, no click). The runner
     uses it before every plain key (no Ctrl/Alt) and before the cleanup Escapes when the frame itself holds the
     focus (an open editor, a panel field or a dialog keep theirs); a failure is logged.
+  - **R-27 correction:** the key-name hypothesis above was wrong and the reference was never at fault: the host's
+    `Combo` sent every unmodified named key as the last letter of its name (Delete -> E = Eraser, Right -> T = Text,
+    Down -> N = Line, Up -> P = Pen, Escape -> E, `esc` -> C = Crop, Enter -> R); the bug was in the host from its
+    first version in this repository and was fixed in R-27. `key_echo` looked right because it sends through `VkOf`
+    directly. The layout request and `view_focus` stay, but they were not the cause.
 - **Key check (TW-140):** after a checked key the pointer tool must still be active; otherwise the step record gets
   `runner_errors: ["tool switched by key: <tool> (key <combo>)"]`, the log `runner error: tool switched by key: …`, the
   key check `tool_switched`/`tool_switched_retry`, and the pointer tool is chosen again. Such a key never counts as
   an effect; an arrow key counts only when the same number of objects stays selected with other rectangles (a dropped
   selection is no move). The log line shows the tool after the key.
+  **R-27 correction:** the tool switches this check reported up to run 30 came from the host bug fixed in R-27
+  (plain named keys sent as their last letter), not from the reference.
 - **Double-click (TW-140, `tool-text/06`):** the host sends all clicks of a double-click in one `SendInput` batch.
   After a pointer double-click on the canvas the runner reads `fw.activeTool` and whether one text is selected;
   a selected text with the pointer still active means no editor: the double-click is sent once more, values
@@ -696,6 +708,8 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   - the `key_echo` self test (fixed in R-16) is repeated at the next unit when no echo came back (3 units at most);
     the second echo runs only when the layout request sent a change. `selftest_host.ps1` also runs `key_probe` and
     `layout` without `want` (nothing is posted).
+  - **R-27 correction:** the switches these lines recorded (Delete -> Eraser and the like) were the host bug fixed in
+    R-27 (plain named keys sent as their last letter), not the reference's handling of the keys.
 - **Text tool attributes (TW-140):** R-15's scratch-document reset (`setTextRuns`) did not reach the tool's defaults
   (36 pt bold italic underlined before and after in all seven units of run 20). Replaced by the UI path, with the
   unit's first document (the tools column anchor needs a document view): nothing selected, text tool from the tools
@@ -762,6 +776,13 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   list `substituted: [{verb, arg, method}]`. `key_check` (R-14) does not run for a replaced key. Config
   `orig.key_substitutes: false` sends the real keys again (R-27: the default; the keys were mangled by the host, see R-27). The windows open at step start are taken as permanent
   (`step_windows`), so only windows that appear during the step keep a key real.
+  **R-27 correction:** the premise of this table was wrong: the reference does not take these keys as tool shortcuts.
+  The host's `Combo` sent every unmodified named key as the last letter of its name (Delete -> E = Eraser, Right -> T
+  = Text, Down -> N = Line, Up -> P = Pen, Escape -> E, `esc` -> C = Crop, Enter -> R); the bug was in the host from
+  its first version in this repository and was fixed in R-27; the key echo, layout and probe lines were right because
+  they do not go through `Combo`. The substitutes are off by default since R-27 (`orig.key_substitutes: false`).
+  Values measured through them (Edit ▸ Clear, `moveSelectionBy`, Pointer tool clicks, `none` / `kept` for Escape) show
+  what the substitute did, not what the key does in the reference.
 - **Text editor ends without Escape:** the cleanup after a step with `type` (R-14) and the unit start no longer press
   Escape twice; when the text tool is active, the Pointer tool click ends the edit (`text_cleanup` / `unit start:
   orig key substitute: escape -> Pointer tool click`).
@@ -839,6 +860,9 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   selection is cleared by `orig.escape_deselect_method`: `"menu"` (default, `commands → select.none`, script
   `selectNone()` as fallback) or `"real_key"` (the real Escape, tool switch checked). The decision is logged once
   per run: `orig escape with a selection: orig.escape_deselects false -> …`. Without a selection Escape stays `none`.
+  **R-27 correction:** `kept` and `escape_not_comparable` go with the substitutes, which are off since R-27; the
+  "plain keys select tools" remark in the bullet above was the host bug fixed in R-27 (plain named keys sent as their
+  last letter). The real Escape keeps the selection in the reference (R-27 probe, `xs-shortcuts/21`).
 - **Nudges and History rows (TW-147 c, `panel-pages-states-history/16, 21`):** every `moveSelectionBy` substitute is a
   History row of its own in the reference. Step flag `"orig_nudge_keys": "shift"` (used by `21`, only the step count
   is compared): the reference side sends a real Shift+arrow (10 px) per plain arrow, method `real Shift+Right (10 px,
@@ -920,6 +944,9 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   action); `nudge: false` = always the real key. With another tool the arrow is `tool_key`: the real key, the tool
   read back; a tool switch (the key taken as a tool shortcut, not consumed) -> Pointer tool back and the step
   `unsupported` with the reason; no switch -> value `tool_key`. `tool-path-reshape/04` carries `nudge: false`.
+  **R-27 correction:** the tool switches `tool_key` guarded against were the host bug fixed in R-27 (a plain arrow
+  went out as the last letter of its name, Right -> T = Text, Down -> N = Line, Up -> P = Pen); since R-27 the
+  substitutes are off, every arrow is the real key and the `tool_key` switch check does not run.
 - **No plain arrows in `inspector-stroke/01_category_submenu_open` (TW-155 b):** the open category list's
   "Airbrush" entry is hovered (`hover {menu_item}`, wait 600 ms), which opens its submenu, on both sides.
 - **History read-back with one document (TW-155 c):** `menu-edit/01_undo_redo_result`, `09_clear_result`,
@@ -963,6 +990,8 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   `moveSelectedBezierPointsBy({x, y})` (the selected points move); the node coordinates of the selected paths
   (`PATH_NODES_JS`) are read before and after - changed = done (`script moveSelectedBezierPointsBy …` in the
   substitute log, value `points`), unchanged or an error (no point selected) -> `moveSelectionBy` as before.
+  **R-27 correction:** the Text tool of run 25 was not the reference's doing: the host sent the plain Right as the
+  letter T (bug fixed in R-27). Since R-27 the real arrow is sent (substitutes off).
 - **Freeform size keys (TW-159 c, run 25 `tool-path-reshape/04`: with `nudge: false` the real Up went through
   unchecked and switched Freeform -> Pen -> Vector Path -> Redraw Path):** `nudge: false` now plans `tool_key` (the
   real key, the tool read back, a switch -> Pointer tool back and the step `unsupported`). New step flag
@@ -971,6 +1000,9 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   during a drag. A switch all the same logs the Properties panel fields (`record_ui inspector.fields`) in the value
   `tool_key` and makes the step `unsupported` with the reason ("the size is compared by the Properties panel
   read-back only").
+  **R-27 correction:** the switch Freeform -> Pen -> Vector Path -> Redraw Path was the host bug fixed in R-27: every
+  plain Up went out as the letter P, which cycles the Pen group. The held-button hypothesis (also R-24) was built on
+  that bug; with real keys since R-27 it is unproven either way.
 - **Text tool size reset (TW-159 d, run 25 `menu-text`):** the unit-start reset was not skipped - it ran (22.8 s,
   bold / italic / underline cleared), but neither the size field nor the R-22 retry 24 -> 13 -> 12 reached the tool,
   so 24 pt from `inspector-text` stayed; the last key probes of `inspector-text` had left the keyboard focus in an

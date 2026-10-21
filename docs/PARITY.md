@@ -430,6 +430,10 @@ New: TW-158 (Firepixel's full screen mode keeps menu bar, tab and status bar; th
 on black) and TW-159 (runner: the reference's screen-mode read-back, a real arrow with the Subselection tool in
 `xs-shortcuts/10_nudge_point`, the Freeform size keys in `tool-path-reshape/04` and a 24 pt text size left by the
 reset in `menu-text`).
+*R-27 correction:* the real arrow that selected another tool in `xs-shortcuts/10_nudge_point` and the Freeform tool
+switches in `tool-path-reshape/04` (TW-159 b, c) were not the reference's handling of the keys: our reference host
+sent every unmodified named key as the last letter of its name (Delete -> E, Right -> T, Down -> N, Up -> P, Escape ->
+E or C, Enter -> R; TW-179, fixed in runner R-27).
 
 **What run 24 found.** The full run confirms the state of the follow-up runs in 46 of 48 old units with unchanged
 quota and values. Confirmed and closed: the History row labels decide **TW-148** against F46 (the reference lists one
@@ -448,6 +452,9 @@ also left 23 pt in eight units), TW-154 (Text Editor and Edit Guides have no key
 (plain arrow keys where they are no nudge, and the reference's History read-back in `menu-edit` with two documents
 open), TW-156 (screen-mode steps in `toolbox/13` without a defined start mode) and TW-157 (Select Behind: hover line on
 vector paths anti-aliased over two pixel rows instead of a crisp #E00000 line; frame shown right after a click).
+*R-27 correction:* the plain arrows of TW-155 a switched the reference's tools because our reference host sent every
+unmodified named key as the last letter of its name (Delete -> E, Right -> T, Down -> N, Up -> P, Escape -> E or C,
+Enter -> R; TW-179, fixed in runner R-27); since R-27 the arrows are real keys and the R-22 `tool_key` check is off.
 
 **What run 23 found.** Runner R-20 makes text entry on the reference side work in most steps: 14 of 17 new texts in
 `tool-text` are created as typed, the commit check confirms them, and drag selections are verified by highlight
@@ -462,6 +469,10 @@ suggests that the reference merges the three presses, against RE spec 51 and F46
 reference still loses the keys of 3 of 17 new texts and the "Q" after a double-click (TW-146 rest); Firepixel's text
 tool starts with Myriad Pro while the reference is reset to ArialMT (TW-149, runner); `xs-shortcuts/08` exceeds the
 90 s step limit (TW-150, runner).
+*R-27 correction:* the reference side of the Escape in `xs-shortcuts/21` was the runner's `kept` substitute, not a
+key, because our reference host sent every unmodified named key as the last letter of its name (Delete -> E, Right ->
+T, Down -> N, Up -> P, Escape -> E or C, Enter -> R; TW-179, fixed in runner R-27); the real Escape was first measured
+by R-27 and keeps the selection there too.
 
 **What run 22 found.** Runner R-19's substitutes work on the reference side: Edit ▸ Clear deletes R1
 (`menu-edit/09, 22`), `moveSelectionBy` nudges by 1 px with values equal to Firepixel's arrow keys
@@ -474,6 +485,10 @@ units (run 21: the colour stayed #808080). New runner artefacts: text entry on t
 `tool-text` (texts created by a click stay empty, the drag selection reads back nothing and its Ctrl+C inserts
 U+0003; TW-146), so the size rule for new text (TW-145) is still not compared; the Pointer slot holding Select Behind,
 the do-nothing Escape that leaves a selection, and script rows in the History that hide the nudge merge (TW-147).
+*R-27 correction:* the substitutes only replaced keys that failed because our reference host sent every unmodified
+named key as the last letter of its name (Delete -> E, Right -> T, Down -> N, Up -> P, Escape -> E or C, Enter -> R;
+TW-179, fixed in runner R-27); TW-140 was a runner bug, and the values of the substituted steps show what the
+substitute did, not what the reference does with the key. The real keys were measured from run 31 on.
 
 **What run 21 found.** Confirmed: Ctrl+Alt+Shift+S leaves the text "left" in both programs (TW-133), the URL panel
 menu reads the same labels, "..." flags and enabled states on both sides (TW-142), and with CR/LF kept in the
@@ -487,6 +502,10 @@ in an open text editor); with Shift no tool changes and Ctrl+D works. R-17's Pro
 reference's text tool to 12 pt regular (not the colour), and the "Q" typed after a double-click arrives. New: in
 `tool-text` Firepixel's new texts take the size set on a partial selection (the F43 rule from the RE spec), which the
 reference side cannot show while its selections fail (TW-145).
+*R-27 correction:* the reference did not take the keys as tool letters; our reference host sent every unmodified named
+key as the last letter of its name (Delete -> E, Right -> T, Down -> N, Up -> P, Escape -> E or C, Enter -> R; TW-179,
+fixed in runner R-27). The key-echo lines went through another path of the host and therefore looked right. With the
+fix the real keys work in the reference.
 
 **What run 20 found.** The fixes after run 19 are confirmed: both Histories list Clone, Copy, Paste (TW-137), a new
 text keeps the tool's 12 pt black after attributes were set on a partial selection (TW-138; `tool-text/14` now
@@ -500,6 +519,10 @@ unit start have no effect (36 pt bold italic underlined text in every unit). New
 report no enabled state and the reference's menu texts lack the "..." (TW-142, runner / bridge), the live read-back
 keeps the old bounds of an edited text until commit (TW-143), and the paragraph separator in text read-backs
 differs (`\r` vs. `\n`, TW-144).
+*R-27 correction:* the Eraser, the Text tool and the "c" after Escape, and probably the crop that was not applied (its
+commit was a plain Enter), come from the host bug fixed in runner R-27: our reference host sent every unmodified named
+key as the last letter of its name (Delete -> E, Right -> T, Down -> N, Up -> P, Escape -> E or C, Enter -> R;
+TW-179).
 
 **What run 19 found.** Runner R-14 makes the reference's dialogs, history and text read-backs visible: the
 warnings on Ctrl+Shift+B and Ctrl+Shift+I appear on both sides, the history read-back works, and the typed text of
@@ -512,6 +535,9 @@ partial selection for the next text (TW-138), and its scripting read-back sees t
 (TW-139). On the reference side, Delete selects the Eraser tool and the plain Right arrow the Text tool, and a "c"
 arrives after Escape (TW-140, runner); Firepixel's menu read-back still has no enabled state (TW-141, runner /
 bridge). `xs-preferences` (TW-134) was not part of run 19.
+*R-27 correction:* these reference-side key effects were our host's, not the reference's: our reference host sent
+every unmodified named key as the last letter of its name (Delete -> E, Right -> T, Down -> N, Up -> P, Escape -> E or
+C, Enter -> R; TW-179, fixed in runner R-27).
 
 **What run 18 found.** With both programs on the "Web Standard" set, Ctrl+Shift+D clones on both sides and the
 Clone-dependent steps are equal (TW-126 closed); per-slice export formats (TW-128), short panel menus (TW-125),
@@ -522,6 +548,9 @@ show that a pointer double-click on a text does not insert the typed character (
 the crop difference with the option measured as on in both programs (TW-134). The remaining differences are
 reference-side runner effects (TW-132: history read-back script error, Delete, Ctrl+D and plain arrow keys without
 effect, text-tool state carried between units).
+*R-27 correction:* Delete and the plain arrow keys had no effect because our reference host sent every unmodified
+named key as the last letter of its name (Delete -> E, Right -> T, Down -> N, Up -> P, Escape -> E or C, Enter -> R;
+TW-179, fixed in runner R-27); this bug was already in the host's first version.
 
 ## History of the headline figure
 
