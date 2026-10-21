@@ -5,7 +5,7 @@
 //! [`Overlay::Ghost`]), intelligente Hilfslinien beim Verschieben, Größe beim Skalieren, Winkel beim
 //! Drehen, Griff-Cursor je Griff.
 
-use super::snap::Snapper;
+use super::snap::{self, Snapper};
 use super::{
     Cursor, Invocation, Overlay, PointerKind, ToolContext, ToolEvent, ToolId, ToolInput, ToolKey,
     ToolMachine, ToolResponse, constrain_angle, dist, fmt_num, pt_json, rect_json, size_label,
@@ -1160,11 +1160,14 @@ impl PointerTool {
             PState::DraggingPoint {
                 start, hit, pull, ..
             } => {
-                // Point/handle drags are free like in the reference: delta = screen delta / zoom,
-                // no whole-pixel rounding (independent of `SnapToPixelGrid`); grid, guides and
-                // smart guides still snap when their View switch is on (re 55 §5.5)
+                // Point/handle drags: delta = screen delta / zoom like in the reference, rounded
+                // to whole document pixels only when View ▸ Snap to Pixels is on (default off).
+                // No smart-guide snap and no guide line (re 55 §7.3, measured at 1600 % and
+                // 100 %); grid and ruler guides snap when their View switch is on (re 55 §5.5, not
+                // measured yet).
                 let sp = Snapper::new(ctx, &[hit.id])
-                    .without_pixels()
+                    .without_smart()
+                    .with_pixels(snap::snap_to_pixels(ctx.prefs))
                     .point(Point::new(
                         hit.at.x + p.x - start.x,
                         hit.at.y + p.y - start.y,

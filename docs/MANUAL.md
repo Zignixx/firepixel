@@ -139,8 +139,10 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   image, and an image from another program is pasted as a bitmap. Also Duplicate, Clone, Insert,
   Preferences and Keyboard Shortcuts.
 - **View:** Magnification, Fit Selection/Fit All, Rulers, Grid, Guides, Smart Guides, Theme, Language.
-  *View ▸ Snap to Pixels* (Firepixel's own switch, on by default) rounds Pointer moves and Pen points to whole
-  pixels; Subselection point drags stay free. *Modify ▸ Snap to Pixel* (Ctrl+K) still snaps the selection once.
+  *View ▸ Snap to Pixels* (Firepixel's own switch, off by default) rounds anchors and handles dragged with the
+  Subselection tool to whole pixels; off, they move freely in steps of 1/zoom like in the original. Pointer moves
+  and Pen points always land on whole pixels. Dragged anchors do not snap to smart guides. *Modify ▸ Snap to
+  Pixel* (Ctrl+K) still snaps the selection once.
 - **Select, Modify, Text, Filters:** act on the selection. If a command is grayed out, running it
   via its shortcut shows the reason in the status bar. Commands that can always be chosen but find
   no suitable target (e.g. *Simplify...* without a path) report this with a warning, like the

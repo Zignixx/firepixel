@@ -146,9 +146,11 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Programmen als Bild zur Verfügung, ein Bild aus einem anderen Programm wird als Bitmap eingefügt.
   Dazu Duplizieren, Klonen, Objekt einfügen, Voreinstellungen und Tastaturbefehle.
 - **Ansicht:** Vergrößerung, Einpassen, Lineale, Raster, Hilfslinien, intelligente Hilfslinien,
-  Design, Sprache. *Ansicht ▸ An Pixeln einrasten* (ein eigener Schalter von Firepixel, ab Werk an) rundet
-  Verschiebungen mit dem Zeiger und die Punkte des Stifts auf ganze Pixel; Punkte mit der Teilauswahl ziehen bleibt
-  frei. *Modifizieren ▸ An Pixeln ausrichten* (Strg+K) richtet die Auswahl weiterhin einmalig aus.
+  Design, Sprache. *Ansicht ▸ An Pixeln einrasten* (ein eigener Schalter von Firepixel, ab Werk aus) rundet Anker
+  und Griffe, die mit der Teilauswahl gezogen werden, auf ganze Pixel; ausgeschaltet bewegen sie sich frei in
+  Schritten von 1/Zoom wie im Original. Verschiebungen mit dem Zeiger und die Punkte des Stifts liegen immer auf
+  ganzen Pixeln. Gezogene Anker rasten nicht an intelligenten Hilfslinien ein. *Modifizieren ▸ An Pixeln
+  ausrichten* (Strg+K) richtet die Auswahl weiterhin einmalig aus.
 - **Auswählen, Modifizieren, Text, Filter:** wirken auf die Auswahl. Ist ein Befehl grau, nennt die
   Statuszeile beim Ausführen über das Kürzel den Grund. Befehle, die immer anwählbar sind, aber
   kein passendes Ziel finden (z. B. *Vereinfachen…* ohne Pfad), melden das wie im Original mit einer

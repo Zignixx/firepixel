@@ -12,9 +12,19 @@ use fp_geom::{Point, Rect};
 use fp_model::ElementId;
 use fp_model::layer::LayerKind;
 
-/// Preference behind View ▸ Snap to Pixels (Firepixel's own switch, default on): whole-pixel
-/// rounding of Pointer moves, Pen points and the other users of [`Snapper`].
+/// Preference behind View ▸ Snap to Pixels (Firepixel's own switch, default off): whole-pixel
+/// rounding of anchor and handle drags with the Subselection tool (and of point drags with the
+/// Pointer). Off = free drags at 1/zoom like the reference (re 55 §5, §7.3). Pointer moves, Pen
+/// points and the other users of [`Snapper`] always round to whole pixels.
 pub const SNAP_TO_PIXELS_PREF: &str = "SnapToPixelGrid";
+
+/// Default of [`SNAP_TO_PIXELS_PREF`]: off, the reference drags points fractionally.
+pub const SNAP_TO_PIXELS_DEFAULT: bool = false;
+
+/// State of View ▸ Snap to Pixels.
+pub fn snap_to_pixels(prefs: &crate::prefs::Preferences) -> bool {
+    prefs.get_bool(SNAP_TO_PIXELS_PREF, SNAP_TO_PIXELS_DEFAULT)
+}
 
 /// Herkunft einer Fanglinie.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -137,7 +147,9 @@ impl Snapper {
             page: page_rect,
             smart,
             show_smart: v.show_smart_guides,
-            pixels: ctx.prefs.get_bool(SNAP_TO_PIXELS_PREF, true),
+            // whole pixels for Pointer moves, Pen points etc. (measured, re 55 §5.2, §7.4);
+            // point drags choose with [`Self::with_pixels`]
+            pixels: true,
         }
     }
 
@@ -147,9 +159,9 @@ impl Snapper {
         self
     }
 
-    /// Ohne Einrasten an ganzen Pixeln.
-    pub fn without_pixels(mut self) -> Snapper {
-        self.pixels = false;
+    /// Whole-pixel rounding on or off (point drags: View ▸ Snap to Pixels).
+    pub fn with_pixels(mut self, on: bool) -> Snapper {
+        self.pixels = on;
         self
     }
 
