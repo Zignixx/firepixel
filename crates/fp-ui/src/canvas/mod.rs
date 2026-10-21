@@ -1359,9 +1359,11 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
 }
 
 /// Coordinate tag of *View ▸ Tooltips* ("x:120 y:80", document pixels rounded like the Info
-/// panel): only while the switch is on and the pointer rests or moves over the canvas; hidden while
-/// a mouse button drags, the view pans, a guide moves or the context menu is open. Returns the
-/// screen position of the tag (below right of the pointer, clear of the cursor) and its text.
+/// panel): only while the switch is on and the pointer is over the canvas, also while a mouse
+/// button is held (RE spec 57 §4: the reference shows it while dragging a bitmap with the
+/// Pointer); hidden while the view pans, a guide is dragged, the context menu or a dialog is
+/// open. Returns the screen position of the tag (below right of the pointer, clear of the cursor)
+/// and its text.
 fn pointer_tag(
     ui: &Ui,
     st: &AppState,
@@ -1370,18 +1372,18 @@ fn pointer_tag(
     view: &fp_engine::ViewState,
     pointer_here: bool,
 ) -> Option<(Pos2, String)> {
-    if !st.session.ui.tooltips || !pointer_here || st.dialogs.any_open() {
+    if !st.session.ui.tooltips || st.dialogs.any_open() {
         return None;
     }
-    let busy = st.canvases.get(&id).is_some_and(|c| {
-        c.pointer_down
-            || c.panning
-            || c.guide_move.is_some()
-            || c.guide_drag.is_some()
-            || c.text_drag
-            || c.context.is_some()
+    let cc = st.canvases.get(&id);
+    // a drag that started on the canvas keeps the tag even if egui stops reporting hover
+    if !(pointer_here || cc.is_some_and(|c| c.pointer_down)) {
+        return None;
+    }
+    let busy = cc.is_some_and(|c| {
+        c.panning || c.guide_move.is_some() || c.guide_drag.is_some() || c.context.is_some()
     });
-    if busy || ui.input(|i| i.pointer.any_down()) {
+    if busy {
         return None;
     }
     let p = ui.ctx().pointer_hover_pos().filter(|p| area.contains(*p))?;

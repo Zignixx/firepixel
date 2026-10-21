@@ -183,8 +183,8 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
 - *View ▸ Gamma 1.8* shows the canvas brighter, as on a monitor with Macintosh gamma. The document and
   the export stay unchanged.
 - *View ▸ Tooltips* (on by default) shows the document coordinates ("x:120 y:80") in a small tag next
-  to the pointer while it is over the canvas; the tag hides while a mouse button is held. The switch does
-  not affect the tooltips of buttons and fields.
+  to the pointer while it is over the canvas, also while dragging (for example when moving an object with
+  the Pointer). The switch does not affect the tooltips of buttons and fields.
 - *Edit ▸ Paste* puts copied objects directly above the topmost selected object (in its layer; if an object
   inside a group is selected, above the group). Without a selection they go to the top of the active layer.
 - *Modify ▸ Mask ▸ Group as Mask* puts the mask group in the place of the lowest selected object; *Group*

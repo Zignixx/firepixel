@@ -3,7 +3,7 @@
 //! - Tools: "Name (shortcut)" plus a second line with a one-sentence description (Firepixel extension).
 //! - Inspector of the retouch tools: descriptive tooltips ("Brush size", "Edge softness", ...), not the labels.
 //! - View ▸ Tooltips: a coordinate tag "x:… y:…" next to the pointer over the canvas, only with the
-//!   switch on and not while a mouse button is held.
+//!   switch on, also while a mouse button is held (dragging).
 
 use egui::{Event, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
@@ -172,15 +172,17 @@ fn view_tooltips_body() {
     ev(&mut h, Event::PointerMoved(o + vec2(120.2, 80.2)));
     h.run_steps(1);
     assert_eq!(tag(&h).as_deref(), Some("x:120 y:80"));
-    // not while a mouse button is held (dragging)
+    // also while a mouse button is held (the reference shows it while dragging a bitmap)
     let p = o + vec2(200.2, 150.2);
     ev(&mut h, Event::PointerMoved(p));
     ev(&mut h, Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: true, modifiers: Default::default() });
+    assert_eq!(tag(&h).as_deref(), Some("x:200 y:150"), "button pressed");
     ev(&mut h, Event::PointerMoved(p + vec2(20.0, 10.0)));
-    assert_eq!(tag(&h), None, "hidden while dragging");
-    ev(&mut h, Event::PointerButton { pos: p + vec2(20.0, 10.0), button: PointerButton::Primary, pressed: false, modifiers: Default::default() });
+    ev(&mut h, Event::PointerMoved(p + vec2(40.0, 20.0)));
+    assert_eq!(tag(&h).as_deref(), Some("x:240 y:170"), "follows the pointer while dragging");
+    ev(&mut h, Event::PointerButton { pos: p + vec2(40.0, 20.0), button: PointerButton::Primary, pressed: false, modifiers: Default::default() });
     h.run_steps(2);
-    assert_eq!(tag(&h).as_deref(), Some("x:220 y:160"), "back after the release");
+    assert_eq!(tag(&h).as_deref(), Some("x:240 y:170"), "after the release");
     // switched off: no tag
     h.state_mut().state.run("view.tooltips", json!({}));
     h.run_steps(2);

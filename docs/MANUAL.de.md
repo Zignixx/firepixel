@@ -193,8 +193,8 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
 - *Ansicht ▸ Gamma 1.8* zeigt die Leinwand heller, wie auf einem Monitor mit Macintosh-Gamma. Dokument und
   Export bleiben unverändert.
 - *Ansicht ▸ QuickInfos* (Vorgabe: an) zeigt über der Leinwand neben dem Mauszeiger eine kleine Marke mit
-  den Dokumentkoordinaten („x:120 y:80“); bei gedrückter Maustaste ist sie ausgeblendet. Die Tooltips der
-  Knöpfe und Felder schaltet der Schalter nicht.
+  den Dokumentkoordinaten („x:120 y:80“), auch beim Ziehen (etwa beim Verschieben eines Objekts mit dem
+  Zeiger). Die Tooltips der Knöpfe und Felder schaltet der Schalter nicht.
 - *Bearbeiten ▸ Einfügen* legt kopierte Objekte direkt über das oberste gewählte Objekt (in dessen Ebene;
   ist ein Objekt in einer Gruppe gewählt, über die Gruppe). Ohne Auswahl landen sie oben in der aktiven Ebene.
 - *Modifizieren ▸ Maske ▸ Als Maske gruppieren* setzt die Maskengruppe an den Platz des untersten gewählten
