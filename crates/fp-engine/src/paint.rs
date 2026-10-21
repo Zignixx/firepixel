@@ -892,6 +892,69 @@ impl LivePaint {
     }
 }
 
+/// Preview tiles of a computed bitmap part (retouch live preview, FB-14a): over `area`, the pixels
+/// of `new` that differ from `base` (outside `base` = transparent, so a grown bitmap shows its new
+/// pixels), stored like [`LivePaint`] stores them: pixels whose coverage dropped are shown over
+/// the `backdrop` with the true value in `exact`, unchanged pixels stay transparent.
+pub(crate) fn diff_tiles(
+    new: &RgbaImage,
+    base: &RgbaImage,
+    area: IRect,
+    backdrop: Argb,
+    version: u64,
+) -> Vec<PaintTile> {
+    let backdrop = Backdrop(backdrop);
+    let mut tiles = Vec::new();
+    if area.is_empty() {
+        return tiles;
+    }
+    let (tx0, ty0) = (area.left.div_euclid(TILE), area.top.div_euclid(TILE));
+    let (tx1, ty1) = (
+        (area.right - 1).div_euclid(TILE),
+        (area.bottom - 1).div_euclid(TILE),
+    );
+    for ty in ty0..=ty1 {
+        for tx in tx0..=tx1 {
+            let trect = IRect::from_xywh(tx * TILE, ty * TILE, TILE, TILE);
+            let part = area.intersect(&trect);
+            if part.is_empty() {
+                continue;
+            }
+            let Ok(mut ti) = RgbaImage::new(trect) else {
+                continue;
+            };
+            let mut exact: Option<RgbaImage> = None;
+            for y in part.top..part.bottom {
+                for x in part.left..part.right {
+                    let n = new.get(x, y).unwrap_or([0; 4]);
+                    let o = base.get(x, y).unwrap_or([0; 4]);
+                    if n == o {
+                        continue;
+                    }
+                    let shown = if n[3] >= o[3] {
+                        n
+                    } else {
+                        over(n, backdrop.at(x, y))
+                    };
+                    if shown[3] != 0 && (shown != n || exact.is_some()) {
+                        let ex = exact.get_or_insert_with(|| ti.clone());
+                        ex.set_pixel(x, y, Rgba8::new(n[0], n[1], n[2], n[3]));
+                    }
+                    ti.set_pixel(x, y, Rgba8::new(shown[0], shown[1], shown[2], shown[3]));
+                }
+            }
+            tiles.push(PaintTile {
+                key: (tx, ty),
+                rect: trect,
+                image: Arc::new(ti),
+                exact: exact.map(Arc::new),
+                version,
+            });
+        }
+    }
+    tiles
+}
+
 /// `src` über einem deckenden Hintergrund.
 fn over(src: [u8; 4], bg: [u8; 4]) -> [u8; 4] {
     let a = src[3] as u32;

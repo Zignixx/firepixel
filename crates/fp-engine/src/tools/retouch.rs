@@ -1,6 +1,10 @@
 //! Pinselbasierte Bitmapwerkzeuge (10 §2.6): Weichzeichner, Scharfzeichner, Abwedler,
 //! Nachbelichter, Verwischen, Stempel, Farbe ersetzen, Rote Augen entfernen. Ziehen sammelt die
 //! Strichpunkte (Umschalt = gerade Linie), beim Loslassen wirkt `bitmap.retouch` auf die Bitmap.
+//! While dragging, the stroke is computed live on a copy of the target bitmap with the same code
+//! as the command, so releasing changes nothing more (FB-14a, RE spec 57 section 1). Over an
+//! editable bitmap the system cursor is hidden and only the tip outline shows the pointer; with
+//! nothing to edit the cursor is "not allowed" and no outline is drawn (RE spec 57 section 2).
 //! Durchmesser, Kante, Form, Intensität/Belichtung/Druck, Bereich und Toleranz kommen aus den
 //! Voreinstellungen des Werkzeugs (`BlurToolDiameter` …), die der Eigenschaften-Inspektor setzt.
 //! Stempel: Alt+Klick setzt die Quelle; der Versatz zur ersten Malstelle bleibt erhalten
@@ -99,90 +103,65 @@ pub struct RetouchTool {
     offset: Option<(f32, f32)>,
     /// Der letzte Zug wurde gemalt (Esc danach: „Bitmapmodus beenden“).
     painted: bool,
-    /// Stempel: Live-Vorschau (Zielbitmap beim Drücken, gerechnete Kopie; PAR 05/04).
-    live: Option<StampLive>,
+    /// There is an editable bitmap for the pointer (or, while dragging, for the stroke): tip
+    /// outline and hidden cursor; otherwise "not allowed" and no outline.
+    target_ok: bool,
+    /// Live preview of the running stroke (target bitmap at the press, computed copy; stamp
+    /// PAR 05/04, the other brush modes FB-14a).
+    live: Option<RetouchLive>,
 }
 
-/// Laufender Stempelzug: Ausgangsbild der Zielbitmap und die zuletzt gerechnete Vorschau.
+/// Running retouch stroke: original image of the target bitmap and the last computed preview.
 #[derive(Clone, Debug)]
-struct StampLive {
+struct RetouchLive {
     base: std::sync::Arc<fp_raster::RgbaImage>,
     sel: Option<fp_raster::Mask>,
+    /// The stroke reads pixels far from the brush (stamp source): compute on the whole image
+    /// instead of the part around the stroke.
+    whole: bool,
+    /// Smudge with "Entire document": the page rendered once at the press.
+    page: Option<std::sync::Arc<fp_raster::RgbaImage>>,
+    /// Canvas colour behind pixels whose coverage drops (see `paint::diff_tiles`).
+    backdrop: fp_color::Argb,
     preview: crate::paint::PaintPreview,
 }
 
-/// Kachelgröße der Stempel-Vorschau (feste Rasterlage je Kachel, wie die Mal-Vorschau).
-const STAMP_TILE: i32 = 128;
-
-fn next_stamp_stroke() -> u64 {
+fn next_live_stroke() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
     static N: AtomicU64 = AtomicU64::new(1 << 40);
     N.fetch_add(1, Ordering::Relaxed)
 }
 
-impl StampLive {
-    /// Rechnet den Zug auf eine Kopie der Zielbitmap und legt die geänderten Pixel als Kacheln ab.
-    fn update(&mut self, pts: &[Point], prm: &RetouchParams, offset: (f32, f32)) {
-        let mut img = (*self.base).clone();
-        crate::commands::stamp_image(
-            &mut img,
-            pts,
-            prm.size,
-            prm.round,
-            prm.soft,
-            prm.strength,
-            prm.spacing,
-            offset,
-            self.sel.as_ref(),
-        );
+impl RetouchLive {
+    /// Computes the stroke (parameters as sent by `bitmap.retouch` on release) on a copy of the
+    /// target bitmap and keeps the changed pixels as tiles. `false`: no live preview for this mode.
+    fn update(&mut self, pts: &[Point], params: &Value, size: f32) -> bool {
+        // part of the bitmap the stroke can touch, with room for the 3 x 3 neighbourhood of
+        // blur/sharpen, the smudge's work margin and the growth past the bitmap edge
+        let h = (size / 2.0).ceil() as i32 + 8;
         let reach = pts.iter().fold(fp_geom::IRect::default(), |r, p| {
-            let h = (prm.size / 2.0).ceil() as i32 + 2;
             let (x, y) = (p.x.floor() as i32, p.y.floor() as i32);
             r.union(&fp_geom::IRect::new(x - h, y - h, x + h + 1, y + h + 1))
         });
+        let mut img = if self.whole {
+            (*self.base).clone()
+        } else {
+            self.base.cropped(reach)
+        };
+        if !crate::commands::retouch_preview(
+            &mut img,
+            pts,
+            params,
+            self.base.bounds(),
+            self.sel.as_ref(),
+            self.page.as_deref(),
+        ) {
+            return false;
+        }
+        // the computed part, including pixels the stroke grew past the bitmap edge
         let area = reach.intersect(&img.bounds());
         let next_gen = self.preview.generation + 1;
-        let mut tiles = Vec::new();
-        if !area.is_empty() {
-            let (tx0, ty0) = (
-                area.left.div_euclid(STAMP_TILE),
-                area.top.div_euclid(STAMP_TILE),
-            );
-            let (tx1, ty1) = (
-                (area.right - 1).div_euclid(STAMP_TILE),
-                (area.bottom - 1).div_euclid(STAMP_TILE),
-            );
-            for ty in ty0..=ty1 {
-                for tx in tx0..=tx1 {
-                    let tr = fp_geom::IRect::from_xywh(
-                        tx * STAMP_TILE,
-                        ty * STAMP_TILE,
-                        STAMP_TILE,
-                        STAMP_TILE,
-                    );
-                    let Ok(mut t) = fp_raster::RgbaImage::new(tr) else {
-                        continue;
-                    };
-                    let part = tr.intersect(&area);
-                    for y in part.top..part.bottom {
-                        for x in part.left..part.right {
-                            if let (Some(n), Some(o)) = (img.get(x, y), self.base.get(x, y))
-                                && n != o
-                            {
-                                t.set_pixel(x, y, fp_color::Rgba8::new(n[0], n[1], n[2], n[3]));
-                            }
-                        }
-                    }
-                    tiles.push(crate::paint::PaintTile {
-                        key: (tx, ty),
-                        rect: tr,
-                        image: std::sync::Arc::new(t),
-                        exact: None,
-                        version: next_gen,
-                    });
-                }
-            }
-        }
+        let tiles = crate::paint::diff_tiles(&img, &self.base, area, self.backdrop, next_gen);
         self.preview = crate::paint::PaintPreview {
             bounds: area.to_rect(),
             generation: next_gen,
@@ -190,6 +169,7 @@ impl StampLive {
             target: self.preview.target,
             tiles: std::sync::Arc::new(tiles),
         };
+        true
     }
 }
 
@@ -204,23 +184,26 @@ impl RetouchTool {
             source: None,
             offset: None,
             painted: false,
+            target_ok: false,
             live: None,
         }
     }
 
+    /// Cursor: red eye the crosshair; the brush modes hide the system cursor over an editable
+    /// bitmap (the tip outline shows the pointer) and show "not allowed" otherwise (RE 57 §2).
     fn cursor(&self) -> Cursor {
         match self.id {
-            ToolId::RubberStamp => Cursor::Stamp,
             ToolId::RedEyeRemoval => Cursor::Crosshair,
-            _ => Cursor::Brush,
+            _ if self.target_ok => Cursor::Hidden,
+            _ => Cursor::NotAllowed,
         }
     }
 
-    /// Stempel: Vorschau beim Drücken beginnen (ausgewählte Bitmap als Ziel).
-    fn begin_stamp_live(&mut self, ctx: &ToolContext) {
+    /// Live preview at the press (target as `bitmap.retouch` chooses it; stamp PAR 05/04, the
+    /// other brush modes FB-14a). Red eye draws its rectangle instead.
+    fn begin_live(&mut self, ctx: &ToolContext, at: Point) {
         self.live = None;
-        let Some((id, e)) = crate::paint::target_bitmap(ctx.doc, ctx.page, &ctx.selection.elements)
-        else {
+        let Some((id, e)) = retouch_target(ctx, at) else {
             return;
         };
         let fp_model::ElementKind::Bitmap(b) = &e.kind else {
@@ -234,15 +217,90 @@ impl RetouchTool {
             .pixels
             .clone()
             .filter(|_| ctx.selection.has_pixels());
-        self.live = Some(StampLive {
+        // "Entire document": the smudge picks up the visible page; rendered once per stroke
+        let page = (self.id == ToolId::Smudge
+            && ctx.prefs.get_bool("SmudgeToolUseEntireDocument", false))
+        .then(|| {
+            crate::commands::smudge_page_source(ctx.doc, ctx.page, ctx.frame, ctx.renderer, &e)
+        })
+        .flatten()
+        .map(std::sync::Arc::new);
+        let backdrop = ctx
+            .doc
+            .pages
+            .get(ctx.page)
+            .map(|pg| pg.root.background)
+            .unwrap_or(fp_color::Argb(0xffff_ffff));
+        self.live = Some(RetouchLive {
             base: std::sync::Arc::new(base),
             sel,
+            whole: self.id == ToolId::RubberStamp,
+            page,
+            backdrop,
             preview: crate::paint::PaintPreview {
-                stroke: next_stamp_stroke(),
+                stroke: next_live_stroke(),
                 target: Some(id.0),
                 ..crate::paint::PaintPreview::default()
             },
         });
+    }
+
+    /// Recomputes the live preview for the points so far; a mode without preview drops it.
+    fn update_live(&mut self, ctx: &ToolContext) {
+        let size = params(self.id, ctx).size;
+        let stroke = self.stroke_params(ctx, &self.points);
+        if let Some(l) = self.live.as_mut()
+            && !l.update(&self.points, &stroke, size)
+        {
+            self.live = None;
+        }
+    }
+
+    /// Parameters of `bitmap.retouch` for the stroke `pts` (sent on release, also the live preview).
+    fn stroke_params(&self, ctx: &ToolContext, pts: &[Point]) -> Value {
+        let prm = params(self.id, ctx);
+        let mut p = json!({
+            "mode": prm.mode, "points": pts.iter().map(|q| pt_json(*q)).collect::<Vec<Value>>(), "size": prm.size,
+            "round": prm.round, "soft": prm.soft, "strength": prm.strength, "range": prm.range, "spacing": prm.spacing,
+        });
+        match self.id {
+            ToolId::RubberStamp => {
+                let (dx, dy) = self.offset.unwrap_or((0.0, 0.0));
+                p["offset"] = json!([dx, dy]);
+            }
+            ToolId::ReplaceColor => {
+                p["from"] = json!(ctx.prefs.get_str("ReplaceColorToolSrcColor", "#00FF00"));
+                p["to"] = json!(ctx.prefs.get_str("ReplaceColorToolDestColor", "#FF0000"));
+                p["colorize"] = json!(ctx.prefs.get_bool("ReplaceColorToolColorize", false));
+                // Toleranz, Stärke 0..255 und „Von: Grafik“ (PAR 05/07–08)
+                p["tolerance"] = json!(
+                    ctx.prefs
+                        .get_int("ReplaceColorToolTolerance", 32)
+                        .clamp(0, 255)
+                );
+                p["replaceStrength"] = json!(
+                    ctx.prefs
+                        .get_int("ReplaceColorToolStrength", 200)
+                        .clamp(0, 255)
+                );
+                p["fromImage"] = json!(ctx.prefs.get_bool("ReplaceColorToolMode", false));
+            }
+            ToolId::RedEyeRemoval => {
+                p["tolerance"] = json!(ctx.prefs.get_int("RedEyeRemovalToolTolerance", 50));
+            }
+            ToolId::Smudge => {
+                // „Farbe verwischen“ (Farbfeld = Füllfarbe) und „Gesamtes Dokument“ (PAR 04/10, 04/11)
+                p["fingerPaint"] = json!(ctx.prefs.get_bool("SmudgeToolFingerPaint", false));
+                p["color"] = json!(ctx.fill_color.to_rgba8().to_hex_rgba());
+                p["wholeDocument"] =
+                    json!(ctx.prefs.get_bool("SmudgeToolUseEntireDocument", false));
+                // Firepixel option: keep the smear inside the bitmap edge (FB-15)
+                p["confineToBounds"] =
+                    json!(ctx.prefs.get_bool("SmudgeToolConfineToBounds", false));
+            }
+            _ => {}
+        }
+        p
     }
 
     fn overlay_for(&self, ctx: &ToolContext) -> Vec<Overlay> {
@@ -267,12 +325,12 @@ impl RetouchTool {
             }
             return v;
         }
-        // while dragging only the one tip outline at the pointer, never one outline per stroke
-        // point (FB-14b, TW-181; RE-25: the original shows a single tip at all times)
+        // the running stroke shows its effect live plus the one tip outline at the pointer, never
+        // one outline per stroke point (FB-14a/b, TW-181/182; RE-25)
         if let Some(l) = self.live.as_ref().filter(|_| self.active) {
             v.push(Overlay::Paint(l.preview.clone()));
         }
-        if let Some(h) = self.hover {
+        if let Some(h) = self.hover.filter(|_| self.target_ok) {
             v.push(Overlay::BrushTip {
                 at: h,
                 diameter: prm.size,
@@ -290,6 +348,31 @@ impl RetouchTool {
         }
         v
     }
+}
+
+/// Target bitmap of a retouch stroke at `at`, chosen like `bitmap.retouch` does: the topmost
+/// selected (unlocked) bitmap, otherwise the bitmap under the point.
+fn retouch_target(
+    ctx: &ToolContext,
+    at: Point,
+) -> Option<(fp_model::ElementId, std::sync::Arc<fp_model::Element>)> {
+    if !ctx.has_document {
+        return None;
+    }
+    crate::paint::target_bitmap(ctx.doc, ctx.page, &ctx.selection.elements).or_else(|| {
+        crate::docops::hits_at(
+            ctx.doc,
+            ctx.page,
+            ctx.frame,
+            at,
+            &crate::geometry::BasicGeometry,
+            &crate::docops::HitOptions::default(),
+        )
+        .into_iter()
+        .filter_map(|p| ctx.doc.element_at(&p).cloned())
+        .find(|e| matches!(e.kind, fp_model::ElementKind::Bitmap(_)))
+        .map(|e| (e.id, e))
+    })
 }
 
 impl ToolMachine for RetouchTool {
@@ -320,6 +403,11 @@ impl ToolMachine for RetouchTool {
             return ToolResponse::default();
         };
         self.hover = Some(*pos);
+        // while a stroke runs, its target counts (the pointer may leave the bitmap)
+        if !self.active {
+            self.target_ok =
+                self.id == ToolId::RedEyeRemoval || retouch_target(ctx, *pos).is_some();
+        }
         match kind {
             PointerKind::Down
                 if !ctx.selection.elements.is_empty()
@@ -365,13 +453,9 @@ impl ToolMachine for RetouchTool {
                 }
                 self.points = vec![*pos];
                 self.active = true;
-                if self.id == ToolId::RubberStamp {
-                    self.begin_stamp_live(ctx);
-                    let prm = params(self.id, ctx);
-                    let off = self.offset.unwrap_or((0.0, 0.0));
-                    if let Some(l) = self.live.as_mut() {
-                        l.update(&self.points, &prm, off);
-                    }
+                if self.id != ToolId::RedEyeRemoval {
+                    self.begin_live(ctx, *pos);
+                    self.update_live(ctx);
                 }
             }
             PointerKind::Move if self.active && self.id == ToolId::RedEyeRemoval => {}
@@ -381,13 +465,7 @@ impl ToolMachine for RetouchTool {
                 }
                 if self.points.last().is_none_or(|l| dist(*l, *pos) >= 0.5) {
                     self.points.push(*pos);
-                    if self.id == ToolId::RubberStamp {
-                        let prm = params(self.id, ctx);
-                        let off = self.offset.unwrap_or((0.0, 0.0));
-                        if let Some(l) = self.live.as_mut() {
-                            l.update(&self.points, &prm, off);
-                        }
-                    }
+                    self.update_live(ctx);
                 }
             }
             PointerKind::Up if self.active && self.id == ToolId::RedEyeRemoval => {
@@ -416,6 +494,12 @@ impl ToolMachine for RetouchTool {
             PointerKind::Up if self.active => {
                 self.active = false;
                 self.live = None;
+                if !self.target_ok {
+                    // no editable bitmap: no effect, no history step, no message (RE 57 §3.2)
+                    self.points.clear();
+                    self.target_ok = retouch_target(ctx, *pos).is_some();
+                    return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
+                }
                 if ev.mods.shift {
                     self.points.truncate(1);
                 }
@@ -424,47 +508,8 @@ impl ToolMachine for RetouchTool {
                 }
                 let pts = std::mem::take(&mut self.points);
                 self.painted = true;
-                let prm = params(self.id, ctx);
-                let mut p = json!({
-                    "mode": prm.mode, "points": pts.iter().map(|q| pt_json(*q)).collect::<Vec<Value>>(), "size": prm.size,
-                    "round": prm.round, "soft": prm.soft, "strength": prm.strength, "range": prm.range, "spacing": prm.spacing,
-                });
-                match self.id {
-                    ToolId::RubberStamp => {
-                        let (dx, dy) = self.offset.unwrap_or((0.0, 0.0));
-                        p["offset"] = json!([dx, dy]);
-                    }
-                    ToolId::ReplaceColor => {
-                        p["from"] = json!(ctx.prefs.get_str("ReplaceColorToolSrcColor", "#00FF00"));
-                        p["to"] = json!(ctx.prefs.get_str("ReplaceColorToolDestColor", "#FF0000"));
-                        p["colorize"] =
-                            json!(ctx.prefs.get_bool("ReplaceColorToolColorize", false));
-                        // Toleranz, Stärke 0..255 und „Von: Grafik“ (PAR 05/07–08)
-                        p["tolerance"] = json!(
-                            ctx.prefs
-                                .get_int("ReplaceColorToolTolerance", 32)
-                                .clamp(0, 255)
-                        );
-                        p["replaceStrength"] = json!(
-                            ctx.prefs
-                                .get_int("ReplaceColorToolStrength", 200)
-                                .clamp(0, 255)
-                        );
-                        p["fromImage"] = json!(ctx.prefs.get_bool("ReplaceColorToolMode", false));
-                    }
-                    ToolId::RedEyeRemoval => {
-                        p["tolerance"] = json!(ctx.prefs.get_int("RedEyeRemovalToolTolerance", 50));
-                    }
-                    ToolId::Smudge => {
-                        // „Farbe verwischen“ (Farbfeld = Füllfarbe) und „Gesamtes Dokument“ (PAR 04/10, 04/11)
-                        p["fingerPaint"] =
-                            json!(ctx.prefs.get_bool("SmudgeToolFingerPaint", false));
-                        p["color"] = json!(ctx.fill_color.to_rgba8().to_hex_rgba());
-                        p["wholeDocument"] =
-                            json!(ctx.prefs.get_bool("SmudgeToolUseEntireDocument", false));
-                    }
-                    _ => {}
-                }
+                let p = self.stroke_params(ctx, &pts);
+                self.target_ok = retouch_target(ctx, *pos).is_some();
                 return ToolResponse {
                     commands: vec![Invocation::new("bitmap.retouch", p)],
                     overlay: self.overlay_for(ctx),

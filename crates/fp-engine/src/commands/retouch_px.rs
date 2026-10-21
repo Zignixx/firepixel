@@ -7,6 +7,7 @@ use fp_geom::{IRect, Point};
 use fp_raster::{Mask, RgbaImage};
 
 /// Werte von „Farbe ersetzen“.
+#[derive(Clone, Debug)]
 pub(crate) struct ReplaceParams {
     pub size: f32,
     pub round: bool,

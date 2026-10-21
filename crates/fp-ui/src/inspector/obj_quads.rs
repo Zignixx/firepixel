@@ -143,6 +143,8 @@ pub struct ToolAttrs {
     pub exposure: i32,
     pub smudge_color: bool,
     pub whole_doc: bool,
+    /// Smudge: "Confine to boundaries" (Firepixel option, `SmudgeToolConfineToBounds`, FB-15).
+    pub confine_bounds: bool,
     pub source_aligned: bool,
     pub tolerance: i32,
     pub strength: i32,
@@ -193,6 +195,7 @@ impl Default for ToolAttrs {
             exposure: 50,
             smudge_color: false,
             whole_doc: false,
+            confine_bounds: false,
             source_aligned: true,
             tolerance: 70,
             strength: 50,

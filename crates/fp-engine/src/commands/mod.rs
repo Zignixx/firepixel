@@ -29,7 +29,7 @@ mod select;
 pub mod spelling;
 pub mod symbol_edit;
 mod text;
-pub(crate) use tooling::stamp_image;
+pub(crate) use tooling::{retouch_preview, smudge_page_source};
 mod tooling;
 pub mod trace;
 mod view;

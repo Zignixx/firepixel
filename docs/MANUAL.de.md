@@ -119,6 +119,16 @@ Beim Malen mit Pinsel, Bleistift, Radiergummi oder Stempel erscheint die Vorscha
 Bitmap in der Stapelreihenfolge, mit ihrer Deckkraft, Füllmethode, ihren Effekten und Masken. Ein
 Strich, der eine neue Bitmap anlegt oder in eine Bitmap in einem Symbol malt, wird bis zum Loslassen
 obenauf angezeigt.
+**Weichzeichner**, **Scharfzeichner**, **Abwedler**, **Nachbelichter**, **Verwischen**, **Stempel** und
+**Farbe ersetzen** zeigen ihre Wirkung ebenfalls schon beim Ziehen; das Loslassen ändert nichts mehr,
+jeder Strich ist ein Verlaufsschritt mit dem Namen des Werkzeugs. Über einer bearbeitbaren Bitmap
+blenden diese Werkzeuge den Mauszeiger aus und zeigen nur den Umriss der Pinselspitze (er verschwindet,
+sobald der Zeiger die Leinwand verlässt); wo keine Bitmap bearbeitet werden kann, zeigt der Zeiger
+„nicht erlaubt“. **Verwischen**, auf einer Bitmap begonnen, kann über ihren Rand hinauslaufen: Die
+Farbe läuft halbtransparent aus, und die Bitmap wächst mit (mit „Gesamtes Dokument“ wird die Seite bis
+zum Strichende hineingeschmiert). Die Firepixel-Option **Auf Grenzen beschränken** im Inspektor von
+Verwischen hält das Verwischen innerhalb des Bitmaprands. **Weichzeichner** über den Rand vergrößert
+die Bitmap um bis zu 2 px.
 
 **Stift:** Beim Zeichnen eines Pfads zieht ein Klick auf seinen letzten Ankerpunkt die ausgehende Tangente dieses
 Punkts ein, sodass das nächste Segment ihn gerade verlässt; Ziehen auf dem Punkt zieht ihn wieder als symmetrischen

@@ -42,6 +42,7 @@ pub(super) fn register(r: &mut QuadrantRegistry) {
     r.register(14968, dodge_q3);
     r.register(14978, dodge_q3);
     r.register(15006, smudge_q3);
+    r.register(super::layouts::SMUDGE_Q5, smudge_q5);
     r.register(15082, red_eye_q3);
     r.register(15091, replace_color_q3);
     r.register(14054, freeform_q3);
@@ -1102,6 +1103,30 @@ fn smudge_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
             a.whole_doc = v;
         }
     });
+}
+
+/// Firepixel option of the smudge (FB-15): "Confine to boundaries" keeps the smear inside the
+/// bitmap edge (off, the default, lets the bitmap grow past its edge like the original). Q3 holds
+/// the original's controls up to its right edge, so the option sits in the otherwise empty Q5 of
+/// the smudge layout, on the line of "Smudge color".
+fn smudge_q5(ui: &mut Ui, _st: &mut AppState, r: Rect) {
+    let d = Dl::at(r.min);
+    let ta = tool_attrs(ui.ctx());
+    let rect = d.r(4.0, 1.0, 112.0, 10.0);
+    let v = fields::checkbox(
+        ui,
+        "smudge-confine",
+        rect,
+        &tx("pi-confine-bounds"),
+        ta.confine_bounds,
+        true,
+    );
+    let _ = ui
+        .interact(rect, Id::new("smudge-confine-tip"), egui::Sense::hover())
+        .on_hover_text(tx("pi-tip-confine-bounds"));
+    if let Some(v) = v {
+        edit_tool_attrs(ui.ctx(), |a| a.confine_bounds = v);
+    }
 }
 
 fn red_eye_q3(ui: &mut Ui, _st: &mut AppState, r: Rect) {

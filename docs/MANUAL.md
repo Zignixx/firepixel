@@ -113,6 +113,15 @@ has its own colors (default black → white, a click on the swatch opens the gra
 While you paint with Brush, Pencil, Eraser or Rubber Stamp, the preview appears at the bitmap's place
 in the stacking order, with its opacity, blend mode, effects and masks. A stroke that creates a new
 bitmap, or paints into a bitmap inside a symbol, is previewed on top until you release the mouse.
+**Blur**, **Sharpen**, **Dodge**, **Burn**, **Smudge**, **Rubber Stamp** and **Replace Color** also show
+their effect live while you drag; releasing the mouse changes nothing more, and each stroke is one
+history step named after the tool. Over an editable bitmap these tools hide the mouse pointer and show
+only the outline of the brush tip (it disappears when the pointer leaves the canvas); where no bitmap
+can be edited the pointer shows "not allowed". **Smudge** started on a bitmap can run past its edge:
+the color fades out semi-transparent and the bitmap grows to cover it (with "Entire document" the page
+is smeared in up to the end of the stroke). The Firepixel option **Confine to boundaries** in the
+Smudge inspector keeps the smear inside the bitmap edge. **Blur** across the edge grows the bitmap by
+up to 2 px.
 
 **Pen:** while you draw a path, a click on its last anchor retracts that point's outgoing handle, so the next
 segment leaves it straight; dragging on it pulls the point out again as a symmetric curve point (Alt moves only the

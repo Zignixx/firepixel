@@ -467,6 +467,7 @@ pub fn attrs_from_prefs(
             ta.strength = int(&k("Pressure"), 50);
             ta.smudge_color = p.get_bool("SmudgeToolFingerPaint", false);
             ta.whole_doc = p.get_bool("SmudgeToolUseEntireDocument", false);
+            ta.confine_bounds = p.get_bool("SmudgeToolConfineToBounds", false);
         }
         T::RedEyeRemoval => {
             ta.strength = int(&k("Strength"), 50);
@@ -629,6 +630,8 @@ pub fn retouch_prefs(
             // „Farbe verwischen“ und „Gesamtes Dokument“ wirken auf den Zug (PAR 04/10, 04/11)
             v.push(("SmudgeToolFingerPaint".into(), Bool(ta.smudge_color)));
             v.push(("SmudgeToolUseEntireDocument".into(), Bool(ta.whole_doc)));
+            // Firepixel option "Confine to boundaries" (FB-15)
+            v.push(("SmudgeToolConfineToBounds".into(), Bool(ta.confine_bounds)));
         }
         T::RedEyeRemoval => {
             v.push((k("Strength"), Int(ta.strength as i64)));

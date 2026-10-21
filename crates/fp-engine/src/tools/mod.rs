@@ -350,6 +350,9 @@ pub enum Cursor {
     Bucket,
     Brush,
     NotAllowed,
+    /// No system cursor (the retouch tools over an editable bitmap: only the tip outline on the
+    /// canvas shows the pointer, RE spec 57 section 2).
+    Hidden,
     /// Zeiger über einem Pfadpunkt (Pfeil mit Quadrat).
     PointerPoint,
     /// Zeiger über einem Pfadsegment.
@@ -454,6 +457,9 @@ pub struct ToolContext<'a> {
     pub bitmap_worked: bool,
     /// Ansicht (Fang an Raster/Hilfslinien/intelligenten Hilfslinien).
     pub view: &'a ViewState,
+    /// Page renderer of the session (`None` headless): the live preview of "Entire document"
+    /// renders the page once at the press, like `bitmap.retouch` does.
+    pub renderer: Option<&'a dyn crate::render::PageRenderer>,
 }
 
 impl ToolContext<'_> {

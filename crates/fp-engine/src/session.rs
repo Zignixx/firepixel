@@ -1362,6 +1362,7 @@ impl Session {
             bitmap_mode,
             bitmap_worked: active.is_some_and(|d| !d.bitmap_worked.is_empty()),
             view,
+            renderer: self.renderer.as_deref(),
         };
         f(self.tools.machine.as_mut(), &ctx)
     }

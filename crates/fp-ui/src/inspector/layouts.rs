@@ -58,6 +58,9 @@ use ObjectKind as K;
 use Pred::*;
 
 const TOOL_EMPTY: [u16; 6] = [14006, 14080, 14081, 14082, 14083, 14084];
+/// Firepixel's own Q5 of the smudge tool ("Confine to boundaries", FB-15); the original leaves
+/// Q5 empty there (14083). The id lies outside the original's template range.
+pub const SMUDGE_Q5: u16 = 61006;
 const DOC_Q: [u16; 6] = [14100, 14080, 14031, 6564, 14083, 14084];
 const DOC_BOX: [u16; 6] = [14100, 14007, 14031, 6564, 14083, 14084];
 
@@ -221,7 +224,7 @@ pub const LAYOUTS: &[PiLayout] = &[
     row(
         18,
         Tool(ToolId::Smudge),
-        [14006, 14080, 15006, 14119, 14083, 14084],
+        [14006, 14080, 15006, 14119, SMUDGE_Q5, 14084],
         73,
     ),
     row(

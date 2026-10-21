@@ -563,6 +563,7 @@ pub fn has_precision_variant(c: Cursor) -> bool {
             | Cursor::Knife
             | Cursor::Lasso
             | Cursor::Wand
+            | Cursor::Hidden
     )
 }
 
@@ -678,6 +679,9 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
         Cursor::Wand => wand(p, at, colors),
         Cursor::Lasso => lasso(p, at, colors),
         Cursor::NotAllowed => not_allowed(p, at, colors),
+        // retouch tools over an editable bitmap: no cursor, the tip outline shows the pointer
+        // (RE spec 57 section 2); with precise cursors the crosshair above
+        Cursor::Hidden => {}
     }
 }
 
@@ -710,6 +714,7 @@ mod tests {
                 Cursor::Bucket,
                 Cursor::Brush,
                 Cursor::NotAllowed,
+                Cursor::Hidden,
                 Cursor::PointerPoint,
                 Cursor::PointerSegment,
                 Cursor::Subselect,

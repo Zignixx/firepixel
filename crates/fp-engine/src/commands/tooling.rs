@@ -605,6 +605,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt_default("fingerPaint", ParamKind::Bool, json!(false), "Verwischen: Farbe verwischen (Farbe `color` einmischen)")
             .opt("color", ParamKind::Color, "Verwischen: Farbe für „Farbe verwischen“ (Vorgabe: Füllfarbe)")
             .opt_default("wholeDocument", ParamKind::Bool, json!(false), "Verwischen: Gesamtes Dokument (alle sichtbaren Objekte und die Leinwand aufnehmen)")
+            .opt_default("confineToBounds", ParamKind::Bool, json!(false), "Smudge: keep the smear inside the bitmap edge (off = the bitmap grows where the smear runs past its edge, like the original)")
             .opt("replaceStrength", ParamKind::Integer { min: Some(0), max: Some(255) }, "Farbe ersetzen: Stärke 0..255 (Vorgabe 200)")
             .opt("fromImage", ParamKind::Bool, "Farbe ersetzen: Von-Farbe aus der Grafik unter dem Startpunkt")
             .run(|s, p| {
@@ -616,25 +617,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 if mode == "replaceColor" || mode == "redEye" {
                     return replace_or_red_eye(s, p, &mode, &pts);
                 }
-                let prm = Retouch {
-                    mode: mode.clone(),
-                    size: p.f64_or("size", 13.0)? as f32,
-                    round: p.bool_or("round", true)?,
-                    soft: p.f64_or("soft", 1.0)?.clamp(0.0, 1.0) as f32,
-                    strength: (p.f64_or("strength", 50.0)?.clamp(0.0, 100.0) / 100.0) as f32,
-                    range: p.i64_or("range", 1)?,
-                    spacing: p.f64_or("spacing", 20.0)? as f32,
-                    offset: p.get("offset").and_then(crate::command::parse_point).map(|q| (q.x, q.y)).unwrap_or((0.0, 0.0)),
-                    from: p.opt_color("from")?.map(|c| c.to_rgba8()).unwrap_or(Rgba8::new(0, 255, 0, 255)),
-                    to: p.opt_color("to")?.map(|c| c.to_rgba8()).unwrap_or(Rgba8::new(255, 0, 0, 255)),
-                    colorize: p.bool_or("colorize", false)?,
-                    tolerance: p.i64_or("tolerance", 50)?.clamp(0, 255) as f32,
-                    finger: if p.bool_or("fingerPaint", false)? {
-                        Some(p.opt_color("color")?.unwrap_or(s.tools.fill_color).to_rgba8())
-                    } else {
-                        None
-                    },
-                };
+                let prm = retouch_params(p, &mode, s.tools.fill_color.to_rgba8())?;
                 // „Gesamtes Dokument“: Verwischen nimmt die sichtbare Seite samt Leinwand auf
                 let whole = mode == "smudge" && p.bool_or("wholeDocument", false)?;
                 let rendered = if whole {
@@ -656,18 +639,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let (path, target) = bitmap_for(d, pts.first().copied(), &BasicGeometry).ok_or_else(|| sel_err("err-sel-no-bitmap-under-stroke"))?;
                     let sel = d.selection.pixels.clone().filter(|_| d.selection.has_pixels());
                     // ohne Renderer (headless): Leinwandfarbe mit der Bitmap darüber
-                    let page_img = if whole { rendered.clone().or_else(|| canvas_with_bitmap(d, &target)) } else { None };
+                    let page_img = if whole { rendered.clone().or_else(|| canvas_with_bitmap(&d.doc, d.page, &target)) } else { None };
                     let doc = Arc::make_mut(&mut d.doc);
                     docops::edit_at(doc, &path, |e| {
                         if let ElementKind::Bitmap(b) = &mut e.kind
                             && let Some(mut img) = bitmap_image(b)
                         {
-                            match prm.mode.as_str() {
-                                "dodge" | "burn" => retouch_cover(&mut img, &pts, &prm, sel.as_ref()),
-                                "blur" | "sharpen" => retouch_blur(&mut img, &pts, &prm, sel.as_ref()),
-                                "smudge" => smudge(&mut img, &pts, &prm, sel.as_ref(), page_img.as_ref()),
-                                _ => retouch(&mut img, &pts, &prm, sel.as_ref()),
-                            }
+                            let bounds = img.bounds();
+                            retouch_dispatch(&mut img, &pts, &prm, bounds, sel.as_ref(), page_img.as_ref());
                             set_bitmap_image(b, &img);
                         }
                     });
@@ -695,36 +674,163 @@ fn drop_unknown_texture(v: &mut serde_json::Value) {
     }
 }
 
-/// Stempel ohne Befehl rechnen (Live-Vorschau des Werkzeugs, PAR 05/04): dieselbe Rechnung wie
-/// `bitmap.retouch` mit `mode = "stamp"`.
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn stamp_image(
+/// Retouch parameters of `bitmap.retouch` (every mode except red eye and replace colour);
+/// `fill` is the colour of "Smudge color" when `color` is missing.
+fn retouch_params(p: &Params, mode: &str, fill: Rgba8) -> Result<Retouch> {
+    Ok(Retouch {
+        mode: mode.to_string(),
+        size: p.f64_or("size", 13.0)? as f32,
+        round: p.bool_or("round", true)?,
+        soft: p.f64_or("soft", 1.0)?.clamp(0.0, 1.0) as f32,
+        strength: (p.f64_or("strength", 50.0)?.clamp(0.0, 100.0) / 100.0) as f32,
+        range: p.i64_or("range", 1)?,
+        spacing: p.f64_or("spacing", 20.0)? as f32,
+        offset: p
+            .get("offset")
+            .and_then(crate::command::parse_point)
+            .map(|q| (q.x, q.y))
+            .unwrap_or((0.0, 0.0)),
+        from: p
+            .opt_color("from")?
+            .map(|c| c.to_rgba8())
+            .unwrap_or(Rgba8::new(0, 255, 0, 255)),
+        to: p
+            .opt_color("to")?
+            .map(|c| c.to_rgba8())
+            .unwrap_or(Rgba8::new(255, 0, 0, 255)),
+        colorize: p.bool_or("colorize", false)?,
+        tolerance: p.i64_or("tolerance", 50)?.clamp(0, 255) as f32,
+        finger: if p.bool_or("fingerPaint", false)? {
+            Some(p.opt_color("color")?.map(|c| c.to_rgba8()).unwrap_or(fill))
+        } else {
+            None
+        },
+        confine: p.bool_or("confineToBounds", false)?,
+        grow: false,
+    })
+}
+
+/// Runs one retouch stroke on `img` (the computation of `bitmap.retouch` for the brush modes).
+/// `bitmap` = bounds of the whole target bitmap (`img` may be a part of it, the live preview).
+fn retouch_dispatch(
     img: &mut RgbaImage,
     pts: &[Point],
-    size: f32,
-    round: bool,
-    soft: f32,
-    strength: f32,
-    spacing: f32,
-    offset: (f32, f32),
+    prm: &Retouch,
+    bitmap: fp_geom::IRect,
     sel: Option<&fp_raster::Mask>,
+    page: Option<&RgbaImage>,
 ) {
-    let prm = Retouch {
-        mode: "stamp".to_string(),
-        size,
-        round,
-        soft: soft.clamp(0.0, 1.0),
-        strength: (strength.clamp(0.0, 100.0) / 100.0),
-        range: 1,
-        spacing,
-        offset,
-        from: Rgba8::new(0, 255, 0, 255),
-        to: Rgba8::new(255, 0, 0, 255),
-        colorize: false,
-        tolerance: 50.0,
-        finger: None,
+    match prm.mode.as_str() {
+        "dodge" | "burn" => retouch_cover(img, pts, prm, sel),
+        "blur" | "sharpen" => retouch_blur(img, pts, prm, sel),
+        "smudge" => {
+            // FB-15 (RE spec 57 section 3): a smudge that starts on the bitmap runs past its edge
+            // and grows the bitmap; one that starts outside only acts where it reaches the bitmap
+            // (no new object), and "Confine to boundaries" keeps every smear inside the edge
+            let grow = !prm.confine
+                && pts
+                    .first()
+                    .is_some_and(|q| in_rect(&bitmap, q.x.floor() as i32, q.y.floor() as i32));
+            let prm = Retouch {
+                grow,
+                ..prm.clone()
+            };
+            smudge(img, pts, &prm, sel, page);
+        }
+        _ => retouch(img, pts, prm, sel),
+    }
+}
+
+/// Source page of "Entire document" (smudge): the rendered page with its canvas, or without a
+/// renderer (headless) the canvas colour with the target bitmap on top. Rendered once per stroke
+/// (by the command, and by the live preview at the press).
+pub(crate) fn smudge_page_source(
+    doc: &fp_model::Document,
+    page: usize,
+    frame: usize,
+    renderer: Option<&dyn crate::render::PageRenderer>,
+    target: &fp_model::Element,
+) -> Option<RgbaImage> {
+    renderer
+        .and_then(|r| r.render_page(doc, page, frame))
+        .or_else(|| canvas_with_bitmap(doc, page, target))
+}
+
+/// "Replace Color" parameters of `bitmap.retouch` and whether the source colour comes from the
+/// image under the start point (`fromImage`).
+fn replace_params(p: &Params) -> Result<(super::retouch_px::ReplaceParams, bool)> {
+    Ok((
+        super::retouch_px::ReplaceParams {
+            size: p.f64_or("size", 13.0)? as f32,
+            round: p.bool_or("round", true)?,
+            from: p
+                .opt_color("from")?
+                .map(|c| c.to_rgba8())
+                .unwrap_or(Rgba8::new(0, 255, 0, 255)),
+            to: p
+                .opt_color("to")?
+                .map(|c| c.to_rgba8())
+                .unwrap_or(Rgba8::new(255, 0, 0, 255)),
+            tolerance: p.i64_or("tolerance", 32)?.clamp(0, 255) as f32,
+            strength: p.i64_or("replaceStrength", 200)?.clamp(0, 255) as f32,
+            colorize: p.bool_or("colorize", false)?,
+        },
+        p.bool_or("fromImage", false)?,
+    ))
+}
+
+/// "From: Image": the source colour is the pixel under the start point (opaque).
+fn replace_from_image(prm: &mut super::retouch_px::ReplaceParams, img: &RgbaImage, start: Point) {
+    if let Some(q) = img.get(start.x.floor() as i32, start.y.floor() as i32) {
+        prm.from = Rgba8::new(q[0], q[1], q[2], 255);
+    }
+}
+
+/// Live preview of a retouch stroke without a command (FB-14a, like the stamp preview PAR 05/04):
+/// the same computation as `bitmap.retouch` with the parameters `params` the tool sends on release,
+/// applied to `img` (a copy of the target bitmap or a part of it around the stroke; `bitmap` = the
+/// bounds of the whole bitmap). `page` = the source page of "Entire document"
+/// ([`smudge_page_source`], rendered once at the press). Returns `false` when the mode has no live
+/// preview (red eye; smudge over the whole document without a page).
+pub(crate) fn retouch_preview(
+    img: &mut RgbaImage,
+    pts: &[Point],
+    params: &serde_json::Value,
+    bitmap: fp_geom::IRect,
+    sel: Option<&fp_raster::Mask>,
+    page: Option<&RgbaImage>,
+) -> bool {
+    let p = Params::new("bitmap.retouch", params.clone());
+    let Ok(mode) = p.str("mode") else {
+        return false;
     };
-    retouch(img, pts, &prm, sel);
+    let Some(&start) = pts.first() else {
+        return false;
+    };
+    match mode.as_str() {
+        "redEye" => false,
+        "replaceColor" => {
+            let Ok((mut prm, from_image)) = replace_params(&p) else {
+                return false;
+            };
+            if from_image {
+                replace_from_image(&mut prm, img, start);
+            }
+            super::retouch_px::replace_color(img, pts, &prm, sel);
+            true
+        }
+        _ => {
+            let whole = mode == "smudge" && p.bool_or("wholeDocument", false).unwrap_or(false);
+            if whole && page.is_none() {
+                return false;
+            }
+            let Ok(prm) = retouch_params(&p, &mode, Rgba8::new(0, 0, 0, 255)) else {
+                return false;
+            };
+            retouch_dispatch(img, pts, &prm, bitmap, sel, page.filter(|_| whole));
+            true
+        }
+    }
 }
 
 /// `bitmap.retouch` für „Farbe ersetzen“ (Strich) und „Rote Augen entfernen“ (Rechteck aus erstem
@@ -737,24 +843,16 @@ fn replace_or_red_eye(
     mode: &str,
     pts: &[Point],
 ) -> Result<CommandOutput> {
-    use super::retouch_px::{RedEyeParams, ReplaceParams, red_eye, replace_color};
-    let size = p.f64_or("size", 13.0)? as f32;
-    let round = p.bool_or("round", true)?;
-    let from = p
-        .opt_color("from")?
-        .map(|c| c.to_rgba8())
-        .unwrap_or(Rgba8::new(0, 255, 0, 255));
-    let to = p
-        .opt_color("to")?
-        .map(|c| c.to_rgba8())
-        .unwrap_or(Rgba8::new(255, 0, 0, 255));
-    let colorize = p.bool_or("colorize", false)?;
+    use super::retouch_px::{RedEyeParams, red_eye, replace_color};
     let tol = p
         .i64_or("tolerance", if mode == "redEye" { 50 } else { 32 })?
         .clamp(0, 255) as f32;
     let strength = p.f64_or("strength", 50.0)?.clamp(0.0, 100.0) as f32;
-    let rstrength = p.i64_or("replaceStrength", 200)?.clamp(0, 255) as f32;
-    let from_image = p.bool_or("fromImage", false)?;
+    let replace = if mode == "redEye" {
+        None
+    } else {
+        Some(replace_params(p)?)
+    };
     let prefs = s.prefs.clone();
     let mut changed = false;
     with_doc(s, |d| {
@@ -788,25 +886,14 @@ fn replace_or_red_eye(
                             / 100.0,
                     };
                     red_eye(&mut img, &prm, sel.as_ref())
-                } else {
-                    let start = pts[0];
-                    let from = if from_image {
-                        img.get(start.x.floor() as i32, start.y.floor() as i32)
-                            .map(|q| Rgba8::new(q[0], q[1], q[2], 255))
-                            .unwrap_or(from)
-                    } else {
-                        from
-                    };
-                    let prm = ReplaceParams {
-                        size,
-                        round,
-                        from,
-                        to,
-                        tolerance: tol,
-                        strength: rstrength,
-                        colorize,
-                    };
+                } else if let Some((rp, from_image)) = &replace {
+                    let mut prm = rp.clone();
+                    if *from_image {
+                        replace_from_image(&mut prm, &img, pts[0]);
+                    }
                     replace_color(&mut img, pts, &prm, sel.as_ref())
+                } else {
+                    false
                 };
                 if changed {
                     set_bitmap_image(b, &img);
@@ -893,6 +980,7 @@ fn nine_slice_element(
 }
 
 /// Parameter der Retusche.
+#[derive(Clone)]
 struct Retouch {
     mode: String,
     size: f32,
@@ -909,6 +997,10 @@ struct Retouch {
     tolerance: f32,
     /// Verwischen: „Farbe verwischen“ mit dieser Farbe.
     finger: Option<Rgba8>,
+    /// Smudge: "Confine to boundaries" (Firepixel option, `confineToBounds`).
+    confine: bool,
+    /// Smudge: the stroke may grow the bitmap past its edge (set by [`retouch_dispatch`]).
+    grow: bool,
 }
 
 fn rgb_to_hsv(p: [u8; 4]) -> (f32, f32, f32) {
@@ -942,8 +1034,11 @@ fn spacing_gain(mode: &str) -> f32 {
     if mode == "stamp" { 0.65 } else { 0.75 }
 }
 /// Farbe außerhalb der Bitmap beim Weichzeichnen: transparentes Weiß (das Original hellt die
-/// Bitmapkante dabei auf und lässt die Bitmap um 1 px wachsen).
+/// Bitmapkante dabei auf und lässt die Bitmap wachsen: 1 px bei einem Klick, 2 px bei einem Zug,
+/// RE spec 57 section 3.2).
 const OUTSIDE: [f32; 4] = [255.0, 255.0, 255.0, 0.0];
+/// How far the blur may grow a bitmap past its edge (px).
+const BLUR_GROWTH: i32 = 2;
 
 fn in_rect(r: &fp_geom::IRect, x: i32, y: i32) -> bool {
     x >= r.left && x < r.right && y >= r.top && y < r.bottom
@@ -1039,8 +1134,9 @@ fn retouch_blur(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&
     let orig = img.bounds();
     let blur = prm.mode == "blur";
     if blur && !orig.is_empty() {
-        // Weichzeichner darf die Bitmap um 1 px erweitern (neue Pixel transparent weiß)
-        let ext = orig.union(&reach.intersect(&orig.inflate(1, 1)));
+        // the blur may grow the bitmap by up to 2 px (new pixels transparent white); the second
+        // ring only gets coverage from the later passes of a stroke (measured 360 -> 362, RE 57)
+        let ext = orig.union(&reach.intersect(&orig.inflate(BLUR_GROWTH, BLUR_GROWTH)));
         if ext != orig
             && let Ok(mut e) = img.extended_to(ext)
         {
@@ -1162,10 +1258,11 @@ fn retouch_blur(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&
 
 /// Seite ohne Renderer: Leinwandfarbe mit der Zielbitmap darüber (für „Gesamtes Dokument“).
 fn canvas_with_bitmap(
-    d: &crate::session::DocumentState,
+    doc: &fp_model::Document,
+    page: usize,
     e: &fp_model::Element,
 ) -> Option<RgbaImage> {
-    let pg = d.doc.pages.get(d.page)?;
+    let pg = doc.pages.get(page)?;
     let r = fp_geom::IRect::new(
         0,
         0,
@@ -1197,6 +1294,16 @@ fn canvas_with_bitmap(
 /// (die Änderung je Abdruck liegt unter einer halben Stufe). „Farbe verwischen“ mischt die Farbe
 /// am Zuganfang ein und lässt sie mit dem Zug auslaufen; „Gesamtes Dokument“ nimmt die sichtbare
 /// Seite (`page`, mit Leinwand) statt nur der Bitmap auf.
+///
+/// Past the bitmap edge (FB-15, RE spec 57 section 3): with `prm.grow` the work area is the whole
+/// reach of the stroke; pixels outside the bitmap start transparent (or as the page with "Entire
+/// document"), so the smear carries the picked-up colour over the edge with the decaying weight of
+/// the drag and fades out semi-transparent; the bitmap then grows to the pixels that got coverage
+/// (with "Entire document" to the whole reach, filled with the page). Without `grow` only the
+/// bitmap is worked on; a stroke from outside drags transparency in, unless `prm.confine` keeps the
+/// outside out entirely (the previous clipped behaviour). Colours mix premultiplied by their
+/// alpha, so transparent pixels carry no colour of their own (identical to straight mixing for
+/// opaque pixels).
 fn smudge(
     img: &mut RgbaImage,
     pts: &[Point],
@@ -1209,8 +1316,16 @@ fn smudge(
     let reach = stamps
         .iter()
         .fold(fp_geom::IRect::default(), |r, s| r.union(&dab.bounds(*s)));
-    let ib = img.bounds();
-    let work = reach.inflate(2, 2).intersect(&ib);
+    let orig = img.bounds();
+    let work = if prm.grow && !orig.is_empty() {
+        let w = reach.inflate(2, 2);
+        if let Ok(e) = img.extended_to(w) {
+            *img = e;
+        }
+        w.intersect(&img.bounds())
+    } else {
+        reach.inflate(2, 2).intersect(&orig)
+    };
     if work.is_empty() {
         return;
     }
@@ -1227,11 +1342,14 @@ fn smudge(
             buf.push(v.map(|c| c as f32));
         }
     }
-    // Quelle außerhalb des Arbeitsbereichs: Seite („Gesamtes Dokument“) oder Bitmap
+    // Quelle außerhalb des Arbeitsbereichs: Seite („Gesamtes Dokument“) oder Bitmap; outside the
+    // bitmap transparent (drags transparency in), with "Confine to boundaries" nothing
+    let confine = prm.confine;
     let outside = |x: i32, y: i32| -> Option<[f32; 4]> {
         page.and_then(|pg| pg.get(x, y))
             .or_else(|| img.get(x, y))
             .map(|p| p.map(|v| v as f32))
+            .or(if confine { None } else { Some([0.0; 4]) })
     };
     let pressure = 0.94 * prm.strength;
     let mut prev: Option<Point> = None;
@@ -1260,13 +1378,14 @@ fn smudge(
                     return;
                 }
                 let px = from[idx(x, y)];
-                let mut out = px;
+                let ppx = premul(px);
+                let mut out = ppx;
                 if let Some(pv) = prev {
                     // Inhalt an der Stelle des vorigen Abdrucks (bilinear)
                     let (fx, fy) = (x as f32 - (s.x - pv.x), y as f32 - (s.y - pv.y));
                     let (x0, y0) = (fx.floor() as i32, fy.floor() as i32);
                     let (ax, ay) = (fx - x0 as f32, fy - y0 as f32);
-                    let g = |xx: i32, yy: i32| sample(xx, yy).unwrap_or(px);
+                    let g = |xx: i32, yy: i32| premul(sample(xx, yy).unwrap_or(px));
                     let (q00, q10, q01, q11) =
                         (g(x0, y0), g(x0 + 1, y0), g(x0, y0 + 1), g(x0 + 1, y0 + 1));
                     let q = [0, 1, 2, 3].map(|k| {
@@ -1275,14 +1394,17 @@ fn smudge(
                             + q01[k] * (1.0 - ax) * ay
                             + q11[k] * ax * ay
                     });
-                    out = [0, 1, 2, 3].map(|k| px[k] + (q[k] - px[k]) * w);
+                    out = [0, 1, 2, 3].map(|k| ppx[k] + (q[k] - ppx[k]) * w);
                 }
                 if let Some(c) = prm.finger {
                     let t = w * color_w;
                     let cv = [c.r as f32, c.g as f32, c.b as f32, 255.0];
                     out = [0, 1, 2, 3].map(|k| out[k] + (cv[k] - out[k]) * t);
                 }
-                changes.push((idx(x, y), out.map(|v| v.round().clamp(0.0, 255.0))));
+                let v = unpremul(out).map(|v| v.round().clamp(0.0, 255.0));
+                // a transparent pixel that stays transparent keeps its stored colour
+                let v = if v[3] == 0.0 && px[3] == 0.0 { px } else { v };
+                changes.push((idx(x, y), v));
             });
         }
         for (i, v) in changes {
@@ -1303,6 +1425,35 @@ fn smudge(
             img.set_pixel(x, y, Rgba8::new(p[0], p[1], p[2], p[3]));
         }
     }
+    if img.bounds() != orig {
+        // keep only the grown pixels that got coverage (measured: the bitmap ends where the smear
+        // fades out, 360 -> 384; with "Entire document" at the end of the stroke plus the radius)
+        let keep = orig.union(&img.alpha_bounds());
+        if keep != img.bounds() {
+            *img = img.cropped(keep);
+        }
+    }
+}
+
+/// Colour premultiplied by its alpha (0..255 channels); unchanged for opaque pixels.
+fn premul(p: [f32; 4]) -> [f32; 4] {
+    if p[3] >= 255.0 {
+        return p;
+    }
+    let a = p[3].max(0.0) / 255.0;
+    [p[0] * a, p[1] * a, p[2] * a, p[3]]
+}
+
+/// Inverse of [`premul`]; fully transparent becomes transparent black.
+fn unpremul(q: [f32; 4]) -> [f32; 4] {
+    if q[3] >= 255.0 {
+        return q;
+    }
+    if q[3] <= 0.0 {
+        return [0.0; 4];
+    }
+    let a = q[3] / 255.0;
+    [q[0] / a, q[1] / a, q[2] / a, q[3]]
 }
 
 /// Wendet die Retusche entlang des Strichs auf das Bild an (in Dokumentkoordinaten). Jeder Abdruck

@@ -979,15 +979,21 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             .ctx()
             .pointer_hover_pos()
             .is_some_and(|p| area.contains(p));
-    let feedback: Vec<Overlay> =
-        if pointer_here || st.canvases.get(&id).is_some_and(|c| c.pointer_down) {
-            feedback
-        } else {
-            feedback
-                .into_iter()
-                .filter(|o| !matches!(o, Overlay::Highlight { .. }))
-                .collect()
-        };
+    // the brush tip outline is drawn only while the pointer is over the canvas (RE spec 57 §2:
+    // it disappears as soon as the pointer leaves the canvas, also while a stroke runs)
+    let pressed = st.canvases.get(&id).is_some_and(|c| c.pointer_down);
+    let feedback: Vec<Overlay> = if pointer_here {
+        feedback
+    } else {
+        feedback
+            .into_iter()
+            .filter(|o| match o {
+                Overlay::Highlight { .. } => pressed,
+                Overlay::BrushTip { .. } => false,
+                _ => true,
+            })
+            .collect()
+    };
     // object selection: mask preview while hovering (BA-037)
     tools::ai_object::update(ui.ctx(), st, pointer_here);
     let preview_drag = st.session.prefs.get_bool("PreviewDrag", true);
