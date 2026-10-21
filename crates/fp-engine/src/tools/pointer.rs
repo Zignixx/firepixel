@@ -956,7 +956,8 @@ impl PointerTool {
     }
 
     /// Does a press on the selection become a move? The Pointer uses the measured zoom-dependent
-    /// threshold (TW-176, re 55 §7.4); the other tools of this machine keep the fixed 3 screen px.
+    /// threshold (TW-176, re 55 §7.4); the other tools of this machine keep the fixed 3 screen px
+    /// for object moves (their point drags use the per-zoom threshold, TW-187).
     fn move_starts(&self, ctx: &ToolContext, start: Point, p: Point) -> bool {
         if self.id == ToolId::Pointer {
             ctx.exceeds_move_threshold(start, p)
@@ -1072,8 +1073,12 @@ impl PointerTool {
                 ToolResponse::with_overlay(self.overlay.clone(), Cursor::PointerPoint)
             }
             // (the Pointer never drags a single point: below its move threshold it waits)
+            // Subselection point drags start at the same per-zoom threshold as Pointer moves:
+            // measured at 50 % an anchor drag of (1,1) screen px writes no row, (−2,−2) one
+            // (TW-187, re 55 §7.3), i.e. travel > 3·√zoom screen px. Handle drags share the
+            // transition (not measured separately).
             PState::PressedPoint { start, hit, pull }
-                if self.id != ToolId::Pointer && dist(start, p) >= thr =>
+                if self.id != ToolId::Pointer && ctx.exceeds_move_threshold(start, p) =>
             {
                 self.state = PState::DraggingPoint {
                     start,
@@ -1515,6 +1520,12 @@ impl PointerTool {
                 pull,
                 ..
             } => {
+                // A point drag past the threshold that ends on its start writes no row: only
+                // (1,1) and (−2,−2) were measured for anchors (re 55 §7.3), so the Pointer's
+                // zero-move row (TW-176) is not carried over (TW-187).
+                if cur == start {
+                    return ToolResponse::default();
+                }
                 let Some(cs) = self.dragged_contours(
                     ctx,
                     &hit,

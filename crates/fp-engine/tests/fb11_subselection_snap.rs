@@ -160,12 +160,12 @@ fn subselection_drag_free_with_switch_off_whole_pixels_with_switch_on() {
     drag(&mut s, (50.0, 31.0), (51.6875, 29.4375));
     assert_eq!(anchors(&s, id)[2], (52.0, 29.0));
     assert_eq!(anchors(&s, id)[0], (10.0, 30.0));
-    // off again: free once more
+    // off again: free once more (21 screen px, above the 12 px threshold at 1600 %, TW-187)
     ex(&mut s, "view.snapToPixels", json!({}));
     assert_eq!(snap_to_pixels(&s), Some(false));
-    drag(&mut s, (52.0, 29.0), (52.3125, 29.0625));
+    drag(&mut s, (52.0, 29.0), (53.3125, 29.0625));
     let a = anchors(&s, id);
-    assert!(approx(a[2].0, 52.3125) && approx(a[2].1, 29.0625), "{a:?}");
+    assert!(approx(a[2].0, 53.3125) && approx(a[2].1, 29.0625), "{a:?}");
 }
 
 #[test]

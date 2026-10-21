@@ -471,7 +471,9 @@ impl ToolContext<'_> {
     /// Measured (re 55 §7.4, TW-176): no move up to 3 / 4 / 6 / 12 screen px, a move from
     /// 4 / 5 / 7 / 13 screen px at 100 / 200 / 400 / 1600 % zoom, independent of the number of
     /// intermediate mouse events: travel > 3·√zoom screen px (the formula is fitted to the
-    /// measured values). Other drags keep [`Self::drag_threshold`].
+    /// measured values). Subselection point drags use it too (TW-187, re 55 §7.3: at 50 % a
+    /// (1,1) screen-px anchor drag writes no row, (−2,−2) one). Other drags keep
+    /// [`Self::drag_threshold`].
     pub fn exceeds_move_threshold(&self, from: Point, to: Point) -> bool {
         let zoom = self.zoom.max(1e-6);
         let travel =
