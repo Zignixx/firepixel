@@ -176,6 +176,9 @@ fn ba001_pen_click_on_start_point_closes_selected_path() {
     let id = sel(&s)[0];
     assert!(!contours(&s, id)[0].closed);
     click(&mut s, 100.0, 100.0);
+    // Escape did not end the drawing (re 55 §7.2): closing the path of this pen run redraws it as a
+    // closed shape (a new element)
+    let id = sel(&s)[0];
     let c = contours(&s, id);
     assert!(c[0].closed, "Pfad geschlossen");
     assert_eq!(c[0].nodes.len(), 3, "kein neuer Knoten");

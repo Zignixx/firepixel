@@ -135,8 +135,8 @@ fn n01_cancel_new_live_effect_leaves_no_history() {
     }
 }
 
-/// Without a previous redo stack: after Cancel no step can be redone and Ctrl+Y does nothing (it
-/// is redo only, FB-08) – it must not bring the glow back.
+/// Without a previous redo stack: after Cancel no step can be redone; Ctrl+Y repeats the last real
+/// step (the rectangle, TW-173) – it must not bring the glow back.
 #[test]
 fn n01_cancel_glow_ctrl_y_does_not_bring_glow_back() {
     let mut h = harness(|s| rect(s, [20, 20, 140, 100]));

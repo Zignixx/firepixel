@@ -225,8 +225,9 @@ fn popup_menu_confirm_hotspot() {
     });
 }
 
-/// Redo is redo only (FB-08, re 55 §2): without an undone step the entry reads
-/// „Wiederholen nicht möglich“ and is disabled; after an undo „Wiederholen: <Schritt>“.
+/// re 55 §7.6 (TW-173): without an undone step the entry repeats the last step
+/// („Wiederholen: Auswahl aufheben“, as PARITAET_B measured); after an undo it redoes it (same text);
+/// right after that redo it reads „Wiederholen nicht möglich“ and is disabled.
 #[test]
 fn redo_with_last_step_in_menu() {
     fp_i18n::with_language("de", || {
@@ -248,11 +249,15 @@ fn redo_with_last_step_in_menu() {
             all.into_iter().find(|(l, _)| l.replace('&', "").starts_with("Wiederholen")).expect("Wiederholen im Menü")
         };
         let r = redo(&h);
-        assert_eq!(r.0.replace('&', ""), "Wiederholen nicht möglich", "wie im Original");
-        assert!(!r.1, "inaktiv");
+        assert_eq!(r.0.replace('&', ""), "Wiederholen: Auswahl aufheben", "repeat, wie im Original");
+        assert!(r.1, "aktiv");
         h.state_mut().state.session.execute("edit.undo", json!({})).expect("undo");
         let r = redo(&h);
         assert_eq!(r.0.replace('&', ""), "Wiederholen: Auswahl aufheben", "wie im Original");
         assert!(r.1, "aktiv");
+        h.state_mut().state.session.execute("edit.redo", json!({})).expect("redo");
+        let r = redo(&h);
+        assert_eq!(r.0.replace('&', ""), "Wiederholen nicht möglich", "nach dem Wiederherstellen");
+        assert!(!r.1, "inaktiv");
     });
 }

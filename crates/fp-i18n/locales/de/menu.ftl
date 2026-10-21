@@ -587,6 +587,8 @@ menu-edit-withStep = { $label }: { $step }
 # Bearbeiten-Menü ohne Verlauf (TW-07)
 menu-edit-undoImpossible = &Rückgängig nicht möglich
 menu-edit-redoImpossible = &Wiederholen nicht möglich
+# Bearbeiten ▸ Wiederholen ohne zurückgenommenen Schritt: letzten Schritt erneut ausführen (TW-173)
+menu-edit-repeat = &Wiederholen
 # Filter-Menü nach einem Filter, wie im Original (Text 10722): Menütext des Filters samt „...“
 menu-filter-repeatWith = Wiederholen: { $filter }
 menu-window-extensions-none = Keine Erweiterungen

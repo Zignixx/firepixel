@@ -1,7 +1,8 @@
 //! FB-07 / FB-08 (re 55 §1, §2): every pen point is its own history step "Pen"; Ctrl+Z while
 //! drawing removes only the last point and drawing goes on from the new last point; finishing adds
-//! no step. Vector Path ignores Ctrl+Z while the stroke is drawn. Redo is redo only: without an
-//! undone step it does nothing and the Edit menu reads "Can't Redo".
+//! no step. Vector Path ignores Ctrl+Z while the stroke is drawn. Enter and Escape do not end the
+//! path (re 55 §7.2, TW-177). Redo redoes an undone step; without one it repeats the last step
+//! (TW-173, re 55 §7.6, tests in `tw173_repeat_last_step`), except right after a redo.
 
 use crate::common;
 use common::*;
@@ -136,8 +137,8 @@ fn undo_keeps_curve_handles_of_the_new_last_point() {
     assert_eq!(pt(c.nodes[1].succ), (240.0, 160.0), "handle kept for the new segment");
 }
 
-/// Finishing (Enter, Escape, double-click, tool change) adds no step; Ctrl+Z afterwards removes just
-/// the last point.
+/// Finishing (double-click, tool change) adds no step; Ctrl+Z afterwards removes just the last
+/// point. Enter and Escape (which do not finish, see below) add no step either.
 #[test]
 fn finishing_adds_no_step() {
     for how in ["enter", "escape", "double", "tool"] {
@@ -164,6 +165,62 @@ fn finishing_adds_no_step() {
         undo(&mut s);
         assert_eq!(anchors(&paths(&s, r)[0][0]), [(180.0, 45.0), (310.0, 58.0)], "{how}: Ctrl+Z removes the last point");
     }
+}
+
+/// re 55 §7.2 (TW-177): Enter and Escape do nothing while a path is drawn: no row, the rubber band
+/// stays and the next click appends to the same path; Select None ends the drawing. A
+/// double-click ends the path (one point row, no extra row) and the next click starts a new path;
+/// a tool change ends it without a row.
+#[test]
+fn enter_and_escape_keep_drawing() {
+    for key in [ToolKey::Enter, ToolKey::Escape] {
+        let (mut s, r) = session();
+        click(&mut s, 50.0, 50.0);
+        click(&mut s, 150.0, 60.0);
+        click(&mut s, 120.0, 150.0);
+        let n = undo_count(&s);
+        let resp = s.tool_event(&ToolEvent::key(key)).expect("key");
+        assert!(resp.commands.is_empty(), "{key:?}: no command");
+        assert!(!resp.overlay.is_empty(), "{key:?}: the rubber band stays");
+        assert_eq!(undo_count(&s), n, "{key:?}: no row");
+        let hover = s.tool_event(&ToolEvent::drag(200.0, 100.0)).expect("hover");
+        assert!(
+            hover.overlay.iter().any(|o| matches!(o, fp_engine::tools::Overlay::Line { .. })),
+            "{key:?}: rubber band from the last point"
+        );
+        // pressing it twice changes nothing either
+        events(&mut s, &[ToolEvent::key(key)]);
+        click(&mut s, 220.0, 117.0);
+        assert_eq!(undo_count(&s), n + 1, "{key:?}: one point row");
+        let p = paths(&s, r);
+        assert_eq!(p.len(), 1, "{key:?}: same path");
+        assert_eq!(anchors(&p[0][0]), [(50.0, 50.0), (150.0, 60.0), (120.0, 150.0), (220.0, 117.0)], "{key:?}");
+        // Select None ends the drawing (PAR 09/07): the next click starts a new path
+        events(&mut s, &[ToolEvent::key(key)]);
+        ex(&mut s, "select.none", json!({}));
+        click(&mut s, 250.0, 200.0);
+        let p = paths(&s, r);
+        assert_eq!(p.len(), 2, "{key:?}: a new path after Select None");
+    }
+    // double-click: one point row, the path ends, the next click starts a new path
+    let (mut s, r) = session();
+    click(&mut s, 50.0, 50.0);
+    click(&mut s, 150.0, 60.0);
+    let n = undo_count(&s);
+    events(&mut s, &[ToolEvent::down(120.0, 150.0), ToolEvent::up(120.0, 150.0), ToolEvent::double(120.0, 150.0)]);
+    assert_eq!(undo_count(&s), n + 1, "the double-click is one point row");
+    let n = undo_count(&s);
+    click(&mut s, 220.0, 117.0);
+    assert_eq!(undo_count(&s), n + 1);
+    let mut p = paths(&s, r);
+    p.sort_by_key(|cs| cs[0].nodes.len());
+    assert_eq!(p.len(), 2, "a new path");
+    assert_eq!(anchors(&p[0][0]), [(220.0, 117.0)]);
+    assert_eq!(anchors(&p[1][0]).len(), 3);
+    // tool change: no row, the path is finished
+    let n = undo_count(&s);
+    s.set_tool(ToolId::Pointer).expect("tool");
+    assert_eq!(undo_count(&s), n);
 }
 
 /// Closing on the start point is one step "Pen"; the closed path gets the fill of a closed shape
@@ -216,28 +273,30 @@ fn line_and_vector_path_one_step_on_release() {
     assert_eq!(top_elements(&s).iter().filter(|e| e.id != r).count(), 2);
 }
 
-/// re 55 §2: Redo without an undone step does nothing (it does not repeat the last command); the
-/// menu entry is disabled and reads "Can't Redo"; with an undone step "Redo: <step>".
+/// re 55 §2 as corrected by §7.6 (TW-173): with an undone step Redo redoes it ("Redo: <step>");
+/// right after that redo the entry is disabled and reads "Can't Redo" and Ctrl+Y does nothing. (Before
+/// TW-173 this test pinned "no repeat at all"; without an undone step the last step is now repeated,
+/// see `tw173_repeat_last_step`.)
 #[test]
 fn redo_without_undone_step_does_nothing() {
     fp_i18n::set_language("de");
     let mut s = doc_session(400.0, 300.0);
     rect(&mut s, 10.0, 10.0, 60.0, 60.0);
-    let n = undo_count(&s);
     let count = top_elements(&s).len();
-    assert!(!s.is_available("edit.redo"), "Redo disabled without an undone step");
-    assert!(s.execute("edit.redo", json!({})).is_err(), "nothing to redo");
-    assert_eq!(undo_count(&s), n, "no new step");
-    assert_eq!(top_elements(&s).len(), count, "last command not repeated");
     let (undo_l, redo_l) = s.undo_redo_labels();
     assert!(undo_l.is_some());
-    assert_eq!(redo_l, None, "no redo label: \"Can't Redo\"");
+    assert_eq!(redo_l, None, "nothing undone: no redo label");
+    assert_eq!(s.repeat_label(), undo_l, "Repeat: <last step>");
     ex(&mut s, "edit.undo", json!({}));
     assert!(s.is_available("edit.redo"));
     assert_eq!(s.undo_redo_labels().1, undo_l, "Redo: <undone step>");
     ex(&mut s, "edit.redo", json!({}));
     assert_eq!(top_elements(&s).len(), count);
-    assert!(!s.is_available("edit.redo"));
+    let n = undo_count(&s);
+    assert!(!s.is_available("edit.redo"), "right after a redo: \"Can't Redo\"");
+    assert!(s.execute("edit.redo", json!({})).is_err(), "nothing happens");
+    assert_eq!(undo_count(&s), n, "no new step");
+    assert_eq!(top_elements(&s).len(), count, "last command not repeated");
     assert_eq!(fp_i18n::t("menu-edit-redoImpossible").replace('&', ""), "Wiederholen nicht möglich");
     assert_eq!(fp_i18n::t("menu-edit-undoImpossible").replace('&', ""), "Rückgängig nicht möglich");
     fp_i18n::set_language("en");

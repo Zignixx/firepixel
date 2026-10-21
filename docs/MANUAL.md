@@ -60,8 +60,11 @@ available in German (`MANUAL.de.md`).
 - *Edit ▸ Undo/Redo* (Ctrl+Z / Ctrl+Y); the History panel shows all steps. Copy and Cut get a row of
   their own ("Copy", "Cut"); Copy does not mark the document as changed. Consecutive arrow-key nudges
   of the same selection form one Move row with the summed offset; selecting something else, another
-  command or an undo starts a new row. Redo only redoes an undone step: with nothing undone, Ctrl+Y and
-  Ctrl+Shift+Z do nothing and the Edit menu shows *Can't Redo*.
+  command or an undo starts a new row. Redo (Ctrl+Y, Ctrl+Shift+Z) first redoes an undone step (*Redo: ‹step›*).
+  With nothing undone it repeats the last step as a new row (*Repeat: ‹step›*): after Clone another clone,
+  after a move the same move again, after a pen point the same point again; a repeat can be repeated. Right
+  after a redo, after a bitmap stroke (brush, pencil, eraser, retouch tools) and without steps the entry
+  reads *Can't Redo* and does nothing.
 - At the top of the window is the application bar with logo, menus, quick buttons and the
   workspace switcher, below it the main toolbar, the tools on the left, the panels on the right
   and the Properties inspector at the bottom.
@@ -129,7 +132,8 @@ outgoing handle, Ctrl moves the point, Shift snaps to 45°). A click on an inter
 corner, a click on an interior corner point deletes it, a click on a segment inserts a point, and a click on the
 end of another open path joins it; with no path in progress, a click on the end of an open path continues it. The
 cursor shows the mode: a "^" for converting a point, a ring with a stub for joining. Points are hit within the
-*Snap distance* set in the preferences. A double-click, Enter or Escape ends the path. Every point is its own
+*Snap distance* set in the preferences. A double-click or a change of tool ends the path; Enter
+and Escape do nothing while a path is drawn (the next click adds to the same path). Every point is its own
 History step "Pen": Ctrl+Z (or Backspace) while drawing removes only the last point and you keep drawing from the
 point before; ending the path adds no step.
 

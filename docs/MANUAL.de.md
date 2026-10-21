@@ -63,9 +63,12 @@ ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\F
   Kopieren und Ausschneiden erhalten eine eigene Zeile („Kopie“, „Ausschneiden“); Kopieren markiert das
   Dokument nicht als geändert. Aufeinanderfolgende Verschiebungen derselben Auswahl mit den Pfeiltasten
   bilden eine gemeinsame Zeile mit dem summierten Versatz; eine andere Auswahl, ein anderer Befehl oder
-  Rückgängig beginnt eine neue Zeile. Wiederholen stellt nur einen rückgängig gemachten Schritt wieder her:
-  Ist nichts rückgängig gemacht, tun Strg+Y und Strg+Umschalt+Z nichts, und das Menü Bearbeiten zeigt
-  *Wiederholen nicht möglich*.
+  Rückgängig beginnt eine neue Zeile. Wiederholen (Strg+Y, Strg+Umschalt+Z) stellt zuerst einen rückgängig
+  gemachten Schritt wieder her (*Wiederholen: ‹Schritt›*). Ist nichts rückgängig gemacht, führt es den letzten
+  Schritt als neue Zeile noch einmal aus (ebenfalls *Wiederholen: ‹Schritt›*): nach Klonen ein weiterer Klon, nach
+  einem Verschieben dieselbe Verschiebung, nach einem Stiftpunkt derselbe Punkt; auch eine Wiederholung lässt sich
+  wiederholen. Direkt nach einem Wiederherstellen, nach einem Bitmap-Strich (Pinsel, Buntstift, Radiergummi,
+  Retuschewerkzeuge) und ohne Schritte zeigt das Menü *Wiederholen nicht möglich*, und nichts geschieht.
 - Das Fenster hat oben die Anwendungsleiste mit Logo, Menüs, Schnellknöpfen und dem
   Arbeitsbereich-Umschalter, darunter die Hauptsymbolleiste, links die Werkzeuge, rechts die
   Bedienfelder und unten den Eigenschaften-Inspektor.
@@ -137,8 +140,8 @@ Ein Klick auf einen inneren Kurvenpunkt macht ihn zum Eckpunkt, ein Klick auf ei
 ein Klick auf ein Segment fügt einen Punkt ein, und ein Klick auf das Ende eines anderen offenen Pfads verbindet
 ihn; ohne laufenden Pfad setzt ein Klick auf das Ende eines offenen Pfads diesen fort. Der Mauszeiger zeigt den
 Modus: ein „^“ zum Umwandeln eines Punkts, ein Ring mit Strich zum Verbinden. Punkte werden innerhalb des
-*Ausrichtungsabstands* aus den Voreinstellungen getroffen. Ein Doppelklick, die Eingabetaste oder Esc beendet den
-Pfad. Jeder Punkt ist ein eigener Schritt „Stift“ im Verlauf: Strg+Z (oder die Rücktaste) entfernt beim Zeichnen nur
+*Ausrichtungsabstands* aus den Voreinstellungen getroffen. Ein Doppelklick oder ein Werkzeugwechsel beendet den
+Pfad; die Eingabetaste und Esc bewirken beim Zeichnen nichts (der nächste Klick setzt denselben Pfad fort). Jeder Punkt ist ein eigener Schritt „Stift“ im Verlauf: Strg+Z (oder die Rücktaste) entfernt beim Zeichnen nur
 den letzten Punkt, und Sie zeichnen vom vorigen Punkt aus weiter; das Beenden des Pfads erzeugt keinen Schritt.
 
 **Hintere auswählen** (im Platz des Zeigers): Ruht der Mauszeiger über Objekten, umrahmt ein roter Rahmen das

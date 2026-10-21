@@ -645,7 +645,8 @@ fn doc_path_contours(ctx: &ToolContext, id: ElementId) -> Option<Vec<Contour>> {
 }
 
 /// Stift (Bézier): Klick = Eckpunkt, Ziehen = Kurvenpunkt (Tangenten symmetrisch, Alt bricht),
-/// Umschalt 45°, Klick auf den Startpunkt schließt, Doppelklick/Eingabe/Werkzeugwechsel beendet offen.
+/// Umschalt 45°, Klick auf den Startpunkt schließt, Doppelklick/Werkzeugwechsel beendet offen
+/// (Enter/Escape are ignored while drawing, re 55 §7.2).
 /// Bei ausgewähltem Pfad: Klick auf einen Endpunkt setzt den Pfad fort, Klick auf einen Punkt
 /// entfernt ihn, Klick auf ein Segment fügt einen Punkt ein.
 #[derive(Clone, Debug, Default)]
@@ -663,9 +664,6 @@ pub struct PenTool {
     target: Option<PenTarget>,
     cursor: Cursor,
     guides: Vec<Overlay>,
-    /// Nach Esc/Eingabe bleibt der offene Pfad gewählt; der nächste Klick setzt ihn am Endpunkt
-    /// fort (Konturindex; PAR 09/07). Doppelklick, Schließen oder Abwählen beenden das.
-    resume: Option<usize>,
     /// Klick/Ziehen auf den letzten Punkt des laufenden Pfads: Punkt umwandeln (FB-01, re 52 §1.4).
     convert: Option<ConvertLast>,
     /// Alt-Ziehen am End- bzw. Anfangspunkt eines gewählten Pfads (Fortsetzen): beide Henkel
@@ -1005,17 +1003,6 @@ impl PenTool {
         resp
     }
 
-    /// Esc/Eingabe: Pfad beenden, aber zum Fortsetzen merken (PAR 09/07).
-    fn commit_resumable(&mut self, ctx: &ToolContext) -> ToolResponse {
-        let contour = self.target.as_ref().map(|t| t.contour).unwrap_or(0);
-        let had = self.nodes.len() >= 2;
-        let r = self.commit(false, ctx);
-        if had {
-            self.resume = Some(contour);
-        }
-        r
-    }
-
     /// Is the node of a document path a curve point (a click retracts its handles)?
     fn is_curve_point(ctx: &ToolContext, id: ElementId, contour: usize, node: usize) -> bool {
         docops::element_on_page(ctx.doc, ctx.page, id)
@@ -1140,7 +1127,6 @@ impl PenTool {
             Some(_) => return None,
         };
         self.reset_drawing();
-        self.resume = None;
         resp.cursor = Cursor::Pen;
         Some(resp)
     }
@@ -1337,7 +1323,6 @@ impl ToolMachine for PenTool {
                     _ => {}
                 }
                 if self.nodes.is_empty() {
-                    let resume = self.resume.take();
                     match Self::pen_hit(ctx, *pos) {
                         Some(PenHit::End {
                             id,
@@ -1431,23 +1416,6 @@ impl ToolMachine for PenTool {
                             )]);
                         }
                         _ => {}
-                    }
-                    // Esc/Eingabe davor: der gewählte offene Pfad wird am Endpunkt fortgesetzt (PAR 09/07)
-                    if let Some(ci) = resume
-                        && ctx.selection.elements.len() == 1
-                        && let Some(e) =
-                            docops::element_on_page(ctx.doc, ctx.page, ctx.selection.elements[0])
-                        && let ElementKind::Path(pe) = &e.kind
-                        && pe.primitive.is_none()
-                        && pe
-                            .contours
-                            .get(ci)
-                            .is_some_and(|c| !c.closed && !c.nodes.is_empty())
-                    {
-                        let id = e.id;
-                        // am zuletzt per Teilauswahl angefassten Endpunkt, sonst am letzten Punkt (BA-001)
-                        let at_start = Self::active_end(ctx, id, ci).unwrap_or(false);
-                        self.start_continue(ctx, id, ci, at_start);
                     }
                 }
                 // Stiftpunkte rasten nicht an Objekten (PAR 09/11: 102,207 und 152,122 bleiben)
@@ -1627,7 +1595,6 @@ impl ToolMachine for PenTool {
                     )]);
                 }
                 if self.closing {
-                    self.resume = None;
                     return self.commit(true, ctx);
                 }
                 // every placed point (and every change of the last point) is one step "Pen"
@@ -1650,11 +1617,15 @@ impl ToolMachine for PenTool {
                     self.nodes.pop();
                 }
                 // Doppelklick beendet endgültig: nächster Klick beginnt einen neuen Pfad (PAR 09/06)
-                self.resume = None;
                 self.commit(false, ctx)
             }
-            ToolInput::Key(ToolKey::Enter) | ToolInput::Key(ToolKey::Escape) => {
-                self.commit_resumable(ctx)
+            // Enter / Escape do nothing while a path is drawn (re 55 §7.2, TW-177): the rubber band
+            // stays, no history row, the next click appends to the same path. The key is consumed
+            // so no menu shortcut acts on it; without a running path it goes on as usual.
+            ToolInput::Key(ToolKey::Enter) | ToolInput::Key(ToolKey::Escape)
+                if !self.nodes.is_empty() =>
+            {
+                ToolResponse::with_overlay(self.overlay(), Cursor::Pen)
             }
             ToolInput::Key(ToolKey::Backspace) | ToolInput::Key(ToolKey::Delete)
                 if !self.nodes.is_empty() =>
@@ -1716,6 +1687,12 @@ impl ToolMachine for PenTool {
         let Some(t) = self.target else {
             return;
         };
+        // deselecting the path (Select None, a click elsewhere with another tool's command) ends
+        // the drawing: the next click starts a new path (PAR 09/07: Ctrl+D → new path)
+        if !ctx.selection.elements.contains(&t.id) {
+            self.reset_drawing();
+            return;
+        }
         let c = doc_path_contours(ctx, t.id)
             .and_then(|cs| cs.get(t.contour).cloned())
             .filter(|c| !c.closed && !c.nodes.is_empty());

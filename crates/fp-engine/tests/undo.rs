@@ -52,14 +52,15 @@ fn undo_redo_restores_document_and_selection() {
     // neuer Befehl leert den Redo-Stapel
     rect(&mut s, 50.0, 50.0, 60.0, 60.0);
     assert!(s.active().is_some_and(|d| !d.history.can_redo()));
-    // Redo is redo only (FB-08, re 55 §2): without an undone step it is disabled and does not repeat
-    // the last command
-    assert!(!s.is_available("edit.redo"));
-    assert_eq!(s.undo_redo_labels().1, None);
-    assert!(s.execute("edit.redo", json!({})).is_err());
-    assert_eq!(top_elements(&s).len(), 2);
-    assert_eq!(s.active().map(|d| d.history.undo_count()), Some(2));
-    assert_eq!(s.active().map(|d| d.history.labels()), Some(vec!["Rechteck".to_string(); 2]));
+    // without an undone step Redo repeats the last step as a new row (TW-173, re 55 §7.6; FB-08 had
+    // pinned "no repeat", which the reference does only right after a redo)
+    assert!(s.is_available("edit.redo"));
+    assert_eq!(s.undo_redo_labels().1, None, "nothing to redo");
+    assert_eq!(s.repeat_label().as_deref(), Some("Rechteck"));
+    ex(&mut s, "edit.redo", json!({}));
+    assert_eq!(top_elements(&s).len(), 3);
+    assert_eq!(s.active().map(|d| d.history.undo_count()), Some(3));
+    assert_eq!(s.active().map(|d| d.history.labels()), Some(vec!["Rechteck".to_string(); 3]));
 }
 
 #[test]

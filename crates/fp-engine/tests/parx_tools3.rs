@@ -391,6 +391,8 @@ fn line_nodes_on_pixel_centers_named_line() {
     assert!(near(a[1], want[2].as_f64().unwrap_or(0.0) as f32, want[3].as_f64().unwrap_or(0.0) as f32, 0.001), "{a:?}");
 }
 
+/// Esc and Enter do not end the pen path (re 55 §7.2, TW-177): the next click appends to the same
+/// path; Select None ends the drawing.
 #[test]
 fn pen_continues_after_esc_and_enter() {
     let mut s = session();

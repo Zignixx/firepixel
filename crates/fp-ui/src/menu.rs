@@ -298,7 +298,7 @@ fn with_step_name(st: &AppState, name: &str, label: String) -> String {
             Some(s) => Some(st.session.step_label(s)),
             None => return clean_label(&t("menu-edit-undoImpossible")).0,
         },
-        // "Redo: <undone step>", without one "Can't Redo" (FB-08)
+        // "Redo: <undone step>", else "Repeat: <last step>", else "Can't Redo" (TW-173)
         "edit.redo" => return with_redo_step(st, label),
         // wie im Original „Wiederholen: <Menütext des zuletzt benutzten Filters>“ (Text 10722, PM-7, MN-5)
         "filter.repeat" => {
@@ -322,10 +322,19 @@ fn with_step_name(st: &AppState, name: &str, label: String) -> String {
     }
 }
 
+/// Edit ▸ Redo (re 55 §7.6, TW-173): "Redo: <undone step>"; without an undone step "Repeat: <last
+/// step>" when the last row is repeatable (the original reads „Wiederholen: <Schritt>“ for both);
+/// otherwise (right after a redo, after a bitmap stroke, empty history) "Can't Redo" (TW-07).
 fn with_redo_step(st: &AppState, label: String) -> String {
-    match st.session.undo_redo_labels().1 {
-        Some(s) if !s.is_empty() => fp_i18n::tr!("menu-edit-withStep", label = label, step = s),
-        // no undone step: "Can't Redo" like the original (TW-07, FB-08)
+    if let Some(s) = st.session.undo_redo_labels().1.filter(|s| !s.is_empty()) {
+        return fp_i18n::tr!("menu-edit-withStep", label = label, step = s);
+    }
+    match st.session.repeat_label() {
+        Some(s) if !s.is_empty() => fp_i18n::tr!(
+            "menu-edit-withStep",
+            label = clean_label(&t("menu-edit-repeat")).0,
+            step = s
+        ),
         _ => clean_label(&t("menu-edit-redoImpossible")).0,
     }
 }

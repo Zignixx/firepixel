@@ -78,6 +78,9 @@ pub struct History {
     redo: Vec<HistoryStep>,
     max_undos: usize,
     dropped: usize,
+    /// The last change of the position was a redo (TW-173, re 55 §7.6): Edit ▸ Redo then has
+    /// nothing to repeat ("Can't Redo") until the next new step or an undo.
+    after_redo: bool,
 }
 
 impl History {
@@ -88,6 +91,7 @@ impl History {
             redo: Vec::new(),
             max_undos,
             dropped: 0,
+            after_redo: false,
         }
     }
 
@@ -104,6 +108,7 @@ impl History {
     /// Fügt einen abgeschlossenen Schritt an, leert den Redo-Stapel und kürzt auf `MaxUndos`.
     pub fn push(&mut self, step: HistoryStep) {
         self.redo.clear();
+        self.after_redo = false;
         self.undo.push(step);
         // Das Original entfernt je Abschluss genau einen Schritt; bei verkleinertem MaxUndos bleibt der
         // Stapel so lange länger, bis weitere Schritte folgen (A). Wir kürzen sofort auf die Grenze.
@@ -114,9 +119,9 @@ impl History {
     }
 
     /// Letzter Schritt zum Zusammenfassen mit einem Folgeschritt (z. B. Pfeiltasten); nur, wenn
-    /// nichts zum Wiederholen ansteht.
+    /// nichts zum Wiederholen ansteht (and not right after a redo: a redone row stays as it was).
     pub fn last_mergeable(&mut self) -> Option<&mut HistoryStep> {
-        if self.redo.is_empty() {
+        if self.redo.is_empty() && !self.after_redo {
             self.undo.last_mut()
         } else {
             None
@@ -126,6 +131,7 @@ impl History {
     /// Nimmt den letzten Schritt zurück und liefert den Zustand davor.
     pub fn undo(&mut self) -> Option<Snapshot> {
         let step = self.undo.pop()?;
+        self.after_redo = false;
         let mut snap = step.before.clone();
         // Einfügen merkt sich im Original keine Vorher-Auswahl (Auswahl-Schritt ohne Slots 7/8,
         // re\10 §Undo-Klassen „clipPaste“): Rückgängig hebt die Objektauswahl auf, statt die Auswahl
@@ -141,6 +147,7 @@ impl History {
     /// Wiederholt den zuletzt zurückgenommenen Schritt und liefert den Zustand danach.
     pub fn redo(&mut self) -> Option<Snapshot> {
         let step = self.redo.pop()?;
+        self.after_redo = true;
         let snap = step.after.clone();
         self.undo.push(step);
         Some(snap)
@@ -174,6 +181,22 @@ impl History {
     /// Kann wiederholt werden?
     pub fn can_redo(&self) -> bool {
         !self.redo.is_empty()
+    }
+
+    /// Was the last change of the position a redo (no new step and no undo since)? Edit ▸ Redo
+    /// then does not repeat the last step (TW-173, re 55 §7.6).
+    pub fn after_redo(&self) -> bool {
+        self.after_redo
+    }
+
+    /// The last executed step (the one Edit ▸ Undo takes back).
+    pub fn top(&self) -> Option<&HistoryStep> {
+        self.undo.last()
+    }
+
+    /// The last executed step, mutable (renaming a repeated row, TW-173).
+    pub(crate) fn top_mut(&mut self) -> Option<&mut HistoryStep> {
+        self.undo.last_mut()
     }
 
     /// Beschriftung des nächsten Rückgängig-Schritts (Menütext „Rückgängig …“).
@@ -239,6 +262,7 @@ impl History {
     pub fn clear(&mut self) {
         self.undo.clear();
         self.redo.clear();
+        self.after_redo = false;
     }
 
     /// Kürzt auf die letzten `n` Schritte (Speicherknappheit, `TrimHistorySteps`).

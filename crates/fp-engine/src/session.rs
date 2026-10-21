@@ -59,6 +59,51 @@ pub(crate) fn is_key_nudge(name: &str, params: &Value) -> bool {
             .is_none_or(|a| a.is_empty())
 }
 
+/// Commands whose history rows Edit ▸ Redo does not repeat (TW-173, re 55 §7.6: after a bitmap
+/// brush stroke the entry reads "Can't Redo"): the bitmap strokes of the brush, pencil, eraser and
+/// retouch tools.
+const NOT_REPEATABLE: &[&str] = &["bitmap.paint", "bitmap.erase", "bitmap.retouch"];
+
+/// Command and parameters that repeat a history row (TW-173). An arrow-key nudge is repeated as a
+/// plain move (a new row, not merged into the nudge row); a pen point (`appendPointToPath` in the
+/// original) appends the same point to the same contour again.
+fn repeat_invocation(step: &crate::history::HistoryStep) -> (String, Value) {
+    let mut params = step.params.clone();
+    if is_key_nudge(&step.command, &params) {
+        if let Some(o) = params.as_object_mut() {
+            o.remove("nudge");
+        }
+    } else if step.command == "path.setContours"
+        && params.get("step").and_then(Value::as_str) == Some("pen")
+        && let Some(p) = pen_point_again(step)
+    {
+        params = p;
+    }
+    (step.command.clone(), params)
+}
+
+/// Parameters of a pen point row with its point appended once more: the open contour that gained
+/// a point in the row gets a copy of its last node (anchor and handles).
+fn pen_point_again(step: &crate::history::HistoryStep) -> Option<Value> {
+    let id = fp_model::ElementId(step.params.get("id")?.as_u64()?);
+    let before: Vec<usize> =
+        match &crate::docops::element_on_page(&step.before.doc, step.before.page, id)?.kind {
+            fp_model::ElementKind::Path(pe) => pe.contours.iter().map(|c| c.nodes.len()).collect(),
+            _ => return None,
+        };
+    let mut params = step.params.clone();
+    let contours = params.get_mut("contours")?.as_array_mut()?;
+    let k = contours.iter().enumerate().position(|(i, c)| {
+        let n = c.get("nodes").and_then(Value::as_array).map_or(0, Vec::len);
+        before.get(i).is_some_and(|b| n == b + 1)
+            && c.get("closed").and_then(Value::as_bool) != Some(true)
+    })?;
+    let nodes = contours.get_mut(k)?.get_mut("nodes")?.as_array_mut()?;
+    let last = nodes.last()?.clone();
+    nodes.push(last);
+    Some(params)
+}
+
 /// Hat sich am Text etwas geändert, das den Satz ändert (Inhalt, Attribute, Rahmenart, Größe des
 /// festen Rahmens, Richtung)? Reines Verschieben zählt nicht – dann bleibt der gespeicherte Rahmen
 /// (Rundreise mit dem Original).
@@ -1193,6 +1238,93 @@ impl Session {
         let undo = d.and_then(|d| d.history.undo_label().map(str::to_string));
         let redo = d.and_then(|d| d.history.redo_label().map(str::to_string));
         (undo, redo)
+    }
+
+    /// The step Edit ▸ Redo repeats when nothing is undone (TW-173, re 55 §7.6): the last history
+    /// row, if it is repeatable and the last change of the position was not a redo. `None` while a
+    /// redo is available.
+    pub fn repeat_step(&self) -> Option<&crate::history::HistoryStep> {
+        let h = &self.active()?.history;
+        if h.can_redo() || h.after_redo() {
+            return None;
+        }
+        h.top()
+            .filter(|st| self.repeatable_command(&st.command, &st.params, true))
+    }
+
+    /// Name of the step Edit ▸ Redo would repeat ("Repeat: <step>", TW-173), in the current
+    /// language.
+    pub fn repeat_label(&self) -> Option<String> {
+        self.repeat_step().map(|st| self.step_label(st))
+    }
+
+    /// Can Edit ▸ Redo repeat the last step (nothing undone, TW-173)?
+    pub fn can_repeat(&self) -> bool {
+        self.repeat_step().is_some()
+    }
+
+    /// Repeatable history row (TW-173, re 55 §7.6): a step with recorded parameters that can be run
+    /// again — every command step and every group of such steps (`history.replay`), as the History
+    /// can replay them. Not repeatable: bitmap strokes (brush, pencil, eraser and the retouch tools;
+    /// their rows have no script counterpart in the original), steps without recorded parameters
+    /// and commands that are unavailable now (`top` only: the outer step is checked against the
+    /// current state).
+    fn repeatable_command(&self, command: &str, params: &Value, top: bool) -> bool {
+        if !params.is_object() || NOT_REPEATABLE.contains(&command) {
+            return false;
+        }
+        let Some(c) = self.registry.get(command) else {
+            return false;
+        };
+        if !c.info().implemented || (top && self.unmet(c.as_ref()).is_some()) {
+            return false;
+        }
+        if command == "history.replay" {
+            return params
+                .get("commands")
+                .and_then(Value::as_array)
+                .is_some_and(|cs| {
+                    !cs.is_empty()
+                        && cs.iter().all(|c| {
+                            match (c.get("command").and_then(Value::as_str), c.get("params")) {
+                                (Some(n), Some(p)) => self.repeatable_command(n, p, false),
+                                _ => false,
+                            }
+                        })
+                });
+        }
+        true
+    }
+
+    /// Edit ▸ Redo without an undone step: runs the last history row again as a new row with the
+    /// same command and parameters and the same name (TW-173, re 55 §7.6: after Clone a second
+    /// clone, after a move the same move, after a pen point the same point appended again). A
+    /// repeated row is itself repeatable.
+    pub fn repeat_last(&mut self) -> Result<()> {
+        self.end_live_text_view();
+        // like undo/redo: ignored while a Vector Path stroke holds the mouse button (FB-07)
+        if self.tools.machine.blocks_history() {
+            return Ok(());
+        }
+        let step = self
+            .repeat_step()
+            .ok_or(EngineError::History("err-req-can-redo"))?;
+        let (label, key) = (step.label.clone(), step.key.clone());
+        let (command, params) = repeat_invocation(step);
+        let rows = |s: &Session| {
+            s.active()
+                .map(|d| d.history.len() + d.history.dropped())
+                .unwrap_or(0)
+        };
+        let n0 = rows(self);
+        self.execute(&command, params)?;
+        if rows(self) > n0
+            && let Some(top) = self.active_mut().and_then(|d| d.history.top_mut())
+        {
+            top.label = label;
+            top.key = key;
+        }
+        Ok(())
     }
 
     /// Wiederholen im aktiven Dokument.

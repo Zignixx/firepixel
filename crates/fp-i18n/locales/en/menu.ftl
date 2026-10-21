@@ -587,6 +587,8 @@ menu-edit-withStep = { $label }: { $step }
 # Edit menu without history (TW-07)
 menu-edit-undoImpossible = Can't &Undo
 menu-edit-redoImpossible = Can't &Redo
+# Edit ▸ Redo without an undone step: run the last step again (TW-173)
+menu-edit-repeat = &Repeat
 # Filter menu after a filter (original text 10722): the filter's menu text including "..."
 menu-filter-repeatWith = Repeat: { $filter }
 menu-window-extensions-none = No Extensions

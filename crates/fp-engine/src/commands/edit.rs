@@ -607,13 +607,20 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 Ok(CommandOutput::session())
             }),
     );
-    // Redo only (tester feedback FB-08): without an undone step Ctrl+Y and Ctrl+Shift+Z do nothing
-    // and the menu entry reads "Can't Redo". Re-running steps is the History panel's "Replay".
+    // Redo, otherwise repeat (TW-173, re 55 §7.6): with an undone step Ctrl+Y / Ctrl+Shift+Z redo
+    // it; without one they run the last history row again as a new row ("Repeat: <step>") if it
+    // is repeatable and the last change was not a redo; otherwise the entry reads "Can't Redo"
+    // and nothing happens. The History panel's "Replay" is a separate command.
     r.add(
         cmd("edit.redo")
-            .requires(&[Requirement::Document, Requirement::CanRedo])
+            .requires(&[Requirement::Document])
+            .available(|s| s.active().is_some_and(|d| d.history.can_redo()) || s.can_repeat())
             .run(|s, _| {
-                s.redo()?;
+                if s.active().is_some_and(|d| d.history.can_redo()) {
+                    s.redo()?;
+                } else {
+                    s.repeat_last()?;
+                }
                 Ok(CommandOutput::session())
             }),
     );
