@@ -605,7 +605,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt_default("fingerPaint", ParamKind::Bool, json!(false), "Verwischen: Farbe verwischen (Farbe `color` einmischen)")
             .opt("color", ParamKind::Color, "Verwischen: Farbe für „Farbe verwischen“ (Vorgabe: Füllfarbe)")
             .opt_default("wholeDocument", ParamKind::Bool, json!(false), "Verwischen: Gesamtes Dokument (alle sichtbaren Objekte und die Leinwand aufnehmen)")
-            .opt_default("confineToBounds", ParamKind::Bool, json!(false), "Smudge: keep the smear inside the bitmap edge (off = the bitmap grows where the smear runs past its edge, like the original)")
+            .opt_default("confineToBounds", ParamKind::Bool, json!(false), "Verwischen: Auf Grenzen beschränken (aus = das Bitmap wächst, wo der Strich über den Rand hinausläuft)")
             .opt("replaceStrength", ParamKind::Integer { min: Some(0), max: Some(255) }, "Farbe ersetzen: Stärke 0..255 (Vorgabe 200)")
             .opt("fromImage", ParamKind::Bool, "Farbe ersetzen: Von-Farbe aus der Grafik unter dem Startpunkt")
             .run(|s, p| {
