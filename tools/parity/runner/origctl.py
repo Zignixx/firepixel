@@ -189,7 +189,9 @@ class Original:
                           # menu entries that would end the program are never executed
                           "forbidden_menu": cfg.get("forbidden_menu", ["Datei > Beenden"]),
                           # R-8: settle time of the host's final foreground check after a take-back
-                          "settle_ms": int(cfg.get("focus_settle_ms", 450))})
+                          "settle_ms": int(cfg.get("focus_settle_ms", 450)),
+                          # R-27 (TW-179): path of unmodified keys - "scancode" (scan code only) or "vk"
+                          "plain_keys": str(cfg.get("plain_keys", "scancode") or "scancode")})
         # decided by the first start(): True only if no instance was running when the run began (a later
         # restart after a crash does not change it)
         self.started_by_us = None

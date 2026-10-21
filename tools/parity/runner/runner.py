@@ -589,6 +589,8 @@ POINTER_TOOLS = ("zeiger", "pointer")
 # as tool shortcuts (Delete -> Eraser, Right -> Text, Down -> Line, Escape -> Crop / Export Area, a "c" in an open
 # text editor), although virtual key, scan code, layout and focus are right; modified keys work. On the reference
 # side these keys are replaced by menu / script / mouse actions with the same effect (Firepixel keeps the real keys)
+# R-27 (TW-179): the cause was the host (a one-key combo was sent as the key name's last letter: delet-E = Eraser,
+# righ-T = Text, dow-N = Line, es-C = Crop); fixed, the substitutes are off by default (config orig.key_substitutes)
 SUBST_KEYS = {"delete": "clear", "backspace": "clear", "left": "nudge", "right": "nudge", "up": "nudge",
               "down": "nudge", "esc": "escape"}
 NUDGE = {"left": (-1, 0), "right": (1, 0), "up": (0, -1), "down": (0, 1)}
@@ -2457,6 +2459,27 @@ class OrigSide(Side):
         before = self.page_size()
         tries, after = [], before
         mid = [(a["from"][0] + a["to"][0]) / 2, (a["from"][1] + a["to"][1]) / 2]
+        # R-27 (TW-179): the real Enter commits the crop (RE-24 7.1, R-27 probe: 400 x 300 -> 100 x 100); the R-19
+        # double-click only when Enter left the page unchanged or `orig.key_substitutes` is on
+        if not self.r.cfg["orig"].get("key_substitutes", False):
+            t = {"commit": "real Enter"}
+            try:
+                self.do("tool", "tool.crop", {})
+                time.sleep(0.3)
+                t["tool"] = self.active_tool()
+                self.do("canvas_drag", {"from": a["from"], "to": a["to"]}, {})
+                time.sleep(0.3)
+                self.key("enter")
+                time.sleep(0.5)
+            except (OrigError, Unmapped) as e:
+                t["error"] = str(e)[:120]
+            after = t["after"] = self.page_size()
+            if after != before and not after.startswith("?"):
+                self.values.append({"crop": {"before": before, "after": after, "tries": 1, "commit": "real Enter"}})
+                self.r.log(f"  orig crop {a['from']} -> {a['to']}: page {before} -> {after} (real Enter; {t})")
+                return
+            tries.append(t)
+            self.r.log(f"  orig crop: real Enter left the page {after} - double-click inside the crop box ({t})")
         for n in (1, 2):
             t = {}
             try:
@@ -3065,10 +3088,13 @@ class OrigSide(Side):
 
     def type_keys(self, text: str):
         """R-20: typed as real keys (vk + scan code + shift state of the reference's layout, host `type` mode keys),
-        config `orig.type_delay_ms` (default 35 since R-22, TW-146 rest; was 20) between the characters."""
+        config `orig.type_delay_ms` (default 35 since R-22, TW-146 rest; was 20) between the characters. R-27 (TW-179):
+        on the scan-code path (orig.plain_keys) every key of a character goes out as scan code only (R-27 probe:
+        "Abc 123" arrived in a new text); the host's answer names the path."""
         delay = int(self.r.cfg["orig"].get("type_delay_ms", 35))
         self.o.focus()
-        return self.h.call("type", text=text, mode="keys", delay_ms=delay, timeout=60 + len(text) * delay / 1000)
+        return self.h.call("type", text=text, mode="keys", delay_ms=delay, path=self.plain_keys(),
+                           timeout=60 + len(text) * (delay + 100) / 1000)
 
     def text_entry(self, text: str) -> bool:
         """R-20 (TW-146, run 22 tool-text/02, 03, 06, 11, 13, 14: texts created by a text-tool click stayed empty and
@@ -3731,8 +3757,13 @@ class OrigSide(Side):
         key_substitute_plan): Delete -> Edit > Clear (menu; `deleteSelection(false)` when the menu fails or removes
         nothing), arrow -> `moveSelectionBy({x, y}, false, false)`, Escape in the text editor -> Pointer tool click.
         Returns the method, or None for the real key (dialogs, menus, popups, text editing, no document; config
-        `orig.key_substitutes: false` switches it off)."""
-        if not self.r.cfg["orig"].get("key_substitutes", True):
+        `orig.key_substitutes: false` switches it off).
+        R-27 (TW-179): off by default - the keys never arrived because the host sent every unmodified named key as
+        its name's last letter (PowerShell made a one-key combo a string; fixed, see orig_host.ps1 ComboParts), and
+        plain keys now go out as scan codes; measured against the reference: Delete removes, arrows nudge, Escape
+        removes a crop box / ends a text edit, Enter crops, typed text arrives. `orig.key_substitutes: true` brings
+        the R-19..R-24 substitutes back."""
+        if not self.r.cfg["orig"].get("key_substitutes", False):
             return None
         mods, k = parse_combo(combo)
         if mods or k not in SUBST_KEYS:
@@ -4747,9 +4778,18 @@ class OrigSide(Side):
         if plain:
             self.view_focus_if_frame(combo)
             self.key_probe(combo)
-        self.h.call("key", combo="+".join(mods + [k]))
+        res = self.h.call("key", combo="+".join(mods + [k]), path=self.plain_keys())
+        # R-27 (TW-179): which path the key took (host: unmodified keys scan code only, modified keys vk + scan code)
+        if isinstance(res, dict):
+            self.r.log(f"  orig key {combo}: {res.get('path')} path (vk {int(res.get('vk') or 0):#04x}, scan "
+                       f"{int(res.get('scan') or 0):#04x}{', extended' if res.get('ext') else ''})")
         if plain and log_tool:
             self.log_tool_after_key(combo)
+
+    def plain_keys(self) -> str:
+        """R-27 (TW-179): the host's path for unmodified keys, config `orig.plain_keys`: "scancode" (default, scan code
+        only like a real keyboard, measured by RE-24) or "vk" (virtual key + scan code, the path up to R-26)."""
+        return str(self.r.cfg["orig"].get("plain_keys", "scancode") or "scancode").lower()
 
     def key_probe(self, combo) -> None:
         """R-17 (TW-140): before every plain key - foreground window, keyboard focus and the focus thread's keyboard
@@ -4807,6 +4847,9 @@ class OrigSide(Side):
         True when at least one echo came back (the caller repeats the test at the next unit otherwise)."""
         want = str(self.r.cfg["orig"].get("key_layout", "00000407") or "")
         done = False
+        self.r.log(f"orig plain keys: {self.plain_keys()} path (orig.plain_keys); R-19 key substitutes "
+                   f"{'on' if self.r.cfg['orig'].get('key_substitutes', False) else 'off (R-27: the real keys arrive)'} "
+                   f"(orig.key_substitutes)")
         for phase in ("before", "after"):
             if phase == "after":
                 if not self.layout_request(want):
@@ -4814,7 +4857,8 @@ class OrigSide(Side):
                     break
             try:
                 self.o.focus()
-                echo = self.h.call("key_echo", timeout=30) or {}
+                # R-27 (TW-179): the keys go out on the same path as `key` sends unmodified keys (orig.plain_keys)
+                echo = self.h.call("key_echo", path=self.plain_keys(), timeout=30) or {}
             except OrigError as e:
                 self.r.log(f"key echo ({phase} layout request): {e}")
                 continue
@@ -4824,8 +4868,10 @@ class OrigSide(Side):
                 s, a = k.get("sent") or {}, k.get("arrived")
                 got = (f"{a['vk']:#04x}/{a['scan']:#04x}{' ext' if a.get('ext') else ''} name '{k.get('name')}' "
                        f"char {k.get('char')!r}") if a else "nothing"
-                return f"{k.get('key')} {s.get('vk', 0):#04x}/{s.get('scan', 0):#04x}{' ext' if s.get('ext') else ''} -> {got}"
-            self.r.log(f"key echo ({phase} layout request; target layout {echo.get('layout')}, host {echo.get('host_layout')}, "
+                # R-27: "scan only" = sent with wVk 0, the arrived vk is the system's translation of the scan code
+                sc = " scan only" if k.get("path") == "scancode" and not s.get("wvk") else ""
+                return f"{k.get('key')} {s.get('vk', 0):#04x}/{s.get('scan', 0):#04x}{' ext' if s.get('ext') else ''}{sc} -> {got}"
+            self.r.log(f"key echo ({phase} layout request; {echo.get('path') or 'vk'} path; target layout {echo.get('layout')}, host {echo.get('host_layout')}, "
                        f"focus {echo.get('focus_class')}, double-click time {echo.get('dbl_ms')} ms): "
                        f"{'ok' if echo.get('ok') else 'MISMATCH'} - " + "; ".join(one(k) for k in echo.get("keys") or []))
         return done

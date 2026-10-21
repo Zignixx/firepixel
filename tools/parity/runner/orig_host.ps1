@@ -123,6 +123,12 @@ public static class N {
   public static ushort ScanOf(ushort vk) { if (vk == 0x1B) return 0x01; uint s = KeyHkl != IntPtr.Zero ? MapVirtualKeyEx(vk, 0, KeyHkl) : MapVirtualKey(vk, 0); return (ushort)(s & 0xFF); }
   public static INPUT Key(ushort vk, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wVk = vk; i.u.ki.wScan = ScanOf(vk); i.u.ki.dwFlags = up ? 2u : 0u;
     if (IsExtended(vk)) i.u.ki.dwFlags |= 1; return i; }
+  // R-27 (TW-179, RE-24: the vk + scan code path turned a plain Escape into the Eraser, Enter into a tool switch; a
+  // posted WM_KEYDOWN had no effect; the scan code alone arrived right - T = Text tool, Escape removes a crop box,
+  // Enter crops): scan-code-only input (KEYEVENTF_SCANCODE, wVk = 0, extended flag for extended keys) - the system
+  // derives the virtual key from the scan code like for a real keyboard. Null when the key has no scan code.
+  public static INPUT? KeySc(ushort vk, bool up) { ushort s = ScanOf(vk); if (s == 0) return null; var i = new INPUT(); i.type = 1; i.u.ki.wVk = 0; i.u.ki.wScan = s;
+    i.u.ki.dwFlags = 8u | (up ? 2u : 0u); if (IsExtended(vk)) i.u.ki.dwFlags |= 1; return i; }
   // key name / character as the target sees them (layout hkl; the host thread borrows that layout for the call)
   public static string KeyName(uint scan, bool ext, IntPtr hkl) { IntPtr old = IntPtr.Zero; if (hkl != IntPtr.Zero) old = ActivateKeyboardLayout(hkl, 0);
     var s = new StringBuilder(64); GetKeyNameText((int)((scan << 16) | (ext ? (1u << 24) : 0u)), s, 64); if (old != IntPtr.Zero) ActivateKeyboardLayout(old, 0); return s.ToString(); }
@@ -130,11 +136,15 @@ public static class N {
   // R-20 (TW-146): typed text as real keys - virtual key and shift state of the character in the target's layout
   // (VkKeyScanEx with KeyHkl), every key with its scan code (Key); null = no key for it in that layout (sent as Unicode)
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern short VkKeyScanEx(char ch, IntPtr hkl);
-  public static INPUT[] CharKeys(char c) { IntPtr hkl = KeyHkl != IntPtr.Zero ? KeyHkl : GetKeyboardLayout(0); short r = VkKeyScanEx(c, hkl);
+  public static INPUT[] CharKeys(char c) { return CharKeys(c, false); }
+  // R-27 (TW-179): sc = every key of the character (Shift/Ctrl/Alt too) as scan-code-only input (KeySc)
+  public static INPUT[] CharKeys(char c, bool sc) { IntPtr hkl = KeyHkl != IntPtr.Zero ? KeyHkl : GetKeyboardLayout(0); short r = VkKeyScanEx(c, hkl);
     if (r == -1 || (r & 0xFF) == 0xFF) return null; ushort vk = (ushort)(r & 0xFF); int sh = (r >> 8) & 0xFF; var a = new List<INPUT>();
-    if ((sh & 2) != 0) a.Add(Key(0x11, false)); if ((sh & 4) != 0) a.Add(Key(0x12, false)); if ((sh & 1) != 0) a.Add(Key(0x10, false));
-    a.Add(Key(vk, false)); a.Add(Key(vk, true));
-    if ((sh & 1) != 0) a.Add(Key(0x10, true)); if ((sh & 4) != 0) a.Add(Key(0x12, true)); if ((sh & 2) != 0) a.Add(Key(0x11, true)); return a.ToArray(); }
+    if (sc && ScanOf(vk) == 0) return null;
+    Func<ushort, bool, INPUT> K = (v, up) => sc ? KeySc(v, up).Value : Key(v, up);
+    if ((sh & 2) != 0) a.Add(K(0x11, false)); if ((sh & 4) != 0) a.Add(K(0x12, false)); if ((sh & 1) != 0) a.Add(K(0x10, false));
+    a.Add(K(vk, false)); a.Add(K(vk, true));
+    if ((sh & 1) != 0) a.Add(K(0x10, true)); if ((sh & 4) != 0) a.Add(K(0x12, true)); if ((sh & 2) != 0) a.Add(K(0x11, true)); return a.ToArray(); }
   // R-20 (TW-146): GUI thread state of a window's thread (focus, caret window, caret rectangle, flags 1 = caret blinking)
   public static GUITHREADINFO GuiOf(IntPtr top) { uint p; uint tid = GetWindowThreadProcessId(top, out p); var g = new GUITHREADINFO(); g.cbSize = Marshal.SizeOf(typeof(GUITHREADINFO)); GetGUIThreadInfo(tid, ref g); return g; }
   public static INPUT Uni(char c, bool up) { var i = new INPUT(); i.type = 1; i.u.ki.wScan = c; i.u.ki.dwFlags = 4u | (up ? 2u : 0u); return i; }
@@ -172,7 +182,7 @@ public static class E {
 [PR.N]::SetProcessDPIAware() | Out-Null
 $UIA = [System.Windows.Automation.AutomationElement]
 $TW = [System.Windows.Automation.TreeWalker]::ControlViewWalker
-$S = @{ process = ''; main_class = ''; view_class = ''; panel_class = ''; pid = 0; forbidden = @() }
+$S = @{ process = ''; main_class = ''; view_class = ''; panel_class = ''; pid = 0; forbidden = @(); plain_keys = 'scancode' }
 
 # LRESULT of a 32-bit target arrives zero-extended (-1 = 4294967295): back to a signed 32-bit value
 function I32($v) { $x = [int64]$v.ToInt64(); if ($x -gt [int64][int]::MaxValue) { $x -= [int64]4294967296 }; [int]$x }
@@ -334,14 +344,32 @@ $VK += @{ semicolon = 0xBA; apostrophe = 0xDE; quote = 0xDE; slash = 0xBF; backs
 # R-16 (run 20): PowerShell names are case-insensitive and scoped dynamically - a caller's local `$vk` hid this table
 # ("[System.UInt16] does not contain a method named 'ContainsKey'"); always the script's table, never a caller's variable
 function VkOf([string]$k) { $k = $k.ToLower(); if ($script:VK.ContainsKey($k)) { return [uint16]$script:VK[$k] }; if ($k.Length -eq 1) { return [uint16][int][char]$k.ToUpper() }; if ($k -match '^f(\d+)$') { return [uint16](0x6F + [int]$matches[1]) }; if ($k -match '^0x') { return [uint16][Convert]::ToInt32($k, 16) }; throw "unknown key $k" }
-function Combo([string]$c) {
-  $parts = $c.Split('+') | ? { $_ }
-  if (($parts | % { $_.ToLower() }) -contains 'ctrl' -and ($parts | % { $_.ToLower() }) -contains 'alt' -and ($parts | % { $_.ToLower() }) -contains 'space') { throw 'ctrl+alt+space is forbidden' }
-  $mods = @(); if ($parts.Count -gt 1) { $mods = $parts[0..($parts.Count - 2)] }; $main = $parts[-1]
+# R-27 (TW-179): path of an unmodified key - 'scancode' (default: scan code only, down and up as two inputs 40 ms
+# apart, like a real keyboard) or 'vk' (virtual key + scan code in one batch, the path up to R-26); init `plain_keys`
+# sets the default, a command's `path` overrides it. Keys with Ctrl / Shift / Alt always take the vk path (it works).
+function PlainPath([string]$p) { $x = if ($p) { $p } elseif ($S.plain_keys) { [string]$S.plain_keys } else { 'scancode' }; $x.ToLower() }
+# R-27 (TW-179): modifiers and main key of a combo. Always arrays - for a single key PowerShell made the pipeline
+# result a plain string, so $parts[-1] was the key name's LAST CHARACTER: every unmodified named key (R-13b..R-26)
+# went out as a letter key - delet-E = Eraser, righ-T = Text, dow-N = Line, escap-E = Eraser, ente-R, es-C = Crop
+# (the R-15 "last letter" finding; single letters and modified combos were right)
+function ComboParts([string]$c) {
+  $parts = @($c.Split('+') | ? { $_ })
+  if (-not $parts.Count) { throw "empty key combo '$c'" }
+  $mods = @(); if ($parts.Count -gt 1) { $mods = @($parts[0..($parts.Count - 2)]) }
+  @{ mods = $mods; main = [string]$parts[$parts.Count - 1] } }
+function Combo([string]$c, [string]$path) {
+  $cp = ComboParts $c; $mods = @($cp.mods); $main = $cp.main
+  $low = @(@($mods) + @($main) | % { $_.ToLower() })
+  if ($low -contains 'ctrl' -and $low -contains 'alt' -and $low -contains 'space') { throw 'ctrl+alt+space is forbidden' }
+  $mv = VkOf $main
+  if ($mods.Count -eq 0 -and (PlainPath $path) -eq 'scancode') { $dn = [PR.N]::KeySc($mv, $false)
+    if ($dn -ne $null) { $up = [PR.N]::KeySc($mv, $true); [PR.N]::Send(@($dn)); Start-Sleep -Milliseconds 40; [PR.N]::Send(@($up))
+      return @{ path = 'scancode'; vk = [int]$mv; scan = [int]$dn.u.ki.wScan; ext = [int]($dn.u.ki.dwFlags -band 1) } } }
   $a = @(); foreach ($m in $mods) { $a += [PR.N]::Key((VkOf $m), $false) }
-  $a += [PR.N]::Key((VkOf $main), $false); $a += [PR.N]::Key((VkOf $main), $true)
+  $md = [PR.N]::Key($mv, $false); $a += $md; $a += [PR.N]::Key($mv, $true)
   for ($i = $mods.Count - 1; $i -ge 0; $i--) { $a += [PR.N]::Key((VkOf $mods[$i]), $true) }
   [PR.N]::Send($a)
+  @{ path = 'vk'; vk = [int]$mv; scan = [int]$md.u.ki.wScan; ext = [int]($md.u.ki.dwFlags -band 1); mods = @($mods) }
 }
 function Mods($mods, [bool]$up) { $a = @(); foreach ($m in @($mods)) { if ($m) { $a += [PR.N]::Key((VkOf $m), $up) } }; if ($a.Count) { [PR.N]::Send($a) } }
 function Click($x, $y, $button, $mods, $count) {
@@ -524,7 +552,7 @@ function MenuPath($path, $final, $bar) {
       [PR.N]::SetCursorPos($x, $y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 250
       Click $x $y 'left' @() 1
       for ($t = 0; $t -lt 8 -and (MenuWins).Count; $t++) { Start-Sleep -Milliseconds 100 }
-      if ((MenuWins).Count) { [PR.N]::SetCursorPos($x, $y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 200; Combo 'enter'; Start-Sleep -Milliseconds 300 }
+      if ((MenuWins).Count) { [PR.N]::SetCursorPos($x, $y) | Out-Null; [PR.N]::Send(@([PR.N]::Mouse(0x1, 0))); Start-Sleep -Milliseconds 200; Combo 'enter' 'vk' | Out-Null; Start-Sleep -Milliseconds 300 }
       if ((MenuWins).Count) { throw "menu item did not execute (menu still open): $want" }
       $invoked = $true
     } else {
@@ -567,28 +595,35 @@ function KeyProbe([string]$want) {
 # R-16: `$mock` (offline self test, selftest_host.ps1): no hook, no SendInput - the inputs that would be sent are
 # echoed back as the hook would record them (injected flag set). Locals never reuse script names ($VK, $S: same
 # variable for PowerShell, see VkOf).
-function KeyEcho($keys, [switch]$mock) {
-  $hkl = TargetHkl; [PR.N]::KeyHkl = $hkl; $m = MainWin; $foc = [PR.N]::FocusOf($m)
+# R-27 (TW-179): `path` as for `key` (default the init's `plain_keys`): with 'scancode' every key goes out as scan code
+# only (wVk = 0) exactly like `key` sends an unmodified key, and the echo proves that the system derived the expected
+# virtual key from it (arrived vk = the key's vk); rows carry `path`
+function KeyEcho($keys, [switch]$mock, [string]$path) {
+  $hkl = TargetHkl; [PR.N]::KeyHkl = $hkl; $m = MainWin; $foc = [PR.N]::FocusOf($m); $pp = PlainPath $path
   if (-not $mock) { $err = [PR.E]::Start(); if ($err) { [PR.E]::Stop(); throw "key_echo: $err" } }
   $sent = @(); $fake = @()
-  try { foreach ($k in @($keys)) { $kv = VkOf $k; $dn = [PR.N]::Key($kv, $false); $up = [PR.N]::Key($kv, $true)
-          $sent += ,@($k, [int]$kv, [int]$dn.u.ki.wScan, [int]($dn.u.ki.dwFlags -band 1))
+  try { foreach ($k in @($keys)) { $kv = VkOf $k; $sc = $false; $dn = $null
+          if ($pp -eq 'scancode') { $dn = [PR.N]::KeySc($kv, $false) }
+          if ($dn -ne $null) { $sc = $true; $up = [PR.N]::KeySc($kv, $true) } else { $dn = [PR.N]::Key($kv, $false); $up = [PR.N]::Key($kv, $true) }
+          $sent += ,@($k, [int]$kv, [int]$dn.u.ki.wScan, [int]($dn.u.ki.dwFlags -band 1), $(if ($sc) { 'scancode' } else { 'vk' }), [int]$dn.u.ki.wVk)
           if ($mock) { foreach ($in in @($dn, $up)) { $fl = $in.u.ki.dwFlags
-              $fake += ,[uint32[]]@($(if ($fl -band 2) { 0x101 } else { 0x100 }), $in.u.ki.wVk, $in.u.ki.wScan, (($fl -band 1) -bor 0x10)) } }
+              # the system's scan code -> virtual key translation is mocked with the key's own vk
+              $fake += ,[uint32[]]@($(if ($fl -band 2) { 0x101 } else { 0x100 }), $(if ($sc) { $kv } else { $in.u.ki.wVk }), $in.u.ki.wScan, (($fl -band 1) -bor 0x10)) } }
+          elseif ($sc) { [PR.N]::Send(@($dn)); Start-Sleep -Milliseconds 40; [PR.N]::Send(@($up)); Start-Sleep -Milliseconds 80 }
           else { [PR.N]::Send(@($dn, $up)); Start-Sleep -Milliseconds 80 } }
         if (-not $mock) { Start-Sleep -Milliseconds 200 } } finally { if (-not $mock) { [PR.E]::Stop() } }
   $all = if ($mock) { $fake } else { @([PR.E]::Take()) }; $got = @($all | ? { $_[0] -eq 0x100 -or $_[0] -eq 0x104 }); $rows = @(); $ok = $true
   for ($i = 0; $i -lt $sent.Count; $i++) { $sk = $sent[$i]; $g = if ($i -lt $got.Count) { $got[$i] } else { $null }
-    $row = @{ key = $sk[0]; sent = @{ vk = $sk[1]; scan = $sk[2]; ext = $sk[3] } }
+    $row = @{ key = $sk[0]; path = $sk[4]; sent = @{ vk = $sk[1]; scan = $sk[2]; ext = $sk[3]; wvk = $sk[5] } }
     if ($g) { $ext = [int]($g[3] -band 1); $row.arrived = @{ vk = [int]$g[1]; scan = [int]$g[2]; ext = $ext; injected = [bool]($g[3] -band 0x10) }
       $row.name = [PR.N]::KeyName($g[2], [bool]$ext, $hkl); $row.char = [PR.N]::KeyChar($g[1], $g[2], $hkl)
       $row.ok = ([int]$g[1] -eq $sk[1] -and [int]$g[2] -eq $sk[2] -and $ext -eq $sk[3]) } else { $row.ok = $false; $row.arrived = $null }
     if (-not $row.ok) { $ok = $false }; $rows += $row }
-  @{ ok = $ok; layout = (Hex $hkl); host_layout = (Hex ([PR.N]::GetKeyboardLayout(0))); focus_class = $(if ($foc -ne [IntPtr]::Zero) { [PR.N]::Cls($foc) } else { '' })
+  @{ ok = $ok; path = $pp; layout = (Hex $hkl); host_layout = (Hex ([PR.N]::GetKeyboardLayout(0))); focus_class = $(if ($foc -ne [IntPtr]::Zero) { [PR.N]::Cls($foc) } else { '' })
      events = $all.Count; keys = $rows; dbl_ms = [int][PR.N]::GetDoubleClickTime(); dbl_cx = [PR.N]::GetSystemMetrics(36); dbl_cy = [PR.N]::GetSystemMetrics(37) } }
 function Handle($c) {
   switch ($c.cmd) {
-    'init' { if ($c.settle_ms) { $S.settle_ms = [int]$c.settle_ms }; $S.process = $c.process; $S.main_class = [string]$c.main_class; $S.view_class = [string]$c.view_class; $S.panel_class = [string]$c.panel_class; $S.forbidden = @($c.forbidden_menu | ? { $_ } | % { (($_ -split '>') | % { Clean $_ }) -join ' > ' }); [PR.N]::TargetClass = $S.main_class; $p = Proc; try { [PR.N]::KeyHkl = TargetHkl } catch { }; return @{ pid = $S.pid } }
+    'init' { if ($c.settle_ms) { $S.settle_ms = [int]$c.settle_ms }; if ($c.plain_keys) { $S.plain_keys = [string]$c.plain_keys }; $S.process = $c.process; $S.main_class = [string]$c.main_class; $S.view_class = [string]$c.view_class; $S.panel_class = [string]$c.panel_class; $S.forbidden = @($c.forbidden_menu | ? { $_ } | % { (($_ -split '>') | % { Clean $_ }) -join ' > ' }); [PR.N]::TargetClass = $S.main_class; $p = Proc; try { [PR.N]::KeyHkl = TargetHkl } catch { }; return @{ pid = $S.pid } }
     'ping' { return 'pong' }
     'pid' { Proc | Out-Null; return $S.pid }
     'main_pid' { return (MainOwner) }
@@ -682,12 +717,12 @@ function Handle($c) {
     'uia_tree' { $root = if ($c.hwnd) { El ([IntPtr][int64]$c.hwnd) } else { El (MainWin) }; $out = New-Object Collections.ArrayList; Dump $root 0 ([int]$(if ($c.depth) { $c.depth } else { 3 })) $out; return ,$out.ToArray() }
     'uia_find' { $e = FindEl $c.name $c.type $c.scope $c.exact; if (-not $e) { throw "not found: $($c.name) [$($c.type)]" }; return (ElInfo $e) }
     'uia_do' { $e = FindEl $c.name $c.type $c.scope $c.exact; if (-not $e) { throw "not found: $($c.name) [$($c.type)]" }; $r = DoAct $e $c.action $c.value; $i = ElInfo $e; $i.done = $r; return $i }
-    'key' { Combo $c.combo; Start-Sleep -Milliseconds 80; return 'ok' }
+    'key' { $r = Combo $c.combo ([string]$c.path); Start-Sleep -Milliseconds 80; return $r }
     'layout' { return (Layout ([string]$c.want)) }
     'key_probe' { return (KeyProbe ([string]$c.want)) }
     'key_echo' { $k = if ($c.keys) { @($c.keys) } else { @('escape', 'delete', 'right', 'left', 'home', 'end', 'pageup', 'insert', 'c', 'e', 't', 'z') }
       # R-16: the failure goes back to the runner (logged there, not fatal) with the host script line that raised it
-      try { return (KeyEcho $k) } catch { $ii = $_.InvocationInfo; $src = if ($ii -and $ii.Line) { $ii.Line.Trim() } else { '' }; if ($src.Length -gt 240) { $src = $src.Substring(0, 240) + '...' }
+      try { return (KeyEcho $k -path ([string]$c.path)) } catch { $ii = $_.InvocationInfo; $src = if ($ii -and $ii.Line) { $ii.Line.Trim() } else { '' }; if ($src.Length -gt 240) { $src = $src.Substring(0, 240) + '...' }
         throw "$($_.Exception.GetType().FullName): $($_.Exception.Message) [orig_host.ps1 line $(if ($ii) { $ii.ScriptLineNumber } else { '?' }), offset $(if ($ii) { $ii.OffsetInLine } else { '?' }): $src]" } }
     'view_focus' { # R-15 (TW-140): keyboard focus to the document view (SetFocus with attached input), no click
       $v = ViewHwnd; if ($v -eq [IntPtr]::Zero) { throw 'view window not found' }
@@ -698,12 +733,16 @@ function Handle($c) {
       return @{ view = [int64]$v; was_class = $(if ($was -ne [IntPtr]::Zero) { [PR.N]::Cls($was) } else { '' }); focus_class = $(if ($f -ne [IntPtr]::Zero) { [PR.N]::Cls($f) } else { '' }); ok = ($f -eq $v -or [PR.N]::IsChild($v, $f)) } }
     # R-20 (TW-146): `mode: keys` types every character as its real key (vk + scan code + shift state of the target's
     # layout, Unicode only for characters without a key; LF is sent as Enter), `delay_ms` between characters (default 25)
+    # R-27 (TW-179): with mode keys and the scan-code path (`path`, default the init's `plain_keys`) every key of a
+    # character (its Shift / Ctrl / Alt too) goes out as scan code only, one input at a time `gap_ms` (default 15) apart
     'type' { $d = if ($c.delay_ms -ne $null) { [int]$c.delay_ms } else { 25 }; $keys = ([string]$c.mode -eq 'keys'); $nk = 0; $nu = 0
+      $sc = $keys -and ((PlainPath ([string]$c.path)) -eq 'scancode'); $gap = if ($c.gap_ms -ne $null) { [int]$c.gap_ms } else { 15 }
       foreach ($ch in ([string]$c.text).ToCharArray()) { $a = $null
-        if ($keys) { if ($ch -eq [char]10) { $ch = [char]13 }; $a = [PR.N]::CharKeys($ch) }
-        if ($a -ne $null) { [PR.N]::Send($a); $nk++ } else { [PR.N]::Send(@([PR.N]::Uni($ch, $false), [PR.N]::Uni($ch, $true))); $nu++ }
+        if ($keys) { if ($ch -eq [char]10) { $ch = [char]13 }; $a = [PR.N]::CharKeys($ch, $sc) }
+        if ($a -ne $null) { if ($sc) { foreach ($in in $a) { [PR.N]::Send(@($in)); Start-Sleep -Milliseconds $gap } } else { [PR.N]::Send($a) }; $nk++ }
+        else { [PR.N]::Send(@([PR.N]::Uni($ch, $false), [PR.N]::Uni($ch, $true))); $nu++ }
         Start-Sleep -Milliseconds $d }
-      if ($keys) { return @{ keys = $nk; unicode = $nu; delay_ms = $d } }; return 'ok' }
+      if ($keys) { return @{ keys = $nk; unicode = $nu; delay_ms = $d; path = $(if ($sc) { 'scancode' } else { 'vk' }) } }; return 'ok' }
     'caret' { # R-20 (TW-146): caret window and keyboard focus of the main window's thread (text editor open?)
       $m = MainWin; $g = [PR.N]::GuiOf($m)
       return @{ caret = [int64]$g.hwndCaret; caret_class = (ClsOf $g.hwndCaret); blinking = (($g.flags -band 1) -ne 0); caret_rect = @([int]$g.rcCaret.L, [int]$g.rcCaret.T, [int]$g.rcCaret.R, [int]$g.rcCaret.B); focus_class = (ClsOf $g.hwndFocus) } }

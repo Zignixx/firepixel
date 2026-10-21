@@ -148,8 +148,8 @@ Aliases: `reset <T..|null>` = `open_testfile` (null: only close menus/dialogs), 
 | `menu_item` | `"A > B"` | like `menu`, last entry clicked | same |
 | `command` | Firepixel command id | menu path from `ui_map.json → commands` | `ui_action {run}` |
 | `close_dialogs` | – | cancel dialogs, close menus | `ui_action {close_dialogs}` |
-| `key` | `"ctrl+shift+z"`, `"Escape"`, `"F1"` (`repeat`) | SendInput; plain Enter/Escape with a dialog open (no popup menu) press its OK/Cancel button, Tab/Shift+Tab with the focus in a dialog = `WM_NEXTDLGCTL` (the program's dialogs do not translate these keys: SendInput Enter/Tab end up as a character in the field) | `ui_input key` (egui names) |
-| `type` | text | Unicode SendInput | `ui_input type` |
+| `key` | `"ctrl+shift+z"`, `"Escape"`, `"F1"` (`repeat`) | SendInput (R-27: unmodified keys scan code only, `orig.plain_keys`; with Ctrl/Shift/Alt virtual key + scan code); plain Enter/Escape with a dialog open (no popup menu) press its OK/Cancel button, Tab/Shift+Tab with the focus in a dialog = `WM_NEXTDLGCTL` (the program's dialogs do not translate these keys: SendInput Enter/Tab end up as a character in the field) | `ui_input key` (egui names) |
+| `type` | text | Unicode SendInput (text entry with the text tool: real keys, R-20; scan code only since R-27) | `ui_input type` |
 | `wait` | ms | sleep | sleep |
 | `select` | object name or list; `{index: i}` = i-th element over all layers; `"slice:N"` = N-th element of the web layer(s) (R-11) | JSF `fw.selection` by name | same JSF via `run_script` (exactly the named objects; `select {ids}` only as fallback) |
 | `select_none` / `select_all` | – | JSF | `select` |
@@ -760,7 +760,7 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   `orig key substitute: <key> -> <method> (…)`, recorded as value `{"key_substitute": {key, method, before, after,
   effect, …}}` and marked in the step record: the action entry gets `arg` and `substituted: "<method>"`, the record a
   list `substituted: [{verb, arg, method}]`. `key_check` (R-14) does not run for a replaced key. Config
-  `orig.key_substitutes: false` sends the real keys again. The windows open at step start are taken as permanent
+  `orig.key_substitutes: false` sends the real keys again (R-27: the default; the keys were mangled by the host, see R-27). The windows open at step start are taken as permanent
   (`step_windows`), so only windows that appear during the step keep a key real.
 - **Text editor ends without Escape:** the cleanup after a step with `type` (R-14) and the unit start no longer press
   Escape twice; when the text tool is active, the Pointer tool click ends the edit (`text_cleanup` / `unit start:
@@ -1105,3 +1105,44 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   25.5 % and `13_view_modes_standard_normal` 25.9 % with the dock expanded on both sides. Known gap: after a mid-unit
   restart of the reference the dock is not checked again until the next layout check (run 29: one restart at the
   start of `xs-select-behind`, the restarted program came up with the dock expanded).
+
+## R-27 additions (21 Oct 2026)
+
+- **Root cause of the "plain keys become tool letters" finding (TW-140, TW-179):** the host's `Combo` split a key combo
+  with a pipeline; for a single key PowerShell returned a plain string, and `$parts[-1]` was the key name's **last
+  character**. Every unmodified named key since R-13b went out as a letter key: delet-E = Eraser, righ-T = Text,
+  dow-N = Line, escap-E = Eraser, ente-R = Blur group, es-C = Crop, u-P = Pen. Single letters and combos with
+  modifiers were right, and `key_echo` (which sends through `VkOf` directly) never showed it. `ComboParts` now always
+  returns arrays; `selftest_host.ps1` checks that `escape`, `Enter`, `t`, `ctrl+shift+z` and `shift+right` keep their
+  whole main key (`ok: combo parts`).
+- **Scan-code path for unmodified keys (RE-24 7.1):** `key` sends a key without modifiers as scan code only
+  (`KEYEVENTF_SCANCODE`, `wVk = 0`, extended flag for the extended keys, down and up as two inputs 40 ms apart); the
+  system derives the virtual key like for a real keyboard. Keys with Ctrl / Shift / Alt keep the virtual key + scan
+  code path. Config `orig.plain_keys` (`"scancode"` default, `"vk"`), passed to the host with `init` and with every
+  `key` / `key_echo` / `type` call; `key` answers `{path, vk, scan, ext}` and the runner logs
+  `orig key <combo>: scancode path (vk 0x1b, scan 0x01)` / `vk path (…)` for every key. Text entry with the text tool
+  (`type_keys`, host `type` mode `keys`) sends every key of a character (Shift too) as scan code only (`gap_ms`
+  between the inputs, default 15). `key_echo` sends on the same path (rows carry `path`; the log line names the path
+  and marks `scan only` keys) and proves that the arrived virtual key is the expected one. The menu-item Enter fallback
+  inside the host stays on the vk path.
+- **R-19 substitutes off by default:** `orig.key_substitutes` now defaults to false; Delete / Backspace, arrows and
+  Escape are the real keys again (no Edit ▸ Clear, `moveSelectionBy`, `moveSelectedBezierPointsBy`, Pointer tool
+  click, `none` / `kept` for Escape, no `tool_key` switch check, no `escape_not_comparable`). The crop commit (`crop`)
+  presses the real Enter and falls back to the double-click only when the page size did not change. Kept, for other
+  reasons: the Pointer tool click that ends a text edit at unit start and after typing (`text_cleanup`, house keeping,
+  not a step key), the dialog OK / Cancel buttons for Enter / Escape and `WM_NEXTDLGCTL` for Tab, `text_select_drag`
+  (Shift+Left), the "no editor - not typed" guard of the text entry. `orig.key_substitutes: true` restores R-19..R-24.
+- **Measured (R-27 probe on scratch documents, both paths after the fix):** T = Text tool; with a selected rectangle
+  Right / Down nudge by 1 px, Delete removes it, Escape keeps the selection; crop tool with a box: Escape removes the
+  box (Pointer tool), Enter crops 400 x 300 -> 100 x 100; text tool: "Abc 123" typed into a new text, plain R and X
+  typed into the open editor, Escape ends the edit; pen: Escape and Enter change nothing (as RE-24 7.2). Before the
+  fix the same probe gave Right -> Text, Down -> Line, Escape -> Eraser, Enter -> Blur.
+- **Run (`xs-shortcuts`, 21 Oct 2026, `run_r27_test_2026-10-21`):** 175 keys on the scan-code path, 72 on the vk path,
+  no `input refused`, 0 substitutes (run 30: 118); step statuses as in run 30 (23 ok, `15_in_text` unsupported,
+  `18_dialog_d17_conflict_open` / `19_custom_set` unmapped); `08_tools` 68 s (run 30: 111 s). `10_nudge`: R1 51,50 and
+  51,51 after Right / Down on both sides (real keys, `key_check` effect true); `21_escape_chain`: the real Escape
+  closes the reference's colour popup (Firepixel's popup stays visible) and keeps the selection on both sides;
+  `22_enter_canvas`: Enter keeps the group selected in the reference (`[object Group]`), Firepixel reads none. Open:
+  in `15_in_text_tx2` (existing text TX2) the reference lost the typed "V" or the following plain R in 3 of 4 runs
+  (full run and three single-step reruns; once both arrived like Firepixel's "Vr"); new texts and the probe never
+  lost a key, and run 30 lost first keys on the vk path in `tool-text` too (TW-146 rest, not shown to be path related).
