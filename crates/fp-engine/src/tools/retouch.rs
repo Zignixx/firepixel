@@ -267,13 +267,10 @@ impl RetouchTool {
             }
             return v;
         }
+        // while dragging only the one tip outline at the pointer, never one outline per stroke
+        // point (FB-14b, TW-181; RE-25: the original shows a single tip at all times)
         if let Some(l) = self.live.as_ref().filter(|_| self.active) {
             v.push(Overlay::Paint(l.preview.clone()));
-        } else if !self.points.is_empty() {
-            v.push(Overlay::Stroke {
-                points: self.points.clone(),
-                diameter: prm.size,
-            });
         }
         if let Some(h) = self.hover {
             v.push(Overlay::BrushTip {
