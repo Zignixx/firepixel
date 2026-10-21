@@ -22,6 +22,97 @@ use fp_model::{
 use serde_json::{Value, json};
 use std::sync::Arc;
 
+/// Swap colours (toolbox button, X, `swapBrushAndFillColors`; TW-186, re 58 §1, measured).
+///
+/// Without selected objects only the toolbox colours swap, without a History row. With a
+/// selection the toolbox colours are those of the topmost selected path or text (the toolbox
+/// follows the selection in the reference application; a bitmap-only selection keeps the toolbox
+/// colours); they swap — "none" included — and are applied to every selected element: fill =
+/// new toolbox fill, stroke = new toolbox stroke. An existing stroke keeps its tip, width and
+/// placement; a new stroke gets the 1-pixel anti-aliased tip, 1 px. Bitmaps keep their pixels but
+/// the row is still written. One row "Stroke Color", or "Brush and Fill" when one side was none.
+fn swap_colors(s: &mut Session, _p: &Params) -> Result<CommandOutput> {
+    let has_selection = s
+        .active()
+        .is_some_and(|d| !super::selected_paths(d).is_empty());
+    if !has_selection {
+        let (st, fi) = (s.tools.stroke_color, s.tools.fill_color);
+        s.set_colors(Some(fi), Some(st));
+        return Ok(CommandOutput::session());
+    }
+    let none = |c: Argb| Argb(c.0 & 0x00ff_ffff);
+    let (st, fi) = s
+        .doc()
+        .ok()
+        .and_then(|d| {
+            super::selected_elements(d)
+                .iter()
+                .find_map(|(_, e)| docops::path_attrs_of(e))
+        })
+        .map(|a| {
+            let st = if a.brush.is_some() {
+                a.stroke_color
+            } else {
+                none(a.stroke_color)
+            };
+            let fi = if a.fill.is_some() {
+                a.fill_color
+            } else {
+                none(a.fill_color)
+            };
+            (st, fi)
+        })
+        .unwrap_or((s.tools.stroke_color, s.tools.fill_color));
+    let with_none = st.a() == 0 || fi.a() == 0;
+    // swapped: the old fill becomes the stroke and the old stroke the fill
+    let (new_stroke, new_fill) = (fi, st);
+    s.set_colors(Some(new_stroke), Some(new_fill));
+    let new_tip = super::panel::preset_brush("bn_1-Pixel Anti-Aliased", 1);
+    with_doc(s, |d| {
+        let page = d.page;
+        let ids: Vec<_> = super::selected_elements(d)
+            .iter()
+            .filter(|(_, e)| docops::path_attrs_of(e).is_some())
+            .map(|(_, e)| e.id)
+            .collect();
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let doc = Arc::make_mut(&mut d.doc);
+        for id in ids {
+            docops::edit_by_id(doc, page, id, |e| {
+                docops::edit_path_attrs(e, &|a| {
+                    if new_fill.a() == 0 {
+                        a.fill = None;
+                    } else {
+                        a.fill_color = new_fill;
+                        if a.fill.is_none() {
+                            a.fill = Some(Fill::solid());
+                        }
+                    }
+                    if new_stroke.a() == 0 {
+                        a.brush = None;
+                    } else {
+                        a.stroke_color = new_stroke;
+                        if a.brush.is_none() {
+                            a.brush = Some(new_tip.clone());
+                        }
+                    }
+                });
+            });
+        }
+        Ok(())
+    })?;
+    // a bitmap gets the row without a pixel change (measured)
+    s.force_history_step();
+    let key = if with_none {
+        "msg-step-brush-and-fill"
+    } else {
+        "msg-step-stroke-color"
+    };
+    Ok(CommandOutput::doc().labeled(fp_i18n::t(key)))
+}
+
 /// Liest Konturen `[{closed, nodes: [{anchor, in, out}]}]` (Henkel optional).
 pub(crate) fn parse_contours(p: &Params) -> Result<Vec<Contour>> {
     let err = |key: &str| EngineError::InvalidParams {
@@ -1826,11 +1917,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("color.swap")
             .label("Pinsel- und Füllungsfarben austauschen")
             .describe("Pseudo-Werkzeug 35278 (Kürzel X)")
-            .run(|s, _| {
-                let (st, fi) = (s.tools.stroke_color, s.tools.fill_color);
-                s.set_colors(Some(fi), Some(st));
-                Ok(CommandOutput::session())
-            }),
+            .run(swap_colors),
     );
     r.add(
         cmd("color.defaults")

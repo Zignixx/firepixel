@@ -2,8 +2,9 @@
 //! - Toolbar buttons: the command name only, no shortcut ("New", "Undo").
 //! - Tools: "Name (shortcut)" plus a second line with a one-sentence description (Firepixel extension).
 //! - Inspector of the retouch tools: descriptive tooltips ("Brush size", "Edge softness", ...), not the labels.
-//! - View ▸ Tooltips: a coordinate tag "x:… y:…" next to the pointer over the canvas, only with the
-//!   switch on, also while a mouse button is held (dragging).
+//! - View ▸ Tooltips (re 58 §4): a tag next to the pointer over the canvas, only with the switch on:
+//!   shape tools show "x:… y:…" on hover and "w:… h:…" while drawing, a Pointer drag shows the
+//!   dragged object's new top-left corner, Pointer/Pen/Text show nothing on hover.
 
 use egui::{Event, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
@@ -162,6 +163,13 @@ fn view_tooltips_shows_the_pointer_coordinates_on_the_canvas() {
     fp_i18n::with_language("de", view_tooltips_body);
 }
 
+fn press(h: &mut H, p: Pos2, pressed: bool) {
+    ev(h, Event::PointerButton { pos: p, button: PointerButton::Primary, pressed, modifiers: Default::default() });
+}
+
+/// View ▸ Tooltips per tool (re 58 §4, measured): no tag on hover with Pointer, Pen and Text;
+/// shape tools show the pointer position on hover and the size while drawing; a Pointer drag
+/// shows the dragged object's new top-left corner; the tag goes away on release.
 fn view_tooltips_body() {
     let mut h = harness();
     let _ = h.state_mut().state.session.set_tool(ToolId::Pointer);
@@ -169,29 +177,60 @@ fn view_tooltips_body() {
     h.run_steps(3);
     assert!(h.state().state.session.ui.tooltips, "default of the switch is kept (on)");
     let o = page_origin(&h);
-    ev(&mut h, Event::PointerMoved(o + vec2(120.2, 80.2)));
-    h.run_steps(1);
-    assert_eq!(tag(&h).as_deref(), Some("x:120 y:80"));
-    // also while a mouse button is held (the reference shows it while dragging a bitmap)
-    let p = o + vec2(200.2, 150.2);
-    ev(&mut h, Event::PointerMoved(p));
-    ev(&mut h, Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: true, modifiers: Default::default() });
-    assert_eq!(tag(&h).as_deref(), Some("x:200 y:150"), "button pressed");
-    ev(&mut h, Event::PointerMoved(p + vec2(20.0, 10.0)));
-    ev(&mut h, Event::PointerMoved(p + vec2(40.0, 20.0)));
-    assert_eq!(tag(&h).as_deref(), Some("x:240 y:170"), "follows the pointer while dragging");
-    ev(&mut h, Event::PointerButton { pos: p + vec2(40.0, 20.0), button: PointerButton::Primary, pressed: false, modifiers: Default::default() });
+    // Pointer, Pen, Text: nothing on hover
+    for t in [ToolId::Pointer, ToolId::Pen, ToolId::Text] {
+        let _ = h.state_mut().state.session.set_tool(t);
+        ev(&mut h, Event::PointerMoved(o + vec2(120.2, 80.2)));
+        h.run_steps(1);
+        assert_eq!(tag(&h), None, "{t:?}: no tag on hover");
+    }
+    // Rectangle (and the other shape tools): pointer position on hover
+    for t in [ToolId::Ellipse, ToolId::Line, ToolId::Rectangle] {
+        let _ = h.state_mut().state.session.set_tool(t);
+        ev(&mut h, Event::PointerMoved(o + vec2(53.2, 37.2)));
+        h.run_steps(1);
+        assert_eq!(tag(&h).as_deref(), Some("x:53 y:37"), "{t:?}: hover");
+    }
+    // drawing a rectangle: its size
+    let a = o + vec2(100.0, 100.0);
+    ev(&mut h, Event::PointerMoved(a));
+    press(&mut h, a, true);
+    ev(&mut h, Event::PointerMoved(a + vec2(40.0, 25.0)));
+    ev(&mut h, Event::PointerMoved(a + vec2(80.0, 50.0)));
+    assert_eq!(tag(&h).as_deref(), Some("w:80 h:50"), "size while drawing");
+    press(&mut h, a + vec2(80.0, 50.0), false);
     h.run_steps(2);
-    assert_eq!(tag(&h).as_deref(), Some("x:240 y:170"), "after the release");
-    // switched off: no tag
+    assert!(tag(&h).is_none_or(|t| !t.starts_with("w:")), "size tag gone after the release");
+    assert_eq!(h.state().state.session.active().map(|d| d.selection.elements.len()), Some(1), "rectangle drawn");
+    // Pointer: pressing without movement shows nothing, dragging the object shows its new
+    // top-left corner (rectangle 100,100 moved by +30/+20 → x:130 y:120)
+    let _ = h.state_mut().state.session.set_tool(ToolId::Pointer);
+    let g = o + vec2(140.2, 125.2);
+    ev(&mut h, Event::PointerMoved(g));
+    h.run_steps(1);
+    assert_eq!(tag(&h), None, "Pointer hover over the object");
+    press(&mut h, g, true);
+    assert_eq!(tag(&h), None, "pressed without movement");
+    ev(&mut h, Event::PointerMoved(g + vec2(15.0, 10.0)));
+    ev(&mut h, Event::PointerMoved(g + vec2(30.0, 20.0)));
+    h.run_steps(1);
+    assert_eq!(tag(&h).as_deref(), Some("x:130 y:120"), "object top-left while dragging");
+    press(&mut h, g + vec2(30.0, 20.0), false);
+    h.run_steps(2);
+    assert_eq!(tag(&h), None, "gone after the release");
+    // switched off: no tag; the switch is stored as the preference `Tooltips`
+    let _ = h.state_mut().state.session.set_tool(ToolId::Rectangle);
     h.state_mut().state.run("view.tooltips", json!({}));
     h.run_steps(2);
     assert!(!h.state().state.session.ui.tooltips);
+    assert!(!h.state().state.session.prefs.get_bool("Tooltips", true), "preference Tooltips off");
     ev(&mut h, Event::PointerMoved(o + vec2(50.2, 40.2)));
     h.run_steps(1);
     assert_eq!(tag(&h), None, "switch off");
     // on again
     h.state_mut().state.run("view.tooltips", json!({}));
+    h.run_steps(2);
+    assert!(h.state().state.session.prefs.get_bool("Tooltips", false), "preference Tooltips on");
     ev(&mut h, Event::PointerMoved(o + vec2(51.2, 41.2)));
     h.run_steps(1);
     assert_eq!(tag(&h).as_deref(), Some("x:51 y:41"));
@@ -199,4 +238,9 @@ fn view_tooltips_body() {
     ev(&mut h, Event::PointerMoved(egui::pos2(5.0, 5.0)));
     h.run_steps(1);
     assert_eq!(tag(&h), None, "outside the canvas");
+    // a new session reads the stored preference
+    let mut prefs = fp_engine::Preferences::new();
+    prefs.set("Tooltips", fp_engine::prefs::PrefValue::Bool(false));
+    assert!(!Session::new(prefs).ui.tooltips, "stored off is read back");
+    assert!(Session::new(fp_engine::Preferences::new()).ui.tooltips, "Firepixel default on");
 }

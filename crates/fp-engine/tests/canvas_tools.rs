@@ -1172,14 +1172,14 @@ fn pointer_double_click_bitmap_enters_bitmap_mode() {
     let d = s.active().unwrap();
     assert_eq!((s.tools.active, d.selection.elements.clone(), d.history.len()), (ToolId::Marquee, vec![b], n));
     assert!(d.bitmap_mode, "Bitmapmodus bleibt");
-    // mit Auswahlrahmen beendet Esc den Bitmapmodus (L13); nach dem Auswahlrahmen ist im Original
-    // auch die Objektauswahl leer (menu-modify-a/22, TW-04)
+    // mit Auswahlrahmen beendet Esc den Bitmapmodus (L13); the bitmap stays selected (re 58 §6,
+    // measured with the real Escape key; the old TW-04 rule "object selection empty" is refuted)
     drag(&mut s, (110.0, 110.0), (140.0, 140.0));
     assert!(s.active().unwrap().selection.has_pixels());
     s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
     let d = s.active().unwrap();
     assert!(!d.bitmap_mode && !d.selection.has_pixels());
-    assert_eq!((s.tools.active, d.selection.elements.clone()), (ToolId::Pointer, vec![]));
+    assert_eq!((s.tools.active, d.selection.elements.clone()), (ToolId::Pointer, vec![b]));
 }
 
 /// PARITAET_A K6–K9: Mauszeiger beim Überfahren wie im Original.

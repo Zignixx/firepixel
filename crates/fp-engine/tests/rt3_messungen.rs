@@ -78,7 +78,8 @@ fn l3_exit_bitmap_mode_trims_after_delete() {
     esc(&mut s);
     assert_eq!(s.tools.active, ToolId::Pointer, "Esc → Zeiger");
     assert_eq!(bounds(&s, id), Rect::new(150.0, 50.0, 200.0, 150.0), "150,50, 50 × 100");
-    // Esc mit dem Auswahlrahmen-Werkzeug leert wie bisher auch die Objektauswahl (TW-04)
+    // Select None above emptied the object selection (Escape itself keeps a selected bitmap
+    // selected, re 58 §6); select the bitmap again for the copy
     select(&mut s, &[id]);
     assert!(history(&s) <= n + 1);
     ex(&mut s, "edit.copy", json!({}));

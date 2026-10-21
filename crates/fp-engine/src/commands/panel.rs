@@ -2831,6 +2831,16 @@ pub fn default_tool_brush(width: i32) -> Brush {
     b
 }
 
+/// Brush of the stroke preset `name` (internal `bn_…` or display name) in the size `width`;
+/// unknown names give the plain 1-pixel brush.
+pub fn preset_brush(name: &str, width: i32) -> Brush {
+    let mut b = Brush::basic(width.max(1));
+    if let Some(p) = find_preset(name) {
+        apply_preset(&mut b, p);
+    }
+    b
+}
+
 /// Pinsel der Werkzeugvorgabe: `new_brush`, sonst aus der Strichvorgabe `new_stroke`
 /// (Vorgabe, Stärke, Weichheit) gebildet, sonst die Werksvorgabe „Präzise abger.“ 1 px.
 pub fn tool_brush(o: &crate::tools::ToolOptions) -> Brush {

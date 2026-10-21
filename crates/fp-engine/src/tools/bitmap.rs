@@ -187,13 +187,11 @@ impl ToolMachine for MarqueeTool {
         let ToolInput::Pointer { kind, pos } = &ev.input else {
             if ev.input == ToolInput::Key(ToolKey::Escape) {
                 if self.start.is_none() {
-                    // Esc nach dem Aufziehen eines Rahmens: im Original ist danach auch die Objektauswahl
-                    // leer (menu-modify-a/22, `fw.selection` = [], TW-04)
-                    let mut r = escape_bitmap_mode(ctx);
-                    for c in &mut r.commands {
-                        c.params["deselect"] = json!(true);
-                    }
-                    return r;
+                    // Esc after dragging a marquee: "Exit bitmap mode", pixel selection gone,
+                    // Pointer, the bitmap STAYS selected like Lasso and Magic Wand (re 58 §6,
+                    // measured with the real Escape key; the earlier TW-04 rule came from a key
+                    // path that sent Escape as a letter)
+                    return escape_bitmap_mode(ctx);
                 }
                 self.start = None;
                 self.overlay.clear();

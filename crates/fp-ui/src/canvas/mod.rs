@@ -1326,10 +1326,10 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         });
         cc.feedback = feedback;
     }
-    // View ▸ Tooltips: tag with the document coordinates next to the pointer (RE spec 57 §4)
+    // View ▸ Tooltips: tag next to the pointer, per tool (re 58 §4)
     let tag = pointer_tag(ui, st, id, area, &view, pointer_here);
     if let Some((at, text)) = &tag {
-        label_at(&painter, &theme, *at, text);
+        pointer_tag_box(&painter, &theme, *at, text);
     }
     if let Some(cc) = st.canvases.get_mut(&id) {
         cc.pointer_tag = tag.map(|(_, text)| text);
@@ -1364,12 +1364,16 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     paint_cursor(ui, st, area, &resp);
 }
 
-/// Coordinate tag of *View ▸ Tooltips* ("x:120 y:80", document pixels rounded like the Info
-/// panel): only while the switch is on and the pointer is over the canvas, also while a mouse
-/// button is held (RE spec 57 §4: the reference shows it while dragging a bitmap with the
-/// Pointer); hidden while the view pans, a guide is dragged, the context menu or a dialog is
-/// open. Returns the screen position of the tag (below right of the pointer, clear of the cursor)
-/// and its text.
+/// Tag of *View ▸ Tooltips* next to the pointer (re 58 §4, measured), per tool:
+/// - shape tools (Rectangle, Ellipse, Line, Polygon, Auto Shape): on hover the pointer position
+///   "x:53 y:37"; while a shape is drawn its size "w:80 h:50";
+/// - Pointer: nothing on hover or on a press without movement; while objects are dragged the
+///   dragged objects' new top-left corner "x:130 y:120";
+/// - every other tool (Pen, Text …): no tag.
+///
+/// Document pixels rounded; no delay; the tag's top-left is at pointer x + 0, y + 14 and it goes
+/// away on release. Hidden while the view pans, a guide is dragged, the context menu or a dialog is
+/// open. Returns the screen position of the tag and its text.
 fn pointer_tag(
     ui: &Ui,
     st: &AppState,
@@ -1378,12 +1382,16 @@ fn pointer_tag(
     view: &fp_engine::ViewState,
     pointer_here: bool,
 ) -> Option<(Pos2, String)> {
+    use fp_engine::tools::ToolId;
     if !st.session.ui.tooltips || st.dialogs.any_open() {
         return None;
     }
     let cc = st.canvases.get(&id);
+    let pressed = cc.is_some_and(|c| c.pointer_down);
+    // the tool's feedback of this frame
+    let feedback = cc.map(|c| c.feedback.as_slice()).unwrap_or(&[]);
     // a drag that started on the canvas keeps the tag even if egui stops reporting hover
-    if !(pointer_here || cc.is_some_and(|c| c.pointer_down)) {
+    if !(pointer_here || pressed) {
         return None;
     }
     let busy = cc.is_some_and(|c| {
@@ -1393,13 +1401,89 @@ fn pointer_tag(
         return None;
     }
     let p = ui.ctx().pointer_hover_pos().filter(|p| area.contains(*p))?;
-    let d = view.screen_to_doc((p.x - area.left()) as f64, (p.y - area.top()) as f64);
-    let text = fp_i18n::tr!(
-        "ui-canvas-pointer-tag",
-        x = d.x.round() as f64,
-        y = d.y.round() as f64
+    let shape_tool = matches!(
+        st.session.tools.active,
+        ToolId::Rectangle | ToolId::Ellipse | ToolId::Line | ToolId::Polygon | ToolId::AutoShape
     );
-    Some((p + vec2(14.0, 18.0), text))
+    let text = match st.session.tools.active {
+        ToolId::Pointer if pressed => {
+            let quad = feedback.iter().find_map(|o| match o {
+                Overlay::Ghost { quad, .. } => Some(*quad),
+                _ => None,
+            })?;
+            let x = quad.iter().map(|q| q.x).fold(f32::INFINITY, f32::min);
+            let y = quad.iter().map(|q| q.y).fold(f32::INFINITY, f32::min);
+            fp_i18n::tr!(
+                "ui-canvas-pointer-tag",
+                x = x.round() as f64,
+                y = y.round() as f64
+            )
+        }
+        _ if shape_tool && pressed => {
+            let r = shape_preview_bounds(feedback)?;
+            fp_i18n::tr!(
+                "ui-canvas-size-tag",
+                w = r.width().round() as f64,
+                h = r.height().round() as f64
+            )
+        }
+        _ if shape_tool => {
+            let d = view.screen_to_doc((p.x - area.left()) as f64, (p.y - area.top()) as f64);
+            fp_i18n::tr!(
+                "ui-canvas-pointer-tag",
+                x = d.x.round() as f64,
+                y = d.y.round() as f64
+            )
+        }
+        _ => return None,
+    };
+    Some((p + vec2(0.0, 14.0), text))
+}
+
+/// Bounds of the shape a shape tool is drawing (its first outline overlay); `None` before the
+/// pointer has moved.
+fn shape_preview_bounds(feedback: &[Overlay]) -> Option<fp_geom::Rect> {
+    let pts: Vec<Point> = feedback.iter().find_map(|o| match o {
+        Overlay::Rect { rect, .. } | Overlay::Ellipse { rect, .. } => {
+            let r = rect.normalized();
+            Some(vec![
+                Point::new(r.left, r.top),
+                Point::new(r.right, r.bottom),
+            ])
+        }
+        Overlay::Line { from, to } => Some(vec![*from, *to]),
+        Overlay::Polyline { points, .. } if !points.is_empty() => Some(points.clone()),
+        Overlay::Path { contours } if !contours.is_empty() => Some(
+            contours
+                .iter()
+                .flat_map(|c| c.nodes.iter().map(|n| n.anchor))
+                .collect(),
+        ),
+        _ => None,
+    })?;
+    let (mut l, mut t, mut r, mut b) = (
+        f32::INFINITY,
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        f32::NEG_INFINITY,
+    );
+    for q in &pts {
+        l = l.min(q.x);
+        t = t.min(q.y);
+        r = r.max(q.x);
+        b = b.max(q.y);
+    }
+    (l.is_finite() && (r > l || b > t)).then(|| fp_geom::Rect::new(l, t, r, b))
+}
+
+/// The *View ▸ Tooltips* tag: light grey box with rounded corners and dark text, its top-left
+/// corner at `at` (re 58 §4).
+fn pointer_tag_box(painter: &egui::Painter, theme: &Theme, at: Pos2, text: &str) {
+    let ink = Color32::from_gray(0x20);
+    let galley = painter.layout_no_wrap(text.to_string(), theme.small_font(), ink);
+    let r = Rect::from_min_size(at, galley.size() + vec2(6.0, 2.0));
+    painter.rect_filled(r, 3.0, Color32::from_gray(0xd4));
+    painter.galley(at + vec2(3.0, 1.0), galley, ink);
 }
 
 /// Eigener Mauszeiger über der Leinwand (Systemzeiger ausgeblendet).

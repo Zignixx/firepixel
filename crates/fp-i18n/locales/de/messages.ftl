@@ -300,6 +300,7 @@ msg-step-fill = Füllen
 msg-step-edit-fill = Füllung bearbeiten
 msg-step-fill-color = Füllfarbe
 msg-step-stroke-color = Strichfarbe
+msg-step-brush-and-fill = Pinselstrich und Füllen
 msg-step-repeat-filter = Filter wiederholen
 msg-step-spelling = Rechtschreibung
 msg-step-file-info = Datei-Info

@@ -27,6 +27,9 @@ pub struct Snapshot {
     pub page: usize,
     pub frame: usize,
     pub layer: Option<fp_model::LayerId>,
+    /// Toolbox stroke and fill colours, set only for steps that changed them (Swap Colours,
+    /// TW-186: Ctrl+Z restores the objects and the toolbox colours). `None` = leave them.
+    pub tool_colors: Option<(fp_color::Argb, fp_color::Argb)>,
 }
 
 /// Befehle, nach deren Rückgängigmachen keine Objekte gewählt sind (im Original gemessen: Einfügen).
@@ -229,14 +232,21 @@ impl History {
     /// Springt zu einer Position (Klick im Verlauf-Bedienfeld): `position` = Zahl der danach
     /// ausgeführten Schritte. Liefert den Zielzustand oder `None`, wenn sich nichts ändert.
     pub fn go_to(&mut self, position: usize) -> Option<Snapshot> {
-        let mut snap = None;
+        let mut snap: Option<Snapshot> = None;
+        // toolbox colours of the last crossed step that changed them (TW-186)
+        let mut colors = None;
         while self.undo.len() > position {
             snap = self.undo();
+            colors = snap.as_ref().and_then(|s| s.tool_colors).or(colors);
         }
         while self.undo.len() < position && !self.redo.is_empty() {
             snap = self.redo();
+            colors = snap.as_ref().and_then(|s| s.tool_colors).or(colors);
         }
-        snap
+        snap.map(|mut s| {
+            s.tool_colors = colors;
+            s
+        })
     }
 
     /// Aufgezeichnete Befehle der ausgeführten Schritte `range` (Indizes wie [`History::steps`],

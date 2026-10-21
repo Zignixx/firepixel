@@ -114,7 +114,9 @@ die Objektauswahl auf (offene Popups und Menüs schließt das erste Esc).
 
 **Bitmap-Werkzeuge:** Der **Pinsel** malt Pixel: Ist keine Bitmap gewählt, legt er eine neue an,
 sonst malt er in die gewählte. **Radiergummi**, **Weichzeichner** und **Stempel** arbeiten mit
-weichem Rand wie im Original; Esc beendet das Malen und wechselt zum Zeiger. Das Werkzeug
+weichem Rand wie im Original; Esc beendet das Malen und wechselt zum Zeiger. Nach einer Auswahl mit
+Auswahlrahmen, Lasso oder Zauberstab auf einer Bitmap beendet Esc den Bitmapmodus (Verlaufszeile
+„Bitmapmodus beenden“), hebt die Pixelauswahl auf und wechselt zum Zeiger; die Bitmap bleibt gewählt. Das Werkzeug
 **Verlauf** hat eigene Farben (Vorgabe Schwarz → Weiß, Klick aufs Farbfeld öffnet den
 Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
 hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
@@ -205,9 +207,19 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   geschlossen, kehrt Firepixel zu Standard zurück.
 - *Ansicht ▸ Gamma 1.8* zeigt die Leinwand heller, wie auf einem Monitor mit Macintosh-Gamma. Dokument und
   Export bleiben unverändert.
-- *Ansicht ▸ QuickInfos* (Vorgabe: an) zeigt über der Leinwand neben dem Mauszeiger eine kleine Marke mit
-  den Dokumentkoordinaten („x:120 y:80“), auch beim Ziehen (etwa beim Verschieben eines Objekts mit dem
-  Zeiger). Die Tooltips der Knöpfe und Felder schaltet der Schalter nicht.
+- *Ansicht ▸ QuickInfos* (Vorgabe: an, wird als Voreinstellung gemerkt) zeigt über der Leinwand dicht unter
+  dem Mauszeiger eine kleine graue Marke: mit Rechteck, Ellipse, Linie, Polygon und automatischen Formen die
+  Zeigerposition („x:53 y:37“) und beim Aufziehen einer Form deren Größe („w:80 h:50“); beim Ziehen von
+  Objekten mit dem Zeiger deren neue linke obere Ecke („x:130 y:120“). Der Zeiger zeigt beim bloßen
+  Überfahren nichts, Stift, Text und die übrigen Werkzeuge zeigen keine Marke. Nach dem Loslassen ist die
+  Marke weg. Die Tooltips der Knöpfe und Felder schaltet der Schalter nicht.
+- **Farben tauschen** (X oder der Knopf unter den Farbfeldern im Werkzeugbedienfeld): Ohne Auswahl tauschen
+  nur Strich- und Füllfarbe. Mit Auswahl tauschen die Farben des obersten gewählten Objekts und gehen an
+  alle gewählten Objekte, als eine Verlaufszeile „Strichfarbe“ („Pinselstrich und Füllen“, wenn eine Seite
+  „keine“ ist: dann tauscht auch das „keine“, ein neuer Strich bekommt die Spitze „1-Pixel weich“, 1 px).
+  Ein vorhandener Strich behält Spitze, Breite und Lage; ein Text verliert seine Füllung und bekommt einen
+  Strich von 1 px in seiner Farbe; eine Bitmap behält ihre Pixel. Strg+Y wiederholt den Tausch, Strg+Z
+  stellt Objekte und Farben zurück.
 - *Bearbeiten ▸ Einfügen* legt kopierte Objekte direkt über das oberste gewählte Objekt (in dessen Ebene;
   ist ein Objekt in einer Gruppe gewählt, über die Gruppe). Ohne Auswahl landen sie oben in der aktiven Ebene.
 - *Modifizieren ▸ Maske ▸ Als Maske gruppieren* setzt die Maskengruppe an den Platz des untersten gewählten

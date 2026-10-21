@@ -289,6 +289,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
     );
     r.add(cmd("view.tooltips").checked(|s| s.ui.tooltips).run(|s, _| {
         s.ui.tooltips = !s.ui.tooltips;
+        // stored as the preference `Tooltips` like the reference (re 58 §4)
+        s.prefs
+            .set("Tooltips", crate::prefs::PrefValue::Bool(s.ui.tooltips));
+        s.prefs_changed();
         Ok(CommandOutput::session())
     }));
     r.add(

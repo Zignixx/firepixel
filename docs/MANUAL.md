@@ -109,7 +109,9 @@ Esc closes open popups and menus).
 
 **Bitmap tools:** the **Brush** paints pixels: with no bitmap selected it creates a new one,
 otherwise it paints into the selected one. **Eraser**, **Blur** and **Rubber Stamp** work with a
-soft edge as in the original; Esc ends painting and switches to the Pointer. The **Gradient** tool
+soft edge as in the original; Esc ends painting and switches to the Pointer. After a Marquee, Lasso
+or Magic Wand selection on a bitmap, Esc exits bitmap mode (History row "Exit Bitmap Mode"), removes the
+pixel selection and switches to the Pointer; the bitmap stays selected. The **Gradient** tool
 has its own colors (default black → white, a click on the swatch opens the gradient editor);
 "Fill selection" and tolerance are separate from the Paint Bucket. **Replace Color** has its own
 "From" and "To" colors (default green → red).
@@ -195,9 +197,18 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   menu; when the last document closes, Firepixel returns to Standard.
 - *View ▸ Gamma 1.8* shows the canvas brighter, as on a monitor with Macintosh gamma. The document and
   the export stay unchanged.
-- *View ▸ Tooltips* (on by default) shows the document coordinates ("x:120 y:80") in a small tag next
-  to the pointer while it is over the canvas, also while dragging (for example when moving an object with
-  the Pointer). The switch does not affect the tooltips of buttons and fields.
+- *View ▸ Tooltips* (on by default, remembered as a preference) shows a small grey tag just below the
+  pointer over the canvas: with the Rectangle, Ellipse, Line, Polygon and Auto Shape tools the pointer
+  position ("x:53 y:37") and, while a shape is drawn, its size ("w:80 h:50"); while objects are dragged
+  with the Pointer their new top-left corner ("x:130 y:120"). The Pointer shows nothing on plain hover,
+  Pen, Text and the other tools show no tag. The tag disappears on release. The switch does not affect
+  the tooltips of buttons and fields.
+- **Swap Colors** (X or the button below the color boxes of the Tools panel): with nothing selected only
+  the stroke and fill colors swap. With a selection the colors of the topmost selected object swap and
+  are applied to every selected object as one History row "Stroke Color" ("Brush and Fill" when one side
+  is none: then the none swaps too, and a new stroke gets the 1-Pixel Soft tip, 1 px). An existing
+  stroke keeps its tip, width and placement; a text loses its fill and gets a 1 px stroke in its color; a
+  bitmap keeps its pixels. Ctrl+Y repeats the swap, Ctrl+Z restores the objects and the colors.
 - *Edit ▸ Paste* puts copied objects directly above the topmost selected object (in its layer; if an object
   inside a group is selected, above the group). Without a selection they go to the top of the active layer.
 - *Modify ▸ Mask ▸ Group as Mask* puts the mask group in the place of the lowest selected object; *Group*

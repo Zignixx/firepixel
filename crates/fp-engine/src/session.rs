@@ -292,6 +292,7 @@ impl DocumentState {
             page: self.page,
             frame: self.frame,
             layer: self.layer,
+            tool_colors: None,
         }
     }
 
@@ -495,7 +496,9 @@ impl Session {
                 options,
             },
             ui: UiState {
-                tooltips: true,
+                // View ▸ Tooltips persists as the preference `Tooltips` (re 58 §4); Firepixel's
+                // default is on (the reference's factory default is not known)
+                tooltips: prefs.get_bool("Tooltips", true),
                 ..UiState::default()
             },
             registry,
@@ -844,6 +847,8 @@ impl Session {
         validate(info, &p)?;
         let doc_id = self.active_id();
         let before = self.active().map(|d| d.snapshot());
+        let colors_before = (self.tools.stroke_color, self.tools.fill_color);
+        let rows_before = self.history_rows();
         let res = cmd.apply(self, &p);
         let mut out = match res {
             Ok(o) => o,
@@ -898,6 +903,7 @@ impl Session {
             Effect::Document => {
                 if let (Some(id), Some(b)) = (doc_id, before) {
                     self.finish_step(id, b, step_name, step_key, name, &p.value);
+                    self.note_tool_colors(rows_before, colors_before);
                 }
             }
             Effect::View => {
@@ -1113,6 +1119,27 @@ impl Session {
         }
     }
 
+    /// Rows of the active document's History including the dropped ones (to see whether a command
+    /// added a row).
+    fn history_rows(&self) -> usize {
+        self.active()
+            .map(|d| d.history.len() + d.history.dropped())
+            .unwrap_or(0)
+    }
+
+    /// A new History row whose command changed the toolbox colours (Swap Colours, TW-186) keeps
+    /// them before and after, so undo, redo and History jumps restore them like the objects.
+    fn note_tool_colors(&mut self, rows_before: usize, before: (Argb, Argb)) {
+        let now = (self.tools.stroke_color, self.tools.fill_color);
+        if now == before || self.history_rows() <= rows_before {
+            return;
+        }
+        if let Some(top) = self.active_mut().and_then(|d| d.history.top_mut()) {
+            top.before.tool_colors = Some(before);
+            top.after.tool_colors = Some(now);
+        }
+    }
+
     /// Der laufende Befehl legt auch ohne Änderung einen Verlaufsschritt an.
     pub(crate) fn force_history_step(&mut self) {
         self.force_step = true;
@@ -1128,6 +1155,8 @@ impl Session {
         self.end_live_text_view();
         let doc_id = self.active_id();
         let before = self.active().map(|d| d.snapshot());
+        let colors_before = (self.tools.stroke_color, self.tools.fill_color);
+        let rows_before = self.history_rows();
         let outer = self.group_depth == 0;
         if outer {
             self.group_log.clear();
@@ -1148,6 +1177,7 @@ impl Session {
             let params = serde_json::json!({ "commands": log, "label": label });
             let key = self.step_key(label);
             self.finish_step(id, b, label.into(), key, "history.replay", &params);
+            self.note_tool_colors(rows_before, colors_before);
             self.sync_tool();
         }
         Ok(())
@@ -1358,6 +1388,12 @@ impl Session {
     }
 
     fn restore_history_snapshot(&mut self, snap: Snapshot) {
+        if self.active().is_none() {
+            return;
+        }
+        if let Some((stroke, fill)) = snap.tool_colors {
+            self.set_colors(Some(stroke), Some(fill));
+        }
         let Some(d) = self.active_mut() else { return };
         // Das Raster gehört wie im Original nicht zum Verlauf (PM-5 D18: „Raster bearbeiten“ legt
         // keinen Schritt an, Strg+Z ändert das Raster nicht) – es bleibt beim Springen im Verlauf

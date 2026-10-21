@@ -55,6 +55,7 @@ ui-symbol-edit-back = Back
     .tooltip = Finish editing the symbol and return to the document
 # View ▸ Tooltips: tag with the document coordinates at the pointer over the canvas
 ui-canvas-pointer-tag = x:{ $x } y:{ $y }
+ui-canvas-size-tag = w:{ $w } h:{ $h }
 
 ## Preview (2-Up/4-Up)
 ui-preview-original = Original

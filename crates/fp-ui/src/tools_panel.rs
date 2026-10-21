@@ -919,13 +919,9 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
                         }
                     });
                 }
-                _ => {
-                    let (s, f) = (st.session.tools.stroke_color, st.session.tools.fill_color);
-                    st.push(Action::SetColors {
-                        stroke: Some(f),
-                        fill: Some(s),
-                    });
-                }
+                // Swap Colours: same command as X (with a selection it changes the objects and
+                // writes a History row, TW-186)
+                _ => st.push(Action::Run("color.swap".into(), json!({}))),
             }
         }
     }
