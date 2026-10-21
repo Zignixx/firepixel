@@ -170,7 +170,7 @@ fn tool_tooltips_list_each_shortcut_once() {
     let st = &h.state().state;
     fp_i18n::with_language("de", || {
         for id in [ToolId::Rectangle, ToolId::Subselection, ToolId::Slice] {
-            let tip = fp_ui::tools_panel::tool_tooltip(st, id);
+            let tip = fp_ui::tools_panel::tool_title(st, id);
             let inner = tip.rsplit_once('(').map(|(_, r)| r.trim_end_matches(')')).unwrap_or("");
             let keys: Vec<&str> = inner.split(", ").collect();
             let mut uniq = keys.clone();
@@ -178,7 +178,7 @@ fn tool_tooltips_list_each_shortcut_once() {
             uniq.dedup();
             assert_eq!(keys.len(), uniq.len(), "{tip}");
         }
-        assert!(fp_ui::tools_panel::tool_tooltip(st, ToolId::Rectangle).ends_with("(U)"));
+        assert!(fp_ui::tools_panel::tool_title(st, ToolId::Rectangle).ends_with("(U)"));
     });
 }
 

@@ -97,16 +97,13 @@ fn resolve(st: &AppState, name: &str) -> Option<String> {
         .map(|c| c.info().name.clone())
 }
 
-/// Werkzeugtipp „Beschriftung (Kürzel)“ in der aktuellen Sprache (`cmd-…` aus `menu.ftl`).
-fn tooltip(st: &AppState, name: &str) -> String {
+/// Tooltip of a toolbar button in the current language (`cmd-…` from `menu.ftl`): the command name
+/// only, without the shortcut, as measured in the reference ("New", "Undo"; RE spec 57 §4).
+pub fn tooltip(st: &AppState, name: &str) -> String {
     if st.session.registry().get(name).is_none() {
         return String::new();
     }
-    let mut t = menu::command_label(st, name);
-    if let Some(sc) = st.session.command_shortcuts(name).first() {
-        t.push_str(&format!(" ({})", menu::shortcut_text(sc)));
-    }
-    t
+    menu::command_label(st, name)
 }
 
 /// Einträge des Ausrichten-Menüs (Trenner = leerer Name).

@@ -550,6 +550,8 @@ fn ungueltiges_regex_meldung_und_gesperrt() {
     let ins: Vec<Rect> = h
         .query_all_by_label(&t("batch-rn-cheat-insert"))
         .map(|n| n.rect())
+        // below the cheat sheet toggle: the toolbar's Paste button has the same name ("Einfügen")
+        .filter(|r| r.top() > ch.y)
         .collect();
     assert_eq!(ins.len(), 8, "8 Beispiele im Spickzettel");
     click(&mut h, ins[k].center());

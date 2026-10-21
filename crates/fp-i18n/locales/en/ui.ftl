@@ -53,6 +53,8 @@ ui-page-default-name = Page { $n }
 ui-page-nav = Change page
 ui-symbol-edit-back = Back
     .tooltip = Finish editing the symbol and return to the document
+# View ▸ Tooltips: tag with the document coordinates at the pointer over the canvas
+ui-canvas-pointer-tag = x:{ $x } y:{ $y }
 
 ## Preview (2-Up/4-Up)
 ui-preview-original = Original

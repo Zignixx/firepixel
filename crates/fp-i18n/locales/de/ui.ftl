@@ -53,6 +53,8 @@ ui-page-default-name = Seite { $n }
 ui-page-nav = Seitenauswahl ändern
 ui-symbol-edit-back = Zurück
     .tooltip = Symbolbearbeitung beenden und zum Dokument zurückkehren
+# Ansicht ▸ QuickInfos: Marke mit den Dokumentkoordinaten am Mauszeiger über der Leinwand
+ui-canvas-pointer-tag = x:{ $x } y:{ $y }
 
 ## Vorschau (2-fach/4-fach)
 ui-preview-original = Original

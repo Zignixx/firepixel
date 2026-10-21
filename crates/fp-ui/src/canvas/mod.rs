@@ -1320,6 +1320,14 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         });
         cc.feedback = feedback;
     }
+    // View ▸ Tooltips: tag with the document coordinates next to the pointer (RE spec 57 §4)
+    let tag = pointer_tag(ui, st, id, area, &view, pointer_here);
+    if let Some((at, text)) = &tag {
+        label_at(&painter, &theme, *at, text);
+    }
+    if let Some(cc) = st.canvases.get_mut(&id) {
+        cc.pointer_tag = tag.map(|(_, text)| text);
+    }
     if chrome.black {
         // page edge 1 px at the top and left, no shadow (full screen, TW-158)
         let edge = Stroke::new(1.0, crate::screen_mode::PAGE_EDGE);
@@ -1348,6 +1356,42 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     context::show(ui, &resp, st, menu.as_ref());
     // eigener Mauszeiger
     paint_cursor(ui, st, area, &resp);
+}
+
+/// Coordinate tag of *View ▸ Tooltips* ("x:120 y:80", document pixels rounded like the Info
+/// panel): only while the switch is on and the pointer rests or moves over the canvas; hidden while
+/// a mouse button drags, the view pans, a guide moves or the context menu is open. Returns the
+/// screen position of the tag (below right of the pointer, clear of the cursor) and its text.
+fn pointer_tag(
+    ui: &Ui,
+    st: &AppState,
+    id: fp_engine::DocId,
+    area: Rect,
+    view: &fp_engine::ViewState,
+    pointer_here: bool,
+) -> Option<(Pos2, String)> {
+    if !st.session.ui.tooltips || !pointer_here || st.dialogs.any_open() {
+        return None;
+    }
+    let busy = st.canvases.get(&id).is_some_and(|c| {
+        c.pointer_down
+            || c.panning
+            || c.guide_move.is_some()
+            || c.guide_drag.is_some()
+            || c.text_drag
+            || c.context.is_some()
+    });
+    if busy || ui.input(|i| i.pointer.any_down()) {
+        return None;
+    }
+    let p = ui.ctx().pointer_hover_pos().filter(|p| area.contains(*p))?;
+    let d = view.screen_to_doc((p.x - area.left()) as f64, (p.y - area.top()) as f64);
+    let text = fp_i18n::tr!(
+        "ui-canvas-pointer-tag",
+        x = d.x.round() as f64,
+        y = d.y.round() as f64
+    );
+    Some((p + vec2(14.0, 18.0), text))
 }
 
 /// Eigener Mauszeiger über der Leinwand (Systemzeiger ausgeblendet).

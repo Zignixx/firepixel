@@ -181,14 +181,35 @@ fn shortcut_text(st: &AppState, id: ToolId) -> String {
         .join(", ")
 }
 
-/// Tooltip eines Werkzeugs wie in CS6: „Name (Kürzel)“.
-pub fn tool_tooltip(st: &AppState, id: ToolId) -> String {
+/// Name of a tool with its shortcuts as the reference shows it: "Name (shortcut)", e.g.
+/// "Pointer (V, 0)" (first tooltip line, flyout rows and the accessible name of the tool button).
+pub fn tool_title(st: &AppState, id: ToolId) -> String {
     let label = tool_label(id);
     let sc = shortcut_text(st, id);
     if sc.is_empty() {
         label
     } else {
         format!("{label} ({sc})")
+    }
+}
+
+/// One-sentence description of a tool in the current language (`tool-desc-…` in `tools.ftl`; a
+/// Firepixel extension, the reference shows only the name). Empty if there is none.
+pub fn tool_description(id: ToolId) -> String {
+    let k = format!("tool-desc-{}", tool_key(id).trim_start_matches("tool-"));
+    let s = fp_i18n::t(&k);
+    if s == k { String::new() } else { s }
+}
+
+/// Tooltip of a tool: "Name (shortcut)" as in the reference, plus a second line with a short
+/// description of what the tool does (tester wish FB-13).
+pub fn tool_tooltip(st: &AppState, id: ToolId) -> String {
+    let title = tool_title(st, id);
+    let desc = tool_description(id);
+    if desc.is_empty() {
+        title
+    } else {
+        format!("{title}\n{desc}")
     }
 }
 
@@ -515,9 +536,8 @@ fn tool_slot(
         };
         widgets::corner_triangle(ui.painter(), r, col);
     }
-    let tip = tool_tooltip(st, shown);
-    crate::ui_kit::icon_button_info(&resp, true, &tip, Some(selected));
-    let resp = resp.on_hover_text(tip);
+    crate::ui_kit::icon_button_info(&resp, true, &tool_title(st, shown), Some(selected));
+    let resp = resp.on_hover_text(tool_tooltip(st, shown));
     // Drücken und Halten (0,4 s) bzw. Klick auf das Dreieck öffnet den Flyout
     let mut open_flyout = false;
     if has_flyout {
@@ -575,7 +595,7 @@ fn flyout_popup(ctx: &egui::Context, st: &mut AppState) {
                     let mut v: Vec<(String, Option<ToolId>, bool, &str)> = members
                         .iter()
                         .filter(|t| **t != ToolId::AutoShape)
-                        .map(|t| (tool_tooltip(st, *t), Some(*t), false, ""))
+                        .map(|t| (tool_title(st, *t), Some(*t), false, ""))
                         .collect();
                     if f.group == flyout_of(ToolId::Rectangle) {
                         v.push((String::new(), None, true, ""));
@@ -653,6 +673,16 @@ fn flyout_popup(ctx: &egui::Context, st: &mut AppState) {
                         theme.menu_font(),
                         c.menu_text,
                     );
+                    // the description of the tool as a tooltip (the row itself shows the title)
+                    let desc = tool
+                        .filter(|t| *t != ToolId::AutoShape)
+                        .map(tool_description)
+                        .unwrap_or_default();
+                    let resp = if desc.is_empty() {
+                        resp
+                    } else {
+                        resp.on_hover_text(desc)
+                    };
                     if resp.clicked() {
                         chosen = tool;
                         if tool == Some(ToolId::AutoShape) {

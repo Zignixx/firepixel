@@ -202,6 +202,8 @@ pub struct CanvasCache {
     pub context: Option<super::context::ContextMenu>,
     /// Werkzeug-Info für die Statuszeile (Position, Größe).
     pub info: Option<String>,
+    /// Text of the coordinate tag drawn at the pointer in this frame (View ▸ Tooltips, RE spec 57 §4).
+    pub pointer_tag: Option<String>,
     /// Rückmeldung des Werkzeugs aus diesem Frame.
     pub feedback: Vec<fp_engine::Overlay>,
     /// Im bearbeiteten Text wird mit gedrückter Taste markiert.

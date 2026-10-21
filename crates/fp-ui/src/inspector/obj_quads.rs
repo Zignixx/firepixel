@@ -1806,6 +1806,12 @@ pub fn tool_opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl, with_blend: boo
     ) {
         st.session.tools.options.opacity = v.round().clamp(0.0, 100.0) as u8;
     }
+    fields::tip(
+        ui,
+        "pi-tool-opacity",
+        d.r(10.0, 0.0, 19.0, 13.0),
+        &t("pi-tip-opacity"),
+    );
     if with_blend {
         let ta = tool_attrs(ui.ctx());
         let names = texts::blend_labels();
@@ -1820,6 +1826,12 @@ pub fn tool_opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl, with_blend: boo
         {
             edit_tool_attrs(ui.ctx(), |a| a.blend = i);
         }
+        fields::tip(
+            ui,
+            "pi-tool-blend",
+            d.r(42.0, 0.0, 81.0, 13.0),
+            &t("pi-tip-blend-mode"),
+        );
     }
 }
 

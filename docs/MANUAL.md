@@ -78,6 +78,12 @@ The Tools panel has the sections Select, Bitmap, Vector, Web, Colors and View. A
 on a button means there are more tools: hold the mouse button down or click the triangle. Each
 slot remembers the tool used last.
 
+**Tooltips:** a tool's tooltip shows its name and shortcut, e.g. "Pointer (V, 0)", and a second line
+with a short description of what the tool does (the rows of a flyout show the description as their
+tooltip). Toolbar buttons show only the command name. In the Property Inspector of the retouch tools
+(Blur, Sharpen, Dodge, Burn, Smudge, Rubber Stamp) and the Eraser, the fields describe themselves:
+"Brush size", "Brush preview", "Edge softness", "Round brush tip", "Pressure" and so on.
+
 Frequent shortcuts (set "Firepixel", switchable in *Edit ▸ Keyboard Shortcuts...*; further sets are called
 "Image Editing", "Vector Drawing" and "Classic Vector Keys"):
 
@@ -176,6 +182,9 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   menu; when the last document closes, Firepixel returns to Standard.
 - *View ▸ Gamma 1.8* shows the canvas brighter, as on a monitor with Macintosh gamma. The document and
   the export stay unchanged.
+- *View ▸ Tooltips* (on by default) shows the document coordinates ("x:120 y:80") in a small tag next
+  to the pointer while it is over the canvas; the tag hides while a mouse button is held. The switch does
+  not affect the tooltips of buttons and fields.
 - *Edit ▸ Paste* puts copied objects directly above the topmost selected object (in its layer; if an object
   inside a group is selected, above the group). Without a selection they go to the top of the active layer.
 - *Modify ▸ Mask ▸ Group as Mask* puts the mask group in the place of the lowest selected object; *Group*

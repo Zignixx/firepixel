@@ -82,6 +82,13 @@ Das Werkzeugbedienfeld hat die Abschnitte Auswählen, Bitmap, Vektor, Web, Farbe
 Ein kleines Dreieck am Knopf zeigt weitere Werkzeuge: Maustaste gedrückt halten oder auf das
 Dreieck klicken. Jeder Platz merkt sich das zuletzt benutzte Werkzeug.
 
+**Tooltips:** Der Tooltip eines Werkzeugs zeigt Name und Kürzel, z. B. „Zeiger (V, 0)“, und in einer
+zweiten Zeile eine kurze Beschreibung, was das Werkzeug tut (die Zeilen eines Flyouts zeigen die
+Beschreibung als Tooltip). Knöpfe der Werkzeugleiste zeigen nur den Befehlsnamen. Im Inspektor der
+Retusche-Werkzeuge (Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel) und des
+Radiergummis beschreiben sich die Felder selbst: „Pinselstärke“, „Pinselvorschau“, „Kantenweichheit“,
+„Runde Pinselspitze“, „Druck“ usw.
+
 Häufige Kürzel (Satz „Firepixel“, umschaltbar unter *Bearbeiten ▸ Tastaturkurzbefehle…*; weitere Sätze heißen
 „Bildbearbeitung“, „Vektorzeichnung“ und „Klassische Vektor-Tasten“):
 
@@ -185,6 +192,9 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   geschlossen, kehrt Firepixel zu Standard zurück.
 - *Ansicht ▸ Gamma 1.8* zeigt die Leinwand heller, wie auf einem Monitor mit Macintosh-Gamma. Dokument und
   Export bleiben unverändert.
+- *Ansicht ▸ QuickInfos* (Vorgabe: an) zeigt über der Leinwand neben dem Mauszeiger eine kleine Marke mit
+  den Dokumentkoordinaten („x:120 y:80“); bei gedrückter Maustaste ist sie ausgeblendet. Die Tooltips der
+  Knöpfe und Felder schaltet der Schalter nicht.
 - *Bearbeiten ▸ Einfügen* legt kopierte Objekte direkt über das oberste gewählte Objekt (in dessen Ebene;
   ist ein Objekt in einer Gruppe gewählt, über die Gruppe). Ohne Auswahl landen sie oben in der aktiven Ebene.
 - *Modifizieren ▸ Maske ▸ Als Maske gruppieren* setzt die Maskengruppe an den Platz des untersten gewählten

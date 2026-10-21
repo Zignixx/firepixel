@@ -3,6 +3,7 @@
 # tool-<name>   tool names (key from the stable name: tool.polygonLasso → tool-polygonLasso),
 #               used in the Tools panel, tooltips ("Name (shortcut)"), flyouts and the Properties panel.
 # tool-tip-…    other tooltips of the Tools panel.
+# tool-desc-…   one-sentence description of a tool (second line of its tooltip).
 # shape-…       auto shapes (key from the English name: "Rounded Rectangle" → shape-rounded-rectangle).
 
 ## Tools
@@ -59,6 +60,61 @@ tool-slice = Slice
 tool-polygonSlice = Polygon Slice
 tool-hand = Hand
 tool-zoom = Zoom
+
+## Tool descriptions (second line of the tool tooltip, a Firepixel extension)
+
+tool-desc-pointer = Selects objects by clicking or dragging a frame and moves them.
+tool-desc-selectBehind = Selects the next object underneath with each click.
+tool-desc-subselection = Selects single objects inside groups and the points of a path.
+tool-desc-marquee = Selects a rectangular area of pixels in a bitmap.
+tool-desc-ovalMarquee = Selects an elliptical area of pixels in a bitmap.
+tool-desc-lasso = Selects an area of pixels that you draw by hand.
+tool-desc-polygonLasso = Selects an area of pixels with straight edges, point by point.
+tool-desc-crop = Crops the document to the area you drag.
+tool-desc-exportArea = Exports only the area of the document you drag.
+tool-desc-magicWand = Selects adjacent pixels of a similar color.
+tool-desc-aiObject = Selects the clicked object with an AI model.
+tool-desc-aiSubject = Selects the main subject with an AI model.
+tool-desc-aiRefineEdge = Improves the edge of a selection, for example at hair and fur.
+tool-desc-line = Draws straight lines, with Shift in 45° steps.
+tool-desc-pen = Draws vector paths point by point, curves included.
+tool-desc-rectangle = Draws rectangles, with Shift squares.
+tool-desc-ellipse = Draws ellipses, with Shift circles.
+tool-desc-polygon = Draws regular polygons and stars.
+tool-desc-autoShape = Draws the chosen auto shape with its own control handles.
+tool-desc-text = Creates and edits text blocks.
+tool-desc-pencil = Paints hard lines one pixel wide in bitmaps.
+tool-desc-vectorPath = Draws a vector path by hand, like a pencil.
+tool-desc-redrawPath = Redraws a section of the selected path.
+tool-desc-brush = Paints brush strokes in bitmaps.
+tool-desc-scale = Scales and rotates the selected objects.
+tool-desc-skew = Skews the selected objects.
+tool-desc-distort = Distorts the selected objects by their corners.
+tool-desc-nineSliceScale = Scales objects without distorting their corners and edges.
+tool-desc-freeform = Bends paths by pulling or pushing them.
+tool-desc-reshapeArea = Reshapes paths inside a circle, as if with a finger.
+tool-desc-pathScrubAdd = Increases the pressure of a path's stroke as you drag over it.
+tool-desc-pathScrubSubtract = Decreases the pressure of a path's stroke as you drag over it.
+tool-desc-eyedropper = Picks up a color from the document.
+tool-desc-paintBucket = Fills pixels of a similar color or an object with the fill color.
+tool-desc-gradient = Fills with a color gradient.
+tool-desc-eraser = Erases pixels in bitmaps.
+tool-desc-blur = Softens areas of a bitmap.
+tool-desc-sharpen = Sharpens areas of a bitmap.
+tool-desc-dodge = Lightens areas of a bitmap.
+tool-desc-burn = Darkens areas of a bitmap.
+tool-desc-smudge = Smears colors in a bitmap as if with a finger.
+tool-desc-rubberStamp = Copies pixels from a source to another place, Alt+click sets the source.
+tool-desc-replaceColor = Replaces one color of a bitmap with another as you paint.
+tool-desc-redEyeRemoval = Removes red eyes in photos.
+tool-desc-knife = Cuts paths along the line you drag.
+tool-desc-hotspotRect = Draws a rectangular hotspot for links.
+tool-desc-hotspotCircle = Draws a circular hotspot for links.
+tool-desc-hotspotPolygon = Draws a hotspot of any shape, point by point.
+tool-desc-slice = Divides the document into rectangular slices for web export.
+tool-desc-polygonSlice = Draws a slice of any shape, point by point.
+tool-desc-hand = Moves the view of the document.
+tool-desc-zoom = Zooms in, with Alt it zooms out.
 
 ## Tools panel tooltips
 

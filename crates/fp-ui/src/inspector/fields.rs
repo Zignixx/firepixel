@@ -1577,6 +1577,7 @@ pub fn toggle(
     crate::ui_kit::icon_button_info(&resp, enabled, tip, Some(on));
     let clicked = enabled && resp.clicked();
     if !tip.is_empty() {
+        log_tip(ui, r, tip);
         resp.on_hover_text(tip);
     }
     clicked
@@ -1918,6 +1919,47 @@ pub fn swatch(
         }
         _ => resp,
     }
+}
+
+/// Descriptive tooltip over a control area (RE spec 57 §4: the inspector controls of the retouch
+/// tools carry descriptions such as "Brush size", not their labels). A hover-only area on top of the
+/// control: it takes no clicks or drags, the control underneath keeps working. Empty text = none.
+pub fn tip(ui: &Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str) {
+    if text.is_empty() {
+        return;
+    }
+    log_tip(ui, r, text);
+    ui.interact(r, Id::new(id).with("tip"), Sense::hover())
+        .on_hover_text(text);
+}
+
+const TIP_LOG: &str = "pi-tip-log";
+
+/// With the layout log on ([`set_audit`]), descriptive tooltips go into a log of their own
+/// ([`take_tips`]), so the text checks of the layout log stay unchanged.
+fn log_tip(ui: &Ui, r: Rect, text: &str) {
+    if !ui
+        .ctx()
+        .data(|d| d.get_temp::<bool>(Id::new(AUDIT_ON)))
+        .unwrap_or(false)
+    {
+        return;
+    }
+    ui.ctx().data_mut(|d| {
+        d.get_temp_mut_or_default::<Vec<(String, Rect)>>(Id::new(TIP_LOG))
+            .push((text.to_string(), r))
+    });
+}
+
+/// Tooltips of controls drawn since the last call (text, area), with the layout log on (tests).
+pub fn take_tips(ctx: &egui::Context) -> Vec<(String, Rect)> {
+    ctx.data_mut(|d| {
+        let v = d
+            .get_temp::<Vec<(String, Rect)>>(Id::new(TIP_LOG))
+            .unwrap_or_default();
+        d.remove::<Vec<(String, Rect)>>(Id::new(TIP_LOG));
+        v
+    })
 }
 
 /// Senkrechte Trennlinie (zwischen Teilfeldern im Quadranten, z. B. Füllung | Strich).

@@ -291,6 +291,72 @@ fn edge_preview(ui: &Ui, pv: Rect, edge: f64, color: egui::Color32) {
     ui.painter().circle_filled(pv.center(), core, color);
 }
 
+/// Tooltip keys of the size field and the two shape buttons (RE spec 57 §4; the retouch tools say
+/// "Brush size" / "Round brush tip", the eraser "Eraser size" / "Round eraser").
+#[derive(Clone, Copy)]
+struct TipKeys {
+    size: &'static str,
+    round: &'static str,
+    square: &'static str,
+}
+
+const BRUSH_TIPS: TipKeys = TipKeys {
+    size: "pi-tip-brush-size",
+    round: "pi-tip-round-brush",
+    square: "pi-tip-square-brush",
+};
+
+const ERASER_TIPS: TipKeys = TipKeys {
+    size: "pi-tip-eraser-size",
+    round: "pi-tip-round-eraser",
+    square: "pi-tip-square-eraser",
+};
+
+/// "Size:" field and "Edge:" preview + field shared by the brush-based bitmap tools, with the
+/// descriptive tooltips of the reference (labels and arrow buttons have none).
+fn size_edge_fields(
+    ui: &mut Ui,
+    d: Dl,
+    key: &str,
+    size: f64,
+    edge: f64,
+    size_range: (f64, f64),
+    size_tip: &str,
+) -> (Option<f64>, Option<f64>) {
+    let t = Theme::current(ui.ctx());
+    fields::label_right(ui, d.r(16.0, 2.0, 40.0, 8.0), &tx("pi-size"), true);
+    let size_edit = d.r(58.0, 0.0, 21.0, 13.0);
+    let s = fields::number(
+        ui,
+        (key, "size"),
+        size_edit,
+        Some(d.r(80.0, 0.0, 9.0, 13.0)),
+        Some(size),
+        size_range,
+        0,
+        true,
+    );
+    fields::tip(ui, (key, "size"), size_edit, &tx(size_tip));
+    fields::label_right(ui, d.r(4.0, 17.0, 35.0, 8.0), &tx("pi-edge"), true);
+    let pv = d.r(41.0, 15.0, 15.0, 13.0);
+    ui.painter().rect_filled(pv, 0.0, t.colors.field_bg);
+    edge_preview(ui, pv, edge, t.colors.icon_fg);
+    fields::tip(ui, (key, "preview"), pv, &tx("pi-tip-brush-preview"));
+    let edge_edit = d.r(58.0, 15.0, 21.0, 13.0);
+    let e = fields::number(
+        ui,
+        (key, "edge"),
+        edge_edit,
+        Some(d.r(80.0, 15.0, 9.0, 13.0)),
+        Some(edge),
+        (0.0, 100.0),
+        0,
+        true,
+    );
+    fields::tip(ui, (key, "edge"), edge_edit, &tx("pi-tip-edge-softness"));
+    (s, e)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn size_edge_shape(
     ui: &mut Ui,
@@ -301,33 +367,9 @@ fn size_edge_shape(
     round: bool,
     form_x: f32,
     size_range: (f64, f64),
+    tips: TipKeys,
 ) -> (Option<f64>, Option<f64>, Option<bool>) {
-    let t = Theme::current(ui.ctx());
-    fields::label_right(ui, d.r(16.0, 2.0, 40.0, 8.0), &tx("pi-size"), true);
-    let s = fields::number(
-        ui,
-        (key, "size"),
-        d.r(58.0, 0.0, 21.0, 13.0),
-        Some(d.r(80.0, 0.0, 9.0, 13.0)),
-        Some(size),
-        size_range,
-        0,
-        true,
-    );
-    fields::label_right(ui, d.r(4.0, 17.0, 35.0, 8.0), &tx("pi-edge"), true);
-    let pv = d.r(41.0, 15.0, 15.0, 13.0);
-    ui.painter().rect_filled(pv, 0.0, t.colors.field_bg);
-    edge_preview(ui, pv, edge, t.colors.icon_fg);
-    let e = fields::number(
-        ui,
-        (key, "edge"),
-        d.r(58.0, 15.0, 21.0, 13.0),
-        Some(d.r(80.0, 15.0, 9.0, 13.0)),
-        Some(edge),
-        (0.0, 100.0),
-        0,
-        true,
-    );
+    let (s, e) = size_edge_fields(ui, d, key, size, edge, size_range, tips.size);
     fields::label_right(
         ui,
         d.r(form_x - 42.0, 2.0, 40.0, 8.0),
@@ -342,7 +384,7 @@ fn size_edge_shape(
         Glyph::RoundTip,
         round,
         true,
-        &tx("pi-tip-round"),
+        &tx(tips.round),
     ) {
         shape = Some(true);
     }
@@ -353,7 +395,7 @@ fn size_edge_shape(
         Glyph::SquareTip,
         !round,
         true,
-        &tx("pi-tip-square"),
+        &tx(tips.square),
     ) {
         shape = Some(false);
     }
@@ -373,6 +415,7 @@ fn eraser_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
         o.eraser_round,
         138.0,
         (1.0, 100.0),
+        ERASER_TIPS,
     );
     if let Some(v) = s {
         st.session.tools.options.eraser_size = v as f32;
@@ -392,7 +435,7 @@ fn eraser_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
         &t,
         true,
     );
-    if let Some(v) = fields::number(
+    let op = fields::number(
         ui,
         "eraser-op",
         d.r(270.0, 0.0, 19.0, 13.0),
@@ -401,7 +444,14 @@ fn eraser_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
         (0.0, 100.0),
         0,
         true,
-    ) {
+    );
+    fields::tip(
+        ui,
+        "eraser-op",
+        d.r(270.0, 0.0, 19.0, 13.0),
+        &tx("pi-tip-eraser-opacity"),
+    );
+    if let Some(v) = op {
         st.session.tools.options.eraser_opacity = v as u8;
     }
 }
@@ -755,6 +805,12 @@ fn stamp_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     ) {
         edit_tool_attrs(ui.ctx(), |a| a.source_aligned = b);
     }
+    fields::tip(
+        ui,
+        "stamp-al",
+        d.r(131.0, 1.0, 119.0, 10.0),
+        &tx("pi-tip-stamp-aligned"),
+    );
     if let Some(b) = fields::checkbox(
         ui,
         "stamp-doc",
@@ -765,6 +821,12 @@ fn stamp_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     ) {
         edit_tool_attrs(ui.ctx(), |a| a.whole_doc = b);
     }
+    fields::tip(
+        ui,
+        "stamp-doc",
+        d.r(131.0, 16.0, 119.0, 10.0),
+        &tx("pi-tip-stamp-source"),
+    );
     obj_quads::tool_opacity_panel(ui, st, d.offset(261.0, 0.0), true);
 }
 
@@ -775,32 +837,7 @@ fn size_edge_shape_noform(
     size: f64,
     edge: f64,
 ) -> (Option<f64>, Option<f64>, ()) {
-    let t = Theme::current(ui.ctx());
-    fields::label_right(ui, d.r(16.0, 2.0, 40.0, 8.0), &tx("pi-size"), true);
-    let s = fields::number(
-        ui,
-        (key, "size"),
-        d.r(58.0, 0.0, 21.0, 13.0),
-        Some(d.r(80.0, 0.0, 9.0, 13.0)),
-        Some(size),
-        (1.0, 100.0),
-        0,
-        true,
-    );
-    fields::label_right(ui, d.r(4.0, 17.0, 35.0, 8.0), &tx("pi-edge"), true);
-    let pv = d.r(41.0, 15.0, 15.0, 13.0);
-    ui.painter().rect_filled(pv, 0.0, t.colors.field_bg);
-    edge_preview(ui, pv, edge, t.colors.icon_fg);
-    let e = fields::number(
-        ui,
-        (key, "edge"),
-        d.r(58.0, 15.0, 21.0, 13.0),
-        Some(d.r(80.0, 15.0, 9.0, 13.0)),
-        Some(edge),
-        (0.0, 100.0),
-        0,
-        true,
-    );
+    let (s, e) = size_edge_fields(ui, d, key, size, edge, (1.0, 100.0), "pi-tip-stamp-size");
     (s, e, ())
 }
 
@@ -872,6 +909,7 @@ fn blur_q3(ui: &mut Ui, _st: &mut AppState, r: Rect) {
         ta.retouch_round,
         153.0,
         (1.0, 100.0),
+        BRUSH_TIPS,
     );
     fields::label_right(ui, d.r(99.0, 17.0, 52.0, 8.0), &tx("pi-intensity"), true);
     let i = fields::number(
@@ -883,6 +921,12 @@ fn blur_q3(ui: &mut Ui, _st: &mut AppState, r: Rect) {
         (0.0, 100.0),
         0,
         true,
+    );
+    fields::tip(
+        ui,
+        "blur-int",
+        d.r(153.0, 15.0, 21.0, 13.0),
+        &tx("pi-tip-intensity"),
     );
     edit_retouch(ui, s, e, sh, |a| {
         if let Some(v) = i {
@@ -924,6 +968,7 @@ fn dodge_q3(ui: &mut Ui, _st: &mut AppState, r: Rect) {
         ta.retouch_round,
         153.0,
         (1.0, 100.0),
+        BRUSH_TIPS,
     );
     fields::label_right(ui, d.r(110.0, 17.0, 40.0, 8.0), &tx("pi-range"), true);
     let rg = fields::combo(
@@ -938,6 +983,12 @@ fn dodge_q3(ui: &mut Ui, _st: &mut AppState, r: Rect) {
         Some(ta.range),
         true,
     );
+    fields::tip(
+        ui,
+        "dodge-range",
+        d.r(153.0, 15.0, 69.0, 13.0),
+        &tx("pi-tip-range"),
+    );
     fields::label_right(ui, d.r(215.0, 2.0, 52.0, 10.0), &tx("pi-exposure"), true);
     let ex = fields::number(
         ui,
@@ -948,6 +999,12 @@ fn dodge_q3(ui: &mut Ui, _st: &mut AppState, r: Rect) {
         (0.0, 100.0),
         0,
         true,
+    );
+    fields::tip(
+        ui,
+        "dodge-exp",
+        d.r(269.0, 0.0, 21.0, 13.0),
+        &tx("pi-tip-exposure"),
     );
     edit_retouch(ui, s, e, sh, |a| {
         if let Some(v) = rg {
@@ -971,6 +1028,7 @@ fn smudge_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
         ta.retouch_round,
         155.0,
         (1.0, 100.0),
+        BRUSH_TIPS,
     );
     fields::label_right(ui, d.r(100.0, 17.0, 50.0, 8.0), &tx("pi-pressure"), true);
     let pr = fields::number(
@@ -982,6 +1040,12 @@ fn smudge_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
         (0.0, 100.0),
         0,
         true,
+    );
+    fields::tip(
+        ui,
+        "smudge-pr",
+        d.r(153.0, 15.0, 21.0, 13.0),
+        &tx("pi-tip-pressure"),
     );
     let c = st.session.tools.fill_color;
     if let Some(super::popups::ColorChoice::Color(col)) = super::popups::color_button(
@@ -1007,6 +1071,12 @@ fn smudge_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
         ta.smudge_color,
         true,
     );
+    fields::tip(
+        ui,
+        "smudge-uc",
+        d.r(255.0, 1.0, 84.0, 10.0),
+        &tx("pi-tip-smudge-color"),
+    );
     let wd = fields::checkbox(
         ui,
         "smudge-doc",
@@ -1014,6 +1084,12 @@ fn smudge_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
         &tx("pi-whole-doc"),
         ta.whole_doc,
         true,
+    );
+    fields::tip(
+        ui,
+        "smudge-doc",
+        d.r(255.0, 16.0, 104.0, 10.0),
+        &tx("pi-tip-smudge-all"),
     );
     edit_retouch(ui, s, e, sh, |a| {
         if let Some(v) = pr {
