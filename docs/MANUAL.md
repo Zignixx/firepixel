@@ -208,7 +208,9 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   are applied to every selected object as one History row "Stroke Color" ("Brush and Fill" when one side
   is none: then the none swaps too, and a new stroke gets the 1-Pixel Soft tip, 1 px). An existing
   stroke keeps its tip, width and placement; a text loses its fill and gets a 1 px stroke in its color; a
-  bitmap keeps its pixels. Ctrl+Y repeats the swap, Ctrl+Z restores the objects and the colors.
+  bitmap keeps its pixels. Ctrl+Y repeats the swap, Ctrl+Z restores the objects and the colors: after
+  Undo, Redo or a History jump the colors follow the selected object, and only with nothing selected (or
+  only bitmaps) do the colors stored with the swap come back.
 - *Edit ▸ Paste* puts copied objects directly above the topmost selected object (in its layer; if an object
   inside a group is selected, above the group). Without a selection they go to the top of the active layer.
 - *Modify ▸ Mask ▸ Group as Mask* puts the mask group in the place of the lowest selected object; *Group*

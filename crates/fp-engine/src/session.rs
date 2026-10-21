@@ -1397,20 +1397,17 @@ impl Session {
         Ok(())
     }
 
-    fn apply_history_snapshot(&mut self, snap: Snapshot) {
+    fn apply_history_snapshot(&mut self, mut snap: Snapshot) {
+        let tool_colors = snap.tool_colors.take();
         self.restore_history_snapshot(snap);
         // the pen follows its path: undoing a point keeps drawing from the new last point (FB-07)
         self.sync_tool();
-        self.follow_selection();
+        // the toolbox follows the restored selection; the colours stored with the row (Swap
+        // Colours, TW-186) only come back when no selected object supplies them (RE spec 58)
+        self.follow_selection_or(tool_colors);
     }
 
     fn restore_history_snapshot(&mut self, snap: Snapshot) {
-        if self.active().is_none() {
-            return;
-        }
-        if let Some((stroke, fill)) = snap.tool_colors {
-            self.set_colors(Some(stroke), Some(fill));
-        }
         let Some(d) = self.active_mut() else { return };
         // Das Raster gehört wie im Original nicht zum Verlauf (PM-5 D18: „Raster bearbeiten“ legt
         // keinen Schritt an, Strg+Z ändert das Raster nicht) – es bleibt beim Springen im Verlauf

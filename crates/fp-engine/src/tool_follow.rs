@@ -259,18 +259,45 @@ impl Session {
     /// its content or its selection changed since the last look; an empty selection keeps them.
     /// Does nothing while a script or a command group runs. `true` when the attributes changed.
     pub fn follow_selection(&mut self) -> bool {
-        if self.follow_hold > 0 || self.group_depth > 0 {
-            return false;
+        self.follow_selection_or(None)
+    }
+
+    /// [`Session::follow_selection`] after Undo, Redo and History jumps (TW-186 with Q-58, RE spec
+    /// 58 §1 and §2): when a selected object supplies tool attributes, the toolbox follows it (the
+    /// restored colours of a Swap Colours row equal that object's colours in the reference, which
+    /// follows the selection before the user can swap); otherwise (nothing selected, only bitmaps
+    /// and the like, or the follow is held) the toolbox colours `fallback` stored with the crossed
+    /// row come back. Exactly one of the two writes the toolbox, so it never shows both in turn.
+    pub(crate) fn follow_selection_or(&mut self, fallback: Option<(Argb, Argb)>) -> bool {
+        if let Some(st) = self.selection_style_to_follow() {
+            return self.set_tool_style(st);
         }
-        let Some(d) = self.active() else {
-            return false;
-        };
+        match fallback {
+            Some((stroke, fill))
+                if (self.tools.stroke_color, self.tools.fill_color) != (stroke, fill) =>
+            {
+                self.set_colors(Some(stroke), Some(fill));
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// The tool attributes of the topmost selected object with path attributes, when the active
+    /// document, its content or its selection changed since the last look (noted here); `None`
+    /// while a script or a command group holds the follow, when nothing changed, nothing is
+    /// selected or no selected object has path attributes.
+    fn selection_style_to_follow(&mut self) -> Option<ToolStyle> {
+        if self.follow_hold > 0 || self.group_depth > 0 {
+            return None;
+        }
+        let d = self.active()?;
         if let Some((id, generation, sel)) = &self.follow_seen
             && *id == d.id
             && *generation == d.generation
             && *sel == d.selection.elements
         {
-            return false;
+            return None;
         }
         let key = (d.id, d.generation, d.selection.elements.clone());
         let current = self.tool_style();
@@ -283,10 +310,7 @@ impl Session {
                 .find_map(|e| style_of_element(e, &current))
         };
         self.follow_seen = Some(key);
-        match style {
-            Some(st) => self.set_tool_style(st),
-            None => false,
-        }
+        style
     }
 }
 

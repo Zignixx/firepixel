@@ -97,15 +97,20 @@ fn without_selection_only_the_toolbox_swaps() {
 /// One rectangle (fill red, stroke blue 2 px centre): fill blue, stroke red 2 px centre; toolbox
 /// swapped; one row "Strichfarbe" `color.swap`; Ctrl+Y repeats (back), Ctrl+Z restores object and
 /// toolbox.
+///
+/// The toolbox shows other colours (green / yellow) while nothing is selected; selecting the
+/// rectangle makes it follow (Q-58), so the swap starts from the rectangle's colours as in the
+/// reference. Undo, redo and History jumps give the toolbox the colours of the restored
+/// selection, which are the colours stored with the swap rows.
 #[test]
 fn rectangle_swaps_with_one_row_repeat_and_undo() {
     fp_i18n::set_language("de");
     let mut s = doc_session(600.0, 400.0);
     let r = styled_rect(&mut s, [100.0, 100.0, 300.0, 200.0], Some("#ff0000"), Some(("#0000ff", 2.0)));
-    select(&mut s, &[r]);
-    // the toolbox follows the selected object in the reference application: the colours come
-    // from the object even when the toolbox shows something else here
+    select(&mut s, &[]);
     s.set_colors(Some(GREEN), Some(YELLOW));
+    select(&mut s, &[r]);
+    assert_eq!(tool_colors(&s), (BLUE, RED), "the toolbox follows the selected rectangle");
     let n = rows(&s);
     let (_, _, tip, _, _) = attrs(&s, r);
     swap(&mut s);
@@ -120,6 +125,7 @@ fn rectangle_swaps_with_one_row_repeat_and_undo() {
     // X again: back, a second row
     swap(&mut s);
     assert_eq!(attrs(&s, r), (Some(RED), Some(BLUE), tip.clone(), 2, 1));
+    assert_eq!(tool_colors(&s), (BLUE, RED));
     assert_eq!(rows(&s), n + 2);
     // Ctrl+Y repeats the swap as a new row
     assert_eq!(s.repeat_label().as_deref(), Some("Strichfarbe"));
@@ -128,22 +134,99 @@ fn rectangle_swaps_with_one_row_repeat_and_undo() {
     assert_eq!(tool_colors(&s), (RED, BLUE));
     assert_eq!(rows(&s), n + 3);
     assert_eq!(last_label(&s), "Strichfarbe");
-    // Ctrl+Z restores the object and the toolbox colours
+    // Ctrl+Z restores the object and the toolbox colours, written once (no flicker between the
+    // stored colours and the followed object)
+    s.drain_events();
     ex(&mut s, "edit.undo", json!({}));
     assert_eq!(attrs(&s, r), (Some(RED), Some(BLUE), tip.clone(), 2, 1));
     assert_eq!(tool_colors(&s), (BLUE, RED));
+    let writes = s
+        .drain_events()
+        .iter()
+        .filter(|e| matches!(e, fp_engine::SessionEvent::ColorsChanged))
+        .count();
+    assert_eq!(writes, 1, "the toolbox is written once");
     ex(&mut s, "edit.undo", json!({}));
+    assert_eq!(tool_colors(&s), (RED, BLUE));
     ex(&mut s, "edit.undo", json!({}));
     assert_eq!(attrs(&s, r), (Some(RED), Some(BLUE), tip.clone(), 2, 1));
-    assert_eq!(tool_colors(&s), (GREEN, YELLOW), "toolbox as before the first swap");
+    assert_eq!(tool_colors(&s), (BLUE, RED), "toolbox as before the first swap");
+    assert_eq!(rows(&s), n);
     // redo brings the swap back, a History jump restores the toolbox of the target position
     ex(&mut s, "edit.redo", json!({}));
     assert_eq!(attrs(&s, r), (Some(BLUE), Some(RED), tip.clone(), 2, 1));
     assert_eq!(tool_colors(&s), (RED, BLUE));
     ex(&mut s, "history.goTo", json!({"position": n + 3}));
+    assert_eq!(attrs(&s, r), (Some(BLUE), Some(RED), tip.clone(), 2, 1));
     assert_eq!(tool_colors(&s), (RED, BLUE));
+    ex(&mut s, "history.goTo", json!({"position": n + 2}));
+    assert_eq!(tool_colors(&s), (BLUE, RED));
+    ex(&mut s, "history.goTo", json!({"position": n}));
+    assert_eq!(attrs(&s, r), (Some(RED), Some(BLUE), tip.clone(), 2, 1));
+    assert_eq!(tool_colors(&s), (BLUE, RED));
+}
+
+/// Nothing selected: a toolbox-only swap writes no row, so undoing, redoing or jumping over the
+/// earlier object rows leaves the swapped toolbox alone as long as those rows end with nothing
+/// selected.
+#[test]
+fn toolbox_only_swap_survives_undo_of_object_rows() {
+    fp_i18n::set_language("de");
+    let mut s = doc_session(600.0, 400.0);
+    let n0 = rows(&s);
+    let r = rect(&mut s, 100.0, 100.0, 300.0, 200.0);
+    ex(&mut s, "edit.clear", json!({}));
+    assert!(s.active().expect("doc").selection.elements.is_empty(), "nothing selected");
+    let n = rows(&s);
+    assert!(n >= n0 + 2, "drawing and deleting are rows");
+    s.set_colors(Some(GREEN), Some(YELLOW));
+    swap(&mut s);
+    assert_eq!(tool_colors(&s), (YELLOW, GREEN));
+    assert_eq!(rows(&s), n, "no row");
+    // the delete comes back (the rectangle selected again): the toolbox follows the rectangle
+    let drawn = {
+        let mut t = doc_session(600.0, 400.0);
+        rect(&mut t, 100.0, 100.0, 300.0, 200.0);
+        tool_colors(&t)
+    };
+    ex(&mut s, "edit.undo", json!({}));
+    assert!(s.active().expect("doc").selection.elements.contains(&r));
+    assert_eq!(tool_colors(&s), drawn, "follows the restored selection");
+    // deselect, swap the toolbox only, then a History jump to the empty document (nothing
+    // selected, no stored colours on the crossed rows): the toolbox stays
+    ex(&mut s, "select.none", json!({}));
+    s.set_colors(Some(GREEN), Some(YELLOW));
+    let m = rows(&s);
+    swap(&mut s);
+    assert_eq!(rows(&s), m, "no row");
+    ex(&mut s, "history.goTo", json!({"position": n0}));
+    assert!(s.active().expect("doc").selection.elements.is_empty());
+    assert_eq!(tool_colors(&s), (YELLOW, GREEN), "the toolbox stays");
+}
+
+/// A swap row on a selected bitmap (no tool attributes to follow) and nothing selected after the
+/// jump: the colours stored with the swap row come back.
+#[test]
+fn stored_colours_come_back_without_an_object_to_follow() {
+    fp_i18n::set_language("de");
+    let mut s = doc_session(600.0, 400.0);
+    let b = bitmap(&mut s, 120, 80, 100, 80, [200, 0, 0, 255]);
+    select(&mut s, &[b]);
+    s.set_colors(Some(GREEN), Some(YELLOW));
+    let n = rows(&s);
+    swap(&mut s);
+    swap(&mut s);
+    swap(&mut s);
+    assert_eq!(tool_colors(&s), (YELLOW, GREEN));
+    assert_eq!(rows(&s), n + 3);
+    ex(&mut s, "history.goTo", json!({"position": n + 1}));
+    assert_eq!(tool_colors(&s), (YELLOW, GREEN));
     ex(&mut s, "history.goTo", json!({"position": n}));
     assert_eq!(tool_colors(&s), (GREEN, YELLOW));
+    ex(&mut s, "history.goTo", json!({"position": n + 2}));
+    assert_eq!(tool_colors(&s), (GREEN, YELLOW));
+    ex(&mut s, "edit.redo", json!({}));
+    assert_eq!(tool_colors(&s), (YELLOW, GREEN));
 }
 
 /// Two objects: both get the toolbox colours of the topmost one, widths stay.

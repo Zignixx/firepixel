@@ -219,7 +219,9 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   „keine“ ist: dann tauscht auch das „keine“, ein neuer Strich bekommt die Spitze „1-Pixel weich“, 1 px).
   Ein vorhandener Strich behält Spitze, Breite und Lage; ein Text verliert seine Füllung und bekommt einen
   Strich von 1 px in seiner Farbe; eine Bitmap behält ihre Pixel. Strg+Y wiederholt den Tausch, Strg+Z
-  stellt Objekte und Farben zurück.
+  stellt Objekte und Farben zurück: Nach Rückgängig, Wiederholen oder einem Sprung im Verlauf folgen die
+  Farben dem gewählten Objekt; nur ohne Auswahl (oder mit nur Bitmaps) kommen die mit dem Tausch
+  gespeicherten Farben zurück.
 - *Bearbeiten ▸ Einfügen* legt kopierte Objekte direkt über das oberste gewählte Objekt (in dessen Ebene;
   ist ein Objekt in einer Gruppe gewählt, über die Gruppe). Ohne Auswahl landen sie oben in der aktiven Ebene.
 - *Modifizieren ▸ Maske ▸ Als Maske gruppieren* setzt die Maskengruppe an den Platz des untersten gewählten

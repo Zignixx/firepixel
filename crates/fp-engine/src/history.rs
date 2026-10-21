@@ -28,7 +28,9 @@ pub struct Snapshot {
     pub frame: usize,
     pub layer: Option<fp_model::LayerId>,
     /// Toolbox stroke and fill colours, set only for steps that changed them (Swap Colours,
-    /// TW-186: Ctrl+Z restores the objects and the toolbox colours). `None` = leave them.
+    /// TW-186: Ctrl+Z restores the objects and the toolbox colours). `None` = leave them. They
+    /// come back only when no selected object supplies tool attributes; otherwise the toolbox
+    /// follows the restored selection (Q-58, `Session::follow_selection_or`).
     pub tool_colors: Option<(fp_color::Argb, fp_color::Argb)>,
 }
 
