@@ -345,8 +345,112 @@ pub fn attrs_params(ta: &crate::inspector::obj_quads::ToolAttrs) -> (Option<Valu
     (fill, stroke)
 }
 
+/// Inverse of [`attrs_params`]: takes `pi.fill` / `pi.stroke` parameters of the tool defaults (as the
+/// engine writes them when the tool attributes follow the selection or a script sets them, Q-58)
+/// into the inspector's tool attributes (stroke "none" = no stroke kind).
+pub fn import_attrs_params(
+    ta: &mut crate::inspector::obj_quads::ToolAttrs,
+    fill: Option<&Value>,
+    stroke: Option<&Value>,
+) {
+    let d = crate::inspector::obj_quads::ToolAttrs::default();
+    let num = |v: &Value, k: &str| v.get(k).and_then(|x| x.as_i64()).map(|x| x as i32);
+    let text = |v: &Value, k: &str| v.get(k).and_then(|x| x.as_str()).map(str::to_string);
+    match fill {
+        None => {
+            ta.fill_kind = d.fill_kind;
+            ta.edge = d.edge;
+            ta.feather = d.feather;
+            ta.fill_texture.clear();
+            ta.fill_texture_amount = 0;
+            ta.fill_texture_transparent = false;
+        }
+        Some(f) => {
+            ta.fill_kind = match f.get("category").and_then(|x| x.as_str()) {
+                Some("none") => 0,
+                Some("gradient") => 2,
+                Some("pattern") => 3,
+                _ => 1,
+            };
+            if ta.fill_kind != 0 {
+                if let Some(v) = num(f, "shape") {
+                    ta.grad_shape = v;
+                }
+                if let Some(v) = text(f, "pattern") {
+                    ta.pattern = v;
+                }
+                ta.edge = num(f, "edge").unwrap_or(d.edge);
+                ta.feather = num(f, "feather").unwrap_or(0);
+                ta.fill_texture = text(f, "texture").unwrap_or_default();
+                ta.fill_texture_amount = num(f, "textureAmount").unwrap_or(0);
+                ta.fill_texture_transparent = f
+                    .get("textureTransparent")
+                    .and_then(|x| x.as_bool())
+                    .unwrap_or(false);
+            }
+        }
+    }
+    match stroke {
+        None => {
+            ta.stroke_preset = d.stroke_preset;
+            ta.stroke_width = d.stroke_width;
+            ta.softness = d.softness;
+            ta.placement = d.placement;
+            ta.stroke_texture.clear();
+        }
+        Some(s) if s.get("none").and_then(|x| x.as_bool()) == Some(true) => ta.stroke_preset = None,
+        Some(s) => {
+            if let Some(i) = text(s, "preset")
+                .and_then(|n| fp_engine::commands::panel::find_preset(&n))
+                .and_then(|f| fp_engine::commands::panel::preset_index_of(f.category, f.name))
+            {
+                ta.stroke_preset = Some(i);
+            }
+            if let Some(v) = num(s, "width") {
+                ta.stroke_width = v;
+            }
+            if let Some(v) = num(s, "softness") {
+                ta.softness = v;
+            }
+            ta.placement = match s.get("placement").and_then(|x| x.as_str()) {
+                Some("inside") => 0,
+                Some("outside") => 2,
+                _ => 1,
+            };
+            ta.stroke_texture = text(s, "texture").unwrap_or_default();
+            if let Some(v) = num(s, "textureAmount") {
+                ta.stroke_texture_amount = v;
+            }
+        }
+    }
+}
+
+/// Q-58: the tool attributes follow the last selected object once the interface is idle; what the
+/// engine changed there (or a script set) goes into the inspector's tool attributes before they
+/// are written back below.
+fn follow_engine_tool_attrs(ctx: &egui::Context, st: &mut crate::app_state::AppState) {
+    st.session.follow_selection();
+    let gen_id = egui::Id::new("lw-tool-attrs-gen");
+    let generation = st.session.tool_attrs_generation();
+    let seen = ctx.data(|d| d.get_temp::<u64>(gen_id));
+    if seen == Some(generation) {
+        return;
+    }
+    ctx.data_mut(|d| d.insert_temp(gen_id, generation));
+    // the first frame only notes the counter (the inspector starts from its own defaults)
+    if seen.is_none() {
+        return;
+    }
+    let o = &st.session.tools.options;
+    let (fill, stroke) = (o.new_fill.clone(), o.new_stroke.clone());
+    crate::inspector::obj_quads::edit_tool_attrs(ctx, |ta| {
+        import_attrs_params(ta, fill.as_ref(), stroke.as_ref())
+    });
+}
+
 /// Überträgt die Werkzeugattribute des Inspektors in die Werkzeugoptionen der Sitzung.
 pub fn sync_tool_attrs(ctx: &egui::Context, st: &mut crate::app_state::AppState) {
+    follow_engine_tool_attrs(ctx, st);
     let ta = crate::inspector::obj_quads::tool_attrs(ctx);
     let (f, s) = attrs_params(&ta);
     let o = &mut st.session.tools.options;
@@ -720,6 +824,77 @@ mod tests {
         assert_eq!(st.session.prefs.get_int("BlurToolDiameter", 0), 30);
         assert_eq!(switch(&mut st, T::Dodge).retouch_size, 13);
         assert_eq!(switch(&mut st, T::Blur).retouch_size, 30);
+    }
+
+    /// Q-58: what the engine writes as tool defaults comes back unchanged through the inspector.
+    #[test]
+    fn imported_tool_params_round_trip() {
+        for (f, s) in [
+            (None, None),
+            (
+                Some(json!({"category": "none"})),
+                Some(json!({"none": true})),
+            ),
+            (
+                Some(json!({"category": "solid", "edge": 2, "feather": 5})),
+                Some(
+                    json!({"preset": "Bleistift/1-Pixel hart", "width": 4, "softness": 0, "placement": "outside"}),
+                ),
+            ),
+            (
+                Some(json!({"category": "gradient", "shape": 3, "edge": 1})),
+                Some(
+                    json!({"preset": "Bleistift/1-Pixel hart", "width": 1, "softness": 0, "placement": "inside"}),
+                ),
+            ),
+        ] {
+            let mut ta = crate::inspector::obj_quads::ToolAttrs::default();
+            import_attrs_params(&mut ta, f.as_ref(), s.as_ref());
+            assert_eq!(attrs_params(&ta), (f, s));
+        }
+    }
+
+    /// Q-58: selecting an object puts its stroke into the inspector's tool attributes on the next
+    /// frame; writing them back keeps the engine's values; deselecting keeps them.
+    #[test]
+    fn selection_attrs_reach_the_inspector() {
+        let ctx = egui::Context::default();
+        let mut s = fp_engine::Session::default();
+        s.execute(
+            "file.new",
+            json!({"width": 200, "height": 100, "background": "#ffffff"}),
+        )
+        .expect("new");
+        let mut st =
+            crate::app_state::AppState::new(s, crate::app_state::UiSettings::default(), None);
+        sync_tool_attrs(&ctx, &mut st);
+        let v = st
+            .session
+            .execute(
+                "draw.rectangle",
+                json!({"rect": [10, 10, 60, 40], "strokeColor": "#00ff00", "strokeWidth": 4}),
+            )
+            .expect("rect")
+            .value;
+        st.session
+            .execute(
+                "pi.stroke",
+                json!({"ids": [v["id"]], "placement": "outside"}),
+            )
+            .expect("stroke");
+        st.session.execute("select.none", json!({})).expect("none");
+        st.session
+            .execute("select.set", json!({"ids": [v["id"]]}))
+            .expect("select");
+        let want = st.session.tools.options.new_stroke.clone();
+        assert_eq!(want.as_ref().and_then(|v| v.get("width")), Some(&json!(4)));
+        sync_tool_attrs(&ctx, &mut st);
+        let ta = crate::inspector::obj_quads::tool_attrs(&ctx);
+        assert_eq!((ta.stroke_width, ta.placement), (4, 2));
+        assert_eq!(st.session.tools.options.new_stroke, want);
+        st.session.execute("select.none", json!({})).expect("none");
+        sync_tool_attrs(&ctx, &mut st);
+        assert_eq!(st.session.tools.options.new_stroke, want);
     }
 
     #[test]

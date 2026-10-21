@@ -143,6 +143,17 @@ pub fn run_source(session: &mut Session, source: &str, opts: &ScriptOptions) -> 
     if state::is_installed() {
         return ScriptOutcome::failed("es läuft bereits ein Skript auf diesem Thread");
     }
+    // Q-58 (RE spec 58 section 2.2): the tool attributes follow the selection before the script
+    // (idle) and after it, never inside it
+    session.follow_selection();
+    session.hold_tool_follow();
+    let outcome = run_source_held(session, source, opts);
+    session.release_tool_follow();
+    session.follow_selection();
+    outcome
+}
+
+fn run_source_held(session: &mut Session, source: &str, opts: &ScriptOptions) -> ScriptOutcome {
     if opts.single_undo_step && session.active().is_some() {
         let mut outcome = ScriptOutcome::default();
         let label = opts

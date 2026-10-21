@@ -227,6 +227,11 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Ergebnis an den Platz des oberen Objekts, Öffnen und Zuschneiden an den des unteren (*Pfade kombinieren*).
 - *Auswählen ▸ Auswahlrahmen in Pfad konvertieren* gibt dem neuen Pfad Füllung und Strich wie einer neu
   gezeichneten Form (Farben aus dem Werkzeugbedienfeld, Füll- und Strichart aus dem Inspektor).
+- **Neue Formen übernehmen die Attribute des zuletzt gewählten Objekts:** Wird ein Objekt gewählt (Klick,
+  Auswahlrahmen, Skript), werden seine Füllung, Füll- und Strichfarbe, Strichspitze, -breite und -lage zu den
+  aktuellen Werkzeugattributen (bei mehreren Objekten zählt das oberste; Bitmaps ändern nichts). Sie bleiben nach
+  dem Abwählen erhalten: Das nächste Rechteck, die nächste Ellipse oder Linie sieht aus wie das zuletzt gewählte
+  Objekt. Skripte sehen die Änderung erst nach ihrem Ende.
 - *Auswählen ▸ Nächste Auswahl / Vorherige Auswahl* (Strg+Umschalt+Rechts / Links) gehen durch den
   Auswahlverlauf des Dokuments: Jede neue Objektauswahl ist ein Eintrag, am Ende passiert nichts.
 - *Modifizieren ▸ Symbol ▸ Symbol bearbeiten* öffnet das Symbol im Fenster des Dokuments, so groß wie die

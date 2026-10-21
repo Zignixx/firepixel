@@ -36,9 +36,10 @@ fn join_single_closed_path_is_no_error_and_clears_name() {
 fn flatten_crops_to_visible_pixels() {
     let mut s = doc_session(400.0, 300.0);
     let hidden = rect(&mut s, 130.0, 180.0, 220.0, 270.0);
+    // drawn before the transparent fill: the selected `hidden` would hand it to the tools (Q-58)
+    let vis = rect(&mut s, 150.0, 200.0, 200.0, 250.0);
     // unsichtbar über eine Füllung mit Alpha 0 (B-2: „Füllung #…00“)
     ex(&mut s, "element.setFill", json!({"ids": [hidden.0], "color": "#ff000000"}));
-    let vis = rect(&mut s, 150.0, 200.0, 200.0, 250.0);
     ex(&mut s, "element.setStroke", json!({"ids": [vis.0], "none": true}));
     ex(&mut s, "element.setStroke", json!({"ids": [hidden.0], "none": true}));
     select(&mut s, &[vis, hidden]);

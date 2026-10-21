@@ -117,6 +117,7 @@ fn fixture() -> (Session, Ids) {
     s.set_script_host(Some(Arc::new(LineHost)));
     // genug Verlaufsschritte für die Wiederholungstests (50× + Vorbereitung)
     s.prefs.set("MaxUndos", fp_engine::PrefValue::Int(200));
+    let tool_colors = (s.tools.stroke_color, s.tools.fill_color);
     ex(&mut s, "file.new", json!({"width": 400, "height": 300, "background": "#ffffff"}));
     // neue Dokumente exportieren als PNG 32 (BA-033); die Paletten- und Größenbefehle brauchen GIF
     ex(&mut s, "pi.export.settings", json!({"settings": serde_json::to_value(fp_model::ExportSettings::default()).unwrap_or_default()}));
@@ -127,6 +128,12 @@ fn fixture() -> (Session, Ids) {
     let hotspot = ElementId(ex(&mut s, "web.addHotspot", json!({"shape": "rect", "rect": [300, 10, 340, 40]}))["id"].as_u64().unwrap_or(0));
     let slice = ElementId(ex(&mut s, "web.addSlice", json!({"shape": "rect", "rect": [300, 60, 360, 100]}))["id"].as_u64().unwrap_or(0));
     ex(&mut s, "select.none", json!({}));
+    // the objects drawn above handed their attributes to the tools (Q-58, the text last: black on
+    // black, so swapping the colours would change nothing): back to the starting tool attributes
+    s.set_colors(Some(tool_colors.0), Some(tool_colors.1));
+    s.tools.options.new_fill = None;
+    s.tools.options.new_stroke = None;
+    s.tools.options.new_brush = None;
     // Verlauf der Vorbereitung verwerfen, damit Rückgängig nur den geprüften Befehl betrifft
     if let Ok(d) = s.doc_mut() {
         d.history.clear();

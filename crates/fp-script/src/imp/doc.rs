@@ -74,23 +74,6 @@ pub(super) fn set_defaults(doc: DocId, f: impl FnOnce(&mut DefaultAttrs)) -> FwR
     with_state(|s| f(s.defaults.entry(doc.0).or_default()))
 }
 
-/// Strich- bzw. Füllfarbe des Werkzeugbedienfelds (Farbe als `#rrggbb[aa]`; `None` = unverändert).
-fn set_tool_color(c: Option<&str>, stroke: bool) -> FwResult<()> {
-    let Some(argb) = c
-        .and_then(fp_model::Rgba8::parse_hex)
-        .map(fp_model::Argb::from)
-    else {
-        return Ok(());
-    };
-    with_state(|s| {
-        if stroke {
-            s.session.set_colors(Some(argb), None)
-        } else {
-            s.session.set_colors(None, Some(argb))
-        }
-    })
-}
-
 /// Füll- bzw. Strichtextur nach Namen (`""` = keine) auf die Auswahl, ohne Auswahl in die
 /// Vorgaben für neue Objekte. `pi.fill`/`pi.stroke` laden die Maske mit
 /// `fp_engine::resources::load_texture` aus den Texturordnern (ohne Datei bleibt nur der Name).
@@ -115,7 +98,7 @@ fn set_texture(doc: DocId, stroke: bool, name: &str) -> FwResult<()> {
 
 /// Neue Form zeichnen und die Texturvorgaben (setFillTexture/setBrushTexture ohne Auswahl) anwenden.
 fn draw_shape(doc: DocId, cmd: &str, p: Map<String, Value>, closed: bool) -> FwResult<()> {
-    exec(Some(doc), cmd, shape_params(doc, p, closed))?;
+    draw_tool_shape(doc, cmd, p)?;
     let d = defaults(doc);
     if let Some(t) = d.fill_texture.filter(|t| !t.is_empty() && closed) {
         exec(Some(doc), "pi.fill", json!({"texture": t}))?;
@@ -126,31 +109,148 @@ fn draw_shape(doc: DocId, cmd: &str, p: Map<String, Value>, closed: bool) -> FwR
     Ok(())
 }
 
-/// Parameter für neue Formen aus den Vorgaben (setBrush/setFill ohne Auswahl).
-pub(super) fn shape_params(doc: DocId, mut p: Map<String, Value>, closed: bool) -> Value {
-    let d = defaults(doc);
-    match d.fill {
-        Some(None) => {
-            p.insert("fill".into(), json!(false));
-        }
-        Some(Some(c)) if closed => {
-            p.insert("fillColor".into(), json!(c));
-        }
-        _ => {}
+/// Q-58 (TW-192, RE spec 58 section 2.1): new shapes take the current tool attributes
+/// (`dom.pathAttributes`) exactly like the drawing tools: fill, stroke colour, tip, size and
+/// placement (`tool.shape` with the inspector's tool defaults). A line has no fill; with the tool
+/// stroke "none" it still gets the 1-pixel tip, 1 px, in the tool stroke colour (measured).
+fn draw_tool_shape(doc: DocId, cmd: &str, mut p: Map<String, Value>) -> FwResult<()> {
+    let line = cmd == "draw.line";
+    if !line {
+        // closed shapes: 1-px stroke from the stroke colour like the shape tools (PAR 10/12)
+        p.insert("strokeWidth".into(), json!(1));
     }
-    match d.stroke {
-        Some(None) => {
-            p.insert("strokeWidth".into(), json!(0));
+    let inv = with_state(|s| {
+        let style = s.session.tool_style();
+        let mut inv = fp_engine::tools::styled(
+            fp_engine::tools::Invocation::new(cmd, Value::Object(p)),
+            &s.session.tools.options,
+        );
+        if line && style.stroke_is_none() && inv.command == "tool.shape" {
+            let c = fp_color::Argb(style.stroke_color.0 | 0xff00_0000);
+            inv.params["params"]["strokeColor"] = json!(fp_engine::commands::argb_hex(c));
+            inv.params["stroke"] = json!({"preset": LINE_NONE_PRESET, "width": 1});
+            inv.params["brush"] = Value::Null;
         }
-        Some(Some((w, c))) => {
-            p.insert("strokeWidth".into(), json!(w));
-            if let Some(c) = c {
-                p.insert("strokeColor".into(), json!(c));
-            }
+        inv
+    })?;
+    exec(Some(doc), &inv.command, inv.params)?;
+    Ok(())
+}
+
+/// Tip of `addNewLine` when the tool stroke is "none" (measured `bn_1-Pixel`, 1 px).
+const LINE_NONE_PRESET: &str = "bn_1-Pixel";
+
+/// Q-58: the script setters of fill and stroke change the tool attributes (`dom.pathAttributes`),
+/// with or without a selection (measured: `setFillColor` on the new selection changes the fill of
+/// the next shape, RE spec 58 section 2.1).
+fn edit_tool_style(f: impl FnOnce(&mut fp_engine::ToolStyle)) -> FwResult<()> {
+    with_state(|s| {
+        let mut st = s.session.tool_style();
+        f(&mut st);
+        s.session.set_tool_style(st);
+    })
+}
+
+/// Index of the tool stroke's preset (from `new_stroke`, else the factory preset).
+fn tool_preset(st: &fp_engine::ToolStyle) -> Option<usize> {
+    use fp_engine::commands::panel::{DEFAULT_TOOL_PRESET, find_preset, preset_index_of};
+    st.new_stroke
+        .as_ref()
+        .and_then(|v| v.get("preset"))
+        .and_then(|v| v.as_str())
+        .and_then(find_preset)
+        .and_then(|f| preset_index_of(f.category, f.name))
+        .or_else(|| preset_index_of(DEFAULT_TOOL_PRESET.0, DEFAULT_TOOL_PRESET.1))
+}
+
+/// Tool stroke with the given parts changed (`None` = as now); a "none" stroke becomes visible.
+fn set_tool_stroke(
+    st: &mut fp_engine::ToolStyle,
+    preset: Option<usize>,
+    width: Option<i64>,
+    softness: Option<i64>,
+    placement: Option<&str>,
+) {
+    let none = st.stroke_is_none();
+    let b =
+        fp_engine::commands::panel::tool_brush_from(st.new_stroke.as_ref(), st.new_brush.as_ref());
+    let cur_preset = tool_preset(st);
+    let new_preset = preset.or(cur_preset);
+    let width = width.unwrap_or(if none { 1 } else { b.diameter as i64 });
+    let softness = softness.unwrap_or_else(|| {
+        if new_preset != cur_preset {
+            new_preset
+                .and_then(|i| fp_engine::commands::panel::BRUSH_PRESETS.get(i))
+                .map(|p| p.softness as i64 / 10)
+                .unwrap_or(0)
+        } else {
+            (b.softness / 10) as i64
         }
-        None => {}
+    });
+    let placement = placement.unwrap_or(st.placement()).to_string();
+    st.new_stroke = fp_engine::tool_follow::stroke_params(
+        new_preset,
+        width as i32,
+        softness as i32,
+        &placement,
+        None,
+    );
+    // the full brush of the tool (followed from an object) stays when only size or placement change
+    st.new_brush = match (preset, st.new_brush.take()) {
+        (None, Some(v)) => serde_json::from_value::<fp_model::Brush>(v)
+            .ok()
+            .and_then(|mut nb| {
+                nb.diameter = width.clamp(1, 1000) as i32;
+                serde_json::to_value(nb).ok()
+            }),
+        _ => None,
+    };
+    if none {
+        st.stroke_color = fp_color::Argb(st.stroke_color.0 | 0xff00_0000);
     }
-    Value::Object(p)
+}
+
+/// Tool stroke "none" (`brush = null`): the stroke kind, the colour stays.
+fn set_tool_stroke_none(st: &mut fp_engine::ToolStyle) {
+    st.new_stroke = Some(json!({"none": true}));
+    st.new_brush = None;
+}
+
+/// `dom.pathAttributes`: the current tool attributes (Q-58). Fill `null` for "none"; brush `null`
+/// for the stroke "none", whose colour is still reported (measured `#ff0000` with brush null).
+fn tool_path_attrs_json(session: &fp_engine::Session) -> Value {
+    let st = session.tool_style();
+    let fill_none = st.fill_color.a() == 0
+        || st
+            .new_fill
+            .as_ref()
+            .and_then(|v| v.get("category"))
+            .and_then(|v| v.as_str())
+            == Some("none");
+    let stroke_none = st.stroke_is_none();
+    let brush = (!stroke_none).then(|| {
+        super::elem::brush_json(&fp_engine::commands::panel::tool_brush_from(
+            st.new_stroke.as_ref(),
+            st.new_brush.as_ref(),
+        ))
+    });
+    let stroke_color = if st.stroke_color.a() == 0 {
+        fp_color::Argb(st.stroke_color.0 | 0xff00_0000)
+    } else {
+        st.stroke_color
+    };
+    json!({
+        "fill": (!fill_none).then(|| json!({"category": "fc_Solid", "name": "fn_Normal", "shape": "solid"})),
+        "fillColor": fp_engine::commands::argb_hex(st.fill_color),
+        "brush": brush,
+        "brushColor": fp_engine::commands::argb_hex(stroke_color),
+        "brushPlacement": st.placement(),
+    })
+}
+
+/// Colour `#rrggbb[aa]` to Argb.
+fn argb_of(c: &str) -> Option<fp_color::Argb> {
+    fp_model::Rgba8::parse_hex(c).map(fp_model::Argb::from)
 }
 
 pub(super) fn rect_arr(r: [f64; 4]) -> Value {
@@ -166,8 +266,9 @@ pub(super) fn rect_arr(r: [f64; 4]) -> Value {
 fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
     let sel = selection(doc)?;
     if fill.is_null() {
+        edit_tool_style(|st| st.new_fill = Some(json!({"category": "none"})))?;
         if sel.is_empty() {
-            return set_defaults(doc, |d| d.fill = Some(None));
+            return Ok(());
         }
         exec(Some(doc), "element.setFill", json!({"kind": "none"}))?;
         return Ok(());
@@ -186,9 +287,25 @@ fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
                 .collect()
         })
         .unwrap_or_default();
+    let c = color.clone().or_else(|| grad_colors.first().cloned());
+    edit_tool_style(|st| {
+        if let Some(a) = c.as_deref().and_then(argb_of) {
+            st.fill_color = a;
+        }
+        // a solid fill replaces "none" (gradients and patterns of the tool stay as they are)
+        if grad_colors.len() < 2
+            && st
+                .new_fill
+                .as_ref()
+                .and_then(|v| v.get("category"))
+                .and_then(|v| v.as_str())
+                == Some("none")
+        {
+            st.new_fill = None;
+        }
+    })?;
     if sel.is_empty() {
-        let c = color.clone().or_else(|| grad_colors.first().cloned());
-        return set_defaults(doc, |d| d.fill = Some(c));
+        return Ok(());
     }
     if grad_colors.len() >= 2 {
         // Verlauf: waagerecht über die Auswahlgrenzen (Griffe setzt setFillVector)
@@ -226,8 +343,14 @@ fn apply_brush(doc: DocId, brush: &Value, color: Option<String>) -> FwResult<()>
     }
     let sel = selection(doc)?;
     if brush.is_null() {
+        edit_tool_style(|st| {
+            if let Some(a) = color.as_deref().and_then(argb_of) {
+                st.stroke_color = a;
+            }
+            set_tool_stroke_none(st);
+        })?;
         if sel.is_empty() {
-            return set_defaults(doc, |d| d.stroke = Some(None));
+            return Ok(());
         }
         exec(Some(doc), "element.setStroke", json!({"width": 0}))?;
         return Ok(());
@@ -239,8 +362,24 @@ fn apply_brush(doc: DocId, brush: &Value, color: Option<String>) -> FwResult<()>
                 .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
         })
         .unwrap_or(1.0);
+    // tool stroke: tip from the brush name (`bn_...`), size, softness (per mille like `brush_json`)
+    let preset = brush
+        .get("name")
+        .and_then(|v| v.as_str())
+        .and_then(fp_engine::commands::panel::find_preset)
+        .and_then(|f| fp_engine::commands::panel::preset_index_of(f.category, f.name));
+    let soft = brush
+        .get("softness")
+        .and_then(|v| v.as_f64())
+        .map(|v| (v / 10.0).round() as i64);
+    edit_tool_style(|st| {
+        if let Some(a) = color.as_deref().and_then(argb_of) {
+            st.stroke_color = a;
+        }
+        set_tool_stroke(st, preset, Some(w.round().max(1.0) as i64), soft, None);
+    })?;
     if sel.is_empty() {
-        return set_defaults(doc, |d| d.stroke = Some(Some((w, color))));
+        return Ok(());
     }
     let mut p = json!({"width": w.max(0.0)});
     if let Some(c) = color {
@@ -1182,10 +1321,13 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         }
         "setFillColor" => {
             let c = a(0).str().and_then(|c| conv::norm_color(&c));
+            // fill colour of the tools panel like the original (M2 Q-18, f13), with a selection too
+            // (Q-58: the next shape gets it)
+            if let Some(argb) = c.as_deref().and_then(argb_of) {
+                edit_tool_style(|st| st.fill_color = argb)?;
+            }
             if selection(doc)?.is_empty() {
-                // ohne Auswahl: Füllfarbe des Werkzeugbedienfelds wie im Original (M2 Q-18, f13)
-                set_tool_color(c.as_deref(), false)?;
-                return set_defaults(doc, |d| d.fill = Some(c)).map(|_| JsValue::undefined());
+                return u();
             }
             exec(
                 Some(doc),
@@ -1233,18 +1375,24 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         }
         "setBrushColor" => {
             let c = a(0).str().and_then(|c| conv::norm_color(&c));
+            // stroke colour of the tools panel (M2 Q-18, f13), with a selection too (Q-58)
+            if let Some(argb) = c.as_deref().and_then(argb_of) {
+                edit_tool_style(|st| st.stroke_color = argb)?;
+            }
             if selection(doc)?.is_empty() {
-                // ohne Auswahl: Strichfarbe des Werkzeugbedienfelds (M2 Q-18, f13)
-                set_tool_color(c.as_deref(), true)?;
                 return u();
             }
             on_selection(doc, "element.setStroke", json!({"color": c}))
         }
-        "setBrushSize" => on_selection(
-            doc,
-            "element.setStroke",
-            json!({"width": a(0).f64().max(0.0)}),
-        ),
+        "setBrushSize" => {
+            let w = a(0).f64().max(0.0);
+            edit_tool_style(|st| {
+                if !st.stroke_is_none() {
+                    set_tool_stroke(st, None, Some(w.round().max(1.0) as i64), None, None);
+                }
+            })?;
+            on_selection(doc, "element.setStroke", json!({"width": w}))
+        }
         "setBrushPlacement" => {
             let p = arg_str(args, 0);
             let pl = match p.as_str() {
@@ -1252,6 +1400,11 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
                 "outside" => "outside",
                 _ => "center",
             };
+            edit_tool_style(|st| {
+                if !st.stroke_is_none() {
+                    set_tool_stroke(st, None, None, None, Some(pl));
+                }
+            })?;
             on_selection(doc, "element.setStroke", json!({"placement": pl}))
         }
         "setOpacity" => on_selection(
@@ -1923,30 +2076,9 @@ pub(super) fn get(doc: DocId, name: &str, ctx: &mut Context) -> FwResult<JsValue
             conv::array(v, ctx)
         }
         "pathAttributes" => {
-            let d = defaults(doc);
-            let fill = match d.fill {
-                Some(None) => JsValue::null(),
-                _ => conv::json_to_js(
-                    &json!({"category": "fc_Solid", "name": "fn_Normal", "shape": "solid"}),
-                    ctx,
-                )
-                .map_err(jserr)?,
-            };
-            let fc = match &d.fill {
-                Some(Some(c)) => c.clone(),
-                _ => with_state(|s| fp_engine::commands::argb_hex(s.session.tools.fill_color))?,
-            };
-            let sc = with_state(|s| fp_engine::commands::argb_hex(s.session.tools.stroke_color))?;
-            conv::object(
-                vec![
-                    ("fill", fill),
-                    ("fillColor", conv::s(&fc)),
-                    ("brushColor", conv::s(&sc)),
-                    ("brush", JsValue::null()),
-                ],
-                ctx,
-            )
-            .map_err(jserr)?
+            // Q-58: the tool attributes new shapes take (fill, colours, tip, size, placement)
+            let v = with_state(|s| tool_path_attrs_json(&s.session))?;
+            conv::json_to_js(&v, ctx).map_err(jserr)?
         }
         "exportOptions" | "exportSettings" | "exportFormatOptions" => {
             // folgt den Exporteinstellungen der Seite (Exportformat im Dokument-Inspektor,

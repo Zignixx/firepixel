@@ -454,7 +454,15 @@ pub struct Session {
     /// Filteraufruf (Vorschau oder OK im Filterdialog) rastert gewählte Vektoren im selben
     /// Verlaufsschritt (re 28 L9). Die Oberfläche setzt es zurück, sobald kein Dialog mehr offen ist.
     pub filter_rasterize: bool,
-    group_depth: u32,
+    pub(crate) group_depth: u32,
+    /// Q-58: open holds on the tool-attribute follow (a running script, see
+    /// [`Session::hold_tool_follow`]).
+    pub(crate) follow_hold: u32,
+    /// Q-58: (document, generation, selection) the tool attributes last looked at.
+    pub(crate) follow_seen: Option<(DocId, u64, Vec<fp_model::ElementId>)>,
+    /// Q-58: counts changes of the tool attributes made by the engine (the user interface mirrors
+    /// them into its inspector fields when it changes).
+    pub(crate) tool_attrs_gen: u64,
     /// TW-139: live text view for script read-back: document whose model currently shows the open
     /// text editor's state, with the committed model to put back (see [`Session::begin_live_text_view`]).
     live_text: Option<(DocId, Arc<Document>)>,
@@ -510,6 +518,9 @@ impl Session {
             last_filter: None,
             filter_rasterize: false,
             group_depth: 0,
+            follow_hold: 0,
+            follow_seen: None,
+            tool_attrs_gen: 0,
             live_text: None,
             group_log: Vec::new(),
             force_step: false,
@@ -946,6 +957,8 @@ impl Session {
         if self.group_depth == 0 && out.effect == Effect::Document {
             self.sync_tool();
         }
+        // Q-58: the tool attributes follow the selection once the command is done
+        self.follow_selection();
         Ok(out)
     }
 
@@ -1180,6 +1193,9 @@ impl Session {
             self.note_tool_colors(rows_before, colors_before);
             self.sync_tool();
         }
+        if outer {
+            self.follow_selection();
+        }
         Ok(())
     }
 
@@ -1385,6 +1401,7 @@ impl Session {
         self.restore_history_snapshot(snap);
         // the pen follows its path: undoing a point keeps drawing from the new last point (FB-07)
         self.sync_tool();
+        self.follow_selection();
     }
 
     fn restore_history_snapshot(&mut self, snap: Snapshot) {

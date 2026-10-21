@@ -59,7 +59,10 @@ fn null_and_undefined_are_gaps_in_js_arrays() {
     assert_eq!(
         result(
             &mut s,
-            &format!("{D}d.pathAttributes.toSource().indexOf('brush:null') >= 0")
+            // tool stroke "none" (Q-58: `dom.pathAttributes` are the tool attributes)
+            &format!(
+                "{D}d.selectNone();d.setBrush(null);d.pathAttributes.toSource().indexOf('brush:null') >= 0"
+            )
         ),
         "true"
     );
@@ -314,12 +317,13 @@ fn set_fill_and_brush_color_without_selection_set_tool_colors() {
         ),
         "#ff0000,#0000ff"
     );
-    // mit Auswahl: nur das Objekt, die Werkzeugfarben bleiben
+    // with a selection the object and the tool fill change (Q-58, RE spec 58 section 2.1: the next
+    // shape gets the colour)
     result(
         &mut s,
         &format!(
             "{D}d.addNewRectangle({{left:1,top:1,right:20,bottom:20}},0);d.setFillColor('#00ff00');"
         ),
     );
-    assert_eq!(s.tools.fill_color, fp_model::Argb(0xffff_0000));
+    assert_eq!(s.tools.fill_color, fp_model::Argb(0xff00_ff00));
 }

@@ -216,6 +216,10 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   object, Punch and Crop in the place of the lower one (*Combine Paths*).
 - *Select ▸ Convert Marquee to Path* gives the new path fill and stroke like a newly drawn shape (colors
   from the Tools panel, fill and stroke category from the Property Inspector).
+- **New shapes take the last selected object's attributes:** selecting an object (click, marquee, script)
+  makes its fill, fill and stroke color, stroke tip, size and placement the current tool attributes (the
+  topmost of several objects counts; bitmaps leave them alone). They stay after deselecting, so the next
+  rectangle, ellipse or line looks like the object selected last. Scripts see the change after they end.
 - *Select ▸ Next Selection / Previous Selection* (Ctrl+Shift+Right / Left) step through the document's
   selection history: every new object selection is an entry, nothing happens at the end.
 - *Modify ▸ Symbol ▸ Edit Symbol* opens the symbol in the document's window, as large as the page and titled

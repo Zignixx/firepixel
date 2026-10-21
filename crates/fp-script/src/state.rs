@@ -151,13 +151,10 @@ impl From<EngineError> for FwErr {
 /// Ergebnis-Typ der API-Umsetzung.
 pub type FwResult<T> = Result<T, FwErr>;
 
-/// Vorgaben für neue Objekte, solange nichts ausgewählt ist (setBrush/setFill* ohne Auswahl).
+/// Texture defaults for new objects while nothing is selected (setFillTexture/setBrushTexture);
+/// fill and stroke are the session's tool attributes (Q-58).
 #[derive(Clone, Debug, Default)]
 pub struct DefaultAttrs {
-    /// `Some(None)` = keine Füllung.
-    pub fill: Option<Option<String>>,
-    /// `Some(None)` = kein Strich; sonst (Breite, Farbe).
-    pub stroke: Option<Option<(f64, Option<String>)>>,
     /// Fülltextur nach Namen (`""` = keine), `None` = unverändert.
     pub fill_texture: Option<String>,
     /// Strichtextur nach Namen (`""` = keine), `None` = unverändert.

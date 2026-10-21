@@ -302,8 +302,15 @@ As in the original:
 * More script details as in the original: `addNewHotspot("slice", …)` creates a slice, shape `"oval"` a circle
   hotspot; `addNewText(rect, true)` takes the Text tool defaults. `antiAliased`/`antiAliasMode` read and set the
   text anti-aliasing (`"none"` = hard edge). `fw.setActiveViewScale(scale, center)` sets zoom and centre.
-  `toSource` writes `null` in an array as a gap (`[1, ]`). `setFillColor`/`setBrushColor` without a selection set
-  the colours of the Tools panel. `filterSelection`/`filterSelectionByName` convert vectors to a bitmap without
+  `toSource` writes `null` in an array as a gap (`[1, ]`). The **tool attributes** (`dom.pathAttributes`: fill,
+  fill colour, stroke colour, tip, size, placement) are shared with the drawing tools and the Tools panel:
+  `setFill…`, `setFillColor`, `setBrush…`, `setBrushColor`, `setBrushSize`, `setBrushPlacement` change them with or
+  without a selection (with a selection they also change the selected objects). `addNewRectangle`,
+  `addNewRectanglePrimitive`, `addNewOval` (and `addNewPolygon`/`addNewStar`) take them exactly like the
+  Rectangle/Ellipse tools; `addNewLine` takes the tool stroke and no fill, and with the tool stroke "none" a
+  1-pixel line in the tool stroke colour. The tool attributes take on those of the last selected object (the
+  topmost of several) after a command or a script is done, never inside the same script, and keep them after
+  deselecting. `filterSelection`/`filterSelectionByName` convert vectors to a bitmap without
   asking. `convertToAnimSymbol(name, states, …)` adds no new states from a script. `importFile` into a target
   rectangle rounds the position. Text on a path: `rawLeft/rawTop/rawWidth` = the path bounds.
 

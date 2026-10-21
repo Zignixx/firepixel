@@ -9740,6 +9740,9 @@ mod tests {
         use crate::tools::ToolId;
         let mut s = doc_with_rect();
         s.execute("select.none", json!({})).expect("none");
+        // the selected rectangle handed its stroke to the tool (Q-58): start from the factory stroke
+        s.tools.options.new_stroke = None;
+        s.tools.options.new_brush = None;
         let doc0 = s.active().map(|d| d.doc.clone()).expect("d");
         // 50× ändern = einmal mit dem letzten Wert; das Dokument bleibt unberührt
         for k in 0..50 {
@@ -9824,11 +9827,12 @@ mod tests {
         s.execute("pi.tool.brush", json!({"width": 12}))
             .expect("width");
         assert_eq!(tool_brush(&s.tools.options).diameter, 12);
-        // Löschen: wieder die Strichvorgabe
+        // Löschen: wieder die Strichvorgabe - since Q-58 the one of the last drawn (selected)
+        // path, 7 px
         s.execute("pi.tool.brush", json!({"clear": true}))
             .expect("clear");
         assert!(s.tools.options.new_brush.is_none());
-        assert_eq!(tool_brush(&s.tools.options).diameter, 1);
+        assert_eq!(tool_brush(&s.tools.options).diameter, 7);
         s.set_tool(ToolId::Rectangle).expect("rect");
         ev(
             &mut s,

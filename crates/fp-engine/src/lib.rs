@@ -55,6 +55,7 @@ pub mod session;
 pub mod shell;
 pub mod shortcuts;
 pub mod symbol_origin;
+pub mod tool_follow;
 pub mod tools;
 pub mod url_library;
 #[cfg(feature = "vector")]
@@ -72,6 +73,7 @@ pub use prefs::{PrefValue, Preferences, Theme};
 pub use selection::{Clipboard, PointRef, SelectMode, Selection, SelectionHistory};
 pub use session::{DocId, DocumentState, ScriptHost, Session, SessionEvent};
 pub use shortcuts::{Shortcut, ShortcutSet};
+pub use tool_follow::ToolStyle;
 pub use tools::{Modifiers, Overlay, ToolEvent, ToolId, ToolKey, ToolResponse};
 pub use view::ViewState;
 pub use warnings::{TargetWarning, WarningChoice};

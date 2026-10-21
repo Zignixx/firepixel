@@ -307,6 +307,8 @@ fn pipette_over_canvas_live_and_click_picks_pixel() {
     let mut h = harness(app(&[("#00ff00", [150.0, 20.0, 290.0, 180.0])]));
     h.run_steps(3);
     let _ = h.state_mut().state.session.execute("select.none", json!({}));
+    // the selected green rectangle handed its fill to the tools (Q-58): a white tool fill again
+    h.state_mut().state.session.set_colors(None, Some(Argb(0xffff_ffff)));
     h.run_steps(2);
     let sw = Id::new(("well", false));
     let well = rect_of(&h, sw);
