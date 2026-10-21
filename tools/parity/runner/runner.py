@@ -1137,6 +1137,22 @@ def right_dock(kids, client):
     return best
 
 
+def dock_group_heights(kids, dock):
+    """R-29 (TW-174): heights of the docked panel groups (`OWL.TabGroup` children inside the right dock), top to
+    bottom - the layout the reference shares out among the groups of an expanded dock (run 30: Layers group 113 px,
+    run 31: 180 px). Empty when the dock is collapsed to icons."""
+    d = rect4(dock)
+    if not d:
+        return []
+    gs = []
+    for k in kids or []:
+        r = rect4(k.get("rect")) if isinstance(k, dict) else None
+        inside = r and r[0] >= d[0] - 2 and r[2] <= d[2] + 2 and r[1] >= d[1] - 2 and r[3] <= d[3] + 2
+        if inside and k.get("class") == "OWL.TabGroup":
+            gs.append(r)
+    return [int(r[3] - r[1]) for r in sorted(gs, key=lambda r: r[1])]
+
+
 def dock_toggle_point(dock):
     """R-26 (TW-167): the dock's collapse/expand button (double arrow at the right end of its 12 px top strip; run
     29 probe: dock [1325, 66, 1596, 996] -> button 1588, 71, the same spot when collapsed [1491, 66, 1596, 996])."""
@@ -1158,6 +1174,36 @@ def r26_selfcheck() -> str:
         bad.append(f"collapsed dock {right_dock(kids, client)}")
     if right_dock(kids[:4], client) is not None or right_dock(kids, None) is not None:
         bad.append("dock found without a right dock")
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
+def r29_selfcheck() -> str:
+    """R-29: offline check of the docked group heights (window rects of the R-29 probe: expanded dock with five
+    groups, collapsed dock without groups), the per-unit dock mode and the flyout size table of ui_map."""
+    from types import SimpleNamespace
+    bad = []
+    dock = [1325, 66, 1596, 996]
+    kids = [{"class": "OWL.Dock", "rect": dock}, {"class": "OWL.TabGroup", "rect": [69, 871, 1325, 996]},
+            {"class": "OWL.TabGroup", "rect": [1326, 440, 1596, 620]}, {"class": "OWL.TabGroup", "rect": [1326, 78, 1596, 258]},
+            {"class": "OWL.TabGroup", "rect": [1326, 259, 1596, 439]}, {"class": "OWL.TabGroup", "rect": [1326, 804, 1596, 996]},
+            {"class": "OWL.TabGroup", "rect": [1326, 621, 1596, 803]}, {"class": "OWL.Palette", "rect": [1327, 97, 1595, 257]}]
+    if dock_group_heights(kids, dock) != [180, 180, 180, 182, 192]:
+        bad.append(f"group heights {dock_group_heights(kids, dock)}")
+    if dock_group_heights(kids[:2], [1491, 66, 1596, 996]) != []:
+        bad.append("groups in a collapsed dock")
+    um = json.loads((HERE / "ui_map.json").read_text(encoding="utf-8"))
+
+    def mode(unit, forced=""):
+        ns = SimpleNamespace(r=SimpleNamespace(cfg={"orig": {"dock_mode": forced}}, ui_map=um, unit={"unit": unit}))
+        return OrigSide.dock_mode_wanted(ns)
+
+    got = [mode("panel-layers"), mode("panel-swatches-mixer"), mode("toolbox"), mode("inspector-bitmap"),
+           mode("menu-edit"), mode("panel-layers", "expanded"), mode("toolbox", "icon")]
+    if got != ["icon", "icon", "expanded", "icon", "expanded", "expanded", "icon"]:
+        bad.append(f"dock modes {got}")
+    fs = (um.get("orig_layout") or {}).get("flyout_sizes") or {}
+    if fs.get("Ebenen") != [245, 389] or fs.get("Farbfelder") != [213, 151]:
+        bad.append(f"flyout sizes Ebenen {fs.get('Ebenen')} Farbfelder {fs.get('Farbfelder')}")
     return "ok" if not bad else "FAILED: " + "; ".join(bad)
 
 
@@ -1778,9 +1824,11 @@ class OrigSide(Side):
             except OrigError as e:
                 self.r.log(f"layout: toolbar {tb}: {e}")
         # R-26 (TW-167): the right panel dock expanded (run 28 started `toolbox` with it collapsed to icons)
+        # R-29 (TW-174): ... or collapsed to icons in the units of `orig_layout.right_dock.icon_units`
         dk = self.dock_expand()
         if dk.get("changed"):
-            changed.append(f"panel dock expanded ({dk.get('before')} -> {dk.get('after')} px)")
+            changed.append(f"panel dock {'expanded' if dk.get('mode') == 'expanded' else 'collapsed to icons'} "
+                           f"({dk.get('before')} -> {dk.get('after')} px)")
         if not self.tools_visible():
             info = self.panel_info("tools")
             self.h.call("menu", path=split_path(info["menu"]), final="invoke", bar=bar, timeout=40)
@@ -1801,27 +1849,49 @@ class OrigSide(Side):
         window width; run 29 probe: 271 expanded, 105 collapsed to icons), {"missing": True} or {"error"}."""
         try:
             client = self.h.call("main").get("client")
-            dock = right_dock(self.h.list("children", all=True, timeout=40), client)
+            kids = self.h.list("children", all=True, timeout=40)
+            dock = right_dock(kids, client)
         except OrigError as e:
             return {"error": str(e)[:80]}
         if not dock:
             return {"missing": True}
-        return {"rect": [int(x) for x in dock], "width": int(dock[2] - dock[0])}
+        # R-29 (TW-174): heights of the docked panel groups (none while the dock is collapsed to icons)
+        return {"rect": [int(x) for x in dock], "width": int(dock[2] - dock[0]), "groups": dock_group_heights(kids, dock)}
 
-    def dock_expand(self) -> dict:
+    def dock_mode_wanted(self) -> str:
+        """R-29 (TW-174): the right dock's mode for the current unit - "icon" (collapsed to icons; panels open as
+        flyouts with their own stored size, the layout of runs 24 and 25 that the reference-side grids and row
+        offsets were measured in) for the units whose name starts with an entry of ui_map
+        `orig_layout.right_dock.icon_units`, else `orig_layout.right_dock.default` ("expanded", R-26). Config
+        `orig.dock_mode` ("icon" / "expanded") forces one mode for every unit."""
+        forced = str(self.r.cfg["orig"].get("dock_mode", "") or "").lower()
+        if forced in ("icon", "expanded"):
+            return forced
+        rd = (self.r.ui_map.get("orig_layout") or {}).get("right_dock") or {}
+        unit = str((getattr(self.r, "unit", None) or {}).get("unit") or "")
+        if unit and any(unit.startswith(str(p)) for p in rd.get("icon_units") or []):
+            return "icon"
+        return "icon" if str(rd.get("default") or "").lower() == "icon" else "expanded"
+
+    def dock_expand(self, mode: str | None = None) -> dict:
         """R-26 (TW-167): the right panel dock expanded - narrower than `orig.dock_expanded_min_px` (default 180)
         -> its double-arrow button (dock_toggle_point) clicked and read back, a second click when still narrow.
-        Result {before, after, clicks, changed, expanded, min} (widths of the dock window), stored as `last_dock`
-        and logged when it clicked (`orig panel dock: ...`)."""
+        R-29 (TW-174): the wanted mode comes from `dock_mode_wanted` (or `mode`): in an "icon" unit the same button
+        collapses an expanded dock to icons. Result {mode, before, after, clicks, changed, expanded, ok, min,
+        groups} (widths of the dock window; `groups` = heights of the docked panel groups, top to bottom), stored
+        as `last_dock` and logged when it clicked (`orig panel dock: ...`)."""
+        mode = mode or self.dock_mode_wanted()
+        want_exp = mode == "expanded"
         lim = float(self.r.cfg["orig"].get("dock_expanded_min_px", 180))
         st = self.dock_state()
-        out = {"before": st.get("width"), "after": st.get("width"), "clicks": [], "changed": False, "min": lim}
+        out = {"mode": mode, "before": st.get("width"), "after": st.get("width"), "clicks": [], "changed": False,
+               "min": lim, "groups_before": st.get("groups")}
         if st.get("error") or st.get("missing"):
             out["note"] = st.get("error") or "no right dock"
             out["expanded"] = None
         else:
             for _ in range(2):
-                if st["width"] >= lim:
+                if (st["width"] >= lim) == want_exp:
                     break
                 pt = dock_toggle_point(st["rect"])
                 try:
@@ -1835,14 +1905,122 @@ class OrigSide(Side):
                 if not st.get("width"):
                     break
             out["after"] = st.get("width")
+            out["groups"] = st.get("groups")
             out["expanded"] = (out["after"] or 0) >= lim
-            out["changed"] = bool(out["clicks"]) and out["expanded"]
+            out["ok"] = out["expanded"] == want_exp
+            out["changed"] = bool(out["clicks"]) and out["ok"]
             if out["clicks"]:
                 self.page = None
                 self.tools_anchor = None
-                self.r.log(f"orig panel dock: {out['before']} px (expanded needs >= {lim:g}) -> clicks "
-                           f"{out['clicks']} -> {out['after']} px" + ("" if out["expanded"] else " - STILL COLLAPSED"))
+                self.r.log(f"orig panel dock: {out['before']} px (wanted {mode}; expanded means >= {lim:g}) -> clicks "
+                           f"{out['clicks']} -> {out['after']} px"
+                           + ("" if out["ok"] else (" - STILL COLLAPSED" if want_exp else " - STILL EXPANDED")))
         self.last_dock = out
+        return out
+
+    def flyout_size_check(self, p, got=None):
+        """R-29 (TW-174, run 30: with the dock expanded since R-26 the docked panel groups shared its height - Layers
+        270 x 113 px, run 25: 245 x 389 - so rows below the visible part were out of reach, `panel-layers/04` and
+        `panel-swatches-mixer/19` hit other rows): in an "icon" unit a panel of the right dock opens as a flyout
+        (top-level frame window) with the size the reference stores per panel. The size is compared with ui_map
+        `orig_layout.flyout_sizes` ({panel title: [w, h]}, measured in runs 24/25 and the R-29 probe) and put right:
+        the width by dragging the frame's left edge, the height by dragging its resize gripper (the right edge stays
+        at the dock). Logged the first time a panel is seen in a unit (`orig panel <title>: flyout ...`) and after
+        every correction. Returns the (re-read) host `panel` answer; `got` = that answer when the caller has it."""
+        info = self.panel_info(p)
+        title = info.get("title") or str(p)
+        want = ((self.r.ui_map.get("orig_layout") or {}).get("flyout_sizes") or {}).get(title)
+        if not want or self.dock_mode_wanted() != "icon":
+            return got
+        if got is None:
+            try:
+                got = self.h.call("panel", name=title)
+            except OrigError:
+                return None
+        r = rect4((got or {}).get("rect"))
+        if not r:
+            return got
+        seen = self.__dict__.setdefault("flyouts_seen", {})
+        size = [int(r[2] - r[0]), int(r[3] - r[1])]
+        tol = int((self.r.ui_map.get("orig_layout") or {}).get("flyout_tolerance_px", 1))
+        if abs(size[0] - want[0]) <= tol and abs(size[1] - want[1]) <= tol:
+            if title not in seen:
+                seen[title] = size
+                self.r.log(f"orig panel {title}: flyout {size[0]} x {size[1]} at {[int(x) for x in r]} (wanted "
+                           f"{want[0]} x {want[1]}, ok)")
+            return got
+        try:
+            fr = next((w for w in self.h.list("windows") if w.get("class") == "OWL.FrameDrawer"
+                       and rect4(w.get("rect")) and rect4(w["rect"])[0] <= r[0] + 2 and rect4(w["rect"])[2] >= r[2] - 2
+                       and rect4(w["rect"])[1] <= r[1] + 4 and rect4(w["rect"])[3] >= r[3] - 4), None)
+        except OrigError as e:
+            fr = None
+            self.r.log(f"orig panel {title}: frame windows not readable: {e}")
+        if not fr:
+            if title not in seen:
+                seen[title] = size
+                self.r.log(f"orig panel {title}: {size[0]} x {size[1]} at {[int(x) for x in r]} is no flyout (wanted "
+                           f"{want[0]} x {want[1]}) - size left as it is")
+            return got
+        drags, now = [], got
+        try:
+            dw = int(want[0] - size[0])
+            if dw:
+                y = int((r[1] + r[3]) // 2)
+                x0 = int(rect4(fr["rect"])[0])
+                self.h.call("drag", x1=x0, y1=y, x2=x0 - dw, y2=y, steps=12)
+                time.sleep(0.5)
+                now = self.h.call("panel", name=title)
+                r2 = rect4(now["rect"])
+                drags.append({"edge": "left", "by": dw, "size": [int(r2[2] - r2[0]), int(r2[3] - r2[1])]})
+                r = r2
+            dh = int(want[1] - (r[3] - r[1]))
+            if dh:
+                grip = next((k for k in self.h.list("kids", hwnd=fr["hwnd"]) if k.get("class") == "OWL.ResizeGripper"), None)
+                if not grip:
+                    drags.append({"edge": "bottom", "by": dh, "error": "no resize gripper"})
+                else:
+                    g = rect4(grip["rect"])
+                    gx, gy = int((g[0] + g[2]) // 2), int((g[1] + g[3]) // 2)
+                    self.h.call("drag", x1=gx, y1=gy, x2=gx, y2=gy + dh, steps=12)
+                    time.sleep(0.5)
+                    now = self.h.call("panel", name=title)
+                    r2 = rect4(now["rect"])
+                    drags.append({"edge": "bottom", "by": dh, "size": [int(r2[2] - r2[0]), int(r2[3] - r2[1])]})
+                    r = r2
+        except OrigError as e:
+            drags.append({"error": str(e)[:80]})
+        after = [int(r[2] - r[0]), int(r[3] - r[1])]
+        seen[title] = after
+        ok = abs(after[0] - want[0]) <= tol and abs(after[1] - want[1]) <= tol
+        self.r.log(f"orig panel {title}: flyout {size[0]} x {size[1]} (wanted {want[0]} x {want[1]}) -> drags {drags} "
+                   f"-> {after[0]} x {after[1]}" + ("" if ok else " - SIZE NOT RESTORED"))
+        return now
+
+    def max_undos_guard(self, why: str) -> dict:
+        """R-29 (TW-174, RE-26: the reference profile held `MaxUndos` 3, factory 20): `xs-preferences/02` sets the
+        History limit to 3 in the Preferences dialog and back to 20 in its `after`; when that restore does not
+        happen (a failed step ends the side, run `r28_test_prefs`), 3 stays in the profile and every later document
+        keeps only 3 History rows. Read with `fw.getPref('MaxUndos')`; a value other than config `orig.max_undos`
+        (default 20) is set back with `fw.setPref` (acts on documents created afterwards) and read again. Runs at
+        every unit start and at the end of the run; logged as `orig MaxUndos (<why>): ...`."""
+        want = int(self.r.cfg["orig"].get("max_undos", 20))
+        out = {"want": want}
+        try:
+            lines = self.o.jsf(f'var __m = fw.getPref("MaxUndos"); if (__m != {want}) {{ fw.setPref("MaxUndos", {want}); }}'
+                               f' fp_log("RET " + __m + " " + fw.getPref("MaxUndos"));', why="MaxUndos guard")
+            got = ([ln[4:] for ln in lines or [] if ln.startswith("RET ")] or ["? ?"])[-1].split()
+            out.update(before=got[0], after=got[1] if len(got) > 1 else "?")
+        except OrigError as e:
+            out["error"] = str(e)[:100]
+            self.r.log(f"orig MaxUndos ({why}): {out['error']}")
+            return out
+        out["changed"] = out["before"] != str(want)
+        if out["changed"]:
+            self.r.log(f"orig MaxUndos ({why}): {out['before']} -> set {want} -> {out['after']}"
+                       + ("" if out["after"] == str(want) else " - NOT RESTORED"))
+        else:
+            self.r.log(f"orig MaxUndos ({why}): {out['before']} (wanted {want}, ok)")
         return out
 
     def ensure_tools(self):
@@ -1952,6 +2130,7 @@ class OrigSide(Side):
         """Unit start (A3-5 'states kept from earlier units', R-2): default layout (panels, main toolbar, tools column
         with a measured anchor), align 'to canvas' off, pointer tool, view switches back to the defaults with the
         next opened document. LayoutError aborts the unit for this side."""
+        self.flyouts_seen = {}  # R-29: flyout sizes are logged once per unit
         try:
             self.ensure_tools()
             self.tools_origin()
@@ -2547,7 +2726,8 @@ class OrigSide(Side):
         info = self.panel_info(p)
         title = info.get("title") or p
         try:
-            return self.h.call("panel", name=title)
+            # R-29 (TW-174): a flyout of the icon dock gets its fixed size (flyout_size_check)
+            return self.flyout_size_check(p, self.h.call("panel", name=title))
         except OrigError as e:
             if "not visible" not in str(e) or not info.get("menu"):
                 raise
@@ -2555,7 +2735,7 @@ class OrigSide(Side):
         for _ in range(10):
             time.sleep(0.3)
             try:
-                return self.h.call("panel", name=title)
+                return self.flyout_size_check(p, self.h.call("panel", name=title))
             except OrigError:
                 pass
         raise OrigError(f"panel not visible after {info['menu']}: {title}")
@@ -5191,13 +5371,20 @@ class OrigSide(Side):
             self.last_panel = arg  # R-5: list_row by image looks in the panel shown last
             if info.get("title"):
                 try:
-                    self.h.call("panel", name=info["title"])
+                    self.flyout_size_check(arg, self.h.call("panel", name=info["title"]))
                     return
                 except OrigError:
                     pass
             if not info.get("menu"):
                 raise Unmapped(f"panel {arg}: no orig menu path")
             self.h.call("menu", path=split_path(info["menu"]), final="invoke", bar=r.ui_map["menu_bar"]["orig"], timeout=40)
+            if info.get("title"):
+                # R-29 (TW-174): the flyout opened by the menu entry gets its fixed size
+                time.sleep(0.4)
+                try:
+                    self.flyout_size_check(arg)
+                except OrigError as e:
+                    self.r.log(f"orig panel {info['title']}: flyout size check: {e}")
         elif verb in ("jsf", "run_script"):
             code = arg if isinstance(arg, str) else arg.get("code")
             lines = self.o.jsf(code if "fp_log" in code else f"var __v = (function(){{ {code} }})(); if (__v !== undefined) fp_log('RET ' + __v);")
@@ -8273,6 +8460,8 @@ class Runner:
                         # defined start state: no questions open, every document closed without saving
                         side.reset_light()
                         self.orig.close_all_docs()
+                        # R-29 (TW-174, RE-26): the History limit back at the factory 20 before the unit's documents
+                        side.max_undos_guard(f"unit start {unit_name}")
                         # defined layout: no floating panel groups left over from earlier units
                         try:
                             side.close_floating()
@@ -8285,10 +8474,15 @@ class Runner:
                         try:
                             side.reset_unit()
                             # R-26 (TW-167): what the unit-start layout check measured and restored for the dock
+                            # R-29 (TW-174): with the wanted mode and the docked group heights
                             dk = getattr(side, "last_dock", None) or {}
+                            state = ("expanded" if dk.get("expanded") else "collapsed to icons") if dk.get("ok") else (
+                                f"NOT {dk.get('mode') or 'expanded'}")
                             self.log(f"unit start {unit_name}: orig panel dock {dk.get('before')} px -> "
-                                     f"{dk.get('after')} px ({'expanded' if dk.get('expanded') else 'NOT expanded'}"
+                                     f"{dk.get('after')} px ({state}, wanted {dk.get('mode')}"
                                      + (f", clicks {dk.get('clicks')}" if dk.get("clicks") else ", nothing restored")
+                                     + (f", docked group heights {dk.get('groups_before')} -> {dk.get('groups')}"
+                                        if dk.get("groups_before") or dk.get("groups") else "")
                                      + (f", {dk['note']}" if dk.get("note") else "") + ")")
                         except LayoutError as e:
                             # no guessed anchor (R-2): this unit is not played in the reference program
@@ -8428,8 +8622,30 @@ class Runner:
         subprocess.run([sys.executable, "-I", str(COMPARE), ".", "--ref-root", str(u / "orig"), "--fp-root", str(u / "fp"),
                         "--out-root", str(u / "cmp")], check=False)
 
+    def run_end_restore(self):
+        """R-29 (TW-174): at the end of the run the reference keeps the History limit 20 (`max_undos_guard`) and the
+        right dock in its default mode (`orig_layout.right_dock.default`, expanded) - a run that ended with a panel
+        unit leaves it collapsed to icons otherwise. Only when the lock is free within a minute."""
+        side = self.sides.get("orig") if getattr(self, "sides", None) else None
+        if side is None or self.orig is None or not self.orig.running():
+            return
+        if not self.lock.acquire(60):
+            self.log("run end: lock not free - MaxUndos and dock not checked")
+            return
+        try:
+            side.max_undos_guard("run end")
+            rd = (self.ui_map.get("orig_layout") or {}).get("right_dock") or {}
+            dk = side.dock_expand("icon" if str(rd.get("default") or "").lower() == "icon" else "expanded")
+            self.log(f"run end: orig panel dock {dk.get('before')} px -> {dk.get('after')} px (wanted {dk.get('mode')}"
+                     + (f", clicks {dk.get('clicks')}" if dk.get("clicks") else ", nothing restored") + ")")
+        except Exception as e:  # noqa: BLE001
+            self.log(f"run end restore: {e}")
+        finally:
+            self.lock.release()
+
     def shutdown(self):
         if self.orig is not None:
+            self.run_end_restore()
             if self.orig.started_by_us is False:
                 # an instance was running when the run began: leave one running (restart it if it ended)
                 try:
@@ -8474,6 +8690,7 @@ def main(argv=None):
         print(f"R-24 self check: {r24_selfcheck()}")
         print(f"R-25 self check: {r25_selfcheck()}")
         print(f"R-26 self check: {r26_selfcheck()}")
+        print(f"R-29 self check: {r29_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0

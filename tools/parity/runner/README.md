@@ -1205,3 +1205,50 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   the list row. The Firepixel side now takes the hit with `source: "accesskit"` (the row's accessibility node; up to
   three tries, then the first hit as before) and logs `fp pref_category <name>: list row [..] (accesskit, n other
   hit(s) left out)`.
+
+## R-29 additions (21 Oct 2026)
+
+- **Cause of TW-174 (run 30: Layers shot 270 x 113 px, run 25: 245 x 389; `panel-layers/04` left "Unterebene" and
+  "Gemeinsam" visible, `panel-swatches-mixer/19` read #ffffbf):** up to run 25 the reference's right dock was
+  collapsed to icons in every unit (left over from a full-screen-with-menus step), so `Fenster > <panel>` opened the
+  panel as a **flyout** with the size the reference stores per panel (Layers group 245 x 389, Swatches 213 x 151 …);
+  the reference-side grids (`grid_targets`) and row offsets were measured in that layout. R-26 expanded the dock at
+  every layout check; an expanded dock shares its height among the docked groups, and those heights change between
+  runs (run 30: Layers group 113 px, run 31: all groups 180 px), so rows below the visible part were out of reach.
+- **Right dock mode per unit:** `ensure_layout` (unit start, after Tab, after the screen modes) now sets the right
+  dock to the mode of the unit (`dock_mode_wanted`): `"icon"` for the units whose name starts with an entry of
+  `ui_map → orig_layout.right_dock.icon_units` (`panel-`, `inspector-bitmap`, `inspector-group-symbol`: the units that
+  shoot or click panels of the right dock), `orig_layout.right_dock.default` (`"expanded"`, R-26) for all others;
+  config `orig.dock_mode` (`"icon"` / `"expanded"`) forces one mode. The same double-arrow button (`dock_toggle_point`)
+  collapses or expands; log `orig panel dock: 271 px (wanted icon; …) -> clicks [...] -> 105 px` and the unit-start
+  line `unit start <unit>: orig panel dock 271 px -> 105 px (collapsed to icons, wanted icon, clicks [...], docked group
+  heights [180, 180, 181, 181, 192] -> [])` (`dock_state` reads the heights of the docked `OWL.TabGroup`s).
+- **Fixed flyout sizes:** in an icon unit every panel lookup (`panel`, the `panel` verb, `panel:` shot areas, layer
+  rows, grid cells) checks the flyout against `ui_map → orig_layout.flyout_sizes` ({panel title: [w, h]}, the host
+  `panel` rect = tab group with tabs; measured in runs 24/25 and the R-29 probe: Optimieren / Verlauf / Ausrichten /
+  libraries 245 x 320, Seiten / Status / Ebenen 245 x 389, Stile / Farbfelder 213 x 151, Farbpalette 213 x 420,
+  Sonderzeichen / Bildbearbeitung / Automatische Formen 222 x 320, Pfad 232 x 320). Another size is put right by
+  dragging the flyout frame's (`OWL.FrameDrawer`) left edge (width; the right edge stays at the dock) and its
+  `OWL.ResizeGripper` (height); log `orig panel Ebenen: flyout 232 x 319 (wanted 245 x 389) -> drags [{edge: left, by:
+  13, …}, {edge: bottom, by: 70, …}] -> 245 x 389`, or once per unit `orig panel Ebenen: flyout 245 x 389 at […]
+  (wanted 245 x 389, ok)`; `SIZE NOT RESTORED` when the drags fail.
+- **History limit (`MaxUndos`):** the runner code only reads `MaxUndos` (`panel-pages-states-history/22`); the script
+  step `xs-preferences/02` sets it to 3 in the Preferences dialog and back to 20 in its `after`. When the step fails
+  before its `after` (run `r28_test_prefs`: "no dialog open"), 3 stays in the profile (RE-26 found it at 3; every
+  later document keeps only 3 History rows). `max_undos_guard` now reads `fw.getPref('MaxUndos')` at every unit start
+  (after the documents are closed) and at the end of the run and sets config `orig.max_undos` (default 20) back with
+  `fw.setPref` when it differs (log `orig MaxUndos (unit start panel-layers): 3 -> set 20 -> 20`).
+- **Run end:** `run_end_restore` (with the lock, before the program is left running or quit) runs the `MaxUndos`
+  guard and puts the right dock back into `right_dock.default` (expanded), so a run that ends with a panel unit does
+  not leave the dock collapsed (log `run end: orig panel dock 105 px -> 271 px (wanted expanded, …)`).
+- `--dry-run` prints `R-29 self check: ok` (docked group heights from the probe's window rects, the mode per unit and
+  forced mode, the flyout sizes of Ebenen and Farbfelder).
+- **Run (`panel-layers`, `panel-swatches-mixer`, 21 Oct 2026, `run_r29_test_2026-10-21`):** `MaxUndos` 3 -> 20 at the
+  first unit start; Layers 245 x 389, Verlauf 245 x 320, Farbfelder 213 x 151, Farbpalette 213 x 420 (all ok, no drag
+  needed). `panel-layers/04_eye_drag_result` hides "Unterebene" and "Gemeinsam" on both sides
+  (`Unterebene:false:true|Gemeinsam:false:true`, run 30: reference true), `panel-swatches-mixer/19_selected_object_result`
+  reads #efffbf on both sides (run 30: reference #ffffbf). Step statuses as in runs 24/25/30; the comparison numbers are
+  those of run 25 (`panel-layers`: panel pairs 55.6–67.8 %, run 30: 81.7–89.5 %) and run 24 (`panel-swatches-mixer`:
+  22.1–94.8 %, the same diff pixel counts). Second check (`run_r29_test_collapse_2026-10-21`, steps `01`, `04`): the
+  dock expanded and the Layers flyout shrunk to 232 x 319 by hand before the run -> collapsed at unit start, flyout
+  dragged back to 245 x 389, `04` hides both layers; the run end expanded the dock again (105 -> 271 px).
