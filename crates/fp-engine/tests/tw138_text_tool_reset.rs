@@ -101,14 +101,52 @@ fn panel_writes_paragraph_defaults_in_all_states() {
     assert!((real(&s, "Text_RangeKerning") - 0.15).abs() < 1e-9, "15 -> 0.15");
 }
 
-/// re 56 section 2.5: % -> px at 30 pt and 120 % gives 36 and `Text_LeadingMode` 1; px -> %
-/// divides by the size.
+/// re 56 sections 2.5 and 5.4 (TW-178): % -> px at 30 pt and 120 % gives 36 and
+/// `Text_LeadingMode` 1. Both directions start from the displayed, rounded field value and store
+/// the result unrounded: % -> px = round(factor * 100) * size / 100, px -> % = round(px) / size.
 #[test]
 fn leading_unit_switch_converts_and_writes_mode() {
-    use fp_engine::commands::convert_leading;
+    use fp_engine::commands::{convert_leading, leading_field_value};
+    let near = |a: f32, b: f64| (a as f64 - b).abs() < 1e-5;
     assert_eq!(convert_leading(1.2, 30.0, false, true), 36.0);
-    assert_eq!(convert_leading(1.234, 30.0, false, true), 37.0, "rounded");
+    assert!(
+        near(convert_leading(1.234, 30.0, false, true), 36.9),
+        "123 % shown -> 36.9, unrounded"
+    );
+    assert!(near(convert_leading(1.2333334, 30.0, false, true), 36.9));
+    assert!(
+        near(convert_leading(1.25, 30.0, false, true), 37.5),
+        "125 % -> 37.5"
+    );
+    assert!(
+        near(convert_leading(1.15, 30.0, false, true), 34.5),
+        "115 % -> 34.5"
+    );
     assert!((convert_leading(36.0, 30.0, true, false) - 1.2).abs() < 1e-6);
+    assert!(
+        near(convert_leading(37.0, 30.0, true, false), 37.0 / 30.0),
+        "37 -> 1.2333"
+    );
+    assert!(
+        near(convert_leading(37.5, 30.0, true, false), 38.0 / 30.0),
+        "37.5 shown as 38 -> 1.2667"
+    );
+    // the measured round trips px -> % -> px: 41 -> 137 % -> 41.1, 44 -> 44.1, 35 -> 35.1
+    for (px, pct, back) in [
+        (41.0, 137.0, 41.1),
+        (44.0, 147.0, 44.1),
+        (35.0, 117.0, 35.1),
+        (31.0, 103.0, 30.9),
+    ] {
+        let f = convert_leading(px, 30.0, true, false);
+        assert_eq!(leading_field_value(f, false), pct, "{px}");
+        assert!(near(convert_leading(f, 30.0, false, true), back), "{px}");
+    }
+    // the field rounds half up
+    assert_eq!(leading_field_value(37.5, true), 38.0);
+    assert_eq!(leading_field_value(34.5, true), 35.0);
+    assert_eq!(leading_field_value(36.9, true), 37.0);
+    assert_eq!(leading_field_value(1.2666666, false), 127.0);
     assert_eq!(convert_leading(40.0, 30.0, true, true), 40.0);
     let mut s = setup();
     s.set_tool(ToolId::Text).expect("text tool");
@@ -143,6 +181,29 @@ fn activating_text_tool_resets_paragraph_defaults() {
     s.set_tool(ToolId::Pointer).expect("pointer");
     s.set_tool(ToolId::Text).expect("text tool");
     assert!((real(&s, "Text_Leading") - 1.5).abs() < 1e-9);
+}
+
+/// TW-178 (re 56 section 5.3): the reset takes the baseline shift from `DefaultBaselineShift` and
+/// the leading from `DefaultLeading` (probe 2 / 1.3), back to 0 / 1.2 after resetting those.
+#[test]
+fn reset_uses_default_baseline_shift_and_default_leading() {
+    let mut s = setup();
+    s.prefs.set("DefaultBaselineShift", PrefValue::Int(2));
+    s.prefs.set("DefaultLeading", PrefValue::Real(1.3));
+    s.set_tool(ToolId::Text).expect("text tool");
+    panel_values(&mut s);
+    s.prefs.set("Text_BaselineShift", PrefValue::Real(3.0));
+    s.set_tool(ToolId::Pointer).expect("pointer");
+    s.set_tool(ToolId::Text).expect("text tool");
+    assert_eq!(real(&s, "Text_BaselineShift"), 2.0);
+    assert!((real(&s, "Text_Leading") - 1.3).abs() < 1e-9);
+    assert_eq!(s.prefs.get_int("Text_LeadingMode", -1), 0);
+    assert_eq!(real(&s, "Text_ParagraphIndent"), 0.0);
+    s.prefs.set("DefaultBaselineShift", PrefValue::Int(0));
+    s.prefs.set("DefaultLeading", PrefValue::Real(1.2));
+    s.set_tool(ToolId::Pointer).expect("pointer");
+    s.set_tool(ToolId::Text).expect("text tool");
+    assert_reset(&s);
 }
 
 #[test]

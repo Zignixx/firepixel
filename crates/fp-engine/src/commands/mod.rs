@@ -39,7 +39,10 @@ pub use file::{load_document, save_document};
 pub use filters::{FILTERS, whole_numbers_as_ints};
 pub use select::restore_bitmap_selection_preview;
 pub(crate) use text::store_font_default as text_store_font_default;
-pub use text::{convert_leading, effective_alignment, new_text_pref_attrs, tool_text_defaults};
+pub use text::{
+    convert_leading, effective_alignment, leading_field_value, new_text_pref_attrs,
+    tool_text_defaults,
+};
 pub(crate) use text::{editor_patch, reset_text_tool_paragraph_defaults, store_editor_prefs};
 
 use crate::command::{CommandRegistry, Requirement};

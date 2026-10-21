@@ -434,6 +434,31 @@ fn w15_text_tool_defaults_before_typing() {
     assert!((a.horizontal_scale.unwrap_or(1.0) - 0.8).abs() < 1e-6, "Horizontalskala");
 }
 
+/// TW-178 (re 56 section 5.4): the leading field shows whole px or percent rounded half up
+/// (37.5 px -> "38", 34.5 px -> "35", 1.2333 -> "123"); the unit switch converts from that
+/// displayed value and stores the result unrounded.
+#[test]
+fn tw178_leading_field_rounds_half_up() {
+    use fp_engine::prefs::PrefValue;
+    for (leading, mode, shown) in [(37.5, 1, "38"), (34.5, 1, "35"), (36.9, 1, "37"), (1.2333333333333334, 0, "123"), (1.2666666666666666, 0, "127")] {
+        let h = harness(|s| {
+            let _ = s.set_tool(ToolId::Text);
+            s.prefs.set("Text_Size", PrefValue::Real(30.0));
+            s.prefs.set("Text_Leading", PrefValue::Real(leading));
+            s.prefs.set("Text_LeadingMode", PrefValue::Int(mode));
+        });
+        let _ = input_with(&h, shown);
+    }
+    use fp_engine::commands::convert_leading;
+    // % -> px from the displayed percent: 123 % at 30 pt -> 36.9, 125 % -> 37.5
+    assert!((convert_leading(1.2333334, 30.0, false, true) - 36.9).abs() < 1e-5);
+    assert!((convert_leading(1.25, 30.0, false, true) - 37.5).abs() < 1e-5);
+    // px -> % from the displayed px: 37.5 (shown 38) -> 1.2667 (shown 127 %)
+    let f = convert_leading(37.5, 30.0, true, false);
+    assert!((f - 38.0 / 30.0).abs() < 1e-6);
+    assert_eq!(fp_engine::commands::leading_field_value(f, false), 127.0);
+}
+
 // ------------------------------------------------------------------ W17: Textausrichtung
 
 #[test]

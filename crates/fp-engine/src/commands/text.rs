@@ -1423,7 +1423,7 @@ fn store_text_tool_defaults(
 
 /// R5 (re 56 section 2.4/3): activating the text tool resets the paragraph defaults (indent,
 /// spacing before/after, leading to `DefaultLeading` in % mode, tracking, horizontal scale,
-/// baseline shift) unless `TextEditor_RememberALLSettings` is on. Size, style, font and alignment
+/// baseline shift to `DefaultBaselineShift`, measured re 56 section 5.3, TW-178) unless `TextEditor_RememberALLSettings` is on. Size, style, font and alignment
 /// stay. Firepixel has no text-tool-only opacity/blend option (the tool opacity/blend fields are
 /// shared with other tools and not applied to new text), so that part of the reset is omitted.
 pub(crate) fn reset_text_tool_paragraph_defaults(s: &mut Session) {
@@ -1432,13 +1432,14 @@ pub(crate) fn reset_text_tool_paragraph_defaults(s: &mut Session) {
         return;
     }
     let leading = s.prefs.get_real("DefaultLeading", 1.2);
+    let shift = s.prefs.get_real("DefaultBaselineShift", 0.0);
     let before = s.prefs.clone();
     s.prefs.set("Text_Leading", PrefValue::Real(leading));
     s.prefs.set("Text_LeadingMode", PrefValue::Int(0));
     for (pref, v) in [
         ("Text_RangeKerning", 0.0),
         ("Text_HorizScale", 1.0),
-        ("Text_BaselineShift", 0.0),
+        ("Text_BaselineShift", shift),
         ("Text_ParagraphIndent", 0.0),
         ("Text_ParagraphSpacingBefore", 0.0),
         ("Text_ParagraphSpacingAfter", 0.0),
@@ -1450,14 +1451,25 @@ pub(crate) fn reset_text_tool_paragraph_defaults(s: &mut Session) {
     }
 }
 
-/// Leading value after switching the Properties panel unit (re 56 section 2.5): % -> px is
-/// `round(factor * size)` (120 % at 30 pt -> 36), px -> % is `px / size`; same unit unchanged.
+/// Leading value after switching the Properties panel unit (measured, re 56 section 5.4,
+/// TW-178): the conversion starts from the displayed field value, rounded half up, and stores
+/// the result unrounded. % -> px is `round(factor * 100) * size / 100` (123 % at 30 pt -> 36.9,
+/// 125 % -> 37.5), px -> % is `round(px) / size` (37.5 shown as 38 -> 1.2667), with the size
+/// limited to 1000 (observed once); same unit unchanged.
 pub fn convert_leading(leading: f32, size: f32, from_px: bool, to_px: bool) -> f32 {
+    let (leading, size) = (leading as f64, size as f64);
     match (from_px, to_px) {
-        (false, true) => (leading * size).round(),
-        (true, false) => leading / size.max(1.0),
-        _ => leading,
+        (false, true) => ((leading * 100.0).round() * size / 100.0) as f32,
+        (true, false) => (leading.round() / size.clamp(1.0, 1000.0)) as f32,
+        _ => leading as f32,
     }
+}
+
+/// Number shown in the Properties panel leading field: whole px or whole percent, rounded half
+/// up like the original (37.5 px -> 38, 34.5 px -> 35, 1.2333 -> 123 %; re 56 section 5.4).
+pub fn leading_field_value(leading: f32, px: bool) -> f64 {
+    let v = leading as f64;
+    if px { v.round() } else { (v * 100.0).round() }
 }
 
 /// Number attributes of the text tool defaults: parameter and preference key.

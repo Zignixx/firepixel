@@ -3310,11 +3310,8 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         &theme,
         en,
     );
-    let lead_shown = if v.leading_px {
-        v.leading as f64
-    } else {
-        (v.leading as f64 * 100.0).round()
-    };
+    // whole numbers rounded half up (37.5 px -> 38), re 56 section 5.4
+    let lead_shown = fp_engine::commands::leading_field_value(v.leading, v.leading_px);
     if let Some(x) = fields::number(
         ui,
         id.with("lead"),

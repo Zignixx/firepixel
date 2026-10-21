@@ -298,9 +298,10 @@ fn pointer_move_and_pen_unchanged_by_snap_to_pixels() {
             approx(b.left - b0.left, 1.0) && approx(b.top - b0.top, -1.0),
             "on={on}: {b0:?} -> {b:?}"
         );
-        // floor rule, not rounding of the mouse path: 15.9 → 16.4 moves by +1
-        drag(&mut s, (15.9, 15.9), (16.4, 15.9));
-        assert!(approx(bounds(&s, r).left - b0.left, 2.0), "on={on}");
+        // floor rule, not rounding of the mouse path: 15.9375 → 17.0 (+17 screen px, above the
+        // 12 px threshold at 1600 %) moves by +2, not by round(1.0625) = 1
+        drag(&mut s, (15.9375, 15.9), (17.0, 15.9));
+        assert!(approx(bounds(&s, r).left - b0.left, 3.0), "on={on}");
         tool(&mut s, ToolId::Pen);
         events(
             &mut s,

@@ -467,6 +467,18 @@ impl ToolContext<'_> {
     pub fn drag_threshold(&self) -> f32 {
         (3.0 / self.zoom.max(1e-6)) as f32
     }
+    /// Has the mouse travelled far enough from `from` to start a Pointer selection move?
+    /// Measured (re 55 §7.4, TW-176): no move up to 3 / 4 / 6 / 12 screen px, a move from
+    /// 4 / 5 / 7 / 13 screen px at 100 / 200 / 400 / 1600 % zoom, independent of the number of
+    /// intermediate mouse events: travel > 3·√zoom screen px (the formula is fitted to the
+    /// measured values). Other drags keep [`Self::drag_threshold`].
+    pub fn exceeds_move_threshold(&self, from: Point, to: Point) -> bool {
+        let zoom = self.zoom.max(1e-6);
+        let travel =
+            (((to.x - from.x) as f64).powi(2) + ((to.y - from.y) as f64).powi(2)).sqrt() * zoom;
+        // the small margin keeps a travel of exactly the threshold below it despite rounding
+        travel > 3.0 * zoom.sqrt() + 1e-3
+    }
     /// Markierungsabstand in Dokumentpixeln.
     pub fn pick_tolerance(&self) -> f64 {
         self.prefs.pick_distance() / self.zoom.max(1e-6)

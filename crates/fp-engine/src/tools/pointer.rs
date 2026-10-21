@@ -955,6 +955,16 @@ impl PointerTool {
         }
     }
 
+    /// Does a press on the selection become a move? The Pointer uses the measured zoom-dependent
+    /// threshold (TW-176, re 55 §7.4); the other tools of this machine keep the fixed 3 screen px.
+    fn move_starts(&self, ctx: &ToolContext, start: Point, p: Point) -> bool {
+        if self.id == ToolId::Pointer {
+            ctx.exceeds_move_threshold(start, p)
+        } else {
+            dist(start, p) >= ctx.drag_threshold()
+        }
+    }
+
     fn moved(&mut self, p: Point, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {
         let thr = ctx.drag_threshold();
         let st = self.state.clone();
@@ -979,8 +989,10 @@ impl PointerTool {
                 copy,
                 fresh,
                 shift,
-                ..
-            } if dist(start, p) >= thr => {
+                toggle,
+            } if self.move_starts(ctx, start, p)
+                && (toggle.is_none() || self.id != ToolId::Pointer) =>
+            {
                 self.state = PState::Moving {
                     start,
                     cur: p,
@@ -994,7 +1006,7 @@ impl PointerTool {
             }
             // Zeiger am Punkt eines gewählten Pfads: Ziehen verschiebt das ganze Objekt (PAR 08/04)
             PState::PressedPoint { start, .. }
-                if self.id == ToolId::Pointer && dist(start, p) >= thr =>
+                if self.id == ToolId::Pointer && self.move_starts(ctx, start, p) =>
             {
                 self.state = PState::Moving {
                     start,
@@ -1059,7 +1071,10 @@ impl PointerTool {
                 self.state = PState::Control(c);
                 ToolResponse::with_overlay(self.overlay.clone(), Cursor::PointerPoint)
             }
-            PState::PressedPoint { start, hit, pull } if dist(start, p) >= thr => {
+            // (the Pointer never drags a single point: below its move threshold it waits)
+            PState::PressedPoint { start, hit, pull }
+                if self.id != ToolId::Pointer && dist(start, p) >= thr =>
+            {
                 self.state = PState::DraggingPoint {
                     start,
                     cur: p,
@@ -1373,7 +1388,14 @@ impl PointerTool {
             } => {
                 let (dx, dy) = (cur.x - start.x, cur.y - start.y);
                 // Umschalt-Klick hat das Objekt gerade abgewählt: nichts verschieben
-                if ctx.selection.elements.is_empty() || (dx == 0.0 && dy == 0.0 && !copy) {
+                if ctx.selection.elements.is_empty() {
+                    return ToolResponse::default();
+                }
+                // A Pointer drag past the threshold that ends on the start pixel still writes a
+                // "Move" row moveSelectionBy({x:0, y:0}) (measured, TW-176, re 55 §7.4); the
+                // other tools and pixel moves keep "no step".
+                let zero = dx == 0.0 && dy == 0.0 && !copy;
+                if zero && (self.id != ToolId::Pointer || ctx.selection.has_pixels()) {
                     return ToolResponse::default();
                 }
                 // Ziehen im Auswahlrahmen einer Bitmap verschiebt die ausgewählten Pixel (PAR 06/16)

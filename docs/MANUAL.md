@@ -278,8 +278,8 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   to text makes its font, bold/italic/underline, leading and anti-aliasing the defaults (not the size). The
   baseline shift becomes a default only through the Text tool's own settings, not through the inspector.
   Choosing the Text tool (toolbox, T, or a switch from another tool) resets indent, spacing before and
-  after, leading (back to the default percentage), tracking, horizontal scale and baseline shift to their
-  factory values; font, size, style and alignment stay. So paragraph values set while the Text tool is
+  after, tracking and horizontal scale to their factory values, and the leading (as a percentage) and the
+  baseline shift to the values of Preferences ▸ Text; font, size, style and alignment stay. So paragraph values set while the Text tool is
   active carry over to the next text, values set with the Pointer do not. The preference
   `TextEditor_RememberALLSettings` (off by default, no row in the Preferences dialog) keeps them. A new text starts with
   tracking 0, and every change in a text field of the inspector is its own "Text Change" step in the History.
