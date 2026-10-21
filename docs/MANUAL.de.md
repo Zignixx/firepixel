@@ -256,7 +256,13 @@ Layoutformat des Originals austauschbar.
 Wichtige Bedienfelder:
 
 - **Ebenen:** Sichtbarkeit (Auge), Sperre (Schloss), Unterebenen; Ziehen ordnet um. Unterebenen
-  stehen eingerückt als Ordnerzeile mit Aufklapper; Doppelklick auf die Zeile benennt sie um.
+  stehen eingerückt als Ordnerzeile mit Aufklapper; Doppelklick auf die Zeile benennt sie um. Ein
+  Rechtsklick auf eine Objektzeile wählt zuerst dieses Objekt, sodass *Auswahl auf Hintergrund
+  reduzieren*, *Maske hinzufügen* und *Mit darunter liegender auf eine Ebene reduzieren* im Kontextmenü
+  dafür gelten (Letzteres nur, wenn das Objekt direkt über einer Bitmap liegt). Ein Rechtsklick auf eine
+  Ebenenzeile macht sie zur aktuellen Ebene und lässt die Auswahl stehen; auf der Webebene sind die
+  Einträge zum Freigeben für Seiten grau. *Maske hinzufügen* legt eine leere, verknüpfte Bitmapmaske an,
+  die alles zeigt, und wählt die Maske.
 - **Seiten / Status:** Seiten und Animationsbilder, Masterseite, Zwiebelschicht. Ist eine
   Animationsinstanz gewählt, zeigt die Leinwand ihren Bewegungspfad (grüner Start, rotes Ende), und der
   Auswahlrahmen umschließt nur das aktuelle Bild.

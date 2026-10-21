@@ -5867,6 +5867,20 @@ fn no_active_sublayer(s: &Session) -> bool {
     })
 }
 
+/// "Share Layer to Pages" / "... to All Pages" in the menu: a top-level layer that is not the web
+/// layer is current (RE spec 58 §3.2: grey on the web layer, Q-59).
+fn shareable_layer(s: &Session) -> bool {
+    no_active_sublayer(s)
+        && s.active().is_some_and(|d| {
+            !active_slot(d).is_some_and(|slot| {
+                matches!(
+                    d.doc.pages.get(d.page).and_then(|pg| pg.root.layers.get(slot)),
+                    Some(LayerSlot::Own(l)) if l.kind == LayerKind::Web
+                )
+            })
+        })
+}
+
 /// Einfügeposition für neue Ebenen „oben“: unter der Web-Ebene.
 fn top_insert_index(pg: &fp_model::Page) -> usize {
     pg.root
@@ -6794,7 +6808,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
         cmd("panel.layers.shareToPages")
             .label("Ebene für Seiten freigeben")
             .requires(DOC)
-            .menu_when(no_active_sublayer)
+            .menu_when(shareable_layer)
             .param("pages", ParamKind::Json, "Seitenindizes [0, 2, …]")
             .run(move |s, p| {
                 let pages: Vec<usize> = p.parse("pages")?.unwrap_or_default();
@@ -6807,7 +6821,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
         cmd("panel.layers.shareToAllPages")
             .label("Ebene für alle Seiten freigeben")
             .requires(DOC)
-            .menu_when(no_active_sublayer)
+            .menu_when(shareable_layer)
             .run(move |s, _| share(s, None)),
     );
     let shared_ref = |d: &DocumentState| -> Option<(usize, fp_model::Guid)> {
@@ -6950,13 +6964,33 @@ fn register_layer_menu(r: &mut CommandRegistry) {
             .requires(DOC)
             .run(move |s, _| edit_all_layers(s, set_lock(false))),
     );
-    alias(
+    // RE spec 58 §3.3 (Q-59): an empty, linked bitmap mask that shows everything (as Modify ▸
+    // Mask ▸ Reveal All), one history step "Add Mask"; afterwards the mask itself is selected
+    add_fw(
         r,
         35441,
-        "panel.layers.addMask",
-        "Maske hinzufügen",
-        "modify.mask.revealAll",
-        json!({}),
+        cmd("panel.layers.addMask")
+            .label("Maske hinzufügen")
+            .requires(&[Requirement::Document, Requirement::Selection])
+            .available(|s| s.active().is_some_and(|d| d.selection.elements.len() == 1))
+            .menu_when(super::not_only_web)
+            .run(|s, _| {
+                let out = super::modify::mask_from_selection(s, Some(true))?;
+                super::with_doc(s, |d| {
+                    let page = d.page;
+                    let group = d.selection.elements.first().copied();
+                    let mask = group
+                        .and_then(|g| docops::element_on_page(&d.doc, page, g))
+                        .and_then(|e| e.element_mask().map(|m| m.element.id));
+                    if let Some(m) = mask {
+                        d.selection.set(vec![m]);
+                    }
+                    Ok(CommandOutput::doc_with(json!({
+                        "id": out.value["id"].clone(),
+                        "mask": mask.map(|m| m.0),
+                    })))
+                })
+            }),
     );
     add_fw(
         r,

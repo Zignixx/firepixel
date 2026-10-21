@@ -374,6 +374,21 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     ));
                 }
             }
+            // Q-59 (RE spec 58 §3.2): a right-click on a layer row makes it the current layer (the
+            // web layer too) before the context menu forms its states; the object selection stays
+            if resp.secondary_clicked() && active_layer != Some(l.id) {
+                if editable {
+                    actions.push(Action::Run(
+                        "layer.setActive".into(),
+                        json!({"layer": l.id.0}),
+                    ));
+                } else if rl.origin == LayerOrigin::Shared {
+                    actions.push(Action::Run(
+                        "pi.layer.setActiveShared".into(),
+                        json!({"layer": l.id.0}),
+                    ));
+                }
+            }
             // egui wertet einen Doppelklick kurz nach einem Klick anderswo als Dreifachklick
             if (resp.double_clicked() || resp.triple_clicked()) && editable && !web {
                 rename_start = Some(kind.clone());
@@ -882,6 +897,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             }
                             actions.push(Action::Run("select.set".into(), json!({"ids": ids})));
                         }
+                    }
+                    // Q-59 (RE spec 58 §3.2): a right-click on an object row selects the object like a
+                    // plain click before the context menu forms its states (Flatten Selection, Add
+                    // Mask, Merge Down follow that selection); an object that is already part of the
+                    // selection keeps the selection as it is
+                    if resp2.secondary_clicked() && editable && !selected_set.contains(&e.id) {
+                        actions.push(Action::Run("select.set".into(), json!({"ids": [e.id.0]})));
                     }
                     if (resp2.double_clicked() || resp2.triple_clicked()) && editable {
                         rename_start = Some(kind.clone());

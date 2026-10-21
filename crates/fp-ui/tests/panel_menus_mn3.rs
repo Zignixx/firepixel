@@ -217,9 +217,10 @@ fn layers_edit_mask_needs_a_mask() {
     s0[15] = "Auswahl auf Hintergrund reduzieren (grau)";
     s0[23] = "Maske hinzufügen (grau)";
     check(&app(false), PanelId::Layers, &s0);
-    // mit Maske: Maske bearbeiten aktiv
+    // with a mask: Edit Mask on for the masked object (Add Mask itself selects the mask, RE spec 58 §3.3)
     let mut a = app(true);
-    a.state.session.execute("panel.layers.addMask", json!({})).expect("Maske");
+    let v = a.state.session.execute("panel.layers.addMask", json!({})).expect("Maske").value;
+    a.state.session.execute("select.set", json!({"ids": [v["id"].clone()]})).expect("masked object");
     let m = menu(&a, PanelId::Layers);
     assert!(m.iter().any(|r| r == "Maske bearbeiten"), "{m:#?}");
 }

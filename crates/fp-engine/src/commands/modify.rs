@@ -759,7 +759,10 @@ fn mask_bitmap(d: &mut DocumentState, mask_img: RgbaImage, target: ElementId) ->
     Ok(gid)
 }
 
-fn mask_from_selection(s: &mut Session, reveal_all: Option<bool>) -> Result<CommandOutput> {
+pub(crate) fn mask_from_selection(
+    s: &mut Session,
+    reveal_all: Option<bool>,
+) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let target = d
             .selection

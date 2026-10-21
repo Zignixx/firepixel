@@ -245,7 +245,11 @@ with the layout format of the original.
 Important panels:
 
 - **Layers:** visibility (eye), lock, sub-layers; drag to reorder. Sub-layers are indented folder
-  rows with an expander; double-click a row to rename it.
+  rows with an expander; double-click a row to rename it. A right-click on an object row selects that
+  object first, so the context menu's *Flatten Selection*, *Add Mask* and *Merge Down* apply to it
+  (*Merge Down* only when the object lies directly above a bitmap). A right-click on a layer row makes
+  it the current layer and keeps the selection; on the web layer the share-to-pages entries are grey.
+  *Add Mask* adds an empty, linked bitmap mask that shows everything and selects the mask.
 - **Pages / States:** pages and animation frames, master page, onion skinning. When an animation
   instance is selected, the canvas shows its motion path (green start, red end), and the selection
   frame encloses only the current frame.
