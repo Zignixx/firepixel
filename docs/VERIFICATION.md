@@ -339,6 +339,21 @@ VER-10.28.
 - [ ] **A4-32** (BA-109, `ai.faceBlur`; needs: real window, photos with faces)
   **Steps:** In the Batch Studio add the step "Blur faces" and run it on a portrait, a group photo, a photo with a profile face and a photo without people; try shape rect, pixelate on, strength 100 and a region JSON `{x, y, width, height}` covering only half the picture.
   **Expected:** Frontal faces are unrecognisable (ellipse with soft edge, or rectangle, or mosaic); no hit on the photo without people and no error, the report says "0 faces"; a profile face may be missed (documented limit); with the region only faces inside it change; the JSON field rejects malformed input with a readable message.
+- [ ] **A4-33** (TW-180 / FB-12, TW-175, tester feedback batch 4; needs: real window, original for comparison)
+  **Steps:** Open a document with two paths and a rectangle, zoom 1600 %. View ▸ Snap to Pixels must be unchecked after a fresh start. Drag an anchor with the Subselection tool by a few screen pixels: the point moves in 1/16 px steps (Info panel). Check Snap to Pixels and drag again: the point lands on whole pixels. With Smart Guides on, drag an anchor past the edge and the centre of the rectangle and past an anchor of the other path.
+  **Expected:** Default off; on → whole pixels, off → fractional; no smart-guide line and no snap while dragging an anchor (the Pointer still snaps with a dashed line); the Pointer's object moves stay whole-pixel in both states.
+- [ ] **A4-34** (TW-181 / FB-14b, tester feedback batch 4; needs: real window, real mouse)
+  **Steps:** Blur tool, size 22, over a bitmap: paint several long strokes with many direction changes; watch the canvas during and after each stroke; move the pointer off the canvas and back; move it over an area with no editable bitmap.
+  **Expected:** One tip outline at the pointer during the stroke, nothing left behind after it; no system cursor over the editable bitmap (crosshair only with precise cursors); the outline disappears off the canvas; over nothing editable a "not allowed" cursor and no outline. Same for Sharpen, Dodge, Burn, Smudge.
+- [ ] **A4-35** (TW-182 / FB-14a, tester feedback batch 4; needs: real window, real mouse, original for comparison)
+  **Steps:** On a pixel-art bitmap paint slowly with Blur, Sharpen, Dodge, Burn and Smudge, holding the button; compare with the original.
+  **Expected:** The effect appears under the brush while the button is held; releasing changes nothing visible; one History row per stroke named after the tool; speed acceptable on a 2000 px bitmap.
+- [ ] **A4-36** (TW-183 / FB-15, tester feedback batch 4; needs: real window, real mouse, original for comparison)
+  **Steps:** Bitmap smaller than the canvas, Smudge size 22: drag from inside the bitmap across its edge into the empty canvas; undo; repeat with "Entire document" on; then check "Confine to boundaries" and repeat; also start a stroke outside the bitmap and drag into it.
+  **Expected:** The smear continues past the edge and fades out, the bitmap's bounds grow (Info panel), undo restores the old size; with "Entire document" the canvas colour is smeared into the bitmap; with "Confine to boundaries" the smear stops at the old edge; a stroke from outside drags transparency in. Compare the look with the original.
+- [ ] **A4-37** (TW-184 / FB-13, tester feedback batch 4; needs: real window, original for comparison)
+  **Steps:** Hover over tools in the toolbox and in a flyout, over toolbar buttons, over the Smudge inspector fields and checkboxes; toggle View ▸ Tooltips and move and drag over the canvas.
+  **Expected:** Tool tooltips: "Name (shortcut)" plus a one-line description; toolbar: the name only; inspector: the descriptions as in the original ("Brush size", "Edge softness", …), none on labels and arrows; the "x:… y:…" tag follows the pointer while hovering and while dragging and is gone with the switch off or off the canvas.
 ---
 
 # Part B – Full catalogue
