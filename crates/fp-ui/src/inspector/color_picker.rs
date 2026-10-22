@@ -20,8 +20,8 @@ use super::texts;
 use crate::app_state::AppState;
 use crate::theme::Theme;
 use egui::{
-    Align2, Color32, CursorIcon, Id, Key, LayerId, Modifiers, Order, Pos2, Rect, Response, Sense,
-    Stroke, StrokeKind, Ui, pos2, vec2,
+    Align2, Color32, Id, Key, LayerId, Modifiers, Order, Pos2, Rect, Response, Sense, Stroke,
+    StrokeKind, Ui, pos2, vec2,
 };
 use fp_color::Argb;
 use std::sync::Arc;
@@ -1276,8 +1276,13 @@ fn body(
         .iter()
         .any(|(a, b, cx, d)| Rect::from_min_max(o + vec2(*a, *b), o + vec2(*cx, *d)).contains(p));
         let over_controls = rect.contains(p) && !grid.contains(p);
-        if !over_field && !over_controls && !(s.slider && slider_rect.contains(p)) {
-            ctx.set_cursor_icon(CursorIcon::None);
+        if !over_field
+            && !over_controls
+            && !(s.slider && slider_rect.contains(p))
+            // inactive window: the system cursor only (FB-18, TW-199)
+            && crate::canvas::cursors::may_paint(ctx)
+        {
+            crate::canvas::cursors::hide_system_cursor(ctx);
             // solange ein Foto aussteht, ohne eigenen Zeiger (das Foto zeigt das nächste Bild)
             if !shot_frame && s.shot_pending.is_none() {
                 let painter = ctx.layer_painter(LayerId::new(Order::Debug, pid.with("cursor")));

@@ -216,6 +216,8 @@ impl FirepixelApp {
         }
         let st = &mut self.state;
         st.frame_counter += 1;
+        st.painted_cursor = None;
+        canvas::cursors::track_focus(&ctx);
         if st.theme_dirty {
             st.theme.apply(&ctx);
             st.theme_dirty = false;

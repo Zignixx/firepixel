@@ -115,6 +115,9 @@ pub struct AppState {
     pub pointer_log: Vec<serde_json::Value>,
     /// Letzte Werkzeugantwort (Mauszeiger).
     pub tool_cursor: fp_engine::tools::Cursor,
+    /// Where the canvas painted its own cursor in this frame (`None`: not painted, the system
+    /// cursor is shown). Lets tests check that only one cursor is visible (FB-18, TW-199).
+    pub painted_cursor: Option<egui::Pos2>,
     /// Version der Oberfläche (für Ereignisse zur Neuzeichnung).
     pub frame_counter: u64,
     /// Laufzeitzustand des Dockings (Reiter ziehen, Symbolmodus).
@@ -164,6 +167,7 @@ impl AppState {
             pointer_doc: None,
             pointer_log: Vec::new(),
             tool_cursor: fp_engine::tools::Cursor::Arrow,
+            painted_cursor: None,
             frame_counter: 0,
             dock: crate::docking::DockUi::default(),
             file_override: None,

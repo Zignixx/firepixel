@@ -22,9 +22,7 @@ use crate::app_state::{Action, AppState};
 use crate::icons::{self, Icon, IconStyle};
 use crate::theme::{Theme, ToolGroup, with_alpha};
 use crate::widgets::{self, ButtonLook};
-use egui::{
-    Align2, Color32, CursorIcon, Id, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2,
-};
+use egui::{Align2, Color32, Id, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_engine::tools::{Cursor, Modifiers, PointerKind, ToolInput};
 use fp_engine::view::{PreviewMode, ZOOM_STEPS};
 use fp_engine::{Overlay, ToolEvent};
@@ -1487,10 +1485,14 @@ fn pointer_tag_box(painter: &egui::Painter, theme: &Theme, at: Pos2, text: &str)
 }
 
 /// Eigener Mauszeiger über der Leinwand (Systemzeiger ausgeblendet).
-fn paint_cursor(ui: &Ui, st: &AppState, area: Rect, resp: &egui::Response) {
+fn paint_cursor(ui: &Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
     let Some(p) = ui.ctx().pointer_hover_pos().filter(|p| area.contains(*p)) else {
         return;
     };
+    // inactive window: the system cursor only (FB-18, TW-199)
+    if !cursors::may_paint(ui.ctx()) {
+        return;
+    }
     let busy = st
         .session
         .active_id()
@@ -1521,12 +1523,13 @@ fn paint_cursor(ui: &Ui, st: &AppState, area: Rect, resp: &egui::Response) {
     };
     let theme = Theme::current(ui.ctx());
     let precise = st.session.prefs.get_bool("UsePrecisionCursors", false);
-    ui.ctx().set_cursor_icon(CursorIcon::None);
+    cursors::hide_system_cursor(ui.ctx());
     let painter = ui.ctx().layer_painter(egui::LayerId::new(
         egui::Order::Tooltip,
         Id::new("fp-canvas-cursor"),
     ));
     cursors::paint(&painter, p, cursor, &theme.colors, precise);
+    st.painted_cursor = Some(p);
 }
 
 /// Punkte (logische Pixel) eines Rad-Ereignisses, die einer Rastung entsprechen (Präzisions-Touchpads

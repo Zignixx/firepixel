@@ -5,8 +5,76 @@
 //! `UsePrecisionCursors` (bzw. Feststelltaste) erscheint für Zeichenwerkzeuge das Fadenkreuz.
 
 use crate::theme::Palette;
-use egui::{Color32, Painter, Pos2, Shape, Stroke, pos2, vec2};
+use egui::{Color32, CursorIcon, Id, Painter, Pos2, Shape, Stroke, ViewportCommand, pos2, vec2};
 use fp_engine::tools::Cursor;
+
+/// Window focus and pointer re-entry, as seen by the painted cursor (FB-18, TW-199).
+///
+/// The painted cursor only works together with a hidden system cursor. Two things broke that:
+/// - while the window is inactive the platform shows its own arrow again (macOS ignores the
+///   hidden cursor of an inactive window), but the canvas kept painting its cursor next to it;
+/// - after the window becomes active again the hidden state is not re-established by the
+///   platform, and the windowing layer skips the request because the cursor icon did not change
+///   (`CursorIcon::None` frame after frame). Only a different icon (hovering or clicking the
+///   toolbar) re-applied it, so system and painted cursor both followed the pointer until then.
+#[derive(Clone, Copy, Debug, Default)]
+struct FocusSync {
+    /// The window lost the focus (no painted cursor; the system cursor is shown).
+    unfocused: bool,
+    /// The hidden state must be pushed to the window again on the next hiding frame
+    /// (after focus gain or after the pointer left the window).
+    reapply: bool,
+}
+
+fn sync_id() -> Id {
+    Id::new("fp-cursor-focus-sync")
+}
+
+/// Once per frame before the canvas: follow window focus changes and the pointer leaving the
+/// window in this frame's events.
+pub(crate) fn track_focus(ctx: &egui::Context) {
+    let mut sync: FocusSync = ctx.data(|d| d.get_temp(sync_id())).unwrap_or_default();
+    let before = (sync.unfocused, sync.reapply);
+    ctx.input(|i| {
+        for e in &i.events {
+            match e {
+                egui::Event::WindowFocused(false) => sync.unfocused = true,
+                egui::Event::WindowFocused(true) => {
+                    sync.unfocused = false;
+                    sync.reapply = true;
+                }
+                egui::Event::PointerGone => sync.reapply = true,
+                _ => {}
+            }
+        }
+    });
+    if (sync.unfocused, sync.reapply) != before {
+        ctx.data_mut(|d| d.insert_temp(sync_id(), sync));
+    }
+}
+
+/// May the app paint its own cursor? Not while the window is inactive: the platform shows its
+/// own cursor then, and a painted one would be a second cursor.
+pub(crate) fn may_paint(ctx: &egui::Context) -> bool {
+    !ctx.data(|d| d.get_temp::<FocusSync>(sync_id()))
+        .unwrap_or_default()
+        .unfocused
+}
+
+/// Hide the system cursor for a painted one. After focus gain or re-entry the hidden state is
+/// pushed to the window explicitly (visible, then hidden in the same frame: the platform
+/// re-evaluates the cursor at once, without a visible frame), because the icon alone does not
+/// change and would be skipped.
+pub(crate) fn hide_system_cursor(ctx: &egui::Context) {
+    ctx.set_cursor_icon(CursorIcon::None);
+    let mut sync: FocusSync = ctx.data(|d| d.get_temp(sync_id())).unwrap_or_default();
+    if sync.reapply {
+        sync.reapply = false;
+        ctx.data_mut(|d| d.insert_temp(sync_id(), sync));
+        ctx.send_viewport_cmd(ViewportCommand::CursorVisible(true));
+        ctx.send_viewport_cmd(ViewportCommand::CursorVisible(false));
+    }
+}
 
 /// Füllt ein (auch konkaves) einfaches Polygon per Ohrenschneiden.
 fn fill_poly(p: &Painter, pts: &[Pos2], color: Color32) {
