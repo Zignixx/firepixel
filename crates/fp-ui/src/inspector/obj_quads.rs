@@ -612,7 +612,7 @@ pub fn toolbar_fill_popups(ui: &mut Ui, st: &mut AppState, well: Rect) {
         .and_then(|f| f.pattern.as_ref())
     {
         Some(p) => p.name.clone(),
-        None if ta.pattern.is_empty() => ui_commands::DEFAULT_PATTERN.to_string(),
+        None if ta.pattern.is_empty() => popups::default_pattern(),
         None => texture_display_name(&ta.pattern),
     };
     let pangle = if vectors && kind == 3 {
@@ -684,7 +684,7 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
                     f.shape = 15;
                     f.category = "fc_Pattern".into();
                     let name = if ta.pattern.is_empty() {
-                        ui_commands::DEFAULT_PATTERN.to_string()
+                        popups::default_pattern()
                     } else {
                         texture_display_name(&ta.pattern)
                     };
@@ -1023,7 +1023,8 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
 }
 
 /// Musterdateien aus den Musterordnern ([`popups::pattern_files`]: Original, dessen Benutzervorlage,
-/// `%APPDATA%\Firepixel\Patterns`; nur zur Laufzeit gelesen, nichts eingebettet).
+/// `%APPDATA%\Firepixel\Patterns`, nur zur Laufzeit gelesen) plus the built-in patterns (pseudo
+/// paths, [`fp_engine::resources::pattern_image`]).
 pub fn pattern_files() -> Vec<std::path::PathBuf> {
     popups::pattern_files()
         .iter()

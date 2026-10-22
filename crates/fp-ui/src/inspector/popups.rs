@@ -108,9 +108,45 @@ pub fn color_popup(
 const FILL_POPUP_OPEN: &str = "pi-fill-popup-open";
 
 /// Ist ein Verlaufs- oder Muster-Popup offen? (Esc schließt dann nur das Popup.)
+///
+/// Only a popup that is actually shown counts: a popup marked open that was neither opened nor
+/// drawn in the last pass (e.g. the "Pattern" button opened it, but the fill change failed and the
+/// popup's swatch never appeared) is closed here. Before FB-20 such an invisible popup claimed every
+/// later canvas click and Esc/Enter until the application was closed.
 pub fn fill_popup_open(ctx: &egui::Context) -> bool {
-    ctx.data(|d| d.get_temp::<Id>(Id::new(FILL_POPUP_OPEN)))
-        .is_some()
+    let Some(pid) = ctx.data(|d| d.get_temp::<Id>(Id::new(FILL_POPUP_OPEN))) else {
+        return false;
+    };
+    let pass = ctx.cumulative_pass_nr();
+    let last = ctx.data(|d| {
+        let opened = d.get_temp::<u64>(pid.with("pass")).unwrap_or(0);
+        let shown = d.get_temp::<u64>(pid.with("shown")).unwrap_or(0);
+        opened.max(shown)
+    });
+    if pass > last + 1 {
+        set_anchored_open(ctx, pid, false);
+        return false;
+    }
+    true
+}
+
+/// Closes every fill popup (gradient, pattern; inspector, tool inspector and toolbar) and the
+/// open egui pop-ups (drop-down lists, arrow sliders). Called when a command from an inspector
+/// control fails, so a failed change never leaves a pop-up state behind that keeps claiming
+/// pointer input (FB-20, TW-198).
+pub fn reset_interaction(ctx: &egui::Context) {
+    if let Some(pid) = ctx.data(|d| d.get_temp::<Id>(Id::new(FILL_POPUP_OPEN))) {
+        set_anchored_open(ctx, pid, false);
+    }
+    let (tg, tp) = super::obj_quads::toolbar_fill_popup_ids();
+    let (sg, sp) = super::obj_quads::fill_popup_ids(false);
+    let (wg, wp) = super::obj_quads::fill_popup_ids(true);
+    for pid in [tg, tp, sg, sp, wg, wp] {
+        if anchored_open(ctx, pid) {
+            set_anchored_open(ctx, pid, false);
+        }
+    }
+    egui::Popup::close_all(ctx);
 }
 
 /// Ist das Füllungs-Popup `pid` offen?
@@ -163,6 +199,8 @@ pub fn anchored_popup<R>(
         .frame(crate::menu::menu_frame(&th).inner_margin(egui::Margin::same(6)))
         .show(add);
     let inner = shown?;
+    let pass = ctx.cumulative_pass_nr();
+    ctx.data_mut(|d| d.insert_temp(pid.with("shown"), pass));
     let opened: u64 = ctx.data(|d| d.get_temp(pid.with("pass"))).unwrap_or(0);
     let mut close = inner.response.should_close();
     if ctx.cumulative_pass_nr() > opened
@@ -830,7 +868,7 @@ pub fn pattern_swatch_texture(ctx: &egui::Context, name: &str) -> Option<egui::T
         .find(|(n, _)| n.eq_ignore_ascii_case(name))
         .map(|(_, p)| p.clone());
     let tex = path
-        .and_then(|p| fp_engine::commands::attrs::load_image_file(&p.to_string_lossy()).ok())
+        .and_then(|p| fp_engine::resources::pattern_image(&p))
         .map(|img| {
             let ci = egui::ColorImage::from_rgba_unmultiplied(
                 [img.width(), img.height()],
@@ -988,10 +1026,19 @@ pub fn texture_names() -> &'static [String] {
     N.get_or_init(|| texture_files().iter().map(|(n, _)| n.clone()).collect())
 }
 
-/// Musterdateien (Name, Datei) wie [`texture_files`], aus `Patterns`.
+/// Musterdateien (Name, Datei) wie [`texture_files`], aus `Patterns`, plus the built-in patterns
+/// drawn in code (pseudo paths, [`fp_engine::resources::pattern_entries`]) so the list is never
+/// empty, also without the reference application's folders (FB-20).
 pub fn pattern_files() -> &'static [(String, std::path::PathBuf)] {
     static N: std::sync::OnceLock<Vec<(String, std::path::PathBuf)>> = std::sync::OnceLock::new();
-    N.get_or_init(|| resource_files(USER_PATTERNS_DIR))
+    N.get_or_init(fp_engine::resources::pattern_entries)
+}
+
+/// Pattern a fill switches to with the "Pattern" button: the reference application's default
+/// ("Cotton") when its file exists, otherwise the first available pattern (FB-20).
+pub fn default_pattern() -> String {
+    fp_engine::resources::default_pattern_name()
+        .unwrap_or_else(|| ui_commands::DEFAULT_PATTERN.to_string())
 }
 
 /// Inhalt eines Popups als Antwort-Platzhalter (für Tests: Fläche reservieren).

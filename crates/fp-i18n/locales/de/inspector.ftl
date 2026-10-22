@@ -127,6 +127,15 @@ pi-pattern-name-weave = Gewebe
 pi-pattern-name-wood-2 = Holz 2
 pi-pattern-name-wood-3 = Holz 3
 pi-pattern-name-wood = Holz
+# Eingebaute Muster (im Programm gezeichnet, überall verfügbar)
+pi-pattern-name-checkerboard = Schachbrett
+pi-pattern-name-diagonal-stripes = Diagonale Streifen
+pi-pattern-name-polka-dots = Tupfen
+pi-pattern-name-grid = Raster
+pi-pattern-name-bricks = Ziegel
+pi-pattern-name-waves = Wellen
+pi-pattern-name-diamonds = Rauten
+pi-pattern-name-crosshatch = Kreuzschraffur
 pi-filter-images = Bilder
 pi-edge-hard = Hart
 pi-edge-antialias = Anti-Alias

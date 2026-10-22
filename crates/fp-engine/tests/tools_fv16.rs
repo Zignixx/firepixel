@@ -166,7 +166,10 @@ fn texture_and_pattern_by_name_load_from_resource_folders() {
     assert!(!pat(&s));
     ex(&mut s, "element.setPattern", json!({"name": "Fv16Muster"}));
     assert!(pat(&s), "element.setPattern nur per Name");
-    assert!(s.execute("pi.fill", json!({"pattern": "gibt-es-nicht"})).is_err(), "unbekanntes Muster: Fehler");
+    // unknown pattern: the default pattern instead of an error, reported in the result (FB-20)
+    let out = s.execute("pi.fill", json!({"pattern": "gibt-es-nicht"})).expect("unbekanntes Muster: Vorgabemuster");
+    assert_eq!(out.value["patternFallback"]["requested"], "gibt-es-nicht");
+    assert!(pat(&s), "Vorgabemuster mit Bild");
     assert!(s.execute("element.setPattern", json!({"name": "gibt-es-nicht"})).is_err());
     // element.setTexture nur per Name
     ex(&mut s, "element.setTexture", json!({"name": "Fv16Textur", "amount": 20}));

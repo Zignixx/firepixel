@@ -607,7 +607,14 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         None
     };
     let no_doc_before = st.session.active().is_none();
-    match crate::ui_commands::execute(&mut st.session, name, params) {
+    let result = crate::ui_commands::execute(&mut st.session, name, params);
+    // a failed inspector command must not leave a pop-up open that the failed change would have
+    // shown (the "Pattern" button opens the pattern pop-up together with `pi.fill`): close the
+    // inspector's pop-ups, they would otherwise keep claiming canvas clicks (FB-20, TW-198)
+    if result.is_err() && is_inspector_command(name) {
+        crate::inspector::popups::reset_interaction(ctx);
+    }
+    match result {
         Ok(out) => {
             if matches!(name, "edit.copy" | "edit.cut" | "edit.copyAsVectors") {
                 crate::os_clipboard::after_copy(st);
@@ -701,6 +708,11 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         // Meldungen der Engine beginnen klein (CLI, Begründungen); in der Statuszeile als Satz (CT-A-16)
         Err(e) => st.set_status(sentence_case(&e.to_string()), now(ctx)),
     }
+}
+
+/// Commands sent by Property Inspector controls (`pi.*`).
+fn is_inspector_command(name: &str) -> bool {
+    name.starts_with("pi.")
 }
 
 /// Save dialog for a text a command script handed over with `fp.saveAs(text, name)`.

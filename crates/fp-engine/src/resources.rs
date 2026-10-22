@@ -6,6 +6,11 @@
 //! (`fp_i18n::profile`). Dieselben Ordner zeigt der Inspektor in seinen Listen; eine Textur bzw.
 //! ein Muster, das nur per Name gesetzt wird (`pi.fill {texture}`, Werkzeugvorgaben, Skripte),
 //! lädt hier die Datei zum Namen, damit die Füllung sichtbar wirkt.
+//!
+//! Patterns additionally have a small set of **built-in** patterns drawn in code (FB-20, TW-198):
+//! without the reference application's folders (macOS, Linux, a fresh Windows machine) the pattern
+//! list would otherwise be empty and switching a fill to "Pattern" failed. Built-in patterns have a
+//! pseudo path below [`BUILTIN_DIR`] that never exists on disk; [`pattern_image`] draws them.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -134,6 +139,11 @@ pub fn label_key(kind: &str, name: &str) -> String {
 /// Groß-/Kleinschreibung (CT-2: die Inspektorliste zeigt übersetzte Namen, Skripte und Agenten
 /// nennen sie so).
 fn find_by_label(dirs: &[PathBuf], kind: &str, name: &str) -> Option<PathBuf> {
+    find_by_label_in(&files_in(dirs), kind, name)
+}
+
+/// [`find_by_label`] over a ready list of (file name, path) entries.
+fn find_by_label_in(files: &[(String, PathBuf)], kind: &str, name: &str) -> Option<PathBuf> {
     let name = name.trim();
     if name.is_empty() {
         return None;
@@ -144,7 +154,6 @@ fn find_by_label(dirs: &[PathBuf], kind: &str, name: &str) -> Option<PathBuf> {
             langs.push(l.code);
         }
     }
-    let files = files_in(dirs);
     for lang in &langs {
         let hit = fp_i18n::with_language(lang, || {
             files.iter().find(|(stem, _)| {
@@ -166,10 +175,19 @@ pub fn texture_file(name: &str) -> Option<PathBuf> {
     find_in(&d, name).or_else(|| find_by_label(&d, TEXTURES, name))
 }
 
-/// Datei eines Musters nach seinem Namen (Dateiname oder angezeigter Name).
+/// Datei eines Musters nach seinem Namen (Dateiname oder angezeigter Name); built-in patterns
+/// answer with their pseudo path ([`builtin_pattern_path`]).
 pub fn pattern_file(name: &str) -> Option<PathBuf> {
-    let d = dirs(PATTERNS);
-    find_in(&d, name).or_else(|| find_by_label(&d, PATTERNS, name))
+    pattern_file_in(&dirs(PATTERNS), name)
+}
+
+/// [`pattern_file`] with explicit pattern folders: a file in the folders (file name, case-insensitive,
+/// with or without extension), then a built-in pattern of that name, then a shown (translated) name
+/// of either.
+pub fn pattern_file_in(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
+    find_in(dirs, name)
+        .or_else(|| builtin_pattern_file(name))
+        .or_else(|| find_by_label_in(&pattern_entries_in(dirs), PATTERNS, name))
 }
 
 /// Dateiname (ohne Endung) zu einem Textur- bzw. Musternamen, wenn eine Datei passt – so wird ein
@@ -237,6 +255,15 @@ pub fn load_texture(name: &str) -> Option<fp_model::attrs::Texture> {
     texture_from_file(&p, &stored_name(name, &p))
 }
 
+/// Image of a pattern file: a built-in pattern is drawn ([`BUILTIN_PATTERNS`]), any other path is
+/// read from disk.
+pub fn pattern_image(path: &Path) -> Option<fp_raster::RgbaImage> {
+    match builtin_of(path) {
+        Some(b) => b.image(),
+        None => image_of(path),
+    }
+}
+
 /// Muster mit Bild aus einer Datei; zwischengespeichert je Datei.
 pub fn pattern_from_file(path: &Path, name: &str) -> Option<fp_model::attrs::Pattern> {
     static CACHE: OnceLock<Mutex<HashMap<PathBuf, Arc<fp_model::element::BitmapNode>>>> =
@@ -246,7 +273,7 @@ pub fn pattern_from_file(path: &Path, name: &str) -> Option<fp_model::attrs::Pat
     let node = match cached {
         Some(n) => n,
         None => {
-            let img = image_of(path)?;
+            let img = pattern_image(path)?;
             // feste Kachelnummern: der Schreiber nummeriert ohnehin neu, so bleibt das Ergebnis reproduzierbar
             let mut next = 1u32;
             let n = Arc::new(fp_model::element::BitmapNode::from_rgba(
@@ -274,4 +301,244 @@ pub fn pattern_from_file(path: &Path, name: &str) -> Option<fp_model::attrs::Pat
 pub fn load_pattern(name: &str) -> Option<fp_model::attrs::Pattern> {
     let p = pattern_file(name)?;
     pattern_from_file(&p, &stored_name(name, &p))
+}
+
+/// Pattern by name like [`load_pattern`]; when no pattern of that name exists (e.g. the default
+/// pattern of the reference application on a machine without its folders), the default pattern
+/// ([`default_pattern_name`]) is used instead. Returns the pattern and whether it is a stand-in.
+pub fn load_pattern_or_default(name: &str) -> Option<(fp_model::attrs::Pattern, bool)> {
+    if let Some(p) = load_pattern(name) {
+        return Some((p, false));
+    }
+    let d = default_pattern_name()?;
+    load_pattern(&d).map(|p| (p, true))
+}
+
+// ---------------------------------------------------------------------- built-in patterns
+
+/// First component of the pseudo path of a built-in pattern (never a real folder: `<` and `>`
+/// are not allowed in Windows file names).
+pub const BUILTIN_DIR: &str = "<built-in>";
+
+/// A pattern drawn in code: name (technical, English) and tile.
+#[derive(Clone, Copy, Debug)]
+pub struct BuiltinPattern {
+    /// Name (also the file name of its pseudo path).
+    pub name: &'static str,
+    w: u32,
+    h: u32,
+    px: fn(u32, u32) -> [u8; 4],
+}
+
+impl BuiltinPattern {
+    /// The tile as an image.
+    pub fn image(&self) -> Option<fp_raster::RgbaImage> {
+        let mut bytes = Vec::with_capacity((self.w * self.h * 4) as usize);
+        for y in 0..self.h {
+            for x in 0..self.w {
+                bytes.extend_from_slice(&(self.px)(x, y));
+            }
+        }
+        fp_raster::RgbaImage::from_rgba_bytes(
+            fp_geom::IRect::new(0, 0, self.w as i32, self.h as i32),
+            &bytes,
+        )
+        .ok()
+    }
+}
+
+const fn rgb(c: u32) -> [u8; 4] {
+    [(c >> 16) as u8, (c >> 8) as u8, c as u8, 255]
+}
+
+/// Mix of two colours, `t` = share of `b` (0..1).
+fn mix(a: u32, b: u32, t: f32) -> [u8; 4] {
+    let (a, b, t) = (rgb(a), rgb(b), t.clamp(0.0, 1.0));
+    let m = |i: usize| (a[i] as f32 + (b[i] as f32 - a[i] as f32) * t).round() as u8;
+    [m(0), m(1), m(2), 255]
+}
+
+fn checkerboard(x: u32, y: u32) -> [u8; 4] {
+    if (x / 8 + y / 8).is_multiple_of(2) {
+        rgb(0xc8c8c8)
+    } else {
+        rgb(0xffffff)
+    }
+}
+
+fn diagonal_stripes(x: u32, y: u32) -> [u8; 4] {
+    if (x + y) % 16 < 6 {
+        rgb(0x3a6ea5)
+    } else {
+        rgb(0xdfe9f5)
+    }
+}
+
+fn polka_dots(x: u32, y: u32) -> [u8; 4] {
+    let (dx, dy) = (x as f32 + 0.5 - 12.0, y as f32 + 0.5 - 12.0);
+    let cover = 5.5 - (dx * dx + dy * dy).sqrt();
+    mix(0xfbe9e9, 0xd04a4a, cover + 0.5)
+}
+
+fn grid(x: u32, y: u32) -> [u8; 4] {
+    if x == 0 || y == 0 {
+        rgb(0x7f8c99)
+    } else {
+        rgb(0xffffff)
+    }
+}
+
+fn bricks(x: u32, y: u32) -> [u8; 4] {
+    let joint = if y < 8 { 0 } else { 16 };
+    if y.is_multiple_of(8) || x == joint {
+        rgb(0xd9d0c1)
+    } else {
+        rgb(0xb5523b)
+    }
+}
+
+fn waves(x: u32, y: u32) -> [u8; 4] {
+    let c = 8.0 + 3.0 * (std::f32::consts::TAU * (x as f32 + 0.5) / 32.0).sin();
+    let d = (y as f32 + 0.5 - c).abs();
+    mix(0xe6f2fa, 0x2f7fb8, 2.0 - d)
+}
+
+fn diamonds(x: u32, y: u32) -> [u8; 4] {
+    let d = (x as f32 + 0.5 - 8.0).abs() + (y as f32 + 0.5 - 8.0).abs();
+    if d < 6.5 {
+        rgb(0xc9b8e8)
+    } else {
+        rgb(0x6b4fa0)
+    }
+}
+
+fn crosshatch(x: u32, y: u32) -> [u8; 4] {
+    if (x + y).is_multiple_of(12) || (x + 12 - y).is_multiple_of(12) {
+        rgb(0x404040)
+    } else {
+        rgb(0xffffff)
+    }
+}
+
+/// The built-in patterns (all tiles repeat seamlessly).
+pub const BUILTIN_PATTERNS: [BuiltinPattern; 8] = [
+    BuiltinPattern {
+        name: "Checkerboard",
+        w: 16,
+        h: 16,
+        px: checkerboard,
+    },
+    BuiltinPattern {
+        name: "Diagonal Stripes",
+        w: 16,
+        h: 16,
+        px: diagonal_stripes,
+    },
+    BuiltinPattern {
+        name: "Polka Dots",
+        w: 24,
+        h: 24,
+        px: polka_dots,
+    },
+    BuiltinPattern {
+        name: "Grid",
+        w: 16,
+        h: 16,
+        px: grid,
+    },
+    BuiltinPattern {
+        name: "Bricks",
+        w: 32,
+        h: 16,
+        px: bricks,
+    },
+    BuiltinPattern {
+        name: "Waves",
+        w: 32,
+        h: 16,
+        px: waves,
+    },
+    BuiltinPattern {
+        name: "Diamonds",
+        w: 16,
+        h: 16,
+        px: diamonds,
+    },
+    BuiltinPattern {
+        name: "Crosshatch",
+        w: 12,
+        h: 12,
+        px: crosshatch,
+    },
+];
+
+/// Pseudo path of a built-in pattern (`<built-in>/Patterns/<name>.png`).
+pub fn builtin_pattern_path(name: &str) -> PathBuf {
+    Path::new(BUILTIN_DIR)
+        .join(PATTERNS)
+        .join(format!("{name}.png"))
+}
+
+/// The built-in pattern behind a pseudo path, if it is one.
+pub fn builtin_of(path: &Path) -> Option<&'static BuiltinPattern> {
+    let mut c = path.components();
+    if c.next()?.as_os_str() != BUILTIN_DIR || c.next()?.as_os_str() != PATTERNS {
+        return None;
+    }
+    let stem = path.file_stem()?.to_string_lossy();
+    BUILTIN_PATTERNS
+        .iter()
+        .find(|b| b.name.eq_ignore_ascii_case(&stem))
+}
+
+/// Pseudo path of the built-in pattern with this name (case-insensitive, `.png` allowed).
+fn builtin_pattern_file(name: &str) -> Option<PathBuf> {
+    let n = name.trim();
+    let n = n
+        .len()
+        .checked_sub(4)
+        .filter(|&i| n.is_char_boundary(i) && n[i..].eq_ignore_ascii_case(".png"))
+        .map_or(n, |i| &n[..i]);
+    BUILTIN_PATTERNS
+        .iter()
+        .find(|b| b.name.eq_ignore_ascii_case(n))
+        .map(|b| builtin_pattern_path(b.name))
+}
+
+/// All patterns: the files of the pattern folders plus the built-in patterns (a file of the same
+/// name wins), ordered by name like [`files_in`].
+pub fn pattern_entries_in(dirs: &[PathBuf]) -> Vec<(String, PathBuf)> {
+    let mut v = files_in(dirs);
+    for b in &BUILTIN_PATTERNS {
+        if !v.iter().any(|(n, _)| n.eq_ignore_ascii_case(b.name)) {
+            v.push((b.name.to_string(), builtin_pattern_path(b.name)));
+        }
+    }
+    v.sort_by(|a, b| {
+        a.0.to_lowercase()
+            .cmp(&b.0.to_lowercase())
+            .then_with(|| a.0.cmp(&b.0))
+    });
+    v
+}
+
+/// [`pattern_entries_in`] for the pattern folders of this machine.
+pub fn pattern_entries() -> Vec<(String, PathBuf)> {
+    pattern_entries_in(&dirs(PATTERNS))
+}
+
+/// Default pattern with explicit folders: the reference application's default ("Cotton") when a
+/// file of that name exists, otherwise the first available pattern.
+pub fn default_pattern_name_in(dirs: &[PathBuf]) -> Option<String> {
+    if let Some(p) = find_in(dirs, crate::commands::panel::DEFAULT_PATTERN) {
+        return p.file_stem().map(|s| s.to_string_lossy().to_string());
+    }
+    pattern_entries_in(dirs).into_iter().next().map(|(n, _)| n)
+}
+
+/// Default pattern of this machine ([`default_pattern_name_in`]), determined once.
+pub fn default_pattern_name() -> Option<String> {
+    static N: OnceLock<Option<String>> = OnceLock::new();
+    N.get_or_init(|| default_pattern_name_in(&dirs(PATTERNS)))
+        .clone()
 }

@@ -3188,12 +3188,19 @@ pub fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let cat = p.opt_str("category")?;
                 // Muster nur per Name: Datei aus den Musterordnern laden (`crate::resources`);
-                // „Muster“ ohne Namen = Vorgabemuster des Originals (nur, wenn noch kein Muster da ist)
+                // „Muster“ ohne Namen = Vorgabemuster (nur, wenn noch kein Muster da ist): "Cotton"
+                // like the original, without its file the first available pattern (FB-20)
                 let pat_name = match p.opt_str("pattern")? {
                     Some(n) if !n.is_empty() => Some(n),
-                    _ if cat.as_deref() == Some("pattern") => Some(DEFAULT_PATTERN.to_string()),
+                    _ if cat.as_deref() == Some("pattern") => Some(
+                        crate::resources::default_pattern_name()
+                            .unwrap_or_else(|| DEFAULT_PATTERN.to_string()),
+                    ),
                     _ => None,
                 };
+                // unknown name: the default pattern instead of an error (FB-20, TW-198), reported in
+                // the result as `patternFallback`
+                let mut stand_in: Option<(String, String)> = None;
                 let pattern = match pat_name {
                     // „Andere…“ als Werkzeugvorgabe: voller Pfad einer Bilddatei
                     Some(n) if std::path::Path::new(&n).is_absolute() => {
@@ -3211,12 +3218,17 @@ pub fn register(r: &mut CommandRegistry) {
                             })?,
                         )
                     }
-                    Some(n) => Some(crate::resources::load_pattern(&n).ok_or_else(|| {
-                        EngineError::InvalidParams {
-                            name: p.command.clone(),
-                            message: fp_i18n::tr!("err-not-found", what = n.as_str()),
+                    Some(n) => {
+                        let (pat, fell_back) = crate::resources::load_pattern_or_default(&n)
+                            .ok_or_else(|| EngineError::InvalidParams {
+                                name: p.command.clone(),
+                                message: fp_i18n::tr!("err-not-found", what = n.as_str()),
+                            })?;
+                        if fell_back {
+                            stand_in = Some((n.clone(), pat.name.clone()));
                         }
-                    })?),
+                        Some(pat)
+                    }
                     None => None,
                 };
                 let keep_pattern = cat.as_deref() == Some("pattern")
@@ -3235,7 +3247,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let tex_tr = p.opt_bool("textureTransparent")?;
                 let dither = p.opt_bool("dither")?;
                 let fallback_fill = s.tools.fill_color;
-                edit_each_changed(s, p, |e, bounds| {
+                let mut out = edit_each_changed(s, p, |e, bounds| {
                     let (attrs0, handles0) = (docops::path_attrs_of(e), handles_of(e));
                     let before = docops::path_attrs_of(e)
                         .map(|a| fill_kind(a.fill.as_ref()))
@@ -3458,7 +3470,14 @@ pub fn register(r: &mut CommandRegistry) {
                     // nur bei echter Änderung ein Verlaufsschritt (gleiche Art erneut gewählt: keiner)
                     docops::path_attrs_of(e).as_deref() != attrs0.as_deref()
                         || handles_of(e) != handles0
-                })
+                })?;
+                if let Some((requested, used)) = stand_in {
+                    if !out.value.is_object() {
+                        out.value = json!({});
+                    }
+                    out.value["patternFallback"] = json!({"requested": requested, "used": used});
+                }
+                Ok(out)
             }),
     );
 

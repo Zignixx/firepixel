@@ -340,7 +340,9 @@ fn w21_texture_list_as_wide_as_longest_name() {
 /// Musterliste: ebenso so breit wie der längste Mustername.
 #[test]
 fn w21_pattern_list_as_wide_as_longest_name() {
-    if popups::pattern_files().is_empty() {
+    // needs the reference application's pattern folders ("Cotton"/„Baumwolle“); the built-in
+    // patterns alone are covered by `inspector_fb20_failed_command` and fp-engine `fb20_builtin_patterns`
+    if !popups::pattern_files().iter().any(|(n, _)| n == "Cotton") {
         return;
     }
     let mut h = harness(|s| rect(s, [50, 50, 150, 120]));

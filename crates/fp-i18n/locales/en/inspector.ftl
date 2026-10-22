@@ -130,6 +130,15 @@ pi-pattern-name-weave = Weave
 pi-pattern-name-wood-2 = Wood 2
 pi-pattern-name-wood-3 = Wood 3
 pi-pattern-name-wood = Wood
+# Built-in patterns (drawn in code, available on every system)
+pi-pattern-name-checkerboard = Checkerboard
+pi-pattern-name-diagonal-stripes = Diagonal Stripes
+pi-pattern-name-polka-dots = Polka Dots
+pi-pattern-name-grid = Grid
+pi-pattern-name-bricks = Bricks
+pi-pattern-name-waves = Waves
+pi-pattern-name-diamonds = Diamonds
+pi-pattern-name-crosshatch = Crosshatch
 pi-filter-images = Images
 pi-edge-hard = Hard
 pi-edge-antialias = Anti-Alias

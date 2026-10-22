@@ -154,7 +154,8 @@ fn w21_counts_like_original_when_installed() {
         return;
     }
     assert_eq!(popups::texture_names().len(), 77, "Texturen wie im Original");
-    assert_eq!(popups::pattern_files().len(), 60, "Muster wie im Original");
+    let files = popups::pattern_files().iter().filter(|(_, p)| fp_engine::resources::builtin_of(p).is_none()).count();
+    assert_eq!(files, 60, "Muster wie im Original (ohne die eingebauten)");
     // die Texturen haben deutsche Namen (bis auf gleichlautende wie „Chiffon“, „Sand“ und
     // „Argyle 01/02“, die auch das Original nicht übersetzt, PAR 18/12)
     let same = popups::texture_names().iter().filter(|n| obj_quads::texture_label(n) == **n).count();
@@ -265,7 +266,9 @@ fn w21_listed_texture_gets_mask() {
 /// ein Schritt und setzt die Musterfüllung.
 #[test]
 fn w21_pattern_list_like_texture_list() {
-    if popups::pattern_files().is_empty() {
+    // needs the reference application's pattern folders ("Cotton"/„Baumwolle“); the built-in
+    // patterns alone are covered by `inspector_fb20_failed_command` and fp-engine `fb20_builtin_patterns`
+    if !popups::pattern_files().iter().any(|(n, _)| n == "Cotton") {
         return;
     }
     let mut h = harness(|s| {
