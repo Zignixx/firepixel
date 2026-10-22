@@ -626,6 +626,8 @@ cmdtext-gewaehlte-vektoren-bekommen-die-farbe-pipette = selected vectors receive
 cmdtext-verwischen-farbe-verwischen-farbe-color-a9a666 = Smudge: smudge color (mix in the color `color`)
 cmdtext-verwischen-farbe-fuer-farbe-verwischen-v-920ed2 = Smudge: color for "Smudge color" (default: fill color)
 cmdtext-verwischen-gesamtes-dokument-alle-sichtb-1546ef = Smudge: Entire document (pick up all visible objects and the canvas)
+cmdtext-kante-0-hart-1-anti-alias-2-weiche-kante-61307b = Edge: 0 hard, 1 anti-alias, 2 feather, 3 dither (Firepixel extension)
+cmdtext-breite-der-weichen-kante-bzw-des-dither-93efad = Width of the feather or dither transition
 cmdtext-verwischen-auf-grenzen-beschraenken-aus-bc598e = Smudge: Confine to boundaries (off = the bitmap grows where the smear runs past its edge)
 cmdtext-farbe-ersetzen-staerke-0-255-vorgabe-200 = Replace color: strength 0..255 (default 200)
 cmdtext-farbe-ersetzen-von-farbe-aus-der-grafik-278aa3 = Replace color: from-color taken from the graphic under the start point

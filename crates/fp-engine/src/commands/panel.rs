@@ -3159,7 +3159,7 @@ pub fn register(r: &mut CommandRegistry) {
                     min: Some(0),
                     max: Some(3),
                 },
-                "Kante: 0 hart, 1 Anti-Alias, 2 weiche Kante, 3 Dither (Firepixel extension)",
+                "Kante: 0 hart, 1 Anti-Alias, 2 weiche Kante, 3 Dither (Firepixel-Erweiterung)",
             )
             .opt(
                 "feather",

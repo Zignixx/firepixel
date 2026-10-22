@@ -626,6 +626,8 @@ cmdtext-gewaehlte-vektoren-bekommen-die-farbe-pipette = gewählte Vektoren bekom
 cmdtext-verwischen-farbe-verwischen-farbe-color-a9a666 = Verwischen: Farbe verwischen (Farbe `color` einmischen)
 cmdtext-verwischen-farbe-fuer-farbe-verwischen-v-920ed2 = Verwischen: Farbe für „Farbe verwischen“ (Vorgabe: Füllfarbe)
 cmdtext-verwischen-gesamtes-dokument-alle-sichtb-1546ef = Verwischen: Gesamtes Dokument (alle sichtbaren Objekte und die Leinwand aufnehmen)
+cmdtext-kante-0-hart-1-anti-alias-2-weiche-kante-61307b = Kante: 0 hart, 1 Anti-Alias, 2 weiche Kante, 3 Dither (Firepixel-Erweiterung)
+cmdtext-breite-der-weichen-kante-bzw-des-dither-93efad = Breite der weichen Kante bzw. des Dither-Übergangs
 cmdtext-verwischen-auf-grenzen-beschraenken-aus-bc598e = Verwischen: Auf Grenzen beschränken (aus = das Bitmap wächst, wo der Strich über den Rand hinausläuft)
 cmdtext-farbe-ersetzen-staerke-0-255-vorgabe-200 = Farbe ersetzen: Stärke 0..255 (Vorgabe 200)
 cmdtext-farbe-ersetzen-von-farbe-aus-der-grafik-278aa3 = Farbe ersetzen: Von-Farbe aus der Grafik unter dem Startpunkt
