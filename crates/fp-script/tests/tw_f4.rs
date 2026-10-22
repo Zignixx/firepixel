@@ -17,8 +17,6 @@ fn has_myriad() -> bool {
 
 fn result(src: &str) -> String {
     let mut s = fp_engine::Session::default();
-    // tool stroke of the measurement: 1 px (the program starts with 2 px, RE spec 59 section 3.2)
-    s.tools.options.new_stroke = None;
     let o = run_source(&mut s, src, &ScriptOptions::default());
     assert!(o.ok, "Fehler: {:?}\nDiagnose: {:?}", o.error, o.diagnostics);
     o.result.unwrap_or_default()

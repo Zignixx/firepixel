@@ -240,7 +240,7 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   die Änderung erst nach ihrem Ende. Strich oder Füllung „keine“ zeigt das Farbfeld weiß mit roter Diagonale.
 - Die Füllung „keine“ gehört zum Dokument: Ein neues oder geöffnetes Dokument beginnt mit Vollfüllung in der
   aktuellen Füllfarbe, Strich (auch „keine“), Spitze, Größe und Lage gelten weiter. Nach dem Programmstart ist
-  der Werkzeugstrich die Spitze „1-Pixel weich“ in der Größe der Voreinstellung `BrushTipSize` (2, wenn keine
+  der Werkzeugstrich die Spitze „1-Pixel weich“ in der Größe der Voreinstellung `BrushTipSize` (1 px, wenn keine
   gespeichert ist), mittig.
 - **Standardfarben** (D oder der Knopf unter den Farbfeldern) setzt nur die Farben (Strich schwarz, Füllung
   weiß); Spitze, Größe und Lage bleiben. Ein Strich „keine“ wird „1-Pixel weich“ 1 px, eine Füllung „keine“

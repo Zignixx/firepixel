@@ -4,7 +4,7 @@
 //! outside. The fill "none" belongs to the document (a new document starts with a solid fill, the
 //! stroke carries over). "Default Colours" sets only the colours and brings back a stroke or fill
 //! "none". After the start the tool stroke is `bn_1-Pixel Anti-Aliased` in the size `BrushTipSize`
-//! (2 without a stored value), centred. The toolbox wells show "none" as such and the topmost
+//! (1 px without a stored value, FIX-G5), centred. The toolbox wells show "none" as such and the topmost
 //! object's colours during a multi-selection.
 
 use crate::common;
@@ -260,8 +260,8 @@ fn default_colours_keep_the_tip_and_bring_back_none() {
     assert_eq!(s.tool_well_colors(), (BLACK, Argb(0xffff_ffff)));
 }
 
-/// After the start: `bn_1-Pixel Anti-Aliased` 2 px centred (no stored `BrushTipSize`), else the
-/// stored size; a rectangle drawn like the Rectangle tool gets it.
+/// After the start: `bn_1-Pixel Anti-Aliased` 1 px centred (no stored `BrushTipSize`), else the
+/// stored size.
 #[test]
 fn start_stroke_is_one_pixel_anti_aliased_in_the_tip_size() {
     let s = Session::default();
@@ -269,7 +269,7 @@ fn start_stroke_is_one_pixel_anti_aliased_in_the_tip_size() {
     let b = tool_brush_from(st.new_stroke.as_ref(), st.new_brush.as_ref());
     assert_eq!(
         (b.category.as_str(), b.name.as_str(), b.diameter, b.antialiased),
-        ("bc_Pencil", "bn_1-Pixel Anti-Aliased", 2, true)
+        ("bc_Pencil", "bn_1-Pixel Anti-Aliased", 1, true)
     );
     assert_eq!(st.placement(), "center");
     assert_eq!(st.new_fill, None, "solid fill");

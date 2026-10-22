@@ -230,7 +230,7 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
 - The fill "none" belongs to the document: a new or opened document starts with a solid fill in the
   current fill color, while the stroke (also "none"), its tip, size and placement carry over. After the
   program start the tool stroke is the 1-Pixel Soft tip in the size of the preference `BrushTipSize`
-  (2 when none is stored), centred.
+  (1 px when none is stored), centred.
 - **Default Colors** (D or the button below the color boxes) sets only the colors (black stroke, white
   fill); tip, size and placement stay. A stroke "none" becomes the 1-Pixel Soft tip, 1 px, a fill "none"
   a solid fill.

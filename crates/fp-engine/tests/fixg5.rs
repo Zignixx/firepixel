@@ -40,7 +40,7 @@ fn session() -> Session {
     let mut s = doc_session(400.0, 300.0);
     s.set_colors(Some(fp_color::Argb(0xffc0_4040)), Some(fp_color::Argb(0xff80_8080)));
     // the factory stroke of the inspector ("Präzise abger." 1 px); the program itself starts with
-    // 1-Pixel Anti-Aliased 2 px (RE spec 59 section 3.2)
+    // 1-Pixel Anti-Aliased 1 px (RE spec 59 section 3.2)
     s.tools.options.new_stroke = None;
     s
 }
