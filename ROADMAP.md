@@ -1,6 +1,6 @@
 # Roadmap
 
-Where Firepixel stands and what remains. Figures as of **21 Oct 2026**; details in
+Where Firepixel stands and what remains. Figures as of **22 Oct 2026**; details in
 [docs/STATUS.md](docs/STATUS.md), [docs/PARITY.md](docs/PARITY.md) and [docs/FINDINGS.md](docs/FINDINGS.md).
 
 ## Stage
@@ -10,18 +10,18 @@ exist and work; FW-PNG round-trips; CLI, JSF and MCP drive everything.
 
 | Measure | Value |
 |---|---|
-| Parity units equal except for design | **49 / 49** (0 real deviations, 0 unclear, 0 under-measured; follow-up run 32 over 3 units on top of runs 31 and 30, 21 Oct 2026; `xs-shortcuts` equal again, TW-189 fixed and confirmed; `xs-preferences` equal again, Q-60 closed as a runner matter) |
-| Proven 1:1 | **100.0 %** (49 / 49; 100.0 % over the 48 units before run 24; run 31: 95.9 %; run 30: 98.0 %; runs 26 to 29: 100.0 %; run 25: 98.0 %; run 24: 93.9 %) |
-| Measurement quota, all 49 units | **87.2 %** (1075 / 1233 steps; unchanged in runs 31 and 32, no step status changed in their units; 87.1 % over the 48 old units; runs 26 to 29: 87.3 %; run 24: 87.0 %; run 17: 86.3 %) |
-| Canvas image pairs within 1 % | 185 / 212 (unchanged in run 32; runner R-28 switches Firepixel's View ▸ Tooltips off, so its canvas shots are pixel-identical to run 30 again and the six canvas pairs of the three units are back at their run 30 values, TW-190 closed; `tool-text/14, 16` above 1 %, TW-165). Tiled canvas (BA-098): no sampling offset at fractional zoom |
-| Errors | 36 reference-side, 21 Firepixel-side (the same steps and texts as before, no new Firepixel-side error); 2 `runner error` lines in run 32 (reference-side text entry in the shot-only step `xs-shortcuts/15`, TW-146 rest; run 31: 10, all in `tool-text`) |
+| Parity units equal except for design | **48 / 49** (1 real deviation, 0 unclear, 0 under-measured; full run 33 over all 49 units, 21/22 Oct 2026; `tool-autoshapes` real deviation, TW-195: the reference draws the Arrow Line black while the tool stroke is red, Firepixel draws it red and keeps the red; TW-193 and TW-194 confirmed, TW-192 confirmed for the colours, the runner item TW-174 confirmed) |
+| Proven 1:1 | **98.0 %** (48 / 49; 97.9 % over the 48 units before run 24; run 32: 100.0 %; run 31: 95.9 %; run 30: 98.0 %; runs 26 to 29: 100.0 %; run 25: 98.0 %; run 24: 93.9 %) |
+| Measurement quota, all 49 units | **87.1 %** (1075 / 1234 steps; run 32: 87.2 %, 1075 / 1233; `export-results/13` measurable for the first time; 87.0 % over the 48 old units; runs 26 to 29: 87.3 %; run 24: 87.0 %; run 17: 86.3 %) |
+| Canvas image pairs within 1 % | 184 / 209 (run 32: 185 / 212; three pairs without a reference shot in run 33; `menu-modify-a/20` below 1 % by TW-192, `tool-autoshapes/05` above 1 % by TW-195; `tool-text/14, 16` above 1 %, TW-165). Tiled canvas (BA-098): no sampling offset at fractional zoom |
+| Errors | 36 reference-side, 21 Firepixel-side (the same totals; no Firepixel-side step status changed in run 33); 4 `runner error` lines in run 33 (reference-side text entry and selection in `tool-text`, TW-146 rest; run 32: 2, run 31: 10) |
 | Tests | Tree with F56 to F59 and runner R-29: **2929 passed, 2 failed, 141 ignored** at `5e9847e6` (GT-1m, 21 Oct 2026): the timing test `image_preview_p1::worker_cancels_outdated_jobs_and_ui_stays_fluid` (green on the rerun, BA-117) and `tw186_swap_colors::rectangle_swaps_with_one_row_repeat_and_undo`, where F57's restored toolbox colours and F58's tool-attribute follow met — reconciled in F60 `6ebdc374` (the follow wins when an object is selected; `fp-engine`/`fp-script` and the touched `fp-ui` modules green); interim run on `36874d34` 2918 / 0 / 141. Before: F55 (TW-189, the Q-60 UI test) on top of the F53 fixes and v0.2.6: 2899 / 0 / 141 at `f543d7b9` (GT-1l; the code of preview `2026-10-21_08-16` and of run 32); the F53 fixes: 2892 / 0 / 141 at `e1340a21` (GT-1k); tester feedback batch 4 (F54a to F54d): 2877 / 1 / 141 at `82b0b5b2` (GT-1j, the code of preview `2026-10-21_05-40` and of v0.2.6; one `fp-ui` lib process crash, BA-117, green on the rerun; the failure was an untranslated parameter text, fixed in `1b95dd37`); JPEG 2000 and the AI batch steps: 2852 / 1 / 141 at `3b7386fa` (GT-1i). Batch and export tests also run on macOS and Linux CI (BA-083) |
 | Latest release | **v0.2.6** pre-release published on 21 Oct 2026 (from `02481356`): Windows x64 ZIP, macOS universal ZIP (arm64 + x86_64), Linux x86_64 tar.gz and AppImage, with tester feedback batch 4 (Snap to Pixels for the Subselection drags, live retouch result, one brush tip outline, smudge past the bitmap edge, tooltips with tool descriptions and the coordinate tag) plus JPEG 2000 in PDF and the AI batch steps; before: **v0.2.5** (20 Oct 2026); Linux tested in CI only, the Intel macOS slice verified by tools only; the repository is public since 20 Oct 2026 |
-| Open findings | 38 fixable rows, 1 open: Q-62 (rules derived from plain-key runs before R-27, to re-measure), plus the unmeasured rests noted in TW-186, TW-193 and Q-61 (TW-185, the Tool Properties tab, declined on 21 Oct 2026); fixed on the evening of 21 Oct 2026 after RE spec 58, pending the click-test A4-38 to A4-42: TW-187 (F56), TW-186 and TW-194 (F57), TW-192 (F58, replaces Q-58) and TW-193 (F59, replaces Q-59), TW-192 and TW-193 also pending run 33; closed: Q-61 (measured, tag per tool in F57), the TW-175 rest (measured, equal) and the runner item TW-174 (R-29); closed by run 32: TW-189 (Enter with a group; fixed in F55 and confirmed, pending the click-test), the runner items TW-190 and TW-191 (runner R-28) and Q-60 (runner matter); TW-188 closed by run 31 (runner matter); TW-179 fixed by runner R-27 (host bug: plain named keys were sent as their last letter); fixed on 21 Oct 2026 pending the click-test: batch 4 (TW-180 to TW-184, TW-175, in v0.2.6) and the RE-24 rules TW-173 (confirmed by run 31), TW-176 to TW-178 (F53a/F53b after v0.2.6); TW-151, TW-160 to TW-162 and TW-168 to TW-172 awaiting the click-test and the macOS re-test; TW-146 rest and TW-165 are click-test item A1-19 · 5 deferred rows, 1 open (BA-101, PSD stroke only) · 20 informational · 850+ closed |
+| Open findings | 41 fixable rows, 4 open: TW-195 (real deviation from run 33: the Arrow Line's own stroke in `tool-autoshapes`), the runner item TW-196 (state after a reference restart in the middle of a unit), the question Q-63 (tool stroke attributes carried between steps and units) and Q-62 (rules derived from plain-key runs before R-27, to re-measure), plus the unmeasured rests noted in TW-186, TW-193 and Q-61 (TW-185, the Tool Properties tab, declined on 21 Oct 2026); fixed on the evening of 21 Oct 2026 after RE spec 58, pending the click-test A4-38 to A4-42: TW-187 (F56), TW-186 and TW-194 (F57), TW-192 (F58, replaces Q-58) and TW-193 (F59, replaces Q-59), TW-192 (colours), TW-193 and TW-194 confirmed by full run 33; closed: Q-61 (measured, tag per tool in F57), the TW-175 rest (measured, equal) and the runner item TW-174 (R-29, confirmed by run 33); closed by run 32: TW-189 (Enter with a group; fixed in F55 and confirmed, pending the click-test), the runner items TW-190 and TW-191 (runner R-28) and Q-60 (runner matter); TW-188 closed by run 31 (runner matter); TW-179 fixed by runner R-27 (host bug: plain named keys were sent as their last letter); fixed on 21 Oct 2026 pending the click-test: batch 4 (TW-180 to TW-184, TW-175, in v0.2.6) and the RE-24 rules TW-173 (confirmed by run 31), TW-176 to TW-178 (F53a/F53b after v0.2.6); TW-151, TW-160 to TW-162 and TW-168 to TW-172 awaiting the click-test and the macOS re-test; TW-146 rest and TW-165 are click-test item A1-19 · 5 deferred rows, 1 open (BA-101, PSD stroke only) · 20 informational · 850+ closed |
 
 Unit count: 49 since 19 Oct 2026; full run 24 classified all of them, including the measurement unit
 `xs-select-behind` (9 steps); run 25 repeated 20 of them, run 26 five, run 27 three, run 28 two and run 29 three;
-full run 30 classified all 49 again, follow-up run 31 eight of them and follow-up run 32 three.
+full run 30 classified all 49 again, follow-up run 31 eight of them, follow-up run 32 three and full run 33 all 49.
 
 ## Next (in order)
 
@@ -36,18 +36,19 @@ full run 30 classified all 49 again, follow-up run 31 eight of them and follow-u
 3. **Preview** `2026-10-21_05-40` (GT-1j) built with tester feedback batch 4 (FB-12 to FB-15 fixed, FB-13 done; FB-16 declined,
    TW-185) and released as pre-release v0.2.6 on 21 Oct 2026; before it preview `2026-10-20_19-06` (GT-1i)
    with JPEG 2000 and the AI batch steps, and v0.2.5 (20 Oct 2026) from the code of preview `2026-10-20_09-25`.
-4. **Full parity run 33** with runner R-29 (`6945bf79`) over all 49 units: real plain keys on the reference side for
-   all units for the first time (R-27) and a fixed reference panel layout per unit (R-29, TW-174), on the code with F56
-   to F59; then its evaluation (TW-174 confirmation, the script strokes of TW-192 in `menu-modify-a`, `menu-text`,
-   `tool-autoshapes`, `tool-path-reshape` and `xs-select-behind`, the Layers right-click of TW-193 in
-   `panel-layers-menu`). Done before it on the evening of 21 Oct 2026: measurement RE-26 (RE spec 58) and the fixes F56
-   to F59 (TW-186, TW-187, TW-192 to TW-194, Q-61) with runner R-29; the open question Q-62 (rules from plain-key runs)
-   needs a re-measurement with real keys. Follow-up run 32 done (21 Oct 2026, 08:22–08:50, 3 units: `xs-shortcuts`,
-   `xs-preferences`, `toolbox`; preview
-   `2026-10-21_08-16` from `f543d7b9` with F55, runner R-28): 49 / 0 / 0 / 0, proven 1:1 100.0 %, quota 87.2 %, canvas
-   pairs 185 / 212. TW-189 confirmed (Enter keeps a selected group in both programs); TW-190, TW-191 and Q-60 closed by
-   runner R-28 (Q-60's product evidence: the F55 UI test `q60_pref_category_click`). Before it, follow-up run 31 (8 units,
-   preview `2026-10-21_06-27`): TW-173 confirmed, TW-188 closed; TW-176 and TW-177 are not reached by any step.
+4. **After full parity run 33** (21/22 Oct 2026, all 49 units, preview `2026-10-21_21-47` from `6ebdc374` with F53,
+   F55 and F56 to F60, runner R-29 with real plain keys in every unit; 48 / 1 / 0 / 0, proven 1:1 98.0 %, quota 87.1 %,
+   canvas pairs 184 / 209): TW-193, TW-194 and the runner item TW-174 are confirmed, TW-192 for the colours. Next:
+   measure in the reference which auto shapes set their own stroke and fix **TW-195** (the reference draws the Arrow
+   Line black while the tool stroke is red; Firepixel draws it red and keeps the red for the rest of `tool-autoshapes`);
+   a runner change for **TW-196** (re-apply the unit-start state, dock mode, `MaxUndos`, default colours and text tool,
+   after every reference restart) and for **Q-63** (log `dom.pathAttributes` and set fixed tool stroke attributes at
+   unit start); then a follow-up run over `tool-autoshapes`, `xs-select-behind`, `tool-path-reshape`, `tool-web`,
+   `toolbox`, `xs-canvas` and `xs-windows-tabs`. Q-62 (rules from plain-key runs) needs a re-measurement with real keys;
+   TW-176, TW-177, TW-186 and TW-187 are not reached by any step and stay with the click-test. Before it: follow-up run
+   32 (21 Oct 2026, 3 units, preview `2026-10-21_08-16`, runner R-28; 49 / 0 / 0 / 0) confirmed TW-189 and closed
+   TW-190, TW-191 and Q-60, follow-up run 31 (8 units, preview `2026-10-21_06-27`) confirmed TW-173 and closed TW-188,
+   and on the evening of 21 Oct 2026 measurement RE-26 (RE spec 58) led to the fixes F56 to F60 and runner R-29.
 5. **After full parity run 30** (20/21 Oct 2026, all 49 units, preview `2026-10-20_19-06`; 48 / 1 / 0 / 0, proven
    1:1 98.0 %, quota 87.2 %, canvas pairs 185 / 212): TW-173 (the reference repeats a clone with Ctrl+Y when nothing
    was undone) is fixed (F53a, after RE spec 55 §7) and confirmed by run 31; the runner item TW-174 is fixed by R-29 and the
@@ -64,9 +65,15 @@ full run 30 classified all 49 again, follow-up run 31 eight of them and follow-u
 - Evening of 21 Oct 2026 (RE-26, RE spec 58): fixed and waiting for the click-test A4-38 to A4-42 are TW-186 (swap
   colours with a selection), TW-187 (point-drag threshold 3·√zoom), TW-194 (the Marquee's Escape keeps the bitmap
   selected; was TW-04), TW-192 (script shapes and tool attributes; was Q-58) and TW-193 (Layers right-click; was
-  Q-59), the last two also waiting for run 33; Q-61 is closed as measured (tag per tool), the TW-175 rest is equal and
-  the runner item TW-174 is fixed by R-29. Open: Q-62 (rules derived from plain-key runs before R-27, DOC-27) and
-  the unmeasured rests of TW-186, TW-193 and Q-61.
+  Q-59); full run 33 confirmed TW-193, TW-194 and TW-192 for the colours; Q-61 is closed as measured (tag per tool),
+  the TW-175 rest is equal and the runner item TW-174 is fixed by R-29 and confirmed by run 33. Open: Q-62 (rules
+  derived from plain-key runs before R-27, DOC-27) and the unmeasured rests of TW-186, TW-193 and Q-61.
+- From full run 33: TW-195 (real deviation, `tool-autoshapes`: the reference draws the Arrow Line with a black stroke
+  while the tool stroke is red and its tool stroke follows back to black; Firepixel draws it red and keeps the red),
+  the runner item TW-196 (after a reference restart in the middle of a unit the dock, tool colours and `MaxUndos` come
+  from the reference's stored profile until the next unit start) and the question Q-63 (tool stroke attributes carried
+  between steps and units: the script rectangle of `xs-select-behind`, the tool fill after a path with fill none, the
+  tool colours after Insert ▸ Hotspot from selection).
 - Closed by follow-up run 32: TW-189 (fixed in F55 and confirmed: Enter on the canvas keeps a selected group in both
   programs), Q-60 (runner matter: the runner's click hit the page heading, not the category row) and the runner items
   TW-190 (View ▸ Tooltips off in Firepixel's shots, no tooltip over the flyouts) and TW-191 (no reference-only

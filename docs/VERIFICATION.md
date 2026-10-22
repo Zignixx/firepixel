@@ -123,10 +123,14 @@ Follow-up run 31 (21 Oct 2026, 8 units, runner R-27, preview `2026-10-21_06-27`)
 TW-188 as a runner matter and added TW-190 and TW-191 (runner) and the questions Q-60 and Q-61.
 Follow-up run 32 (21 Oct 2026, 3 units, runner R-28, preview `2026-10-21_08-16`) confirmed TW-189 (fixed in F55) and
 closed TW-190, TW-191 and Q-60 (runner matters).
-On the evening of 21 Oct 2026 runner R-29 (`6945bf79`) fixed TW-174 (fixed reference panel layout per unit); full
-run 33 is to confirm it. The product fixes of that evening (TW-186, TW-187, TW-192 to TW-194, Q-61) are click-test
-items A4-38 to A4-42.
-The open checks below come from runs 17 to 32.
+On the evening of 21 Oct 2026 runner R-29 (`6945bf79`) fixed TW-174 (fixed reference panel layout per unit). The
+product fixes of that evening (TW-186, TW-187, TW-192 to TW-194, Q-61) are click-test items A4-38 to A4-42.
+Full run 33 (21/22 Oct 2026, 49 units, runner R-29 with real plain keys in every unit, preview `2026-10-21_21-47`)
+confirmed TW-174, TW-193 and TW-194 and TW-192 for the colours, and added TW-195 (real deviation, the Arrow Line's
+stroke in `tool-autoshapes`), the runner item TW-196 (the reference's state after a restart in the middle of a unit)
+and the question Q-63 (tool stroke attributes carried between steps and units) ([FINDINGS.md](FINDINGS.md)); TW-176,
+TW-177, TW-186 and TW-187 are not reached by any step.
+The open checks below come from runs 17 to 33.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -214,7 +218,7 @@ The open checks below come from runs 17 to 32.
   **Expected:** The unit starts and ends with the expanded default dock on the reference side; the dock width after `13` equals the one at unit start.
 - [x] **TW-173** (`menu-edit/02_redo_last_result`; fixed in F53a `d1bb1d87`) – confirmed in run 31: three R1 in both programs, the Edit menu reads the enabled "Wiederholen: Klonen" in both, and Ctrl+Y right after a redo still adds nothing (`xs-shortcuts/02, 17`). Run 30: select R1 in T04, Ctrl+Shift+D, Ctrl+Y: the reference ends with three R1 (every run since run 1), Firepixel with two since F51a (TW-170). Ctrl+Y right after a redo adds nothing in either program (`xs-shortcuts/02`).
   **Expected:** Ctrl+Y with an empty redo stack repeats a repeatable last command (here the Clone) as in the reference; the redo-only cases of TW-170 stay equal.
-- [ ] **TW-174** (`panel-layers/04`, `panel-swatches-mixer/19`; runner R-29 `6945bf79`) – fixed by R-29, to be confirmed in full run 33: the reference's right dock is set per unit (icon mode for the panel units, flyouts dragged back to the measured sizes); verified in a test: `04` hides both layers and `19` reads #efffbf on both sides. Run 30: the reference's docked panels had other sizes than in runs 24 and 25 (Layers panel shot 270 × 113 px, was 245 × 389), so its eye drag left two layers visible and swatch 5 read #ffffbf instead of #efffbf; Firepixel unchanged.
+- [x] **TW-174** (`panel-layers/04`, `panel-swatches-mixer/19`; runner R-29 `6945bf79`) – confirmed in full run 33: `04` hides both layers and `19` reads #efffbf on both sides, and the panel pairs are back at the run 24/25 values (Layers 55.6–67.8 %, Pages and States 44.4–55.6 %); 20 of 21 flyouts opened at the wanted size and one was dragged back. After a reference restart in the middle of a unit the dock comes back collapsed until the next unit start (TW-196, runner). Fixed by R-29: the reference's right dock is set per unit (icon mode for the panel units, flyouts dragged back to the measured sizes); verified in a test: `04` hides both layers and `19` reads #efffbf on both sides. Run 30: the reference's docked panels had other sizes than in runs 24 and 25 (Layers panel shot 270 × 113 px, was 245 × 389), so its eye drag left two layers visible and swatch 5 read #ffffbf instead of #efffbf; Firepixel unchanged.
   **Expected:** The reference starts each panel unit with a fixed panel layout; both steps read the same rows as in run 25.
 - [x] **TW-189** (`xs-shortcuts/22_enter_canvas_result`; fixed in F55 `f543d7b9`) – confirmed in run 32: Enter keeps the group selected in both programs (`[object Group]` on both sides). R-27 test run and run 31: with the group G of T06 selected, Enter keeps the group selected in the reference (`[object Group]`); Firepixel reads no selection.
   **Expected:** Enter on the canvas leaves the selection unchanged; both read `[object Group]`.
