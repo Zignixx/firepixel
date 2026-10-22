@@ -82,7 +82,8 @@ pub struct Fill {
     pub feather: i32,
     /// Stempelmodus (`FSMi`): 1 = blend, 2 = blend opaque.
     pub stamping_mode: i32,
-    /// Kante (`FETi`): 0 hart, 1 kantengeglättet, 2 weiche Kante.
+    /// Kante (`FETi`): 0 hart, 1 kantengeglättet, 2 weiche Kante; 3 = Dither
+    /// ([`Fill::EDGE_DITHER`], Firepixel extension; `feather` holds its width).
     pub edge: i32,
     /// `FRDb` (Dither-Flag, nicht gerendert).
     pub dither: bool,
@@ -110,6 +111,23 @@ pub struct Fill {
 }
 
 impl Fill {
+    /// Edge kind "hard" (`FETi` 0).
+    pub const EDGE_HARD: i32 = 0;
+    /// Edge kind "anti-alias" (`FETi` 1).
+    pub const EDGE_ANTIALIAS: i32 = 1;
+    /// Edge kind "feather" (`FETi` 2, width in `feather`).
+    pub const EDGE_FEATHER: i32 = 2;
+    /// Edge kind "dither" (Firepixel extension, FB-23): the feather ramp of width `feather`
+    /// quantised to fully on/off pixels by an ordered 8 × 8 threshold on document pixels. In
+    /// FW-PNG it is stored as a feather (`FETi` 2, `FEFi` = width; `FETi` 0 at width 0) plus the
+    /// Firepixel-own marker `fpEi` = 3, so other readers show a feathered (or hard) edge.
+    pub const EDGE_DITHER: i32 = 3;
+
+    /// Does the edge kind use the width in `feather` (feather and dither)?
+    pub fn edge_uses_amount(edge: i32) -> bool {
+        edge == Self::EDGE_FEATHER || edge == Self::EDGE_DITHER
+    }
+
     /// Vollfarbige, kantengeglättete Füllung mit Original-Vorgaben (`fc_Solid`, Stempelmodus 1).
     pub fn solid() -> Fill {
         Fill {

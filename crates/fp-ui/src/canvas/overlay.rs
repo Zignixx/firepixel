@@ -302,8 +302,8 @@ pub fn attrs_params(ta: &crate::inspector::obj_quads::ToolAttrs) -> (Option<Valu
             _ => json!({"category": "solid"}),
         };
         if ta.fill_kind != 0 {
-            f["edge"] = json!(ta.edge.clamp(0, 2));
-            if ta.edge == 2 {
+            f["edge"] = json!(ta.edge.clamp(0, 3));
+            if fp_model::Fill::edge_uses_amount(ta.edge) {
                 f["feather"] = json!(ta.feather.clamp(0, 100));
             }
             if !fill_texture.is_empty() {

@@ -262,8 +262,39 @@ pub(super) fn rect_arr(r: [f64; 4]) -> Value {
     ])
 }
 
-/// Fill-Objekt → Füllfarbe/Verlauf auf der Auswahl.
+/// Edge mode name of a script fill (`edgeType`, `setFillEdgeMode`) → model edge code; "dither" is
+/// the Firepixel extension (FB-23).
+pub(super) fn fill_edge_code(mode: &str) -> Option<i32> {
+    match mode.trim().to_ascii_lowercase().as_str() {
+        "hard" => Some(fp_model::Fill::EDGE_HARD),
+        "antialias" | "antialiased" | "anti-alias" => Some(fp_model::Fill::EDGE_ANTIALIAS),
+        "feather" | "feathered" => Some(fp_model::Fill::EDGE_FEATHER),
+        "dither" | "dithered" => Some(fp_model::Fill::EDGE_DITHER),
+        _ => None,
+    }
+}
+
+/// Fill-Objekt → Füllfarbe/Verlauf auf der Auswahl; `edgeType: "dither"` (Firepixel extension,
+/// FB-23) also sets the dither edge with the object's `feather` as its width.
 fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
+    apply_fill_colors(doc, fill, color)?;
+    if fill
+        .get("edgeType")
+        .and_then(|v| v.as_str())
+        .and_then(fill_edge_code)
+        == Some(fp_model::Fill::EDGE_DITHER)
+    {
+        let amount = fill.get("feather").and_then(|v| v.as_i64()).unwrap_or(0);
+        on_selection(
+            doc,
+            "pi.fill",
+            json!({"edge": fp_model::Fill::EDGE_DITHER, "feather": amount.clamp(0, 100)}),
+        )?;
+    }
+    Ok(())
+}
+
+fn apply_fill_colors(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
     let sel = selection(doc)?;
     if fill.is_null() {
         edit_tool_style(|st| st.new_fill = Some(json!({"category": "none"})))?;
@@ -1356,7 +1387,19 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             }
             u()
         }
-        "setFillEdgeMode" | "setFillPlacement" | "setDefaultFillVector" => u(),
+        // edge of the selection's fill: "hard", "antialias(ed)", "feather" (width `featherAmt`) and
+        // the Firepixel extension "dither" (FB-23, width `featherAmt`); other modes do nothing
+        "setFillEdgeMode" => {
+            if let Some(edge) = fill_edge_code(&arg_str(args, 0)) {
+                let mut p = json!({"edge": edge});
+                if fp_model::Fill::edge_uses_amount(edge) {
+                    p["feather"] = json!(a(1).i64().clamp(0, 100));
+                }
+                on_selection(doc, "pi.fill", p)?;
+            }
+            u()
+        }
+        "setFillPlacement" | "setDefaultFillVector" => u(),
         "setBrush" => {
             apply_brush(doc, &a(0).json(), None)?;
             u()

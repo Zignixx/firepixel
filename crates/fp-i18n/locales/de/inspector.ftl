@@ -141,6 +141,7 @@ pi-edge-hard = Hart
 pi-edge-antialias = Anti-Alias
 pi-edge-feather-short = Weiche Kte.
 pi-edge-feather = Weiche Kante
+pi-edge-dither = Dither
 pi-texture-transparent = Transparent
 pi-texture-other = Andere...
 pi-texture-pick-title = Textur wählen

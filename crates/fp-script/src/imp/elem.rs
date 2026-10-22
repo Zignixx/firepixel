@@ -126,9 +126,11 @@ fn fill_json(f: &fp_model::Fill) -> Value {
         "fc_WebDither" => "web dither",
         _ => "solid",
     };
-    // wie das Original: eine weiche Kante meldet „antialiased“ mit `feather` > 0 (PAR 18/11)
+    // wie das Original: eine weiche Kante meldet „antialiased“ mit `feather` > 0 (PAR 18/11);
+    // the dither edge (Firepixel extension, FB-23) reports "dither" with its width in `feather`
     let edge = match f.edge {
         0 => "hard",
+        fp_model::Fill::EDGE_DITHER => "dither",
         _ => "antialiased",
     };
     let gradient = f.gradient.as_ref().map(|g| {

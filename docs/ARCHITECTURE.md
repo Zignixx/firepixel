@@ -109,6 +109,14 @@ tag tree onto `fp-model` and back. Files written by Firepixel identify themselve
 ("Firepixel r2" since the symbol-origin change; older Firepixel files are converted on load). Files from the
 reference application are read and written without conversion.
 
+Firepixel-own data uses tags that start with a lower-case letter (the reference format's tags never do), so they
+cannot clash with a tag of the original, and other readers ignore them:
+
+| Tag | Where | Meaning |
+|---|---|---|
+| `fpSv` | `EXPv` | CSS sprite export options and the HTML default ALT text |
+| `fpEi` | fill `FPLv` | `3` = **Dither edge** (FB-23). The fill is written as a feather (`FETi` 2, `FEFi` = width; `FETi` 0 at width 0) and read back as dither (model `Fill.edge` 3, width in `feather`) only when the marker is present; a reader without it shows the feather (or hard) edge |
+
 Other formats: see `fp-io` (import) and `fp-export` (export). Only pure-Rust crates or statically linked C
 libraries are used; no DLLs ship next to the executable.
 

@@ -98,6 +98,50 @@ pub fn feather(big: &Coverage, r: u32, window: IRect) -> Coverage {
     out
 }
 
+/// Bayer 8 × 8 threshold matrix (values 0..63), indexed `[y & 7][x & 7]`.
+const BAYER8: [[u8; 8]; 8] = [
+    [0, 32, 8, 40, 2, 34, 10, 42],
+    [48, 16, 56, 24, 50, 18, 58, 26],
+    [12, 44, 4, 36, 14, 46, 6, 38],
+    [60, 28, 52, 20, 62, 30, 54, 22],
+    [3, 35, 11, 43, 1, 33, 9, 41],
+    [51, 19, 59, 27, 49, 17, 57, 25],
+    [15, 47, 7, 39, 13, 45, 5, 37],
+    [63, 31, 55, 23, 61, 29, 53, 21],
+];
+
+/// Is coverage `c` (0..255) at document pixel (x, y) on under the ordered dither?
+/// On when `c / 255 > (B + 0.5) / 64`: 0 is always off, 255 always on, and a flat coverage `c`
+/// turns on about `c / 255` of every 8 × 8 block.
+#[inline]
+pub fn dither_on(c: u8, x: i32, y: i32) -> bool {
+    let b = BAYER8[y.rem_euclid(8) as usize][x.rem_euclid(8) as usize] as u32;
+    (c as u32) * 128 > b * 510 + 255
+}
+
+/// Dither edge (Firepixel extension, FB-23): quantises every coverage value to 0 or 255 with an
+/// ordered 8 × 8 (Bayer) threshold on **document** pixel coordinates, so the pattern is fixed to
+/// the document grid (stable under scrolling, zoom and whole-pixel moves of the window).
+pub fn ordered_dither(cov: &mut Coverage) {
+    let w = cov.width();
+    if w == 0 {
+        return;
+    }
+    let (left, top) = (cov.rect.left, cov.rect.top);
+    for (j, row) in cov.data.chunks_mut(w).enumerate() {
+        let y = top + j as i32;
+        for (i, c) in row.iter_mut().enumerate() {
+            if *c != 0 && *c != 255 {
+                *c = if dither_on(*c, left + i as i32, y) {
+                    255
+                } else {
+                    0
+                };
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

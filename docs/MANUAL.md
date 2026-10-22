@@ -321,6 +321,14 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   flush left with its arrow, with the thumb of the current value under the point where you pressed; near the
   window edge it is moved just enough to stay inside (the first drag then sets the value under the pointer).
 
+- **Fill edge:** *Hard*, *Anti-Alias*, *Feather* and *Dither*. Feather and Dither use the width field next to the
+  list (a new Feather or Dither edge starts at 10 px). *Dither* gives a retro pixel-art edge: the same transition as
+  a feather of that width, but every pixel is either fully on or off, scattered by a fixed 8 × 8 dither pattern that
+  is anchored to the document pixels (it does not shimmer when you scroll, zoom or move an object by whole pixels).
+  Width 0 is a hard edge; the fill's own opacity still applies. Dither is a Firepixel extension; the reference's
+  Hard, Anti-Alias and Feather edges stay as they are. In a `.fw.png` file a dither edge is stored as a feather of
+  the same width plus a Firepixel marker, so other programs show a feathered edge.
+
 - **Live Filters (+):** the “+” menu groups the effects as in the original, e.g. *Bevel and Emboss* ▸
   *Inner Bevel*, *Outer Bevel*, *Inset Emboss*, *Raised Emboss*. The kind is part of the menu item;
   the dialog has no separate field for it. Double-click an entry in the filter list to open its settings.

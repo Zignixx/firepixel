@@ -147,6 +147,11 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     `element.setTexture {name | image, target?: "fill"|"stroke", amount?, ids?}` (without `name` and `image`: remove the texture),
     `element.setPattern {name | image, ids?}`, `pi.fill {pattern}` or `pi.fill {texture, textureAmount?}` on the selection
     (no selection: the tool's default); an unknown name → error message
+  * Fill edge: `pi.fill {edge, feather?}` with `edge` 0 hard, 1 anti-alias, 2 feather, 3 dither (Firepixel
+    extension: the feather ramp of width `feather` as an ordered 8 × 8 dither on document pixels, only fully on/off
+    pixels; width 0 = hard). Scripts: `pathAttributes.fill.edgeType` reads `"dither"` (width in `feather`),
+    `dom.setFillEdgeMode("dither", width)` (also `"hard"`, `"antialias"`, `"feather"`) and `setFill` with
+    `edgeType: "dither"` set it on the selection
   * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Paint Bucket),
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Gradient tool; `fillSelection`
     default `true` = fill the pixel selection or the whole bitmap, `false` = contiguous color area at the

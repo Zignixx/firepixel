@@ -184,13 +184,24 @@ pub enum FillEdge {
     AntiAliased,
     /// Weiche Kante (`FETi = 1`, `FEFi = r > 0`): Dreiecksfilter mit Radius r (höchstens 1024).
     Feather(u32),
+    /// Dither edge (Firepixel extension, FB-23; model edge 3 with width `r > 0`): the feather ramp
+    /// of radius r, quantised to fully on / off by an ordered 8 × 8 threshold on document pixel
+    /// coordinates (no partial coverage). Width 0 is [`FillEdge::Hard`].
+    Dither(u32),
 }
 
 impl FillEdge {
     /// Aus `FETi`/`FEFi` (der Setter erzwingt `FEFi = 0`, wenn `FETi ≠ 1`; Referenz: `FETi ≠ 0` = AA).
+    /// The model value 3 is Firepixel's dither edge (stored in files as a feather plus a marker).
     pub fn from_tags(feti: u32, fefi: u32) -> Self {
         if feti == 0 {
             Self::Hard
+        } else if feti == 3 {
+            if fefi > 0 {
+                Self::Dither(fefi.min(1024))
+            } else {
+                Self::Hard
+            }
         } else if fefi > 0 {
             Self::Feather(fefi.min(1024))
         } else {

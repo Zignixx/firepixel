@@ -341,6 +341,15 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   bündig mit dem Pfeil, der Regler beim aktuellen Wert unter der Stelle, an der Sie gedrückt haben; am Fensterrand
   wird er gerade so weit verschoben, dass er hineinpasst (die erste Bewegung setzt dann den Wert unter dem Zeiger).
 
+- **Rand der Füllung:** *Hart*, *Anti-Alias*, *Weiche Kante* und *Dither*. Weiche Kante und Dither nutzen das
+  Breitenfeld neben der Liste (ein neuer weicher oder Dither-Rand beginnt mit 10 px). *Dither* ergibt einen
+  Retro-Pixelrand: derselbe Übergang wie eine weiche Kante dieser Breite, aber jedes Pixel ist ganz an oder aus,
+  gestreut nach einem festen 8 × 8-Ditherraster, das an den Dokumentpixeln verankert ist (es flimmert nicht beim
+  Bildlauf, Zoomen oder Verschieben um ganze Pixel). Breite 0 ist ein harter Rand; die eigene Deckkraft der Füllung
+  gilt weiterhin. Dither ist eine Firepixel-Erweiterung; die Ränder Hart, Anti-Alias und Weiche Kante des Originals
+  bleiben unverändert. In einer `.fw.png`-Datei wird ein Dither-Rand als weiche Kante gleicher Breite mit einer
+  Firepixel-Markierung gespeichert, andere Programme zeigen also eine weiche Kante.
+
 - **Filter (+):** Das Menü „+“ gliedert die Effekte wie im Original, z. B. *Abgeflachte Kante und
   Relief* ▸ *Abgeflachte Kante innen*, *Abgeflachte Kante außen*, *Relief vertieft*, *Relief erhaben*.
   Die Art steht im Menüeintrag; der Dialog hat dafür kein eigenes Feld. Doppelklick auf einen Eintrag

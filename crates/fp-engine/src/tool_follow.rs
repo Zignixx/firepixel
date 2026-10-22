@@ -253,8 +253,8 @@ fn style_from(a: &PathAttrs, placement: i32) -> ToolStyle {
                     },
                     _ => json!({"category": "solid"}),
                 };
-                v["edge"] = json!(f.edge.clamp(0, 2));
-                if f.edge == 2 {
+                v["edge"] = json!(f.edge.clamp(0, 3));
+                if fp_model::Fill::edge_uses_amount(f.edge) {
                     v["feather"] = json!(f.feather.clamp(0, 100));
                 }
                 if let Some(t) = texture {

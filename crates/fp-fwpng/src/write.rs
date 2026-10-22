@@ -969,6 +969,12 @@ fn write_texture(t: &Texture, ctx: &mut WriteCtx) -> Vec<RawNode> {
     w.finish()
 }
 
+/// Firepixel-own edge marker in a fill `FPLv` (FB-23): `fpEi` = 3 marks the dither edge, which
+/// the file otherwise stores as a feather (`FETi` 2, `FEFi` = width; `FETi` 0 at width 0). Like
+/// [`SPRITE_EXT`] the tag starts with a lower-case letter and cannot clash with a tag of the
+/// reference format; readers that do not know it keep / drop it and show the feather.
+pub const FILL_EDGE_EXT: TagKey = k!(b"fpEi");
+
 /// Füllung `FPLv` (Kinder).
 pub fn write_fill(f: &Fill, ctx: &mut WriteCtx) -> Vec<RawNode> {
     let mut w = Wr::new(&f.extra);
@@ -979,7 +985,15 @@ pub fn write_fill(f: &Fill, ctx: &mut WriteCtx) -> Vec<RawNode> {
     w.i32_def(k!(b"FTBi"), f.texture_amount, 0, true);
     w.i32_def(k!(b"FEFi"), f.feather, 0, true);
     w.i32_def(k!(b"FSMi"), f.stamping_mode, 1, true);
-    w.i32_def(k!(b"FETi"), f.edge, 1, true);
+    // dither edge (Firepixel extension): a feather (hard at width 0) for every other reader plus
+    // the own marker `fpEi` (see `FILL_EDGE_EXT`)
+    let dither = f.edge == Fill::EDGE_DITHER;
+    let feti = match f.edge {
+        Fill::EDGE_DITHER if f.feather > 0 => Fill::EDGE_FEATHER,
+        Fill::EDGE_DITHER => Fill::EDGE_HARD,
+        e => e,
+    };
+    w.i32_def(k!(b"FETi"), feti, 1, true);
     w.bool_def(k!(b"FRDb"), f.dither, false, true);
     w.i32_def(k!(b"FRRi"), f.dither_amount, 0, true);
     w.i32_def(k!(b"FSHi"), f.shape, 0, true);
@@ -991,6 +1005,9 @@ pub fn write_fill(f: &Fill, ctx: &mut WriteCtx) -> Vec<RawNode> {
         w.int(k!(b"FD4i"), d[3]);
     }
     w.opt_bool(k!(b"FDTb"), f.transparent_dither);
+    if dither {
+        w.i32(FILL_EDGE_EXT, Fill::EDGE_DITHER);
+    }
     if let Some(g) = &f.gradient {
         w.list(k!(b"FGLv"), write_gradient(g));
     }

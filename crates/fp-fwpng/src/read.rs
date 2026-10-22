@@ -1205,6 +1205,12 @@ pub fn read_fill(v: &[RawNode], ctx: &mut ReadCtx) -> Fill {
         None
     };
     let transparent_dither = r.bool(k!(b"FDTb"));
+    // Firepixel-own dither edge marker (see `write::FILL_EDGE_EXT`): FETi/FEFi hold its feather
+    let edge = if r.i32(crate::write::FILL_EDGE_EXT) == Some(Fill::EDGE_DITHER) {
+        Fill::EDGE_DITHER
+    } else {
+        edge
+    };
     let gradient = r.list(k!(b"FGLv")).map(|g| read_gradient(g, ctx));
     let pattern = r.list(k!(b"FPTv")).map(|p| {
         let mut s = Rd::new(p);

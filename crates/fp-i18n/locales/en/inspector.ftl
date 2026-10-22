@@ -144,6 +144,7 @@ pi-edge-hard = Hard
 pi-edge-antialias = Anti-Alias
 pi-edge-feather-short = Feather
 pi-edge-feather = Feather
+pi-edge-dither = Dither
 pi-texture-transparent = Transparent
 pi-texture-other = Other...
 pi-texture-pick-title = Choose Texture

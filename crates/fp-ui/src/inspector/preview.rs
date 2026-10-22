@@ -31,7 +31,8 @@ pub enum PreviewValue {
     StrokeWidth(f64),
     /// Stroke edge softness in percent (0..100), like `pi.stroke {softness}`.
     StrokeSoftness(f64),
-    /// Fill edge feather amount (0..100), like `pi.fill {feather, edge: 2}`.
+    /// Fill edge feather / dither amount (0..100), like `pi.fill {feather, edge: 2}` (a dither
+    /// edge keeps edge 3).
     Feather(f64),
     /// Fill texture amount in percent, like `pi.fill {textureAmount}`.
     FillTextureAmount(f64),
@@ -128,7 +129,11 @@ impl InspectorPreview {
                 PreviewValue::Feather(v) => {
                     fp_engine::docops::edit_path_attrs(e, &|a| {
                         if let Some(f) = a.fill.as_mut() {
-                            f.edge = 2;
+                            // the dither edge (FB-23) keeps its kind, every other edge previews
+                            // as feather
+                            if f.edge != fp_model::Fill::EDGE_DITHER {
+                                f.edge = fp_model::Fill::EDGE_FEATHER;
+                            }
                             f.feather = pct(*v);
                         }
                     });

@@ -148,6 +148,11 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     `element.setTexture {name | image, target?: "fill"|"stroke", amount?, ids?}` (ohne `name` und `image`: Textur entfernen),
     `element.setPattern {name | image, ids?}`, `pi.fill {pattern}` bzw. `pi.fill {texture, textureAmount?}` an der Auswahl
     (ohne Auswahl: Vorgabe des Werkzeugs); unbekannter Name → Fehlermeldung
+  * Rand der Füllung: `pi.fill {edge, feather?}` mit `edge` 0 hart, 1 Anti-Alias, 2 weiche Kante, 3 Dither
+    (Firepixel-Erweiterung: der Verlauf der weichen Kante der Breite `feather` als geordnetes 8 × 8-Dither auf den
+    Dokumentpixeln, nur ganz an/aus; Breite 0 = hart). Skripte: `pathAttributes.fill.edgeType` liest `"dither"`
+    (Breite in `feather`), `dom.setFillEdgeMode("dither", breite)` (auch `"hard"`, `"antialias"`, `"feather"`) und
+    `setFill` mit `edgeType: "dither"` setzen ihn an der Auswahl
   * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Farbeimer),
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Verlauf-Werkzeug; `fillSelection`
     Vorgabe `true` = Pixelauswahl bzw. ganze Bitmap füllen, `false` = zusammenhängender Farbbereich am

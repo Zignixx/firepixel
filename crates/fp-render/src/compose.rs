@@ -1380,7 +1380,10 @@ impl Renderer {
                 let mut vp = convert::fill_only(convert::vector_path(p, &st.map));
                 if show
                     && let Some(f) = &mut vp.fill
-                    && matches!(f.edge, fp_vector::FillEdge::Feather(_))
+                    && matches!(
+                        f.edge,
+                        fp_vector::FillEdge::Feather(_) | fp_vector::FillEdge::Dither(_)
+                    )
                 {
                     f.edge = fp_vector::FillEdge::AntiAliased;
                 }

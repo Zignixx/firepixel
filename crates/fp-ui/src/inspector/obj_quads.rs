@@ -318,7 +318,13 @@ pub fn blend_index(m: BlendMode) -> Option<usize> {
     BLEND_ITEMS.iter().position(|b| b.1 == m.0 as i32)
 }
 
-const EDGE_ITEMS: [&str; 3] = ["pi-edge-hard", "pi-edge-antialias", "pi-edge-feather-short"];
+/// Fill edge kinds; the fourth, "Dither", is a Firepixel extension (FB-23).
+pub const EDGE_ITEMS: [&str; 4] = [
+    "pi-edge-hard",
+    "pi-edge-antialias",
+    "pi-edge-feather-short",
+    "pi-edge-dither",
+];
 const TARGETS: [&str; 4] = ["_blank", "_parent", "_self", "_top"];
 
 fn targets_list() -> Vec<String> {
@@ -457,7 +463,7 @@ fn apply_fill(ui: &Ui, st: &mut AppState, tgt: Target, params: Value) {
                 }
                 if let Some(v) = params.get("edge").and_then(|v| v.as_i64()) {
                     a.edge = v as i32;
-                    if v != 2 {
+                    if !fp_model::Fill::edge_uses_amount(a.edge) {
                         a.feather = 0;
                     }
                 }
@@ -885,8 +891,9 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
         }
     }
     // Rand: Hart / Anti-Alias / Weiche Kante + Breite (Verlauf-Werkzeug: immer bedienbar, es malt
-    // stets einen Verlauf)
+    // stets einen Verlauf); "Dither" (Firepixel extension, FB-23) uses the same width field
     let fen = en && (kind != 0 || gradient_tool);
+    let amount_edge = fp_model::Fill::edge_uses_amount(edge);
     fields::label(ui, d.r(0.0, 17.0, 31.0, 8.0), &t("pi-edge"), fen);
     let edge_items = tl(&EDGE_ITEMS);
     let er = d.r(33.0, 15.0, 55.0, 13.0);
@@ -895,11 +902,11 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
         id.with("edge"),
         er,
         &refs(&edge_items),
-        Some(edge.clamp(0, 2) as usize),
+        Some(edge.clamp(0, 3) as usize),
         fen,
     ) {
         let mut p = json!({"edge": i});
-        if i == 2 && feather == 0 {
+        if fp_model::Fill::edge_uses_amount(i as i32) && feather == 0 {
             p["feather"] = json!(10);
         }
         apply_fill(ui, st, tgt, p);
@@ -913,16 +920,17 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
         Some(feather as f64),
         (0.0, 100.0),
         0,
-        fen && edge == 2,
+        fen && amount_edge,
     ) {
-        apply_fill(ui, st, tgt, json!({"feather": v as i64, "edge": 2}));
+        apply_fill(ui, st, tgt, json!({"feather": v as i64, "edge": edge}));
     }
-    // live canvas preview of the dragged feather amount (FB-21, Firepixel enhancement)
+    // live canvas preview of the dragged feather / dither amount (FB-21, FB-23, Firepixel
+    // enhancement); the preview keeps the edge kind
     preview_slider(
         ui,
         st,
         id.with("feather"),
-        tgt == Target::Selection && fen && edge == 2,
+        tgt == Target::Selection && fen && amount_edge,
         PreviewValue::Feather,
     );
 }

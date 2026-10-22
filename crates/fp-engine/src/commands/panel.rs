@@ -3157,9 +3157,9 @@ pub fn register(r: &mut CommandRegistry) {
                 "edge",
                 ParamKind::Integer {
                     min: Some(0),
-                    max: Some(2),
+                    max: Some(3),
                 },
-                "Kante: 0 hart, 1 Anti-Alias, 2 weiche Kante",
+                "Kante: 0 hart, 1 Anti-Alias, 2 weiche Kante, 3 Dither (Firepixel extension)",
             )
             .opt(
                 "feather",
@@ -3167,7 +3167,7 @@ pub fn register(r: &mut CommandRegistry) {
                     min: Some(0),
                     max: Some(100),
                 },
-                "Breite der weichen Kante",
+                "Breite der weichen Kante bzw. des Dither-Übergangs",
             )
             .opt("texture", ParamKind::String, "Texturname (leer = keine)")
             .opt(
@@ -3408,17 +3408,19 @@ pub fn register(r: &mut CommandRegistry) {
                         if let Some(ed) = edge {
                             f.edge = ed;
                             // Hart/Anti-Alias: die Breite der weichen Kante gilt nicht mehr (PAR 18/11;
-                            // das Original setzt sie beim Wechsel zurück)
-                            if ed != 2 {
+                            // das Original setzt sie beim Wechsel zurück); feather and dither
+                            // (Firepixel extension, FB-23) share the width
+                            if !fp_model::Fill::edge_uses_amount(ed) {
                                 f.feather = 0;
                             }
                         }
                         if let Some(fe) = feather
-                            && edge.is_none_or(|ed| ed == 2)
+                            && edge.is_none_or(fp_model::Fill::edge_uses_amount)
                         {
                             f.feather = fe;
-                            if fe > 0 && edge.is_none() {
-                                f.edge = 2;
+                            if fe > 0 && edge.is_none() && !fp_model::Fill::edge_uses_amount(f.edge)
+                            {
+                                f.edge = fp_model::Fill::EDGE_FEATHER;
                             }
                         }
                         if let Some(t) = &tex {

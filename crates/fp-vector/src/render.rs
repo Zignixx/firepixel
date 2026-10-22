@@ -53,6 +53,12 @@ pub fn fill_mask(path: &VectorPath, edge: FillEdge, rect: IRect) -> Coverage {
             );
             feather(&big, r, rect)
         }
+        FillEdge::Dither(0) => fill_mask(path, FillEdge::Hard, rect),
+        FillEdge::Dither(r) => {
+            let mut m = fill_mask(path, FillEdge::Feather(r), rect);
+            crate::feather::ordered_dither(&mut m);
+            m
+        }
     }
 }
 
@@ -178,7 +184,7 @@ pub fn render_bounds(path: &VectorPath) -> Option<IRect> {
     let b = polys_bounds(&polys)?;
     let mut m = 1.0f64;
     if let Some(f) = &path.fill
-        && let FillEdge::Feather(r) = f.edge
+        && let FillEdge::Feather(r) | FillEdge::Dither(r) = f.edge
     {
         m = m.max(r.min(crate::feather::MAX_FEATHER) as f64 + 1.0);
     }
