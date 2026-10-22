@@ -917,6 +917,40 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
     ) {
         apply_fill(ui, st, tgt, json!({"feather": v as i64, "edge": 2}));
     }
+    // live canvas preview of the dragged feather amount (FB-21, Firepixel enhancement)
+    preview_slider(
+        ui,
+        st,
+        id.with("feather"),
+        tgt == Target::Selection && fen && edge == 2,
+        PreviewValue::Feather,
+    );
+}
+
+/// Live canvas preview of the pending value of the pop-up slider of the number field `field`
+/// while its thumb is moved (FB-09/FB-10, FB-21/FB-22; Firepixel enhancement, the reference only
+/// updates the field). Applies to the selection; the value itself is applied on release / close.
+fn preview_slider(
+    ui: &Ui,
+    st: &mut AppState,
+    field: Id,
+    on: bool,
+    value: impl FnOnce(f64) -> PreviewValue,
+) {
+    if on && let Some(v) = fields::slider_live(ui.ctx(), field) {
+        st.inspector_preview = InspectorPreview::for_selection(st, value(v));
+    }
+}
+
+/// Live canvas preview of a pending text slider value (FB-21/FB-22): the attribute patch of
+/// `text.applyAttributes` on the selected text objects. With the text editor open only the field
+/// shows the pending value (the marked text is not previewed).
+fn preview_text(st: &mut AppState, live: Option<f64>, patch: impl FnOnce(f64) -> Value) {
+    if st.session.text_edit_attrs().is_none()
+        && let Some(v) = live
+    {
+        st.inspector_preview = InspectorPreview::for_selection(st, PreviewValue::Text(patch(v)));
+    }
 }
 
 /// Tooltip über einem Feld (ohne eigene Klickfläche; das Feld bleibt bedienbar).
@@ -999,6 +1033,13 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
     ) {
         apply_fill(ui, st, tgt, json!({"textureAmount": v as i64}));
     }
+    preview_slider(
+        ui,
+        st,
+        id.with("amt"),
+        tgt == Target::Selection && en,
+        PreviewValue::FillTextureAmount,
+    );
     if let Some(v) = fields::checkbox(
         ui,
         id.with("tr"),
@@ -1552,7 +1593,12 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
         let col = color
             .map(|c| Color32::from_rgb(c.r(), c.g(), c.b()))
             .unwrap_or(theme.colors.icon_fg);
-        paint_edge_preview(ui, pv, col, width, soft);
+        // the tip preview follows the dragged edge softness too
+        let tip_soft = fields::slider_live(ui.ctx(), id.with("soft"))
+            .filter(|_| en)
+            .map(|v| v.round() as i32)
+            .unwrap_or(soft);
+        paint_edge_preview(ui, pv, col, width, tip_soft);
     }
     if let Some(v) = fields::number(
         ui,
@@ -1566,6 +1612,14 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
     ) {
         apply_stroke(ui, st, tgt, json!({"softness": v as i64}));
     }
+    // live canvas preview of the dragged edge softness (FB-21, Firepixel enhancement)
+    preview_slider(
+        ui,
+        st,
+        id.with("soft"),
+        tgt == Target::Selection && en && has,
+        PreviewValue::StrokeSoftness,
+    );
 }
 
 /// Teilfeld „Strichtextur“ (14103).
@@ -1621,6 +1675,13 @@ pub fn stroke_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, 
     ) {
         apply_stroke(ui, st, tgt, json!({"textureAmount": v as i64}));
     }
+    preview_slider(
+        ui,
+        st,
+        id.with("amt"),
+        tgt == Target::Selection && en,
+        PreviewValue::StrokeTextureAmount,
+    );
 }
 
 /// „Pinselstrich bearbeiten“ + Speichern/Löschen (Zeile unter der Strichtextur).
@@ -3273,6 +3334,9 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     if let Some(s) = size {
         set_text(ui, st, tgt, json!({"size": s}));
     }
+    // live canvas preview of the dragged size (FB-21, Firepixel enhancement)
+    let live = ui.data(|dd| dd.get_temp::<f64>(id.with("size-arrow").with("val")));
+    preview_text(st, live.filter(|_| en), |s| json!({"size": s}));
     if let Some(ColorChoice::Color(c)) = popups::color_button(
         ui,
         id.with("color"),
@@ -3304,6 +3368,8 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     ) {
         set_text(ui, st, tgt, json!({"tracking": x}));
     }
+    let live = fields::slider_live(ui.ctx(), id.with("track")).filter(|_| en);
+    preview_text(st, live, |x| json!({"tracking": x}));
     super::glyphs::paint(
         ui.painter(),
         d.r(55.0, 16.0, 12.0, 11.0),
@@ -3331,6 +3397,11 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
             json!({"leading": val, "leadingMode": v.leading_px as i64}),
         );
     }
+    let live = fields::slider_live(ui.ctx(), id.with("lead")).filter(|_| en);
+    preview_text(st, live, |x| {
+        let val = if v.leading_px { x } else { x / 100.0 };
+        json!({"leading": val, "leadingMode": v.leading_px as i64})
+    });
     if let Some(i) = fields::combo(
         ui,
         id.with("leadu"),
@@ -3527,6 +3598,8 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     ) {
         set_text(ui, st, tgt, json!({"indent": x}));
     }
+    let live = fields::slider_live(ui.ctx(), id.with("ind")).filter(|_| en);
+    preview_text(st, live, |x| json!({"indent": x}));
     super::glyphs::paint(
         ui.painter(),
         d.r(56.0, 1.0, 12.0, 11.0),
@@ -3546,6 +3619,8 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     ) {
         set_text(ui, st, tgt, json!({"spaceBefore": x}));
     }
+    let live = fields::slider_live(ui.ctx(), id.with("sb")).filter(|_| en);
+    preview_text(st, live, |x| json!({"spaceBefore": x}));
     super::glyphs::paint(
         ui.painter(),
         d.r(1.0, 16.0, 12.0, 11.0),
@@ -3556,6 +3631,10 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     if let Some(x) = hscale_field(ui, id.with("hs"), d, (v.hscale as f64 * 100.0).round(), en) {
         set_text(ui, st, tgt, json!({"horizontalScale": x / 100.0}));
     }
+    let live = ui
+        .data(|dd| dd.get_temp::<f64>(id.with("hs").with("arrow").with("val")))
+        .filter(|_| en);
+    preview_text(st, live, |x| json!({"horizontalScale": x / 100.0}));
     super::glyphs::paint(
         ui.painter(),
         d.r(56.0, 16.0, 12.0, 11.0),
@@ -3575,6 +3654,8 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     ) {
         set_text(ui, st, tgt, json!({"spaceAfter": x}));
     }
+    let live = fields::slider_live(ui.ctx(), id.with("sa")).filter(|_| en);
+    preview_text(st, live, |x| json!({"spaceAfter": x}));
     // Grundlinienverschiebung (14618) nur während der Textbearbeitung; am gewählten Textobjekt
     // liegt an derselben Stelle der Strich (Stift 14932 + Strichfarbe 14931, UX-A O7, a_302); im
     // Textwerkzeug ohne Text ist die Stelle leer (a_133)

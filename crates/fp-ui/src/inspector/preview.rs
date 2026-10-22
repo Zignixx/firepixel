@@ -1,14 +1,19 @@
 //! Live preview of an inspector pop-up slider on the canvas (FB-09/FB-10, deliberate Firepixel
 //! enhancement over the reference, which only updates the field while the thumb moves).
 //!
-//! While the thumb of the opacity or stroke width slider is moved (drag from the arrow, or the
-//! pop-up opened by a click), the inspector stores the pending value in
+//! While the thumb of an inspector pop-up slider is moved (drag from the arrow, or the pop-up
+//! opened by a click), the inspector stores the pending value in
 //! [`AppState::inspector_preview`]. The canvas renders a **copy** of the document with that value
 //! applied to the selection ([`InspectorPreview::apply`]); the session's document, its history and
 //! its dirty flag are never touched. The preview is reset at the start of every frame and set again
 //! by the inspector only while the slider holds a pending value, so Esc, closing the pop-up, a
 //! selection change or a hidden inspector discard it without residue. The single real apply
 //! (one history step) happens through the normal command on release / close.
+//!
+//! Sliders with a preview (FB-09/FB-10, extended by FB-21/FB-22): opacity, stroke size, stroke edge
+//! softness, fill edge feather, fill and stroke texture amount, and the text fields font size,
+//! tracking, leading, indent, space before/after and horizontal scale (selected text objects; with
+//! the text editor open only the field shows the pending value).
 
 use crate::app_state::AppState;
 use fp_engine::DocId;
@@ -18,12 +23,22 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 /// Which property the preview changes.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PreviewValue {
     /// Object opacity in percent (0..100), like `element.setOpacity`.
     Opacity(f64),
     /// Stroke (brush tip) size in pixels, like `pi.stroke {width}`.
     StrokeWidth(f64),
+    /// Stroke edge softness in percent (0..100), like `pi.stroke {softness}`.
+    StrokeSoftness(f64),
+    /// Fill edge feather amount (0..100), like `pi.fill {feather, edge: 2}`.
+    Feather(f64),
+    /// Fill texture amount in percent, like `pi.fill {textureAmount}`.
+    FillTextureAmount(f64),
+    /// Stroke texture amount in percent, like `pi.stroke {textureAmount}`.
+    StrokeTextureAmount(f64),
+    /// Text attributes, the parameters of `text.applyAttributes` (e.g. `{"size": 40}`).
+    Text(serde_json::Value),
 }
 
 /// A pending slider value shown on the canvas of one document.
@@ -62,9 +77,14 @@ impl InspectorPreview {
         for id in &self.ids {
             id.0.hash(&mut h);
         }
-        match self.value {
+        match &self.value {
             PreviewValue::Opacity(v) => (0u8, v.to_bits()).hash(&mut h),
             PreviewValue::StrokeWidth(v) => (1u8, v.to_bits()).hash(&mut h),
+            PreviewValue::StrokeSoftness(v) => (2u8, v.to_bits()).hash(&mut h),
+            PreviewValue::Feather(v) => (3u8, v.to_bits()).hash(&mut h),
+            PreviewValue::FillTextureAmount(v) => (4u8, v.to_bits()).hash(&mut h),
+            PreviewValue::StrokeTextureAmount(v) => (5u8, v.to_bits()).hash(&mut h),
+            PreviewValue::Text(p) => (6u8, p.to_string()).hash(&mut h),
         }
         h.finish() | 1
     }
@@ -73,10 +93,16 @@ impl InspectorPreview {
     /// not changed; unchanged parts stay shared).
     pub fn apply(&self, doc: &Document) -> Document {
         let mut out = doc.clone();
+        if let PreviewValue::Text(p) = &self.value {
+            // same attribute patch as `text.applyAttributes` on selected text objects
+            let _ = fp_engine::commands::preview_text_attributes(&mut out, self.page, &self.ids, p);
+            return out;
+        }
+        let pct = |v: f64| v.round().clamp(0.0, 100.0) as i32;
         for &id in &self.ids {
-            let _ = fp_engine::docops::edit_by_id(&mut out, self.page, id, |e| match self.value {
+            let _ = fp_engine::docops::edit_by_id(&mut out, self.page, id, |e| match &self.value {
                 PreviewValue::Opacity(v) => {
-                    content_of(e).common.opacity = fp_color::Opacity::from_percent(v);
+                    content_of(e).common.opacity = fp_color::Opacity::from_percent(*v);
                 }
                 PreviewValue::StrokeWidth(v) => {
                     fp_engine::docops::edit_path_attrs(e, &|a| {
@@ -85,6 +111,36 @@ impl InspectorPreview {
                         }
                     });
                 }
+                PreviewValue::StrokeSoftness(v) => {
+                    fp_engine::docops::edit_path_attrs(e, &|a| {
+                        if let Some(b) = a.brush.as_mut() {
+                            b.softness = pct(*v) * 10;
+                        }
+                    });
+                }
+                PreviewValue::StrokeTextureAmount(v) => {
+                    fp_engine::docops::edit_path_attrs(e, &|a| {
+                        if let Some(b) = a.brush.as_mut() {
+                            b.texture_blend = pct(*v) * 10;
+                        }
+                    });
+                }
+                PreviewValue::Feather(v) => {
+                    fp_engine::docops::edit_path_attrs(e, &|a| {
+                        if let Some(f) = a.fill.as_mut() {
+                            f.edge = 2;
+                            f.feather = pct(*v);
+                        }
+                    });
+                }
+                PreviewValue::FillTextureAmount(v) => {
+                    fp_engine::docops::edit_path_attrs(e, &|a| {
+                        if let Some(f) = a.fill.as_mut() {
+                            f.texture_amount = pct(*v) * 10;
+                        }
+                    });
+                }
+                PreviewValue::Text(_) => {}
             });
         }
         out

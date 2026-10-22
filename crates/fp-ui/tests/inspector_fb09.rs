@@ -133,7 +133,7 @@ fn type_into(h: &mut H, field: egui::Rect, s: &str) {
 }
 
 fn preview(h: &H) -> Option<PreviewValue> {
-    st(h).inspector_preview.as_ref().map(|p| p.value)
+    st(h).inspector_preview.as_ref().map(|p| p.value.clone())
 }
 
 /// Key of the preview in the image shown on the canvas (0 = the document itself).

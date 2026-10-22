@@ -513,8 +513,9 @@ impl Session {
             },
             ui: UiState {
                 // View ▸ Tooltips persists as the preference `Tooltips` (re 58 §4); Firepixel's
-                // default is on (the reference's factory default is not known)
-                tooltips: prefs.get_bool("Tooltips", true),
+                // default is off like the measured profile (FB-17; the reference's factory
+                // default is not known, Q-61)
+                tooltips: prefs.get_bool("Tooltips", false),
                 ..UiState::default()
             },
             registry,

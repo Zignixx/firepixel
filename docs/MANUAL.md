@@ -197,7 +197,7 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   menu; when the last document closes, Firepixel returns to Standard.
 - *View ▸ Gamma 1.8* shows the canvas brighter, as on a monitor with Macintosh gamma. The document and
   the export stay unchanged.
-- *View ▸ Tooltips* (on by default, remembered as a preference) shows a small grey tag just below the
+- *View ▸ Tooltips* (off by default, remembered as a preference) shows a small grey tag just below the
   pointer over the canvas: with the Rectangle, Ellipse, Line, Polygon and Auto Shape tools the pointer
   position ("x:53 y:37") and, while a shape is drawn, its size ("w:80 h:50"); while objects are dragged
   with the Pointer their new top-left corner ("x:130 y:120"). The Pointer shows nothing on plain hover,
@@ -302,11 +302,15 @@ Important panels:
 The **Properties inspector** at the bottom shows, depending on the selection, fill, stroke,
 opacity, blending mode, Live Filters (+/−) and text or symbol settings.
 
-- **Opacity and stroke width:** while you move the thumb of the ▾ slider, the canvas previews the value live
-  (preview only). Press on the arrow and drag: the value is applied on release. Click the arrow: the slider stays
-  open and the value is applied when you click beside it or press Enter; Esc discards it. A typed value is applied
-  with Enter, Tab or a click into the document; a click on empty panel space applies nothing. Each apply is one
-  History step; an unchanged value makes none.
+- **Pop-up sliders (▾):** while you move the thumb, the canvas previews the value live (preview only) for
+  opacity, stroke size, stroke edge softness, fill edge feather, fill and stroke texture amount, and for selected
+  text objects font size, tracking, leading, indent, space before and after and horizontal scale (with the text
+  editor open only the field shows the value). Press on the arrow and drag: the value is applied on release; Esc
+  discards it. Click the arrow: the slider stays open and the value is applied when you click beside it or press
+  Enter; Esc discards it. A typed value is applied with Enter, Tab or a click into the document; a click on empty
+  panel space applies nothing. Each apply is one History step; an unchanged value makes none. The slider opens
+  flush left with its arrow, with the thumb of the current value under the point where you pressed; near the
+  window edge it is moved just enough to stay inside (the first drag then sets the value under the pointer).
 
 - **Live Filters (+):** the “+” menu groups the effects as in the original, e.g. *Bevel and Emboss* ▸
   *Inner Bevel*, *Outer Bevel*, *Inset Emboss*, *Raised Emboss*. The kind is part of the menu item;

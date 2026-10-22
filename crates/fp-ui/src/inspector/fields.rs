@@ -7,7 +7,9 @@
 
 use crate::inspector::glyphs::{self, Glyph};
 use crate::theme::Theme;
-use egui::{Align2, Color32, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
+use egui::{
+    Align2, Color32, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, pos2, vec2,
+};
 use std::hash::Hash;
 
 /// Umrechnung DLU → Pixel (11 §6: 1,5 px waagerecht, 1,625 px senkrecht).
@@ -863,8 +865,9 @@ pub const VSLIDER_PAD: f32 = 3.0;
 const VSLIDER_MARGIN: f32 = 1.0;
 
 /// Pfeilknopf ▾ mit **senkrechtem** Popup-Schieber über dem Feld (Inspektor, PARITAET_A T4): oben
-/// der größte, unten der kleinste Wert; das Popup liegt so, dass der Schieberknopf beim aktuellen
-/// Wert auf Höhe des Pfeils steht (am Fensterrand verschoben). Zwei Bedienarten wie im Original:
+/// der größte, unten der kleinste Wert; the pop-up is flush left with the arrow and the thumb of
+/// the current value lies under the press point (moved at the window edge, [`vslider_popup_pos`]).
+/// Zwei Bedienarten wie im Original:
 /// - Pfeil drücken und ziehen: Der Wert folgt dem Zeiger, Loslassen übernimmt und schließt.
 /// - Pfeil klicken: Das Popup bleibt offen. Ziehen im Schieber zeigt den Wert live im Feld, das
 ///   Popup bleibt danach offen (TW-52). Ein Klick daneben übernimmt und schließt, Esc schließt ohne
@@ -925,10 +928,18 @@ pub fn slider_arrow_vertical(
     let (min, max) = (range.0.min(range.1), range.0.max(range.1));
     let max_pos = scale.max_pos(min, max).max(1.0);
     let frac_of = |v: f64| (scale.to_pos(v, min, max) / max_pos).clamp(0.0, 1.0) as f32;
-    // Lage nach dem Wert beim Öffnen (das Popup springt beim Ziehen nicht mit)
-    let top =
-        r.center().y - (VSLIDER_MARGIN + VSLIDER_PAD + (1.0 - frac_of(value)) * VSLIDER_TRACK);
-    let left = r.center().x - VSLIDER_W / 2.0 - VSLIDER_MARGIN;
+    // Lage nach dem Wert beim Öffnen (das Popup springt beim Ziehen nicht mit): the thumb of the
+    // current value under the point where the arrow was pressed (RE spec 60 §2e)
+    let press_key = id.with("press-y");
+    if !was_open && resp.is_pointer_button_down_on() {
+        let y = ui.input(|i| i.pointer.press_origin()).map(|p| p.y);
+        ui.data_mut(|d| d.insert_temp(press_key, y.unwrap_or(r.center().y)));
+    }
+    let press_y = ui
+        .data(|d| d.get_temp::<f32>(press_key))
+        .filter(|y| (r.top()..=r.bottom()).contains(y))
+        .unwrap_or(r.center().y);
+    let pos = vslider_popup_pos(ui.ctx(), r, press_y, frac_of(value));
     let frame = egui::Frame::NONE
         .fill(c.frame_bg)
         .stroke(Stroke::new(1.0, c.menu_border))
@@ -945,8 +956,12 @@ pub fn slider_arrow_vertical(
     egui::Popup::from_toggle_button_response(&resp)
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
         .frame(frame)
-        .at_position(pos2(left, top))
+        .at_position(pos)
         .align(egui::RectAlign::BOTTOM_START)
+        // no flip to another side: egui would place the pop-up above or left of the anchor point
+        // once it knows its size and it overflows the window (FB-21c: the pop-up "jumped away"
+        // from the arrow); the position is clamped to the window in `vslider_popup_pos` instead
+        .align_alternatives(&[])
         .gap(0.0)
         .show(|ui| {
             let mut v: f64 = ui.data(|d| d.get_temp(key)).unwrap_or(value);
@@ -959,12 +974,16 @@ pub fn slider_arrow_vertical(
                 let f = (1.0 - (p.y - track_top) / VSLIDER_TRACK).clamp(0.0, 1.0) as f64;
                 scale.to_value((f * max_pos).round(), min, max)
             };
+            // egui's first frame of a pop-up is an invisible sizing pass at a provisional place:
+            // no value from it (the field and the canvas preview would flash a wrong value)
+            let sizing = ui.is_sizing_pass();
             if drag_mode && arrow_drag {
-                if let Some(p) = pointer {
+                if !sizing && let Some(p) = pointer {
                     v = value_at(p);
                     ui.data_mut(|d| d.insert_temp(key, v));
                 }
-            } else if (sresp.dragged() || sresp.drag_started() || sresp.clicked())
+            } else if !sizing
+                && (sresp.dragged() || sresp.drag_started() || sresp.clicked())
                 && let Some(p) = sresp.interact_pointer_pos()
             {
                 v = value_at(p);
@@ -999,7 +1018,8 @@ pub fn slider_arrow_vertical(
                 .add(egui::Shape::convex_polygon(pts, col, Stroke::NONE));
             sresp.widget_info(|| egui::WidgetInfo::slider(true, v, ""));
             // übernehmen und schließen: Loslassen nach dem Ziehen am Pfeil, Klick auf die Spur
-            if (drag_mode && arrow_released) || sresp.clicked() {
+            // (egui ends a drag on Esc: then the value is discarded, not applied)
+            if (drag_mode && arrow_released && !esc) || sresp.clicked() {
                 out = Some(v);
                 done = true;
                 ui.data_mut(|d| d.remove::<f64>(key));
@@ -1019,6 +1039,34 @@ pub fn slider_arrow_vertical(
         }
     }
     out
+}
+
+/// Outer size of the vertical pop-up slider (24 × 222: slider, inner margin and 1 px border).
+pub const VSLIDER_POPUP: Vec2 = vec2(
+    VSLIDER_W + 2.0 * (VSLIDER_MARGIN + 1.0),
+    VSLIDER_TRACK + 2.0 * (VSLIDER_PAD + VSLIDER_MARGIN + 1.0),
+);
+
+/// Top-left corner of the vertical pop-up slider of the arrow button `arrow` (FB-21c, measured in
+/// RE spec 60 §2e): the left edge flush with the arrow's left edge, the thumb of the current value
+/// `frac` (0 = bottom … 1 = top of the track) at the height `press_y` where the arrow was pressed.
+/// The reference moves it only at the edge of the monitor's work area; an egui pop-up cannot leave
+/// the application window, so here it is moved (never flipped) just enough to lie inside the
+/// window. The size is a constant, so the place is final before the first frame is painted.
+pub fn vslider_popup_pos(ctx: &egui::Context, arrow: Rect, press_y: f32, frac: f32) -> Pos2 {
+    let border = 1.0;
+    let top = press_y
+        - (border + VSLIDER_MARGIN + VSLIDER_PAD + (1.0 - frac.clamp(0.0, 1.0)) * VSLIDER_TRACK);
+    let left = arrow.left();
+    let screen = ctx.content_rect();
+    let max = (screen.max - VSLIDER_POPUP).max(screen.min);
+    pos2(left, top).clamp(screen.min, max)
+}
+
+/// Id of the pop-up of the slider arrow of the [`number`] field `id` (for tests: its area rect is
+/// `ctx.memory(|m| m.area_rect(id))`).
+pub fn slider_popup_id(id: impl Hash + std::fmt::Debug) -> Id {
+    Id::new(id).with("arrow").with("popup")
 }
 
 /// Pending value of the pop-up slider of the [`number`] field `id` while its thumb is moved or the

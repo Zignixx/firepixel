@@ -4379,9 +4379,9 @@
 {
 "key": "Tooltips",
 "type": "bool",
-"default": true,
+"default": false,
 "category": "Werkzeuge",
-"effect": "Ansicht > QuickInfos (Koordinatenmarke am Mauszeiger); Firepixel-Vorgabe an, Werksvorgabe des Originals nicht gemessen (Profil: aus)",
+"effect": "Ansicht > QuickInfos (Koordinatenmarke am Mauszeiger); Firepixel-Vorgabe aus wie im gemessenen Profil (FB-17), Werksvorgabe des Originals nicht gemessen",
 "dialog_page": null
 },
 {

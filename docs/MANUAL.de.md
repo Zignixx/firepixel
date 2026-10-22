@@ -207,7 +207,7 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   geschlossen, kehrt Firepixel zu Standard zurück.
 - *Ansicht ▸ Gamma 1.8* zeigt die Leinwand heller, wie auf einem Monitor mit Macintosh-Gamma. Dokument und
   Export bleiben unverändert.
-- *Ansicht ▸ QuickInfos* (Vorgabe: an, wird als Voreinstellung gemerkt) zeigt über der Leinwand dicht unter
+- *Ansicht ▸ QuickInfos* (Vorgabe: aus, wird als Voreinstellung gemerkt) zeigt über der Leinwand dicht unter
   dem Mauszeiger eine kleine graue Marke: mit Rechteck, Ellipse, Linie, Polygon und automatischen Formen die
   Zeigerposition („x:53 y:37“) und beim Aufziehen einer Form deren Größe („w:80 h:50“); beim Ziehen von
   Objekten mit dem Zeiger deren neue linke obere Ecke („x:130 y:120“). Der Zeiger zeigt beim bloßen
@@ -319,11 +319,16 @@ Wichtige Bedienfelder:
 Der **Eigenschaften-Inspektor** unten zeigt je nach Auswahl Füllung, Strich, Deckkraft,
 Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
 
-- **Deckkraft und Strichstärke:** Während Sie den Regler des ▾-Schiebers bewegen, zeigt die Arbeitsfläche den Wert
-  live als Vorschau. Auf den Pfeil drücken und ziehen: Der Wert gilt beim Loslassen. Auf den Pfeil klicken: Der
-  Schieber bleibt offen, und der Wert gilt, wenn Sie daneben klicken oder die Eingabetaste drücken; Esc verwirft ihn.
-  Ein eingetippter Wert gilt mit Eingabetaste, Tab oder einem Klick ins Dokument; ein Klick auf eine leere Stelle des
-  Bedienfelds übernimmt nichts. Jedes Übernehmen ist ein Schritt im Verlauf; ein unveränderter Wert erzeugt keinen.
+- **Popup-Schieber (▾):** Während Sie den Regler bewegen, zeigt die Arbeitsfläche den Wert live als Vorschau – bei
+  Deckkraft, Strichstärke, Kantenweichheit des Strichs, weicher Kante der Füllung, Texturmenge von Füllung und Strich
+  sowie bei gewählten Textobjekten für Schriftgröße, Laufweite, Zeilenabstand, Einzug, Abstand davor und danach und
+  horizontale Skalierung (bei offenem Texteditor zeigt nur das Feld den Wert). Auf den Pfeil drücken und ziehen: Der
+  Wert gilt beim Loslassen; Esc verwirft ihn. Auf den Pfeil klicken: Der Schieber bleibt offen, und der Wert gilt,
+  wenn Sie daneben klicken oder die Eingabetaste drücken; Esc verwirft ihn. Ein eingetippter Wert gilt mit
+  Eingabetaste, Tab oder einem Klick ins Dokument; ein Klick auf eine leere Stelle des Bedienfelds übernimmt nichts.
+  Jedes Übernehmen ist ein Schritt im Verlauf; ein unveränderter Wert erzeugt keinen. Der Schieber öffnet sich links
+  bündig mit dem Pfeil, der Regler beim aktuellen Wert unter der Stelle, an der Sie gedrückt haben; am Fensterrand
+  wird er gerade so weit verschoben, dass er hineinpasst (die erste Bewegung setzt dann den Wert unter dem Zeiger).
 
 - **Filter (+):** Das Menü „+“ gliedert die Effekte wie im Original, z. B. *Abgeflachte Kante und
   Relief* ▸ *Abgeflachte Kante innen*, *Abgeflachte Kante außen*, *Relief vertieft*, *Relief erhaben*.

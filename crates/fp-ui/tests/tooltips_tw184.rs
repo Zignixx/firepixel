@@ -175,7 +175,12 @@ fn view_tooltips_body() {
     let _ = h.state_mut().state.session.set_tool(ToolId::Pointer);
     let _ = h.state_mut().state.session.execute("view.setZoom", json!({"zoom": 1.0}));
     h.run_steps(3);
-    assert!(h.state().state.session.ui.tooltips, "default of the switch is kept (on)");
+    // FB-17: off by default (like the measured profile of the reference); switched on here
+    assert!(!h.state().state.session.ui.tooltips, "default of the switch is off (FB-17)");
+    assert!(!h.state().state.session.prefs.get_bool("Tooltips", true), "preference default off");
+    h.state_mut().state.run("view.tooltips", json!({}));
+    h.run_steps(2);
+    assert!(h.state().state.session.ui.tooltips, "switched on");
     let o = page_origin(&h);
     // Pointer, Pen, Text: nothing on hover
     for t in [ToolId::Pointer, ToolId::Pen, ToolId::Text] {
@@ -242,5 +247,8 @@ fn view_tooltips_body() {
     let mut prefs = fp_engine::Preferences::new();
     prefs.set("Tooltips", fp_engine::prefs::PrefValue::Bool(false));
     assert!(!Session::new(prefs).ui.tooltips, "stored off is read back");
-    assert!(Session::new(fp_engine::Preferences::new()).ui.tooltips, "Firepixel default on");
+    assert!(!Session::new(fp_engine::Preferences::new()).ui.tooltips, "Firepixel default off (FB-17)");
+    let mut prefs = fp_engine::Preferences::new();
+    prefs.set("Tooltips", fp_engine::prefs::PrefValue::Bool(true));
+    assert!(Session::new(prefs).ui.tooltips, "stored on is read back");
 }

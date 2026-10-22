@@ -1363,6 +1363,35 @@ fn set_attributes(s: &mut Session, p: &Params) -> Result<CommandOutput> {
     })
 }
 
+/// Live preview of a Properties inspector text slider (FB-21/FB-22): applies the attributes of a
+/// `text.applyAttributes` parameter object to the text objects `ids` on page `page` of `doc` (a copy
+/// of the document the user interface renders), exactly as the command does for selected text
+/// objects, but without a history step and without touching the `Text_*` defaults. Other elements
+/// are left as they are.
+pub fn preview_text_attributes(
+    doc: &mut fp_model::Document,
+    page: usize,
+    ids: &[fp_model::ElementId],
+    params: &serde_json::Value,
+) -> Result<()> {
+    let p = Params::new("text.applyAttributes", params.clone());
+    let a = attrs_from_params(&p)?;
+    let color = p.opt_color("color")?;
+    for &id in ids {
+        docops::edit_by_id(doc, page, id, |e| {
+            if let ElementKind::Text(t) = &mut e.kind {
+                let a2 = a.clone();
+                set_attr(t, &move |x| x.apply(&a2));
+                if let Some(c) = color {
+                    Arc::make_mut(&mut t.attrs).fill_color = c;
+                }
+                t.detach_story();
+            }
+        });
+    }
+    Ok(())
+}
+
 /// Stores text attributes as the defaults of the text tool (prefs `Text_*`, app-wide; TW-138).
 /// New text never reads `Text_FillColor` (re 50 section 2.3): its colour is the current fill colour
 /// of the text tool (`tools.options.text_color`), which `tool_color` also sets - not for a
