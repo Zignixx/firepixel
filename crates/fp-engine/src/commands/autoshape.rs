@@ -34,7 +34,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
             )
             .opt("rect", ParamKind::Rect, "Rahmen")
             .opt("at", ParamKind::Point, "Mittelpunkt (statt rect)")
-            .run(|s, p| Ok(CommandOutput::doc_with(call(s, &p.value, "insert")?))),
+            // History row "Shape" ("Form", measured, RE spec 59 section 1.2)
+            .run(|s, p| {
+                Ok(CommandOutput::doc_with(call(s, &p.value, "insert")?)
+                    .labeled(fp_i18n::t("msg-step-shape")))
+            }),
     );
     r.add(
         cmd("autoShape.dragControlPoint")

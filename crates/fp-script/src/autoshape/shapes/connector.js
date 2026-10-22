@@ -50,7 +50,9 @@ SS.run({
     }
     var n = [[a.x, a.y]].concat(knick(a, c1, c2, SS.num(cd.corner1, 0)), knick(c1, c2, b, SS.num(cd.corner2, 0)), [[b.x, b.y]]);
     var p = SS.path(el, 0);
-    SS.style(p, false, 1);
+    // no fill, the tool stroke; without a tool stroke its own black `bn_1-Pixel` 1 px (RE spec 59 section 1.3)
+    SS.style(p, false);
+    if (!p.pathAttributes.brush) SS.brush(p, "bc_Pencil", "bn_1-Pixel", 1, "#000000");
     SS.contour(el, p, n, false);
     SS.trim(el, 1);
     SS.cp(el, 0, (a.x + b.x) / 2, (a.y + b.y) / 2, "Richtung drehen", cd.mode);

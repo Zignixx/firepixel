@@ -263,7 +263,9 @@ fn none_swaps_too_with_brush_and_fill_row() {
     let a = fp_engine::docops::path_attrs_of(&el(&s, r)).expect("attrs");
     assert!(a.brush.as_ref().is_some_and(|b| b.antialiased), "anti-aliased tip");
     assert_eq!(tool_colors(&s).0, RED);
-    assert_eq!(tool_colors(&s).1.a(), 0, "toolbox fill none");
+    // toolbox fill none (RE spec 59: the tool follows the path's fill none with its stored colour)
+    assert!(s.tool_style().fill_is_none(), "toolbox fill none");
+    assert_eq!(s.tool_well_colors().1.a(), 0, "the fill well shows none");
     assert_eq!(rows(&s), n + 1);
     assert_eq!(last_label(&s), "Pinselstrich und Füllen");
     fp_i18n::set_language("en");

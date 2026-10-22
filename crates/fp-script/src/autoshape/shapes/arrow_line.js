@@ -40,13 +40,17 @@ SS.run({
   build: function (el, cd) {
     var a = { x: cd.x1, y: cd.y1 }, b = { x: cd.x2, y: cd.y2 }, s = SS.num(cd.size, 10);
     var line = SS.path(el, 0);
-    SS.style(line, false, 1);
+    // always its own stroke: black `bn_Hard Line` 1 px, not anti-aliased, no fill - whatever the tool
+    // attributes are (RE spec 59 section 1.3)
+    SS.style(line, false);
+    SS.brush(line, "bc_Basic", "bn_Hard Line", 1, "#000000");
     SS.contour(el, line, [[a.x, a.y], [b.x, b.y]], false);
     // Spitze an p, Richtung von q nach p
     function head(i, p, q, type) {
       var path = SS.path(el, i), ang = Math.atan2(p.y - q.y, p.x - q.x), c = Math.cos(ang), sn = Math.sin(ang);
       var bx = p.x - s * 0.866 * c, by = p.y - s * 0.866 * sn, nx = -sn * s / 2, ny = c * s / 2;
-      SS.style(path, false, 1);
+      SS.style(path, false);
+      SS.brush(path, "bc_Basic", "bn_Hard Line", 1, "#000000");
       var filled = type === 2 || type === 4;
       path.pathAttributes.fill = filled ? { category: "fc_Solid", name: "Solid", shape: "solid" } : null;
       if (filled) path.pathAttributes.fillColor = path.pathAttributes.brushColor;

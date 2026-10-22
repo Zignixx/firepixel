@@ -9761,6 +9761,7 @@ mod tests {
         s.execute("pi.tool.brush", json!({"sensitivity": {"PZ": 25}}))
             .expect("sens");
         let mut once = Session::default();
+        once.tools.options.new_stroke = None;
         once.execute(
             "pi.tool.brush",
             json!({"diameter": 7, "softness": 40, "angle": 30, "sensitivity": {"PZ": 25}}),

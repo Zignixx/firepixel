@@ -210,9 +210,9 @@ fn set_tool_stroke(
     }
 }
 
-/// Tool stroke "none" (`brush = null`): the stroke kind, the colour stays.
+/// Tool stroke "none" (`brush = null`): the stroke kind, the colour and the placement stay.
 fn set_tool_stroke_none(st: &mut fp_engine::ToolStyle) {
-    st.new_stroke = Some(json!({"none": true}));
+    st.new_stroke = Some(fp_engine::tool_follow::none_stroke(st.placement()));
     st.new_brush = None;
 }
 

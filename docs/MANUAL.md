@@ -218,10 +218,29 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   object, Punch and Crop in the place of the lower one (*Combine Paths*).
 - *Select ▸ Convert Marquee to Path* gives the new path fill and stroke like a newly drawn shape (colors
   from the Tools panel, fill and stroke category from the Property Inspector).
-- **New shapes take the last selected object's attributes:** selecting an object (click, marquee, script)
-  makes its fill, fill and stroke color, stroke tip, size and placement the current tool attributes (the
-  topmost of several objects counts; bitmaps leave them alone). They stay after deselecting, so the next
-  rectangle, ellipse or line looks like the object selected last. Scripts see the change after they end.
+- **New shapes take the last selected object's attributes:** selecting exactly one path or text (click,
+  marquee, script) makes its fill, fill and stroke color, stroke tip, size and placement the current tool
+  attributes; a path with the fill "none" gives the tool fill "none" with the path's own stored fill color,
+  a text gives its color as the fill, no stroke and placement outside. Groups, auto shapes, several
+  selected objects, bitmaps and web objects leave the tool attributes alone; while several objects or an
+  auto shape are selected, the color boxes of the Tools panel only show the topmost object's colors. The
+  attributes stay after deselecting, so the next rectangle, ellipse or line looks like the object selected
+  last. Scripts see the change after they end. A stroke or fill "none" shows as a white box with a red
+  diagonal.
+- The fill "none" belongs to the document: a new or opened document starts with a solid fill in the
+  current fill color, while the stroke (also "none"), its tip, size and placement carry over. After the
+  program start the tool stroke is the 1-Pixel Soft tip in the size of the preference `BrushTipSize`
+  (2 when none is stored), centred.
+- **Default Colors** (D or the button below the color boxes) sets only the colors (black stroke, white
+  fill); tip, size and placement stay. A stroke "none" becomes the 1-Pixel Soft tip, 1 px, a fill "none"
+  a solid fill.
+- **Auto shapes** take the tool attributes in full: fill (also "none"), stroke color, tip, size and
+  placement. Connector Line and Spiral never have a fill and take the tool stroke; only without a tool
+  stroke do they draw their own black 1 px line. Arrow Line always draws black Hard Line 1 px without fill,
+  Measure Tool a red Hard Line 1 px inside with a black length label, and the Measure Tool's shape is not
+  selected afterwards. Only these two change the tool attributes (Arrow Line: black Hard Line 1 px,
+  Measure Tool: red, both with fill "none"; the placement stays). Every shape is one History row "Shape";
+  Undo removes the shape but leaves the tool attributes as they are.
 - *Select ▸ Next Selection / Previous Selection* (Ctrl+Shift+Right / Left) step through the document's
   selection history: every new object selection is an entry, nothing happens at the end.
 - *Modify ▸ Symbol ▸ Edit Symbol* opens the symbol in the document's window, as large as the page and titled

@@ -80,10 +80,10 @@ SS.run({
     }
     var p0 = SS.path(el, 0);
     if (p0.__id === null || p0.__id === undefined) {
-      // offen ohne Füllung; ohne Werkzeugstrich 1 px schwarz
+      // no fill, the tool stroke; without a tool stroke its own black `bn_Soft Line` 1 px (RE spec 59 section 1.3)
       var at = p0.pathAttributes;
       at.fill = null;
-      if (!at.brush) { at.brush = { category: "bc_Pencil", name: "1-Pixel Soft", diameter: 1 }; at.brushColor = "#000000"; }
+      if (!at.brush) SS.brush(p0, "bc_Basic", "bn_Soft Line", 1, "#000000");
     }
     SS.contour(el, p0, n, !!cd.closed);
     SS.trim(el, 1);

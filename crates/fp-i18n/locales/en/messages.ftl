@@ -292,6 +292,7 @@ msg-step-contract-selection = Contract Selection
 msg-step-border-selection = Border Selection
 msg-step-smooth-selection = Smooth Selection
 msg-step-stamp = Rubber Stamp
+msg-step-shape = Shape
 msg-step-replace-color = Replace Color
 msg-step-red-eye = Red Eye Removal
 msg-step-edit-bitmap = Edit Bitmap

@@ -41,6 +41,15 @@ var SS = {
     else if (strokeWidth) a.brush = { category: "bc_Pencil", name: "1-Pixel Hard", diameter: strokeWidth };
     if (strokeColor) a.brushColor = strokeColor;
   },
+  // Own tip of a new path (Arrow Line, Measure Tool, Connector Line and Spiral, RE spec 59 section 1.5):
+  // stroke preset by internal category and name (`bc_Basic`/`bn_Hard Line` …), size and colour; the
+  // preset decides anti-aliasing. Existing paths keep the user's changes.
+  brush: function (p, category, name, diameter, color) {
+    if (p.__id !== null && p.__id !== undefined) return;
+    var a = p.pathAttributes;
+    a.brush = { category: category, name: name, diameter: diameter };
+    if (color) a.brushColor = color;
+  },
   // überzählige Pfade ab Nummer n entfernen
   trim: function (el, n) { if (el.elements.length > n) el.elements.length = n; },
 

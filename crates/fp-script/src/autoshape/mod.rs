@@ -224,8 +224,12 @@ fn color_of(v: &Value, k: &str) -> Option<fp_color::Argb> {
         .and_then(|c| hex_argb(&c))
 }
 
-/// Pfadattribute aus dem JSON (`pathAttributes`) auf vorhandene Attribute anwenden.
-fn apply_attrs(a: &mut fp_model::PathAttrs, pa: &Value) {
+/// Pfadattribute aus dem JSON (`pathAttributes`) auf vorhandene Attribute anwenden. A brush with
+/// the internal category and name of a stroke preset (`bc_Basic`/`bn_Hard Line` …) that differs
+/// from the current tip gets that preset's tip (own strokes of Arrow Line, Measure Tool, Connector
+/// Line and Spiral, RE spec 59 section 1.5); otherwise only the size changes.
+/// `brushPlacement` sets the stroke placement.
+fn apply_attrs(a: &mut fp_model::PathAttrs, placement: &mut i32, pa: &Value) {
     if !pa.is_object() {
         return;
     }
@@ -246,15 +250,36 @@ fn apply_attrs(a: &mut fp_model::PathAttrs, pa: &Value) {
                 .unwrap_or(1.0)
                 .round()
                 .max(1.0) as i32;
-            match &mut a.brush {
-                Some(br) => br.diameter = d,
-                None => a.brush = Some(fp_model::Brush::basic(d)),
+            let text = |k: &str| b.get(k).and_then(Value::as_str).unwrap_or("");
+            let (cat, name) = (text("category"), text("name"));
+            let preset = fp_engine::commands::panel::preset_index_of(cat, name)
+                .filter(|_| {
+                    a.brush
+                        .as_ref()
+                        .is_none_or(|br| br.category != cat || br.name != name)
+                })
+                .and_then(|i| fp_engine::commands::panel::BRUSH_PRESETS.get(i));
+            match (&mut a.brush, preset) {
+                (_, Some(pr)) => {
+                    a.brush = Some(fp_engine::commands::panel::preset_brush(pr.name, d))
+                }
+                (Some(br), None) => br.diameter = d,
+                (None, None) => a.brush = Some(fp_model::Brush::basic(d)),
+            }
+            if let (Some(br), Some(aa)) = (
+                &mut a.brush,
+                b.get("antiAliased").and_then(Value::as_bool),
+            ) {
+                br.antialiased = aa;
             }
         }
         _ => {}
     }
     if let Some(c) = color_of(pa, "brushColor") {
         a.stroke_color = c;
+    }
+    if let Some(pl) = pa.get("brushPlacement").and_then(Value::as_str) {
+        *placement = fp_engine::tool_follow::placement_id(pl);
     }
 }
 
@@ -304,36 +329,36 @@ fn contours_from(v: &Value) -> Vec<fp_model::element::Contour> {
         .unwrap_or_default()
 }
 
-/// Vorgabe-Attribute neuer Pfade: wie der erste vorhandene Pfad, sonst Füll-/Strichfarbe der Sitzung.
-fn template_attrs(session: &Session, base: Option<&Element>) -> fp_model::PathAttrs {
+/// Attribute neuer Pfade und ihre Strichlage: wie der erste vorhandene Pfad, sonst die
+/// Werkzeugattribute des Dokuments vollständig (`dom.pathAttributes`: Füllung samt „keine“,
+/// Strichfarbe, Spitze, Größe, Lage; RE spec 59 section 1).
+fn template_attrs(session: &Session, base: Option<&Element>) -> (fp_model::PathAttrs, i32) {
     if let Some(ElementKind::Group(g)) = base.map(|e| &e.kind) {
         for c in &g.children {
             if let ElementKind::Path(p) = &c.kind {
-                return (*p.attrs).clone();
+                return ((*p.attrs).clone(), p.stroke_placement);
             }
         }
     }
-    let mut a = fp_model::PathAttrs::solid_fill(session.tools.fill_color);
-    a.stroke_color = session.tools.stroke_color;
-    a.brush = Some(fp_model::Brush::basic(1));
-    a
+    session.tool_path_attrs()
 }
 
 fn default_attrs_json(session: &Session, base: Option<&Element>) -> Value {
-    let a = template_attrs(session, base);
+    let (a, placement) = template_attrs(session, base);
     let hex = crate::imp::elem::hex;
     json!({
         "fill": a.fill.as_ref().map(|f| json!({"category": f.category, "name": f.name, "shape": "solid"})),
         "fillColor": hex(a.fill_color),
-        "brush": a.brush.as_ref().map(|b| json!({"category": b.category, "name": b.name, "diameter": b.diameter})),
+        "brush": a.brush.as_ref().map(|b| json!({"category": b.category, "name": b.name, "diameter": b.diameter, "antiAliased": b.antialiased})),
         "brushColor": hex(a.stroke_color),
+        "brushPlacement": match placement { 0 => "inside", 2 => "outside", _ => "center" },
     })
 }
 
 /// Baut das Gruppenelement aus dem Zustand nach dem letzten Ereignis.
 fn build_group(
     doc: &mut fp_model::Document,
-    session_tpl: fp_model::PathAttrs,
+    session_tpl: (fp_model::PathAttrs, i32),
     base: Option<&Element>,
     shape_name: &str,
     script: &str,
@@ -384,12 +409,22 @@ fn build_group(
         let contours = contours_from(&pj);
         let mut e = match old {
             Some(o) if matches!(o.kind, ElementKind::Path(_)) => (**o).clone(),
-            _ => Element::new_path(&mut doc.ids, Vec::new(), session_tpl.clone()),
+            _ => {
+                let mut e = Element::new_path(&mut doc.ids, Vec::new(), session_tpl.0.clone());
+                if let ElementKind::Path(p) = &mut e.kind {
+                    p.stroke_placement = session_tpl.1;
+                }
+                e
+            }
         };
         e.cache = None;
         if let ElementKind::Path(p) = &mut e.kind {
             let mut a = (*p.attrs).clone();
-            apply_attrs(&mut a, pj.get("pathAttributes").unwrap_or(&Value::Null));
+            apply_attrs(
+                &mut a,
+                &mut p.stroke_placement,
+                pj.get("pathAttributes").unwrap_or(&Value::Null),
+            );
             p.attrs = Arc::new(a);
             p.contours = contours;
             p.polyline = None;
@@ -833,8 +868,42 @@ pub fn insert(session: &mut Session, p: &Value) -> R<Value> {
     let id = g.id;
     docops::insert_element(doc, page, frame, layer, 0, Arc::new(g))
         .ok_or_else(|| fail(fp_i18n::t("err-script-no-layer")))?;
-    d.selection.elements = vec![id];
+    // the Measure Tool's shape is not selected afterwards (measured, RE spec 59 section 1.2)
+    d.selection.elements = if def.en == MEASURE_TOOL {
+        Vec::new()
+    } else {
+        vec![id]
+    };
+    set_tool_after(session, def.en);
     Ok(json!({"id": id.0, "shape": def.en}))
+}
+
+/// English names of the two auto shapes that set the tool attributes.
+const ARROW_LINE: &str = "Arrow Line";
+const MEASURE_TOOL: &str = "Measure Tool";
+
+/// Only Arrow Line and Measure Tool change the tool attributes (their scripts set the document's
+/// stroke and fill, RE spec 59 sections 1.2 and 1.5): stroke `bn_Hard Line` 1 px (not
+/// anti-aliased) in black or red, fill none (the fill colour stays), the placement of the tool
+/// stays. Undo takes the shape back, not the tool. Every other shape leaves the tool unchanged
+/// (the new shape is a group, which the tool does not follow).
+fn set_tool_after(session: &mut Session, shape: &str) {
+    let color = match shape {
+        ARROW_LINE => fp_color::Argb(0xff00_0000),
+        MEASURE_TOOL => fp_color::Argb(0xffff_0000),
+        _ => return,
+    };
+    let cur = session.tool_style();
+    let mut a = fp_model::PathAttrs::solid_fill(cur.fill_color);
+    a.fill = None;
+    a.stroke_color = color;
+    a.brush = Some(fp_engine::commands::panel::preset_brush("bn_Hard Line", 1));
+    let st = fp_engine::tool_follow::style_of_attrs(
+        &a,
+        fp_engine::tool_follow::placement_id(cur.placement()),
+    );
+    session.set_tool_style(st);
+    session.keep_tool_change_out_of_history();
 }
 
 /// Steuerpunkt `index` von `from` nach `to` ziehen (optional über Zwischenpunkte `points`).
@@ -1118,12 +1187,13 @@ pub fn op_with_history(session: &mut Session, p: &Value) -> R<Value> {
         return op(session, p);
     }
     let label = match kind {
-        "insert" => "Automatische Form",
-        "dragControlPoint" => "Steuerpunkt ziehen",
-        _ => "Automatische Form bearbeiten",
+        // History row "Shape" ("Form", measured, RE spec 59 section 1.2)
+        "insert" => fp_i18n::t("msg-step-shape"),
+        "dragControlPoint" => "Steuerpunkt ziehen".to_string(),
+        _ => "Automatische Form bearbeiten".to_string(),
     };
     let mut out = Value::Null;
-    session.run_group(label, |s| {
+    session.run_group(&label, |s| {
         out = op(s, p)?;
         Ok(())
     })?;

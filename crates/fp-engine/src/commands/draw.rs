@@ -1922,10 +1922,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("color.defaults")
             .label("Standardfarben aktivieren")
-            .describe("Pseudo-Werkzeug 35279 (Kürzel D)")
+            .describe("Pseudo-Werkzeug 35279 (Kürzel D): nur die Farben; Spitze, Größe und Lage bleiben, ein Strich „keine“ wird 1-Pixel weich 1 px, eine Füllung „keine“ einfarbig")
             .run(|s, _| {
-                let (st, fi) = s.prefs.default_colors();
-                s.set_colors(Some(st), Some(fi));
+                s.default_tool_colors();
                 Ok(CommandOutput::session())
             }),
     );

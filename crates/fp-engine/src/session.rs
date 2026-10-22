@@ -213,6 +213,9 @@ pub struct DocumentState {
     pub flattened: bool,
     /// Auswahlverlauf für „Vorherige/Nächste Auswahl“ (Q-21).
     pub selection_history: crate::selection::SelectionHistory,
+    /// RE spec 59 section 2.3: the tool fill "none" belongs to the document; whether it was none
+    /// when this document was left (a new or opened document starts with a solid fill).
+    pub tool_fill_none: bool,
 }
 
 /// Verknüpfung einer Symbol-Bearbeitungsansicht mit ihrem Dokument („Symbol bearbeiten“,
@@ -261,6 +264,7 @@ impl DocumentState {
             symbol_edit: None,
             flattened: false,
             selection_history: Default::default(),
+            tool_fill_none: false,
         }
     }
 
@@ -463,6 +467,10 @@ pub struct Session {
     /// Q-58: counts changes of the tool attributes made by the engine (the user interface mirrors
     /// them into its inspector fields when it changes).
     pub(crate) tool_attrs_gen: u64,
+    /// RE spec 59 section 1.4: the running command changed the tool attributes as a side effect
+    /// that undo does not take back (Arrow Line, Measure Tool); the History row keeps no toolbox
+    /// colours then (see [`Session::keep_tool_change_out_of_history`]).
+    pub(crate) tool_change_unrecorded: bool,
     /// TW-139: live text view for script read-back: document whose model currently shows the open
     /// text editor's state, with the committed model to put back (see [`Session::begin_live_text_view`]).
     live_text: Option<(DocId, Arc<Document>)>,
@@ -521,6 +529,7 @@ impl Session {
             follow_hold: 0,
             follow_seen: None,
             tool_attrs_gen: 0,
+            tool_change_unrecorded: false,
             live_text: None,
             group_log: Vec::new(),
             force_step: false,
@@ -621,6 +630,7 @@ impl Session {
         if self.active != Some(i) {
             self.leave_document();
             self.active = Some(i);
+            self.enter_document_tool_fill();
             self.events
                 .push(SessionEvent::ActiveDocumentChanged(Some(id)));
         }
@@ -654,6 +664,7 @@ impl Session {
         self.leave_document();
         self.docs.push(st);
         self.active = Some(self.docs.len() - 1);
+        self.enter_document_tool_fill();
         self.events.push(SessionEvent::DocumentOpened(id));
         self.events
             .push(SessionEvent::ActiveDocumentChanged(Some(id)));
@@ -679,6 +690,7 @@ impl Session {
         } else {
             Some(i.min(self.docs.len() - 1))
         };
+        self.enter_document_tool_fill();
         self.events
             .push(SessionEvent::ActiveDocumentChanged(self.active_id()));
         Ok(())
@@ -856,6 +868,9 @@ impl Session {
         let p = Params::new(name, params);
         self.force_step = false;
         validate(info, &p)?;
+        if self.group_depth == 0 {
+            self.tool_change_unrecorded = false;
+        }
         let doc_id = self.active_id();
         let before = self.active().map(|d| d.snapshot());
         let colors_before = (self.tools.stroke_color, self.tools.fill_color);
@@ -1143,6 +1158,9 @@ impl Session {
     /// A new History row whose command changed the toolbox colours (Swap Colours, TW-186) keeps
     /// them before and after, so undo, redo and History jumps restore them like the objects.
     fn note_tool_colors(&mut self, rows_before: usize, before: (Argb, Argb)) {
+        if std::mem::take(&mut self.tool_change_unrecorded) {
+            return;
+        }
         let now = (self.tools.stroke_color, self.tools.fill_color);
         if now == before || self.history_rows() <= rows_before {
             return;
@@ -1151,6 +1169,13 @@ impl Session {
             top.before.tool_colors = Some(before);
             top.after.tool_colors = Some(now);
         }
+    }
+
+    /// The running command changes the tool attributes in a way undo does not take back (measured
+    /// for the auto shapes Arrow Line and Measure Tool, RE spec 59 section 1.4): its History row
+    /// keeps no toolbox colours, so Undo, Redo and History jumps leave the tool as it is.
+    pub fn keep_tool_change_out_of_history(&mut self) {
+        self.tool_change_unrecorded = true;
     }
 
     /// Der laufende Befehl legt auch ohne Änderung einen Verlaufsschritt an.
@@ -1166,6 +1191,9 @@ impl Session {
         f: impl FnOnce(&mut Session) -> Result<()>,
     ) -> Result<()> {
         self.end_live_text_view();
+        if self.group_depth == 0 {
+            self.tool_change_unrecorded = false;
+        }
         let doc_id = self.active_id();
         let before = self.active().map(|d| d.snapshot());
         let colors_before = (self.tools.stroke_color, self.tools.fill_color);
@@ -1580,6 +1608,7 @@ impl Session {
     fn leave_document(&mut self) {
         if self.active().is_some() {
             let _ = self.finish_tool();
+            self.note_document_tool_fill();
         }
         self.tools.machine = tools::make_machine(self.tools.active);
     }

@@ -29,7 +29,10 @@ SS.run({
     var ang = Math.atan2(b.y - a.y, b.x - a.x), c = Math.cos(ang), s = Math.sin(ang), nx = -s, ny = c;
     var gap = Math.min(20, len / 2), tick = 15, ah = 8, aw = 4;
     var p = SS.path(el, 0);
-    SS.style(p, false, 1, "#ff0000");
+    // red `bn_Hard Line` 1 px inside, no fill (RE spec 59 section 1.2)
+    SS.style(p, false);
+    SS.brush(p, "bc_Basic", "bn_Hard Line", 1, "#ff0000");
+    if (p.__id === null || p.__id === undefined) p.pathAttributes.brushPlacement = "inside";
     SS.contour(el, p, [[a.x, a.y], [a.x + c * gap, a.y + s * gap]], false);
     SS.contour(el, p, [[b.x, b.y], [b.x - c * gap, b.y - s * gap]], false);
     SS.contour(el, p, [[a.x + c * ah * 0.866 + nx * aw, a.y + s * ah * 0.866 + ny * aw], [a.x, a.y], [a.x + c * ah * 0.866 - nx * aw, a.y + s * ah * 0.866 - ny * aw]], false);
@@ -38,7 +41,7 @@ SS.run({
     SS.contour(el, p, [[b.x + nx * tick, b.y + ny * tick], [b.x - nx * tick, b.y - ny * tick]], false);
     var val = cd.units === "inch" ? Math.round(len / 72 * 100) / 100 + " Zoll" : cd.units === "cm" ? Math.round(len / 72 * 2.54 * 100) / 100 + " cm" : Math.round(len) + " px";
     var deg = Math.round(((Math.atan2(a.y - b.y, a.x - b.x) * 180 / Math.PI) % 360 + 360) % 360 * 100) / 100;
-    var t = SS.text(el, 1, val, (a.x + b.x) / 2 - val.length * 3.4, (a.y + b.y) / 2 + 4, 12, "#ff0000");
+    var t = SS.text(el, 1, val, (a.x + b.x) / 2 - val.length * 3.4, (a.y + b.y) / 2 + 4, 12, "#000000");
     t.font = "Arial";
     SS.trim(el, 2);
     var tip = "Länge: " + Math.round(len) + " px – Winkel: " + deg.toFixed(2) + "°";

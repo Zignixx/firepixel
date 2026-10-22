@@ -308,9 +308,13 @@ As in the original:
   without a selection (with a selection they also change the selected objects). `addNewRectangle`,
   `addNewRectanglePrimitive`, `addNewOval` (and `addNewPolygon`/`addNewStar`) take them exactly like the
   Rectangle/Ellipse tools; `addNewLine` takes the tool stroke and no fill, and with the tool stroke "none" a
-  1-pixel line in the tool stroke colour. The tool attributes take on those of the last selected object (the
-  topmost of several) after a command or a script is done, never inside the same script, and keep them after
-  deselecting. `filterSelection`/`filterSelectionByName` convert vectors to a bitmap without
+  1-pixel line in the tool stroke colour. The tool attributes take on those of the selected object after a command or a
+  script is done - only when exactly one path or text is selected (not groups, auto shapes, several objects,
+  bitmaps or web objects), never inside the same script - and keep them after deselecting; a path with fill
+  `null` gives fill `null` with its own `fillColor`. The fill `null` belongs to the document: a new or opened
+  document starts with a solid fill. `autoShape.insert` builds the shape from the tool attributes (Arrow Line,
+  Measure Tool, Connector Line and Spiral have their own strokes); Arrow Line and Measure Tool also set the tool
+  stroke (`bn_Hard Line` 1 px, black or red, fill `null`), and the Measure Tool's shape is not selected. `filterSelection`/`filterSelectionByName` convert vectors to a bitmap without
   asking. `convertToAnimSymbol(name, states, …)` adds no new states from a script. `importFile` into a target
   rectangle rounds the position. Text on a path: `rawLeft/rawTop/rawWidth` = the path bounds.
 

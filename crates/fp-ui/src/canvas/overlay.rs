@@ -326,7 +326,11 @@ pub fn attrs_params(ta: &crate::inspector::obj_quads::ToolAttrs) -> (Option<Valu
             .stroke_preset
             .and_then(|i| fp_engine::commands::panel::BRUSH_PRESETS.get(i))
         {
-            None => Some(json!({"none": true})),
+            None => Some(fp_engine::tool_follow::none_stroke(match ta.placement {
+                0 => "inside",
+                2 => "outside",
+                _ => "center",
+            })),
             Some(b) => {
                 let mut s = json!({
                     "preset": format!("{}/{}", b.category_de, b.name_de),
@@ -398,7 +402,15 @@ pub fn import_attrs_params(
             ta.placement = d.placement;
             ta.stroke_texture.clear();
         }
-        Some(s) if s.get("none").and_then(|x| x.as_bool()) == Some(true) => ta.stroke_preset = None,
+        Some(s) if s.get("none").and_then(|x| x.as_bool()) == Some(true) => {
+            ta.stroke_preset = None;
+            // the placement stays apart from the stroke kind (RE spec 59 section 2.2)
+            ta.placement = match s.get("placement").and_then(|x| x.as_str()) {
+                Some("inside") => 0,
+                Some("outside") => 2,
+                _ => 1,
+            };
+        }
         Some(s) => {
             if let Some(i) = text(s, "preset")
                 .and_then(|n| fp_engine::commands::panel::find_preset(&n))
@@ -437,10 +449,8 @@ fn follow_engine_tool_attrs(ctx: &egui::Context, st: &mut crate::app_state::AppS
         return;
     }
     ctx.data_mut(|d| d.insert_temp(gen_id, generation));
-    // the first frame only notes the counter (the inspector starts from its own defaults)
-    if seen.is_none() {
-        return;
-    }
+    // the first frame takes the engine's tool attributes too: the start stroke (`bn_1-Pixel
+    // Anti-Aliased` in the size `BrushTipSize`, centred, RE spec 59 section 3.2) comes from there
     let o = &st.session.tools.options;
     let (fill, stroke) = (o.new_fill.clone(), o.new_stroke.clone());
     crate::inspector::obj_quads::edit_tool_attrs(ctx, |ta| {

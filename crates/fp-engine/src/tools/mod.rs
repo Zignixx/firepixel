@@ -806,12 +806,28 @@ impl ToolOptions {
             path_precision: p.get_int("PathToolPrecision", 5).clamp(1, 10) as u32,
             opacity: 100,
             new_fill: None,
-            new_stroke: None,
+            new_stroke: start_stroke(p),
             new_brush: None,
             auto_shape: "Abgerundetes Rechteck".into(),
         }
     }
 }
+
+/// Tool stroke after the program start (RE spec 59 section 3.2, measured after a restart):
+/// `bn_1-Pixel Anti-Aliased` (`bc_Pencil`) centred, in the size of the preference `BrushTipSize`
+/// (stored value; 2 when none is stored, as in the measured profile).
+pub fn start_stroke(p: &Preferences) -> Option<Value> {
+    let size = p
+        .values
+        .get("BrushTipSize")
+        .and_then(|v| v.as_int())
+        .unwrap_or(START_TIP_SIZE)
+        .clamp(1, 1000) as i32;
+    crate::tool_follow::one_pixel_aa_stroke(size, "center")
+}
+
+/// Size of the start stroke without a stored `BrushTipSize` (RE spec 59 section 3.2).
+pub const START_TIP_SIZE: i64 = 2;
 
 /// Werkzeugattribute neuer Formen für den Zeichenbefehl `command`: Füllung (`pi.fill`), Strich
 /// (`pi.stroke`) und Pinsel; `None`, wenn nichts über die Werkzeugfarben hinaus anzuwenden ist.

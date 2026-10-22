@@ -292,6 +292,7 @@ msg-step-contract-selection = Auswahl verkleinern
 msg-step-border-selection = Rand auswählen
 msg-step-smooth-selection = Auswahl glätten
 msg-step-stamp = Stempel
+msg-step-shape = Form
 msg-step-replace-color = Farbe ersetzen
 msg-step-red-eye = Rote Augen entfernen
 msg-step-edit-bitmap = Bitmap bearbeiten

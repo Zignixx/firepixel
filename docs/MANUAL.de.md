@@ -229,11 +229,30 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Ergebnis an den Platz des oberen Objekts, Öffnen und Zuschneiden an den des unteren (*Pfade kombinieren*).
 - *Auswählen ▸ Auswahlrahmen in Pfad konvertieren* gibt dem neuen Pfad Füllung und Strich wie einer neu
   gezeichneten Form (Farben aus dem Werkzeugbedienfeld, Füll- und Strichart aus dem Inspektor).
-- **Neue Formen übernehmen die Attribute des zuletzt gewählten Objekts:** Wird ein Objekt gewählt (Klick,
-  Auswahlrahmen, Skript), werden seine Füllung, Füll- und Strichfarbe, Strichspitze, -breite und -lage zu den
-  aktuellen Werkzeugattributen (bei mehreren Objekten zählt das oberste; Bitmaps ändern nichts). Sie bleiben nach
-  dem Abwählen erhalten: Das nächste Rechteck, die nächste Ellipse oder Linie sieht aus wie das zuletzt gewählte
-  Objekt. Skripte sehen die Änderung erst nach ihrem Ende.
+- **Neue Formen übernehmen die Attribute des zuletzt gewählten Objekts:** Wird genau ein Pfad oder ein Text
+  gewählt (Klick, Auswahlrahmen, Skript), werden seine Füllung, Füll- und Strichfarbe, Strichspitze, -breite
+  und -lage zu den aktuellen Werkzeugattributen; ein Pfad mit Füllung „keine“ gibt dem Werkzeug die Füllung
+  „keine“ mit seiner eigenen gespeicherten Füllfarbe, ein Text seine Farbe als Füllung, keinen Strich und die
+  Lage außen. Gruppen, automatische Formen, mehrere gewählte Objekte, Bitmaps und Webobjekte ändern nichts;
+  während mehrere Objekte oder eine automatische Form gewählt sind, zeigen die Farbfelder des
+  Werkzeugbedienfelds nur die Farben des obersten Objekts. Die Attribute bleiben nach dem Abwählen erhalten:
+  Das nächste Rechteck, die nächste Ellipse oder Linie sieht aus wie das zuletzt gewählte Objekt. Skripte sehen
+  die Änderung erst nach ihrem Ende. Strich oder Füllung „keine“ zeigt das Farbfeld weiß mit roter Diagonale.
+- Die Füllung „keine“ gehört zum Dokument: Ein neues oder geöffnetes Dokument beginnt mit Vollfüllung in der
+  aktuellen Füllfarbe, Strich (auch „keine“), Spitze, Größe und Lage gelten weiter. Nach dem Programmstart ist
+  der Werkzeugstrich die Spitze „1-Pixel weich“ in der Größe der Voreinstellung `BrushTipSize` (2, wenn keine
+  gespeichert ist), mittig.
+- **Standardfarben** (D oder der Knopf unter den Farbfeldern) setzt nur die Farben (Strich schwarz, Füllung
+  weiß); Spitze, Größe und Lage bleiben. Ein Strich „keine“ wird „1-Pixel weich“ 1 px, eine Füllung „keine“
+  einfarbig.
+- **Automatische Formen** übernehmen die Werkzeugattribute vollständig: Füllung (auch „keine“), Strichfarbe,
+  Spitze, Größe und Lage. Verbindungslinie und Spirale haben nie eine Füllung und nehmen den Werkzeugstrich;
+  nur ohne Werkzeugstrich zeichnen sie eine eigene schwarze 1-px-Linie. Die Pfeillinie zeichnet immer
+  schwarz „Präzise Linie“ 1 px ohne Füllung, das Messwerkzeug rot „Präzise Linie“ 1 px innen mit schwarzer
+  Längenangabe; die Form des Messwerkzeugs ist danach nicht gewählt. Nur diese beiden ändern die
+  Werkzeugattribute (Pfeillinie: schwarz „Präzise Linie“ 1 px, Messwerkzeug: rot, beide mit Füllung „keine“;
+  die Lage bleibt). Jede Form ist eine Verlaufszeile „Form“; Rückgängig entfernt die Form, die
+  Werkzeugattribute bleiben.
 - *Auswählen ▸ Nächste Auswahl / Vorherige Auswahl* (Strg+Umschalt+Rechts / Links) gehen durch den
   Auswahlverlauf des Dokuments: Jede neue Objektauswahl ist ein Eintrag, am Ende passiert nichts.
 - *Modifizieren ▸ Symbol ▸ Symbol bearbeiten* öffnet das Symbol im Fenster des Dokuments, so groß wie die

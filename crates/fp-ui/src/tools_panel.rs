@@ -750,11 +750,10 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
         );
         let well =
             Rect::from_center_size(pos2(left + cell.x * 1.5, row.center().y), vec2(20.0, 18.0));
-        let argb = if is_stroke {
-            st.session.tools.stroke_color
-        } else {
-            st.session.tools.fill_color
-        };
+        // what the wells show (RE spec 59 sections 2.2 and 4): "none" as a white box with a red
+        // diagonal; during a multi-selection or a selected auto shape the topmost object's colours
+        let (shown_stroke, shown_fill) = st.session.tool_well_colors();
+        let argb = if is_stroke { shown_stroke } else { shown_fill };
         widgets::color_well(ui.painter(), well, argb_to_color(argb), theme);
         let resp = ui
             .interact(row, Id::new(("well", is_stroke)), Sense::click())
@@ -798,7 +797,15 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
             shown_col,
             footer,
         );
-        let none = fp_color::Argb(0x00ff_ffff);
+        // "none" keeps the colour (transparent): a new document gives the fill back solid in it
+        let none = fp_color::Argb(
+            if is_stroke {
+                st.session.tools.stroke_color
+            } else {
+                st.session.tools.fill_color
+            }
+            .0 & 0x00ff_ffff,
+        );
         let set = |c| {
             if is_stroke {
                 Action::SetColors {
@@ -898,24 +905,22 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
         .clicked()
         {
             match i {
-                0 => {
-                    let (s, f) = st.session.prefs.default_colors();
-                    st.push(Action::SetColors {
-                        stroke: Some(s),
-                        fill: Some(f),
-                    });
-                }
+                // Default Colours: same command as D (only the colours; a stroke or fill "none"
+                // comes back, RE spec 59 section 3.3)
+                0 => st.push(Action::Run("color.defaults".into(), json!({}))),
                 1 => {
-                    let none = fp_color::Argb(0x00ff_ffff);
+                    // "none" keeps the colour (transparent), see the wells above
+                    let none = |c: fp_color::Argb| fp_color::Argb(c.0 & 0x00ff_ffff);
+                    let (sc, fc) = (st.session.tools.stroke_color, st.session.tools.fill_color);
                     st.push(if active_well == ActiveWell::Stroke {
                         Action::SetColors {
-                            stroke: Some(none),
+                            stroke: Some(none(sc)),
                             fill: None,
                         }
                     } else {
                         Action::SetColors {
                             stroke: None,
-                            fill: Some(none),
+                            fill: Some(none(fc)),
                         }
                     });
                 }

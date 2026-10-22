@@ -1,6 +1,6 @@
 //! Q-58 (TW-192, RE spec 58 section 2.2): the tool attributes (colours of the tools panel, the
-//! inspector's tool fill / stroke / brush) take on those of the topmost selected object once the
-//! command that changed the selection is done - not inside a command group or a running script -
+//! inspector's tool fill / stroke / brush) take on those of the single selected path or text once
+//! the command that changed the selection is done - not inside a command group or a running script -
 //! and keep them after deselecting.
 
 use crate::common;
@@ -72,17 +72,18 @@ fn selecting_an_object_sets_the_tool_attributes_and_deselecting_keeps_them() {
     assert_eq!(p.attrs.brush.as_ref().map(|b| b.diameter), Some(4));
 }
 
-/// Several objects: the topmost counts (R2, no stroke: the tools panel's "none").
+/// Several objects: the tool attributes stay (RE spec 59 section 2.4, formerly the topmost counted);
+/// the toolbox wells show the topmost one (R2, no stroke: "none").
 #[test]
-fn several_selected_take_the_topmost() {
+fn several_selected_keep_the_tool_attributes() {
     let mut s = doc_session(200.0, 100.0);
     let (r1, r2) = two_rects(&mut s);
+    select(&mut s, &[r1]);
     select(&mut s, &[r1, r2]);
-    let st = s.tool_style();
-    assert_eq!(st.fill_color, Argb(0xff00_00ff));
-    assert!(st.stroke_is_none());
-    assert_eq!(st.new_stroke, Some(json!({"none": true})));
-    assert_eq!(st.new_brush, None);
+    assert_r1_style(&s);
+    let (stroke, fill) = s.tool_well_colors();
+    assert_eq!(fill, Argb(0xff00_00ff));
+    assert_eq!(stroke.a(), 0);
 }
 
 /// Inside a command group (one script step) nothing follows; after the group it does.
