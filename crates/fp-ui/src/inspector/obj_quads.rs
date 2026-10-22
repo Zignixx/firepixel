@@ -1846,6 +1846,18 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
             st.run("element.setBlendMode", json!({"mode": m.to_string()}));
         }
     }
+    fields::tip(
+        ui,
+        "pi-opacity",
+        d.r(11.0, 0.0, 19.0, 13.0),
+        &t("pi-tip-opacity"),
+    );
+    fields::tip(
+        ui,
+        "pi-blend",
+        d.r(43.0, 0.0, 81.0, 13.0),
+        &t("pi-tip-blend-mode"),
+    );
 }
 
 /// Deckkraft/Mischmodus eines Werkzeugs (Werkzeug-Quadranten 15012 ff.).
@@ -3283,6 +3295,8 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         crate::menu::note_recent_font(st, &ps);
         set_text(ui, st, tgt, json!({"font": ps}));
     }
+    // descriptive tooltips as measured (RE spec 60 §4); none on the arrows, glyphs and labels
+    fields::tip(ui, id.with("fam"), fam_r, &t("pi-tip-font-family"));
     let styles: Vec<String> = fams
         .iter()
         .find(|f| f.name == family)
@@ -3305,6 +3319,12 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
             json!({"font": super::fonts::ps_name(&family, srefs[i])}),
         );
     }
+    fields::tip(
+        ui,
+        id.with("style"),
+        d.r(122.0, 0.0, 77.0, 13.0),
+        &t("pi-tip-font-style"),
+    );
     // Feld nimmt 1..5000 an; der Schieber hat wie im Original 8..96 in ganzen Schritten (11 §3.5.5,
     // 09: Schieberbereiche der Text-Inspektorfelder) – vorher 1..5000 auf 130 px ≈ 38 pt je Pixel
     // senkrechter Popup-Schieber 8..96 in ganzen Schritten (Nutzerbefund N14: vorher 100er-Sprünge);
@@ -3337,6 +3357,12 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     // live canvas preview of the dragged size (FB-21, Firepixel enhancement)
     let live = ui.data(|dd| dd.get_temp::<f64>(id.with("size-arrow").with("val")));
     preview_text(st, live.filter(|_| en), |s| json!({"size": s}));
+    fields::tip(
+        ui,
+        id.with("size"),
+        d.r(202.0, 0.0, 27.0, 13.0),
+        &t("pi-tip-font-size"),
+    );
     if let Some(ColorChoice::Color(c)) = popups::color_button(
         ui,
         id.with("color"),
@@ -3370,6 +3396,12 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     }
     let live = fields::slider_live(ui.ctx(), id.with("track")).filter(|_| en);
     preview_text(st, live, |x| json!({"tracking": x}));
+    fields::tip(
+        ui,
+        id.with("track"),
+        d.r(15.0, 15.0, 27.0, 13.0),
+        &t("pi-tip-tracking"),
+    );
     super::glyphs::paint(
         ui.painter(),
         d.r(55.0, 16.0, 12.0, 11.0),
@@ -3402,6 +3434,12 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         let val = if v.leading_px { x } else { x / 100.0 };
         json!({"leading": val, "leadingMode": v.leading_px as i64})
     });
+    fields::tip(
+        ui,
+        id.with("lead"),
+        d.r(69.0, 15.0, 27.0, 13.0),
+        &t("pi-tip-leading"),
+    );
     if let Some(i) = fields::combo(
         ui,
         id.with("leadu"),
@@ -3413,6 +3451,12 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         let val = fp_engine::commands::convert_leading(v.leading, v.size, v.leading_px, i == 1);
         set_text(ui, st, tgt, json!({"leading": val, "leadingMode": i}));
     }
+    fields::tip(
+        ui,
+        id.with("leadu"),
+        d.r(109.0, 15.0, 28.0, 13.0),
+        &t("pi-tip-leading-unit"),
+    );
     if fields::toggle(
         ui,
         id.with("b"),
@@ -3551,6 +3595,7 @@ fn orientation_button(ui: &mut Ui, id: Id, r: Rect, current: i32, enabled: bool)
     let mut out = None;
     let name = t("pi-text-orientation");
     crate::ui_kit::icon_button_info(&resp, enabled, &name, None);
+    fields::log_tip(ui, r, &name);
     let resp = resp.on_hover_text(&name);
     egui::Popup::menu(&resp)
         .frame(crate::menu::menu_frame(&theme))
@@ -3600,6 +3645,12 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     }
     let live = fields::slider_live(ui.ctx(), id.with("ind")).filter(|_| en);
     preview_text(st, live, |x| json!({"indent": x}));
+    fields::tip(
+        ui,
+        id.with("ind"),
+        d.r(16.0, 1.0, 26.0, 13.0),
+        &t("pi-tip-para-indent"),
+    );
     super::glyphs::paint(
         ui.painter(),
         d.r(56.0, 1.0, 12.0, 11.0),
@@ -3621,6 +3672,12 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     }
     let live = fields::slider_live(ui.ctx(), id.with("sb")).filter(|_| en);
     preview_text(st, live, |x| json!({"spaceBefore": x}));
+    fields::tip(
+        ui,
+        id.with("sb"),
+        d.r(71.0, 1.0, 23.0, 13.0),
+        &t("pi-tip-space-before"),
+    );
     super::glyphs::paint(
         ui.painter(),
         d.r(1.0, 16.0, 12.0, 11.0),
@@ -3635,6 +3692,12 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         .data(|dd| dd.get_temp::<f64>(id.with("hs").with("arrow").with("val")))
         .filter(|_| en);
     preview_text(st, live, |x| json!({"horizontalScale": x / 100.0}));
+    fields::tip(
+        ui,
+        id.with("hs"),
+        d.r(16.0, 16.0, 26.0, 13.0),
+        &t("pi-tip-horiz-scale"),
+    );
     super::glyphs::paint(
         ui.painter(),
         d.r(56.0, 16.0, 12.0, 11.0),
@@ -3656,6 +3719,12 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     }
     let live = fields::slider_live(ui.ctx(), id.with("sa")).filter(|_| en);
     preview_text(st, live, |x| json!({"spaceAfter": x}));
+    fields::tip(
+        ui,
+        id.with("sa"),
+        d.r(71.0, 16.0, 23.0, 13.0),
+        &t("pi-tip-space-after"),
+    );
     // Grundlinienverschiebung (14618) nur während der Textbearbeitung; am gewählten Textobjekt
     // liegt an derselben Stelle der Strich (Stift 14932 + Strichfarbe 14931, UX-A O7, a_302); im
     // Textwerkzeug ohne Text ist die Stelle leer (a_133)
@@ -3708,6 +3777,12 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
             Target::Tool => st.run("text.setToolDefaults", json!({"antialias": name})),
         }
     }
+    fields::tip(
+        ui,
+        id.with("aa"),
+        d.r(165.0, 1.0, 90.0, 13.0),
+        &t("pi-tip-aa-level"),
+    );
     if let Some(off) = v.on_path {
         fields::label_right(
             ui,
@@ -3742,6 +3817,12 @@ pub fn text_row2(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
             Target::Tool => st.run("text.setToolDefaults", json!({"autoKern": b})),
         }
     }
+    fields::tip(
+        ui,
+        id.with("ak"),
+        d.r(165.0, 18.0, 100.0, 10.0),
+        &t("pi-tip-autokern"),
+    );
 }
 
 /// Strich des Textobjekts (Stift + Farbfeld) in Zeile 2: Farbe wählen legt einen Strich an

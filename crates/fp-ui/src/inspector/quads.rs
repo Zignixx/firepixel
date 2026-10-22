@@ -568,7 +568,7 @@ fn selection_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
             )
         });
         let shown = shown.unwrap_or_default();
-        if let Some(n) = fields::text(ui, "pi-objname", d.r(30.0, 14.0, 46.0, 12.0), &shown, true)
+        if let Some(n) = name_field(ui, d, &shown)
             && n != shown
         {
             st.run("pi.web", json!({"fileName": n}));
@@ -583,7 +583,7 @@ fn selection_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
     {
         let own = w.file_name.clone().filter(|f| !f.is_empty());
         let shown = own.clone().or_else(auto).unwrap_or_default();
-        if let Some(n) = fields::text(ui, "pi-objname", d.r(30.0, 14.0, 46.0, 12.0), &shown, true)
+        if let Some(n) = name_field(ui, d, &shown)
             && n != shown
         {
             st.run("pi.web", json!({"fileName": n}));
@@ -603,11 +603,19 @@ fn selection_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
         .or_else(unnamed_rect)
         .or_else(|| auto_name.clone())
         .unwrap_or_default();
-    if let Some(n) = fields::text(ui, "pi-objname", d.r(30.0, 14.0, 46.0, 12.0), &name, true)
+    if let Some(n) = name_field(ui, d, &name)
         && auto_name.as_deref() != Some(n.as_str())
     {
         st.run("element.setName", json!({"name": n}));
     }
+}
+
+/// Object name field with its descriptive tooltip "Edit object name" (RE spec 60 §4).
+fn name_field(ui: &mut Ui, d: Dl, shown: &str) -> Option<String> {
+    let r = d.r(30.0, 14.0, 46.0, 12.0);
+    let out = fields::text(ui, "pi-objname", r, shown, true);
+    fields::tip(ui, "pi-objname", r, &t("pi-tip-object-name"));
+    out
 }
 
 /// Mehrfachauswahl (14102): „n Objekte“.
@@ -718,6 +726,7 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let key = egui::Id::new("pi-box-prop");
     let prop: bool = ui.data(|dd| dd.get_temp(key)).unwrap_or(false);
     let link = d.r(-2.0, 0.0, 7.0, 27.0);
+    fields::log_tip(ui, link, &t("pi-box-keep-proportions"));
     let lresp = ui
         .interact(link, key.with("btn"), egui::Sense::click())
         .on_hover_text(t("pi-box-keep-proportions"));
@@ -795,4 +804,29 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     {
         st.run("element.setBounds", json!({"y": v}));
     }
+    // descriptive tooltips on the fields, not on the labels (RE spec 60 §4)
+    fields::tip(
+        ui,
+        "pi-box-w",
+        d.r(17.0, 1.0, 24.0, 12.0),
+        &t("pi-tip-sel-width"),
+    );
+    fields::tip(
+        ui,
+        "pi-box-h",
+        d.r(17.0, 15.0, 24.0, 12.0),
+        &t("pi-tip-sel-height"),
+    );
+    fields::tip(
+        ui,
+        "pi-box-x",
+        d.r(52.0, 1.0, 24.0, 12.0),
+        &t("pi-tip-sel-x"),
+    );
+    fields::tip(
+        ui,
+        "pi-box-y",
+        d.r(52.0, 15.0, 24.0, 12.0),
+        &t("pi-tip-sel-y"),
+    );
 }

@@ -1667,6 +1667,7 @@ pub fn icon_button(
     if tip.is_empty() {
         resp
     } else {
+        log_tip(ui, r, tip);
         resp.on_hover_text(tip)
     }
 }
@@ -1960,13 +1961,17 @@ pub fn swatch(
         ui.painter()
             .rect_stroke(r, 0.0, Stroke::new(1.0, t.colors.focus), StrokeKind::Inside);
     }
-    // Tooltip mit dem Hex-Wert wie im Original („#808080“, PAR 17/17)
-    match color {
-        Some(c) if enabled && c.a() > 0 => {
-            resp.on_hover_text(format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b()))
-        }
-        _ => resp,
+    // Tooltip mit dem Hex-Wert wie im Original („#808080“, PAR 17/17); ohne Farbe (Strich
+    // „keine“) transparentes Weiß „#FFFFFF00“ (RE spec 60 §4)
+    if !enabled {
+        return resp;
     }
+    let hex = match color {
+        Some(c) if c.a() > 0 => format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b()),
+        _ => "#FFFFFF00".to_string(),
+    };
+    log_tip(ui, r, &hex);
+    resp.on_hover_text(hex)
 }
 
 /// Descriptive tooltip over a control area (RE spec 57 §4: the inspector controls of the retouch
@@ -1984,13 +1989,20 @@ pub fn tip(ui: &Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str) {
 const TIP_LOG: &str = "pi-tip-log";
 
 /// With the layout log on ([`set_audit`]), descriptive tooltips go into a log of their own
-/// ([`take_tips`]), so the text checks of the layout log stay unchanged.
-fn log_tip(ui: &Ui, r: Rect, text: &str) {
+/// ([`take_tips`]), so the text checks of the layout log stay unchanged. Only controls inside the
+/// Properties inspector are logged (the shared buttons and colour wells of other panels are not).
+pub fn log_tip(ui: &Ui, r: Rect, text: &str) {
     if !ui
         .ctx()
         .data(|d| d.get_temp::<bool>(Id::new(AUDIT_ON)))
         .unwrap_or(false)
     {
+        return;
+    }
+    let panel = ui
+        .ctx()
+        .data(|d| d.get_temp::<(Rect, u64)>(Id::new(PANEL_RECT)));
+    if panel.is_some_and(|(p, _)| !p.contains(r.center())) {
         return;
     }
     ui.ctx().data_mut(|d| {

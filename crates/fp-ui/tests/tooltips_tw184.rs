@@ -2,6 +2,7 @@
 //! - Toolbar buttons: the command name only, no shortcut ("New", "Undo").
 //! - Tools: "Name (shortcut)" plus a second line with a one-sentence description (Firepixel extension).
 //! - Inspector of the retouch tools: descriptive tooltips ("Brush size", "Edge softness", ...), not the labels.
+//! - Text inspector and the shared name, W/H/X/Y, filter and style controls (FB-22, TW-201, RE spec 60 §4).
 //! - View ▸ Tooltips (re 58 §4): a tag next to the pointer over the canvas, only with the switch on:
 //!   shape tools show "x:… y:…" on hover and "w:… h:…" while drawing, a Pointer drag shows the
 //!   dragged object's new top-left corner, Pointer/Pen/Text show nothing on hover.
@@ -251,4 +252,142 @@ fn view_tooltips_body() {
     let mut prefs = fp_engine::Preferences::new();
     prefs.set("Tooltips", fp_engine::prefs::PrefValue::Bool(true));
     assert!(Session::new(prefs).ui.tooltips, "stored on is read back");
+}
+
+/// Tooltips of the Property Inspector with a selected text object, in drawing order.
+fn text_inspector_tips(h: &mut H) -> Vec<(String, egui::Rect)> {
+    h.run_steps(2);
+    fp_ui::inspector::fields::set_audit(&h.ctx, true);
+    let _ = fp_ui::inspector::fields::take_tips(&h.ctx);
+    h.run_steps(1);
+    let v = fp_ui::inspector::fields::take_tips(&h.ctx);
+    fp_ui::inspector::fields::set_audit(&h.ctx, false);
+    v
+}
+
+/// FB-22 / TW-201 (RE spec 60 §4): the text inspector and the shared controls (name, W/H/X/Y,
+/// filter, style) carry the measured descriptions; the colour wells show their hex value, a
+/// stroke "none" "#FFFFFF00"; nothing on the arrows, glyphs, labels and the style menu.
+#[test]
+fn text_inspector_controls_carry_the_measured_descriptions() {
+    let mut h = harness();
+    let _ = h.state_mut().state.session.set_tool(ToolId::Pointer);
+    h.state_mut()
+        .state
+        .session
+        .execute("draw.text", json!({"text": "Schieber Test", "anchor": [40, 60], "size": 24, "color": "#000000"}))
+        .expect("text");
+    let de = fp_i18n::with_language("de", || text_inspector_tips(&mut h));
+    assert_eq!(
+        texts(&de),
+        [
+            // object quadrant: name field, then lock and W/H/X/Y
+            "Objektnamen bearbeiten",
+            "Proportionen beibehalten",
+            "Auswahlbreite",
+            "Auswahlhöhe",
+            "X-Position der Auswahl",
+            "Y-Position der Auswahl",
+            // text row 1 (no tip on the size, AV and leading arrows nor on the glyphs)
+            "Schriftfamilie",
+            "Schriftstil",
+            "Größe",
+            "#000000",
+            "Unterschneidung oder Laufweite",
+            "Zeilenabstand",
+            "Einheit für Zeilenabstand",
+            "Faux Fett",
+            "Faux Kursiv",
+            "Unterstrichen",
+            "Textausrichtung festlegen",
+            "Linksbündig",
+            "Zentrieren",
+            "Rechtsbündig",
+            "Blocksatz",
+            // opacity, blend mode, filters
+            "Deckkraft",
+            "Mischmodus",
+            "Live-Filter hinzufügen oder Vorgabe wählen",
+            "Aktuell ausgewählten Live-Filter löschen",
+            // text row 2; the stroke well without stroke shows transparent white
+            "Absatzeinzug",
+            "Leerraum vor Absatz",
+            "Horizontale Skalierung",
+            "Leerraum nach Absatz",
+            "#FFFFFF00",
+            "Anti-Aliasing-Stufe",
+            "Unterschneidung von Schriftarten verwenden",
+            // style buttons (no tip on the "No Style" menu); the last two are Firepixel extras
+            "Neuer Stil",
+            "Stil neu definieren",
+            "Abweichungen löschen",
+            "Verknüpfung zu Stil aufheben",
+            "Stil löschen",
+        ]
+    );
+    let en = fp_i18n::with_language("en", || text_inspector_tips(&mut h));
+    assert_eq!(
+        texts(&en),
+        [
+            "Edit object name",
+            "Constrain proportions",
+            "Selection width",
+            "Selection height",
+            "Selection X position",
+            "Selection Y position",
+            "Font family",
+            "Font style",
+            "Size",
+            "#000000",
+            "Kerning or tracking",
+            "Leading",
+            "Leading unit",
+            "Faux Bold",
+            "Faux Italic",
+            "Underline",
+            "Set text orientation",
+            "Left align",
+            "Center",
+            "Right align",
+            "Justify",
+            "Opacity",
+            "Blending mode",
+            "Add Live Filters or choose a preset",
+            "Delete the selected Live Filter",
+            "Paragraph indent",
+            "Space before paragraph",
+            "Horizontal scale",
+            "Space after paragraph",
+            "#FFFFFF00",
+            "Anti-aliasing level",
+            "Use font kerning",
+            "New Style",
+            "Redefine Style",
+            "Clear Overrides",
+            "Break Link to Style",
+            "Delete Style",
+        ]
+    );
+    // the tip areas cover the fields only, not the slider arrows right of them
+    let av = de.iter().find(|(t, _)| t == "Unterschneidung oder Laufweite").expect("AV tip").1;
+    let size = de.iter().find(|(t, _)| t == "Größe").expect("size tip").1;
+    // (field 27 x 13 DLU; with the 9 DLU arrow it would be wider than 2.5 : 1)
+    for r in [av, size] {
+        assert!(r.width() / r.height() < 2.2, "field only: {r:?}");
+    }
+
+    // a real hover on the AV field shows the description ...
+    fp_i18n::with_language("de", || {
+        ev(&mut h, Event::PointerMoved(av.center()));
+        for _ in 0..60 {
+            h.step();
+        }
+    });
+    assert!(h.query_by_label("Unterschneidung oder Laufweite").is_some(), "tooltip shown");
+    // ... and the field underneath still takes the click
+    ev(&mut h, Event::PointerButton { pos: av.center(), button: PointerButton::Primary, pressed: true, modifiers: Default::default() });
+    ev(&mut h, Event::PointerButton { pos: av.center(), button: PointerButton::Primary, pressed: false, modifiers: Default::default() });
+    h.run_steps(2);
+    let te = egui::Id::new(egui::Id::new(("pi-text", false)).with("track")).with("te");
+    assert_eq!(h.ctx.memory(|m| m.focused()), Some(te), "AV field focused");
 }
