@@ -1293,3 +1293,39 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   the interrupted file reopened, nothing opened for a folder test file, a second restart during the reset, no nested
   reset, LayoutError abort, the `open_testfile` hook). Not yet verified on the reference program (it was busy with
   another measurement); the next run with a restart inside a unit shows the log line above.
+
+## R-31 additions (22 Oct 2026)
+
+- **Cause of Q-63 a/b (run 33: the script rectangle FR of `xs-select-behind` was 399,199-601,301 in the reference and
+  400,200-600,300 in Firepixel; the first auto shapes of `tool-autoshapes/02` were drawn with a different stroke):**
+  the reference keeps the tool stroke (tip, size, placement) across documents and sessions, and the tools' "default
+  colours" button sets only the colours (a stroke of "none" becomes the anti-aliased 1-pixel tip 1 px; tip, size and
+  placement otherwise stay). After a fresh start the reference has `bn_1-Pixel Anti-Aliased` 2 px centred; in run 33 it
+  had been restarted, while Firepixel carried 1 px inside from an earlier unit. `addNewRectangle` copies tip, size and
+  placement exactly, so the pixel rects differed. The fill category "none" is per document in the reference (every
+  newly opened document starts solid); colours and stroke are session-wide.
+- **`Side.tool_stroke_reset`:** one script expression for both sides (`tool_stroke_js`): nothing selected,
+  `setFillNColor(<solid fill>, orig.default_fill)`, `setBrushNColor(<bn_1-Pixel Anti-Aliased, bc_Pencil, diameter 1,
+  anti-aliased>, orig.default_stroke)`, `setBrushPlacement('center')`; the reference's script API through
+  `jsf_value`, Firepixel's `run_script` over the bridge (Firepixel names this preset `bn_1-Pixel Anti-Aliased` too).
+  The size comes from the brush's `diameter`: `setBrushSize` is not a function in the reference's document (nor in the
+  preview build 2026-10-21_21-47). `dom.pathAttributes` is read before and after (tip, category, size, anti-aliasing,
+  placement, stroke colour, fill category, fill colour); one retry when the read-back is not the wanted state.
+  Config `tool_stroke_reset: false` switches it off.
+- **When:** at unit start with the unit's first test document, after the default colours (script or tools button),
+  the text tool reset and the reopening of the document that follows it (`pending_stroke`, set by `reset_unit` in the
+  reference and by `run_unit` for Firepixel). The R-30 repeat after a reference restart runs `reset_unit` again, so
+  the reopened document gets the stroke too (log `tool stroke (unit start after an orig restart): ...`). A unit
+  whose test file is a folder sets the stroke with the first document a step opens.
+- **Log:** `tool stroke (unit start): set bn_1-Pixel Anti-Aliased 1 px center, stroke #000000, fill solid #ffffff:
+  before ... | after ... -> ok` (Firepixel: `fp tool stroke ...`), then `unit start <unit>: tool stroke orig ... | fp
+  ... -> same` (or `DIFFERENT: key orig/fp, ...` / `incomplete`). The first step's entry in `log.jsonl` carries
+  `unit_start_tool_stroke` {orig, fp} with the read-back dicts.
+- **Verified** (preview 2026-10-21_21-47, `--units xs-select-behind`): both sides read `bn_1-Pixel Anti-Aliased`
+  (`bc_Pencil`) 1 px centred, anti-aliased, stroke #000000, fill solid #ffffff at unit start (`same`); Firepixel
+  came from `bn_Hard Rounded` 1 px centred. FR is `400,200-600,300` on both sides in every step that selects it
+  (01..07), B1 `40,40-520,360`. A second run with the reference's stroke set to `bn_1-Pixel Hard` 4 px outside
+  beforehand: the default colours button kept 4 px outside, the stroke reset read `bn_1-Pixel Anti-Aliased` 1 px
+  centred afterwards, FR again `400,200-600,300` on both sides.
+- `--dry-run` prints `R-31 self check: ok` (the script's calls and objects, no `setBrushSize`, balanced brackets,
+  read-back parsing with colours in lower case without alpha, the wanted-state check and the side comparison).

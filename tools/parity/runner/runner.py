@@ -1070,6 +1070,118 @@ def r21_selfcheck() -> str:
     return "ok" if not bad else "FAILED: " + "; ".join(bad)
 
 
+# R-31 (Q-63, RE-27 spec 59 §2.3 / §3): the tool STROKE (tip, size, placement) carries across documents and sessions in
+# the reference and the "default colours" button sets only the colours; after a fresh start the reference has
+# `bn_1-Pixel Anti-Aliased` 2 px centred, Firepixel carried whatever an earlier unit left (run 33: 1 px inside, so the
+# script rectangle FR of `xs-select-behind` was 400,200-600,300 there and 399,199-601,301 in the reference). Both sides
+# get one defined tool state at unit start, after the default colours and with the unit's test document open (the fill
+# category "none" is per document in the reference): this stroke, centred, and a solid fill.
+TOOL_STROKE_WANT = {"tip": "bn_1-Pixel Anti-Aliased", "category": "bc_Pencil", "size": "1", "aa": "true",
+                    "placement": "center", "fill": "fc_Solid"}
+# the brush and fill objects the reference reports for these presets (RE measurements, anti-aliased 1-pixel tip)
+TOOL_STROKE_BRUSH = {"alphaRemap": "none", "angle": 0, "antiAliased": True, "aspect": 100, "blackness": 0,
+                     "category": "bc_Pencil", "concentration": 100, "dashOffSize1": 2, "dashOffSize2": 2,
+                     "dashOffSize3": 2, "dashOnSize1": 8, "dashOnSize2": 1, "dashOnSize3": 1, "diameter": 1,
+                     "feedback": "brush", "flowRate": 0, "maxCount": 15, "minSize": 1,
+                     "name": "bn_1-Pixel Anti-Aliased", "numDashes": 0, "shape": "circle",
+                     "softenMode": "bell curve", "softness": 0, "spacing": 15, "textureBlend": 0, "textureEdge": 0,
+                     "tipColoringMode": "random", "tipCount": 1, "tipSpacing": 0, "tipSpacingMode": "random",
+                     "type": "simple"}
+TOOL_FILL_SOLID = {"category": "fc_Solid", "ditherColors": ["#000000", "#000000"], "edgeType": "antialiased",
+                   "feather": 0, "gradient": None, "name": "fn_Normal", "pattern": None, "shape": "solid",
+                   "stampingMode": "blend opaque", "textureBlend": 0, "webDitherTransparent": False}
+# read-back of the tool attributes (`dom.pathAttributes`) as "key=value|..."
+TOOL_STROKE_READ_JS = ("function __ts(){var p=d.pathAttributes,b=p.brush,f=p.fill;"
+                       "return 'tip='+(b?b.name:'none')+'|category='+(b?b.category:'-')+'|size='+(b?b.diameter:'-')"
+                       "+'|aa='+(b?b.antiAliased:'-')+'|placement='+p.brushPlacement+'|stroke='+p.brushColor"
+                       "+'|fill='+(f?(f.category||'set'):'none')+'|fillColor='+p.fillColor;}")
+TOOL_STROKE_KEYS = ("tip", "category", "size", "aa", "placement", "stroke", "fill", "fillColor")
+
+
+def tool_stroke_js(fill="#ffffff", stroke="#000000", set_it=True) -> str:
+    """R-31: one script expression for both sides - nothing selected, the tool fill solid in `fill`, the stroke
+    `TOOL_STROKE_BRUSH` in `stroke` (its `diameter` 1 is the size: the reference's document has no `setBrushSize`),
+    placement centred; returns "<before> >> <after>" (TOOL_STROKE_READ_JS). `set_it=False` only reads ("<now>")."""
+    body = ("d.selectNone();"
+            f"d.setFillNColor({json.dumps(TOOL_FILL_SOLID)},{json.dumps(fill)});"
+            f"d.setBrushNColor({json.dumps(TOOL_STROKE_BRUSH)},{json.dumps(stroke)});"
+            "d.setBrushPlacement('center');"
+            "return b0+' >> '+__ts();") if set_it else "return __ts();"
+    return ("(function(){var d=fw.getDocumentDOM();if(!d)return 'error no document';" + TOOL_STROKE_READ_JS
+            + "var b0='';try{b0=__ts();}catch(e){return 'error read '+e;}"
+            + "try{" + body + "}catch(e){return b0+' >> error '+e;}})()")
+
+
+def parse_tool_stroke(s) -> dict:
+    """R-31: "k=v|k=v" (one side of the read-back) -> dict (colours lower case without alpha, the size as an integer
+    string); {"_error": ...} for an error text."""
+    s = str(s or "").strip()
+    if not s or s.startswith("error"):
+        return {"_error": s or "no result"}
+    out = {}
+    for kv in s.split("|"):
+        k, _, v = kv.partition("=")
+        v = v.strip()
+        if k in ("stroke", "fillColor"):
+            v = v.lower()[:7]
+        elif k == "size":
+            try:
+                v = str(int(round(float(v))))
+            except ValueError:
+                pass
+        out[k.strip()] = v
+    return out
+
+
+def tool_stroke_ok(got: dict, want=None) -> bool:
+    want = want or TOOL_STROKE_WANT
+    return "_error" not in got and all(str(got.get(k)) == str(v) for k, v in want.items())
+
+
+def tool_stroke_text(got) -> str:
+    if not isinstance(got, dict):
+        return "not set"
+    if "_error" in got:
+        return str(got["_error"])[:120]
+    return (f"{got.get('tip')} {got.get('size')} px {got.get('placement')} (aa {got.get('aa')}, stroke "
+            f"{got.get('stroke')}, fill {got.get('fill')} {got.get('fillColor')})")
+
+
+def tool_stroke_compare(orig, fp) -> str:
+    """R-31: "same" or "DIFFERENT: key orig/fp, ..." over TOOL_STROKE_KEYS (a missing side: "incomplete")."""
+    if not isinstance(orig, dict) or not isinstance(fp, dict) or "_error" in orig or "_error" in fp:
+        return "incomplete"
+    diff = [f"{k} {orig.get(k)}/{fp.get(k)}" for k in TOOL_STROKE_KEYS if str(orig.get(k)) != str(fp.get(k))]
+    return "same" if not diff else "DIFFERENT: " + ", ".join(diff)
+
+
+def r31_selfcheck() -> str:
+    """R-31 (Q-63): offline check of the tool stroke script and its read-back helpers."""
+    bad = []
+    js = tool_stroke_js()
+    for part in ("d.selectNone();", '"name": "bn_1-Pixel Anti-Aliased"', '"diameter": 1',
+                 "d.setBrushPlacement('center');", '"category": "fc_Solid"', ',"#ffffff");', ',"#000000");'):
+        if part not in js:
+            bad.append(f"script lacks {part}")
+    if js.count("(") != js.count(")") or js.count("{") != js.count("}"):
+        bad.append("script brackets")
+    if "setBrushSize" in js:
+        bad.append("setBrushSize is not a function in the reference")
+    a = parse_tool_stroke("tip=bn_1-Pixel Anti-Aliased|category=bc_Pencil|size=1|aa=true|placement=center|"
+                          "stroke=#000000FF|fill=fc_Solid|fillColor=#FFFFFF")
+    if not tool_stroke_ok(a) or a.get("stroke") != "#000000" or a.get("fillColor") != "#ffffff":
+        bad.append(f"parse {a}")
+    b = parse_tool_stroke("tip=bn_1-Pixel Anti-Aliased|category=bc_Pencil|size=2.0|aa=true|placement=center|"
+                          "stroke=#000000|fill=fc_Solid|fillColor=#ffffff")
+    if tool_stroke_ok(b) or tool_stroke_compare(a, b) != "DIFFERENT: size 1/2":
+        bad.append(f"size 2 {b} {tool_stroke_compare(a, b)}")
+    if tool_stroke_compare(a, dict(a)) != "same" or tool_stroke_compare(a, None) != "incomplete":
+        bad.append("compare")
+    if "_error" not in parse_tool_stroke("error no document"):
+        bad.append("error text")
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
 # R-15 (TW-140): text attributes the reference's text tool is reset to at unit start (config `orig.text_defaults`)
 TEXT_DEFAULTS = {"face": "ArialMT", "size": "12pt", "bold": False, "italic": False, "underline": False, "fillColor": "#000000"}
 # R-15: after a pointer double-click: active tool and whether exactly one text is selected
@@ -1541,6 +1653,38 @@ class Side:
 
     def script_eval(self, expr):
         raise NotImplementedError
+
+    def tool_stroke_reset(self, why="unit start") -> dict:
+        """R-31 (Q-63): the tool stroke set explicitly - tip `bn_1-Pixel Anti-Aliased` 1 px centred in the default
+        stroke colour, the fill solid in the default fill colour (config `orig.default_stroke` / `orig.default_fill`),
+        nothing selected - by script (`tool_stroke_js`; the reference's script API, Firepixel's `run_script` over
+        the bridge). Read back before and after; one retry when the read-back differs. Kept as `self.unit_stroke`
+        (the runner compares both sides at unit start) and logged as `[fp ]tool stroke (<why>): ...`. Config
+        `tool_stroke_reset: false` switches it off."""
+        if not self.r.cfg.get("tool_stroke_reset", True):
+            return {}
+        fill = str(self.r.cfg["orig"].get("default_fill", "#ffffff")).lower()
+        stroke = str(self.r.cfg["orig"].get("default_stroke", "#000000")).lower()
+        tries, before, after = [], {}, {}
+        for n in (1, 2):
+            try:
+                got = str(self.script_eval(tool_stroke_js(fill, stroke)))
+            except Exception as e:  # noqa: BLE001
+                got = f"error {str(e)[:160]}"
+            b, _, a = got.partition(" >> ")
+            if n == 1:
+                before = parse_tool_stroke(b)
+            after = parse_tool_stroke(a if _ else got)
+            tries.append(after)
+            if tool_stroke_ok(after):
+                break
+        self.unit_stroke = after
+        ok = tool_stroke_ok(after)
+        self.r.log(f"{'fp ' if self.name == 'fp' else ''}tool stroke ({why}): set {TOOL_STROKE_WANT['tip']} 1 px center, "
+                   f"stroke {stroke}, fill solid {fill}: before {tool_stroke_text(before)} | after "
+                   f"{tool_stroke_text(after)}" + (f" ({len(tries)} tries)" if len(tries) > 1 else "")
+                   + (" -> ok" if ok else f" -> NOT {TOOL_STROKE_WANT}"))
+        return after
 
     def option_state(self, target):
         """R-13 (TW-127): checked state (True/False/None) of a stored option control of the open dialog."""
@@ -2346,6 +2490,10 @@ class OrigSide(Side):
         # anchor is only provisional and a click could hit the main toolbar instead
         self.pending_pointer = True
         self.pending_colors = True
+        # R-31 (Q-63): the tool stroke (tip, size, placement) is set with the unit's first document, after the
+        # default colours and the text tool reset (open_testfile)
+        self.pending_stroke = True
+        self.unit_stroke = None
         # no document is open here: the view switches are reset by the next open_testfile (R-4: not before)
         self.view_dirty = False
 
@@ -3017,6 +3165,12 @@ class OrigSide(Side):
         self.fitted = self.fit_if_needed()
         self.page = None
         self.calibrate()
+        if getattr(self, "pending_stroke", False) and not getattr(self, "pending_text_defaults", False):
+            # R-31 (Q-63): after the default colours (script or button above, and the text tool reset's button) and
+            # with the test document open - the stroke carries across documents and sessions, the fill is per document
+            self.pending_stroke = False
+            self.tool_stroke_reset("unit start" if not getattr(self.r, "orig_reset_busy", False)
+                                   else "unit start after an orig restart")
         if getattr(self, "pending_text_defaults", False):
             # R-17: with the unit's first document (the tools column anchor needs a document view); the scratch texts
             # of the read-back leave history entries, so the test document is opened afresh afterwards
@@ -6288,6 +6442,11 @@ class FpSide(Side):
                            f" - after fill {after.get('fill_color')} stroke {after.get('stroke_color')}")
             except Exception as e:  # noqa: BLE001
                 self.r.log(f"fp default colours failed: {e}")
+        if getattr(self, "pending_stroke", False) and not getattr(self, "pending_text_defaults", False):
+            # R-31 (Q-63): the reference's tool stroke here too, after the default colours and the text tool reset
+            # (whose reopened document comes back here), with the test document open
+            self.pending_stroke = False
+            self.tool_stroke_reset()
 
         if getattr(self, "pending_text_defaults", False):
             # R-21 (TW-149): the reference's unit-start text tool reset (ArialMT 12 pt regular #000000) here too; the
@@ -8740,6 +8899,8 @@ class Runner:
                     if side.name != "orig":
                         side.pending_colors = True  # R-9 (TW-107): default colours with the unit's first document
                         side.pending_text_defaults = True  # R-21 (TW-149): text tool reset like the reference
+                        side.pending_stroke = True  # R-31 (Q-63): tool stroke like the reference
+                        side.unit_stroke = None
                     if side.name == "orig":
                         # R-30 (TW-196): the sequence lives in orig_unit_start, which a restart inside the unit
                         # repeats (orig_restart_check)
@@ -8754,10 +8915,17 @@ class Runner:
                     self.recover(side)
             # R-30 (TW-196): a restart during the unit start (after its reset) gets the reset again before step one
             self.orig_restart_check(self.orig_where)
+            # R-31 (Q-63): the tool stroke both sides read back at unit start (also in the first step's log entry)
+            unit_stroke = {n: getattr(s, "unit_stroke", None) for n, s in self.sides.items()}
+            self.log(f"unit start {unit_name}: tool stroke orig {tool_stroke_text(unit_stroke.get('orig'))} | fp "
+                     f"{tool_stroke_text(unit_stroke.get('fp'))} -> "
+                     f"{tool_stroke_compare(unit_stroke.get('orig'), unit_stroke.get('fp'))}")
             for i, step in enumerate(steps):
                 after = steps[i + 1]["id"] if i + 1 < len(steps) else "the end of the unit"
                 entry = {"unit": unit_name, "step": step["id"], "n": i, "check": step.get("check"),
                          "area": (step.get("shot") or {}).get("area"), "time": time.strftime("%Y-%m-%d %H:%M:%S")}
+                if i == 0:
+                    entry["unit_start_tool_stroke"] = unit_stroke
                 if step.get("cursor") or (step.get("shot") or {}).get("cursor"):
                     entry["result"] = {"orig": {"status": "skipped", "error": "cursor image cannot be captured"},
                                        "fp": {"status": "skipped", "error": "cursor image cannot be captured"}}
@@ -8962,6 +9130,7 @@ def main(argv=None):
         print(f"R-26 self check: {r26_selfcheck()}")
         print(f"R-29 self check: {r29_selfcheck()}")
         print(f"R-30 self check: {r30_selfcheck()}")
+        print(f"R-31 self check: {r31_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0
