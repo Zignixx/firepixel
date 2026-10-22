@@ -1018,6 +1018,16 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             Overlay::TextEdit(v) => text_hidden.extend(v.target),
             // Zeiger zieht einen Füllgriff: das Objekt zeichnet die Vorschau live (re 40 §1)
             Overlay::FillLive { target, .. } => text_hidden.push(*target),
+            // the open path the pen is drawing: drawn without its fill (RE spec 60 section 1.2)
+            Overlay::PenPath { target }
+                if st
+                    .session
+                    .active()
+                    .and_then(|d| pen_path_without_fill(&d.doc, d.page, *target))
+                    .is_some() =>
+            {
+                text_hidden.push(*target)
+            }
             _ => {}
         }
     }
@@ -2648,6 +2658,17 @@ fn overlays(
             | fp_engine::ToolId::RedEyeRemoval
     );
     let subsel_outline = st.session.tools.active == fp_engine::ToolId::Subselection;
+    // FB-19 (RE spec 60 section 1.3): the Pointer and the Pen show a single selected vector path
+    // (free or rectangle primitive) as its outline plus anchor squares (from `Overlay::PathPoints`),
+    // not as a bounding box; the path the pen is drawing is shown by the pen's own overlay
+    let path_outline = matches!(
+        st.session.tools.active,
+        fp_engine::ToolId::Pointer | fp_engine::ToolId::Pen
+    ) && d.selection.elements.len() == 1;
+    let pen_target = feedback.iter().find_map(|o| match o {
+        Overlay::PenPath { target } => Some(*target),
+        _ => None,
+    });
     if view.show_edges {
         // alle gewählten Elemente in einem Durchlauf (PERF-1: eine Suche je ID kostete bei
         // Tausenden gewählten Objekten O(Objekte × Auswahl) je Bild)
@@ -2691,12 +2712,23 @@ fn overlays(
             // FB-06 (re 54 §1, §6): the Subselection tool shows a vector object as its path outline
             // (1 px, real curves through the anchors) instead of a bounding box with corner squares;
             // the anchors and handles come from `Overlay::PathPoints` on top of it
-            if subsel_outline && let fp_model::ElementKind::Path(pe) = &e.kind {
-                if !is_moving {
-                    if let Some(bt) = batch.as_mut() {
-                        bt.flush(painter);
+            if (subsel_outline || path_outline)
+                && let fp_model::ElementKind::Path(pe) = &e.kind
+            {
+                if pen_target == Some(eid.0) {
+                    continue;
+                }
+                if let Some(bt) = batch.as_mut() {
+                    bt.flush(painter);
+                }
+                let line = Stroke::new(1.0, c.selection);
+                match moving.as_ref().filter(|_| is_moving) {
+                    None => paint_path_outline(painter, &pe.contours, &spp, line),
+                    // Pointer drag: the outline follows the preview
+                    Some((_, m)) if path_outline => {
+                        paint_path_outline(painter, &pe.contours, &|p| spp(m.apply(p)), line)
                     }
-                    paint_path_outline(painter, &pe.contours, &spp, Stroke::new(1.0, c.selection));
+                    Some(_) => {}
                 }
                 continue;
             }
@@ -3098,6 +3130,26 @@ fn overlays(
                 painter.rect_filled(r, 0.0, c.handle_fill);
                 painter.rect_stroke(r, 0.0, line, StrokeKind::Inside);
             }
+            Overlay::PenPath { target } => {
+                // the open path being drawn without its fill (RE spec 60 section 1.2); the page
+                // render hides the element itself
+                if let Some(e) = pen_path_without_fill(&d.doc, d.page, target) {
+                    let key = generation.wrapping_mul(0x9e37_79b9_7f4a_7c15)
+                        ^ target
+                        ^ 0x7065_6e5f_7061_7468;
+                    if let Some(s) = cc.ghosts.element_sprite(
+                        &ctx,
+                        &st.renderer,
+                        &d.doc,
+                        frame_i,
+                        &e,
+                        key,
+                        view.zoom,
+                    ) {
+                        ghost::paint_at(&page_painter, s, &spp);
+                    }
+                }
+            }
             Overlay::FillLive { target, handles } => {
                 // Füllung live mit den gezogenen Griffen (Zeiger, re 40 §1)
                 if let Some(e) =
@@ -3393,6 +3445,30 @@ fn fill_live_key(generation: u64, target: u64, h: &fp_model::FillHandles) -> u64
         k = (k ^ v.to_bits() as u64).wrapping_mul(0x0100_0000_01b3);
     }
     k
+}
+
+/// The open path element `target` the pen is drawing, without its fill (RE spec 60 section 1.2:
+/// the fill of an open path appears only once it is closed or finished); `None` when it has no
+/// fill or no open contour (then the page shows it unchanged).
+fn pen_path_without_fill(
+    doc: &fp_model::Document,
+    page: usize,
+    target: u64,
+) -> Option<fp_model::Element> {
+    let e = fp_engine::docops::element_on_page(doc, page, fp_model::ElementId(target))?;
+    let fp_model::ElementKind::Path(pe) = &e.kind else {
+        return None;
+    };
+    if pe.attrs.fill.is_none() || pe.contours.iter().all(|c| c.closed) {
+        return None;
+    }
+    let mut n = (*e).clone();
+    if let fp_model::ElementKind::Path(pe) = &mut n.kind {
+        let a = std::sync::Arc::make_mut(&mut pe.attrs);
+        a.fill = None;
+        a.fill_texture = None;
+    }
+    Some(n)
 }
 
 /// Path outline as crisp 1 px lines along the real curves (Subselection display, re 54 §6).

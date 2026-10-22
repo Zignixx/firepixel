@@ -1505,6 +1505,7 @@ impl Session {
             }
             self.tools.active = id;
             self.tools.machine = tools::make_machine(id);
+            self.with_tool_ctx(|m, ctx| m.activated(ctx));
             if let Some(g) = tools::info(id).map(|i| i.flyout) {
                 self.tools.slot_memory.insert(g.to_string(), id);
             }

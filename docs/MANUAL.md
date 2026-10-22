@@ -133,7 +133,13 @@ segment leaves it straight; dragging on it pulls the point out again as a symmet
 outgoing handle, Ctrl moves the point, Shift snaps to 45°). A click on an interior curve point turns it into a
 corner, a click on an interior corner point deletes it, a click on a segment inserts a point, and a click on the
 end of another open path joins it; with no path in progress, a click on the end of an open path continues it. The
-cursor shows the mode: a "^" for converting a point, a ring with a stub for joining. Points are hit within the
+cursor shows the mode: an "x" with no path in progress (a click starts a new path), the plain pen while drawing, an
+"o" over the first point (close), a "^" for converting a point, a "−" for deleting and a "+" for inserting one (the
+rubber band is hidden then), a "/" over the end of an unselected open path (continue) and a ring with a stub for
+joining. While you draw, the path shows its outline and a square on each anchor (the last placed one filled), no
+bounding box and no fill until it is closed; after closing the first anchor is filled. Choosing the Pen with an
+open path selected continues that path from its end point; a selected closed path shows its outline with hollow
+anchors. Points are hit within the
 *Snap distance* set in the preferences. A double-click or a change of tool ends the path; Enter
 and Escape do nothing while a path is drawn (the next click adds to the same path). Every point is its own
 History step "Pen": Ctrl+Z (or Backspace) while drawing removes only the last point and you keep drawing from the
@@ -143,6 +149,9 @@ point before; ending the path adds no step.
 select – the next object below the selected one under the pointer, also while the pointer is over the selected
 object, or the topmost object when nothing there is selected. The Pointer tool frames only the topmost object and
 shows no frame over the selected one.
+
+**Pointer:** a single selected path also shows its outline with filled squares on its anchors (a rectangle: its
+four corners) instead of a bounding box; groups, bitmaps, text, symbols and several selected objects keep the box.
 
 **Subselection:** a selected path, rectangle or autoshape part shows its outline, a small square on each point
 (filled when the point is selected; *Show solid points* in the preferences reverses this) and the handles of the

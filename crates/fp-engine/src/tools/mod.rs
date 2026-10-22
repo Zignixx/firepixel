@@ -321,6 +321,10 @@ pub enum Overlay {
     Paint(crate::paint::PaintPreview),
     /// Markierung (Quelle des Stempels).
     Marker { at: Point },
+    /// The pen is drawing the open path `target` (RE spec 60 section 1.2): the UI draws it without
+    /// its fill and without a selection outline of its own (the pen's `Path`/`PathPoints` overlays
+    /// show it); the fill appears once the path is closed or finished.
+    PenPath { target: u64 },
     /// Steuerpunkt einer automatischen Form (gelbe Raute); `hot` = gerade gezogen/überfahren.
     ControlPoint {
         at: Point,
@@ -371,6 +375,9 @@ pub enum Cursor {
     PenConvert,
     /// Stift über dem Endpunkt eines anderen offenen Pfads beim Zeichnen: verbinden („o-“).
     PenJoin,
+    /// Pen without a path in progress over empty space, a primitive's edge or a segment of an
+    /// unselected path: a click starts a new path (pen with "x", RE spec 60 section 1.4).
+    PenNew,
     /// Griffe: waagerecht, senkrecht, diagonal (↗↙).
     ResizeH,
     ResizeV,
@@ -538,6 +545,9 @@ pub trait ToolMachine: Send {
     /// document. The pen keeps the path being drawn in the document (one history step per point,
     /// FB-07) and follows it here.
     fn sync(&mut self, _ctx: &ToolContext) {}
+    /// The tool was just made the active tool (toolbar, shortcut, command): pick up state from the
+    /// document, e.g. the pen resumes drawing a selected open path (RE spec 60 section 1.3).
+    fn activated(&mut self, _ctx: &ToolContext) {}
     /// Is a stroke running with the mouse button held, during which undo and redo are ignored
     /// (Vector Path, FB-07)?
     fn blocks_history(&self) -> bool {

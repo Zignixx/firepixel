@@ -1,8 +1,8 @@
 //! FB-06 (re 54 §1, §6): with the Subselection tool a selected vector object shows its path outline
 //! (1 px, real curves) with a 5 x 5 px square on every anchor (hollow, selected ones filled) and the
 //! handles of every segment with a selected end, but no bounding box and no corner squares.
-//! Bitmaps keep the box; the Pointer keeps the box; `ShowSolidPoints` reverses the fill; hidden
-//! edges show nothing.
+//! Bitmaps keep the box; the Pointer shows the outline with filled anchors (RE spec 60 section 1.3);
+//! `ShowSolidPoints` reverses the fill; hidden edges show nothing.
 
 use egui::Pos2;
 use egui_kittest::Harness;
@@ -182,11 +182,13 @@ fn fb06_subselection_shows_outline_and_anchors_without_box() {
     }
     run(&mut h, "view.edges", json!({}));
 
-    // Pointer: the box with its corner squares
+    // Pointer: no box either, the outline with filled anchors (RE spec 60 section 1.3, FB-19)
     run(&mut h, "tool.select", json!({"tool": "tool.pointer"}));
     let Some(s) = Shot::take(&mut h) else { return };
-    assert!(s.any_near(box_tr, 2, BLUE), "Pointer: box corner square top right");
-    assert!(s.any_near(box_br, 2, BLUE), "Pointer: box corner square bottom right");
+    assert!(!s.any_near(box_tr, 2, BLUE), "Pointer: no box corner square top right");
+    assert!(!s.any_near(box_br, 2, BLUE), "Pointer: no box corner square bottom right");
+    assert!(s.any_near(curve, 1, BLUE), "Pointer: outline on the curve");
+    assert!(near(s.px(a, 0, 0), BLUE), "Pointer: filled anchor");
 
     // a bitmap with the Subselection tool keeps the box
     run(&mut h, "tool.select", json!({"tool": "tool.subselection"}));

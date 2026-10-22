@@ -672,6 +672,11 @@ pub struct PenTool {
     /// Alt-Ziehen an einem mittleren Punkt des gewählten Pfads: zieht dort einen glatten Punkt auf,
     /// statt ihn zu löschen (B-2b BA-003: 300,160 → 330,160 ergibt 270 · 330).
     alt_point: Option<AltPoint>,
+    /// First anchor of the path just closed: shown filled until the next press (RE spec 60
+    /// section 1.2: after closing the first anchor is filled, the others hollow).
+    closed_first: Option<Point>,
+    /// Drawing was resumed on activation (`activated`) and no press followed yet.
+    resumed: bool,
 }
 
 /// Press on the last anchor of the path being drawn (convert point, re 52 §1.4/§1.5): the outgoing
@@ -915,6 +920,7 @@ impl PenTool {
         self.smooth_drag = false;
         self.hover = None;
         self.guides.clear();
+        self.resumed = false;
     }
 
     /// Writes the path being drawn into the document as one history step "Pen" (FB-07, re 55 §1.3):
@@ -999,7 +1005,11 @@ impl PenTool {
         {
             resp.commands = self.write(ctx, false);
         }
+        let first = self.nodes.first().map(|n| n.0);
         self.reset_drawing();
+        if closed && !resp.commands.is_empty() {
+            self.closed_first = first;
+        }
         resp
     }
 
@@ -1241,17 +1251,13 @@ impl PenTool {
                 }
             }
             Some(PenHit::Segment { .. }) => Cursor::PenAdd,
-            None => Cursor::Pen,
+            None => Cursor::PenNew,
         }
     }
 }
 
-impl ToolMachine for PenTool {
-    fn id(&self) -> ToolId {
-        ToolId::Pen
-    }
-
-    fn handle(&mut self, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {
+impl PenTool {
+    fn handle_event(&mut self, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {
         if !ctx.has_document {
             return ToolResponse::default();
         }
@@ -1262,6 +1268,12 @@ impl ToolMachine for PenTool {
                 kind: PointerKind::Down,
                 pos,
             } => {
+                // drawing resumed on activation: a press on the selected path itself (end points,
+                // anchors, segments, Alt-drags) acts as without a path in progress (BA-001, BA-003,
+                // re 37 section 2); a press beside it appends to the path (RE spec 60 section 1.3)
+                if std::mem::take(&mut self.resumed) && Self::pen_hit(ctx, *pos).is_some() {
+                    self.reset_drawing();
+                }
                 self.button = true;
                 self.convert = None;
                 self.smooth_drag = false;
@@ -1559,6 +1571,13 @@ impl ToolMachine for PenTool {
                     self.hover = Some(h);
                     self.guides = sp.guides;
                     self.cursor = self.hover_cursor(ctx, *pos, ev.mods.shift);
+                    // over a segment (insert) or an inner corner point (delete) of the path being
+                    // drawn the rubber band is hidden (RE spec 60 section 1.4, `p2_hover_seg_x3`)
+                    if !self.nodes.is_empty()
+                        && matches!(self.cursor, Cursor::PenAdd | Cursor::PenRemove)
+                    {
+                        self.hover = None;
+                    }
                 }
                 ToolResponse::with_overlay(self.overlay(), self.cursor)
             }
@@ -1651,9 +1670,89 @@ impl ToolMachine for PenTool {
             _ => ToolResponse::default(),
         }
     }
+}
+
+impl ToolMachine for PenTool {
+    fn id(&self) -> ToolId {
+        ToolId::Pen
+    }
+
+    fn handle(&mut self, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {
+        if matches!(ev.kind(), Some(PointerKind::Down)) {
+            self.closed_first = None;
+        }
+        let mut r = self.handle_event(ev, ctx);
+        // without a path in progress the pen shows "x": a click starts a new path (RE spec 60
+        // section 1.4); the plain pen only while drawing
+        if ctx.has_document
+            && self.nodes.is_empty()
+            && self.alt_point.is_none()
+            && matches!(r.cursor, Cursor::Pen | Cursor::Arrow)
+        {
+            r.cursor = Cursor::PenNew;
+        }
+        r
+    }
 
     fn finish(&mut self, ctx: &ToolContext) -> ToolResponse {
         self.commit(false, ctx)
+    }
+
+    /// Activating the pen on one selected path with exactly one open contour resumes drawing at
+    /// its last point: the rubber band runs from there, the cursor shows "o" over the first and "^"
+    /// over the last point, and a click beside the path appends (RE spec 60 section 1.3, `p10`).
+    fn activated(&mut self, ctx: &ToolContext) {
+        if !ctx.has_document || !self.nodes.is_empty() {
+            return;
+        }
+        let [id] = ctx.selection.elements.as_slice() else {
+            return;
+        };
+        let Some(e) = docops::element_on_page(ctx.doc, ctx.page, *id) else {
+            return;
+        };
+        let ElementKind::Path(pe) = &e.kind else {
+            return;
+        };
+        if pe.primitive.is_some() {
+            return;
+        }
+        let mut open = pe
+            .contours
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| !c.closed && !c.nodes.is_empty());
+        let (Some((contour, _)), None) = (open.next(), open.next()) else {
+            return;
+        };
+        self.resumed = self.start_continue(ctx, *id, contour, false);
+    }
+
+    fn feedback(&self, ctx: &ToolContext) -> Vec<Overlay> {
+        let mut v = Vec::new();
+        if self.nodes.is_empty() && self.alt_point.is_none() && ctx.has_document {
+            // a selected path without a path in progress: anchors like the Subselection (hollow,
+            // selected ones filled); a rectangle primitive: its four corners filled (RE spec 60
+            // section 1.3). Right after closing the first anchor is filled (section 1.2).
+            v = super::pointer::path_points_feedback(ctx, true, true);
+            if let Some(a) = self.closed_first
+                && let [id] = ctx.selection.elements.as_slice()
+                && let Some(Overlay::PathPoints {
+                    contours, selected, ..
+                }) = v.first_mut()
+                && docops::element_on_page(ctx.doc, ctx.page, *id).is_some_and(
+                    |e| matches!(&e.kind, ElementKind::Path(pe) if pe.primitive.is_none()),
+                )
+                && let Some(ci) = contours.iter().position(|c| {
+                    c.closed && c.nodes.first().is_some_and(|n| dist(n.anchor, a) < 1e-3)
+                })
+                && !selected.contains(&(ci, 0))
+            {
+                selected.push((ci, 0));
+            }
+        }
+        v.extend(self.overlay());
+        v
     }
 
     /// Follows the path being drawn in the document (FB-07): after the first point the new element
@@ -1722,6 +1821,11 @@ impl ToolMachine for PenTool {
     fn overlay(&self) -> Vec<Overlay> {
         let mut v = Vec::new();
         if !self.nodes.is_empty() {
+            // the open path in the document: no fill and no selection box while it is drawn
+            // (RE spec 60 section 1.2); the outline and anchors below show it
+            if let Some(t) = self.target {
+                v.push(Overlay::PenPath { target: t.id.0 });
+            }
             v.push(Overlay::Path {
                 contours: vec![self.contour(false)],
             });

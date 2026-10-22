@@ -332,8 +332,14 @@ fn point_hit(
     best.map(|(_, h)| h)
 }
 
-/// Pfadpunkt-Anzeige der ausgewählten Pfade.
-fn path_points_feedback(ctx: &ToolContext, subselect: bool) -> Vec<Overlay> {
+/// Pfadpunkt-Anzeige der ausgewählten Pfade. `subselect`: selected points filled with handles,
+/// the others hollow (otherwise all filled); `primitive_corners`: a rectangle primitive shows only
+/// its four corners, filled (Pointer and Pen, RE spec 60 section 1.3).
+pub(crate) fn path_points_feedback(
+    ctx: &ToolContext,
+    subselect: bool,
+    primitive_corners: bool,
+) -> Vec<Overlay> {
     let mut out = Vec::new();
     for id in ctx.selection.elements.iter().take(64) {
         let Some(e) = docops::element_on_page(ctx.doc, ctx.page, *id) else {
@@ -342,7 +348,7 @@ fn path_points_feedback(ctx: &ToolContext, subselect: bool) -> Vec<Overlay> {
         let ElementKind::Path(pe) = &e.kind else {
             continue;
         };
-        if let Some(pr) = pe.primitive.as_ref().filter(|_| !subselect) {
+        if let Some(pr) = pe.primitive.as_ref().filter(|_| primitive_corners) {
             // Rechteck-Grundform: nur die vier Eckpunkte (Ziehen = Rundung)
             let q = pr
                 .rect
@@ -1814,7 +1820,8 @@ impl ToolMachine for PointerTool {
         let dragging_points = matches!(self.state, PState::DraggingPoint { .. });
         let moving = matches!(self.state, PState::Moving { .. } | PState::Scaling { .. });
         if !dragging_points && !moving && self.id != ToolId::SelectBehind {
-            v.extend(path_points_feedback(ctx, self.id == ToolId::Subselection));
+            let sub = self.id == ToolId::Subselection;
+            v.extend(path_points_feedback(ctx, sub, !sub));
             if !matches!(self.state, PState::Control(_)) {
                 v.extend(control_points_feedback(ctx, None));
             }

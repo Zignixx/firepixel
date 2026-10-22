@@ -141,7 +141,14 @@ Kurvenpunkt auf (Alt bewegt nur die ausgehende Tangente, Strg verschiebt den Pun
 Ein Klick auf einen inneren Kurvenpunkt macht ihn zum Eckpunkt, ein Klick auf einen inneren Eckpunkt löscht ihn,
 ein Klick auf ein Segment fügt einen Punkt ein, und ein Klick auf das Ende eines anderen offenen Pfads verbindet
 ihn; ohne laufenden Pfad setzt ein Klick auf das Ende eines offenen Pfads diesen fort. Der Mauszeiger zeigt den
-Modus: ein „^“ zum Umwandeln eines Punkts, ein Ring mit Strich zum Verbinden. Punkte werden innerhalb des
+Modus: ein „ד ohne laufenden Pfad (ein Klick beginnt einen neuen Pfad), der Stift ohne Zusatz beim Zeichnen, ein
+„o“ über dem ersten Punkt (schließen), ein „^“ zum Umwandeln, ein „−“ zum Löschen und ein „+“ zum Einfügen eines
+Punkts (das Gummiband ist dann ausgeblendet), ein „/“ über dem Ende eines nicht gewählten offenen Pfads (fortsetzen)
+und ein Ring mit Strich zum Verbinden. Beim Zeichnen zeigt der Pfad seinen Umriss und ein Quadrat auf jedem
+Ankerpunkt (der zuletzt gesetzte gefüllt), keinen Begrenzungsrahmen und keine Füllung, bis er geschlossen ist; nach
+dem Schließen ist der erste Ankerpunkt gefüllt. Wird der Stift bei einem gewählten offenen Pfad gewählt, geht das
+Zeichnen an dessen Endpunkt weiter; ein gewählter geschlossener Pfad zeigt seinen Umriss mit hohlen Ankerpunkten.
+Punkte werden innerhalb des
 *Ausrichtungsabstands* aus den Voreinstellungen getroffen. Ein Doppelklick oder ein Werkzeugwechsel beendet den
 Pfad; die Eingabetaste und Esc bewirken beim Zeichnen nichts (der nächste Klick setzt denselben Pfad fort). Jeder Punkt ist ein eigener Schritt „Stift“ im Verlauf: Strg+Z (oder die Rücktaste) entfernt beim Zeichnen nur
 den letzten Punkt, und Sie zeichnen vom vorigen Punkt aus weiter; das Beenden des Pfads erzeugt keinen Schritt.
@@ -150,6 +157,10 @@ den letzten Punkt, und Sie zeichnen vom vorigen Punkt aus weiter; das Beenden de
 Objekt, das ein Klick wählen würde – das nächste Objekt unter dem gewählten unter dem Mauszeiger, auch wenn der
 Mauszeiger über dem gewählten Objekt steht, oder das oberste Objekt, wenn dort nichts gewählt ist. Der Zeiger
 umrahmt nur das oberste Objekt und zeigt über dem gewählten keinen Rahmen.
+
+**Zeiger:** Ein einzelner gewählter Pfad zeigt ebenfalls seinen Umriss mit gefüllten Quadraten auf den Ankerpunkten
+(ein Rechteck: seine vier Ecken) statt eines Begrenzungsrahmens; Gruppen, Bitmaps, Text, Symbole und mehrere gewählte
+Objekte behalten den Rahmen.
 
 **Unterauswahl:** Ein gewählter Pfad, ein Rechteck oder ein Teil einer Autoform zeigt statt eines Begrenzungsrahmens
 seinen Umriss, ein kleines Quadrat auf jedem Punkt (gefüllt, wenn der Punkt gewählt ist; *Einfarbige Punkte anzeigen*

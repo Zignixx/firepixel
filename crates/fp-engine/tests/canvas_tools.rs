@@ -1199,9 +1199,10 @@ fn hover_cursors_like_original() {
     assert_eq!(hover(&mut s, 300.0, 250.0), Cursor::Crop);
     tool(&mut s, ToolId::ExportArea);
     assert_eq!(hover(&mut s, 300.0, 250.0), Cursor::Crosshair);
-    // Stift über leerer Leinwand: Federspitze (Cursor::Pen, ohne Zusatz)
+    // Stift über leerer Leinwand ohne laufenden Pfad: Stift mit „ד (neuer Pfad, RE spec 60 §1.4);
+    // ohne Zusatz nur beim Zeichnen
     tool(&mut s, ToolId::Pen);
-    assert_eq!(hover(&mut s, 300.0, 250.0), Cursor::Pen);
+    assert_eq!(hover(&mut s, 300.0, 250.0), Cursor::PenNew);
     // Hand: offen beim Überfahren, Faust nur beim Ziehen, danach wieder offen
     tool(&mut s, ToolId::Hand);
     assert_eq!(hover(&mut s, 300.0, 250.0), Cursor::Hand);

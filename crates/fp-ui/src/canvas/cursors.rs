@@ -1,5 +1,5 @@
 //! Eigene Mauszeiger der Leinwand – selbst gezeichnet in Anlehnung an die Formen des Originals
-//! (Pfeil schwarz mit weißem Rand, Teilauswahl-Anker als hohle Pfeilspitze, Stift mit Zusatzzeichen ×/○/+/−, Fadenkreuz,
+//! (Pfeil schwarz mit weißem Rand, Teilauswahl-Anker als hohle Pfeilspitze, Stift mit Zusatzzeichen × ○ + − ^ /, Fadenkreuz,
 //! Lupe, Hand, Pipette, Farbeimer …), keine übernommenen Grafiken. Der Systemzeiger wird über der
 //! Leinwand ausgeblendet und der Zeiger auf einer Ebene über allem gemalt. Mit
 //! `UsePrecisionCursors` (bzw. Feststelltaste) erscheint für Zeichenwerkzeuge das Fadenkreuz.
@@ -235,102 +235,59 @@ fn double_arrow(p: &Painter, at: Pos2, c: &Palette, dx: f32, dy: f32) {
 }
 
 /// Stiftspitze (Spitze im Hotspot).
-fn pen(p: &Painter, at: Pos2, c: &Palette) {
-    let pts = [
-        (0.0, 0.0),
-        (5.0, 3.0),
-        (9.0, 9.0),
-        (13.0, 11.0),
-        (11.0, 13.0),
-        (9.0, 9.0),
-        (3.0, 5.0),
-    ];
-    poly(p, at, &pts, c.cursor_fill, c.cursor_outline);
-    poly(
-        p,
-        at,
-        &[(9.0, 9.0), (13.0, 11.0), (15.0, 15.0), (11.0, 13.0)],
-        c.cursor_fill,
-        c.cursor_outline,
-    );
-    p.circle_filled(pos2(at.x + 3.5, at.y + 3.5), 1.0, c.cursor_outline);
+/// Badge stroke: a 3 px dark line under a 1 px light one (readable on light and dark ground).
+fn badge_line(p: &Painter, a: Pos2, b: Pos2, c: &Palette) {
+    p.line_segment([a, b], Stroke::new(3.0, c.cursor_outline));
+    p.line_segment([a, b], Stroke::new(1.0, c.cursor_fill));
 }
 
+/// Mark next to the pen nib at its lower right, right of the bar (RE spec 60 section 1.4: every
+/// pen cursor is the same nib, the variants differ only in this mark).
 fn pen_badge(p: &Painter, at: Pos2, c: &Palette, kind: Cursor) {
-    let o = pos2(at.x + 16.0, at.y + 6.0);
+    let o = pos2(at.x + 9.0, at.y + 13.0);
+    let l = |a: (f32, f32), b: (f32, f32)| {
+        badge_line(p, pos2(o.x + a.0, o.y + a.1), pos2(o.x + b.0, o.y + b.1), c)
+    };
     match kind {
+        // close: a small ring "o"
         Cursor::PenClose => {
-            p.circle_stroke(o, 3.0, Stroke::new(3.0, c.cursor_outline));
-            p.circle_stroke(o, 3.0, Stroke::new(1.0, c.cursor_fill));
+            p.circle_stroke(o, 2.5, Stroke::new(3.0, c.cursor_outline));
+            p.circle_stroke(o, 2.5, Stroke::new(1.0, c.cursor_fill));
         }
-        Cursor::PenAdd | Cursor::PenRemove => {
-            let bg = egui::Rect::from_center_size(o, vec2(9.0, 9.0));
-            p.rect_filled(bg, 1.0, c.cursor_outline);
+        // add point "+" / delete point "−"
+        Cursor::PenAdd => {
+            l((-3.0, 0.0), (3.0, 0.0));
+            l((0.0, -3.0), (0.0, 3.0));
             p.line_segment(
                 [pos2(o.x - 3.0, o.y), pos2(o.x + 3.0, o.y)],
                 Stroke::new(1.0, c.cursor_fill),
             );
-            if kind == Cursor::PenAdd {
-                p.line_segment(
-                    [pos2(o.x, o.y - 3.0), pos2(o.x, o.y + 3.0)],
-                    Stroke::new(1.0, c.cursor_fill),
-                );
-            }
         }
+        Cursor::PenRemove => l((-3.0, 0.0), (3.0, 0.0)),
+        // convert point: a caret "^"
         Cursor::PenConvert => {
-            // convert point: a caret "^"
-            let pts = [
-                pos2(o.x - 3.5, o.y + 2.5),
-                pos2(o.x, o.y - 2.5),
-                pos2(o.x + 3.5, o.y + 2.5),
-            ];
-            p.line_segment([pts[0], pts[1]], Stroke::new(3.0, c.cursor_outline));
-            p.line_segment([pts[1], pts[2]], Stroke::new(3.0, c.cursor_outline));
-            p.line_segment([pts[0], pts[1]], Stroke::new(1.0, c.cursor_fill));
-            p.line_segment([pts[1], pts[2]], Stroke::new(1.0, c.cursor_fill));
+            l((-3.0, 2.5), (0.0, -2.5));
+            l((0.0, -2.5), (3.0, 2.5));
         }
+        // join: a small ring with a stub "o-"
         Cursor::PenJoin => {
-            // join: a small ring with a stub "o-"
+            l((1.0, 0.0), (5.0, 0.0));
             let ring = pos2(o.x - 1.5, o.y);
-            p.line_segment(
-                [pos2(o.x + 1.0, o.y), pos2(o.x + 5.0, o.y)],
-                Stroke::new(3.0, c.cursor_outline),
-            );
-            p.line_segment(
-                [pos2(o.x + 1.0, o.y), pos2(o.x + 5.0, o.y)],
-                Stroke::new(1.0, c.cursor_fill),
-            );
             p.circle_stroke(ring, 2.5, Stroke::new(3.0, c.cursor_outline));
             p.circle_stroke(ring, 2.5, Stroke::new(1.0, c.cursor_fill));
         }
-        Cursor::PenContinue => {
-            let r = egui::Rect::from_center_size(o, vec2(5.0, 5.0));
-            p.rect_filled(r.expand(1.0), 0.0, c.cursor_outline);
-            p.rect_filled(r, 0.0, c.cursor_fill);
+        // continue an unselected open path: a slash "/"
+        Cursor::PenContinue => l((-3.0, 3.0), (3.0, -3.0)),
+        // new path: a small "x"
+        Cursor::PenNew => {
+            l((-2.5, -2.5), (2.5, 2.5));
+            l((-2.5, 2.5), (2.5, -2.5));
             p.line_segment(
-                [pos2(o.x - 6.0, o.y + 4.0), pos2(o.x - 2.0, o.y + 1.0)],
+                [pos2(o.x - 2.5, o.y - 2.5), pos2(o.x + 2.5, o.y + 2.5)],
                 Stroke::new(1.0, c.cursor_fill),
             );
         }
-        _ => {
-            // neuer Pfad: kleines ×
-            p.line_segment(
-                [pos2(o.x - 3.0, o.y - 3.0), pos2(o.x + 3.0, o.y + 3.0)],
-                Stroke::new(3.0, c.cursor_outline),
-            );
-            p.line_segment(
-                [pos2(o.x - 3.0, o.y + 3.0), pos2(o.x + 3.0, o.y - 3.0)],
-                Stroke::new(3.0, c.cursor_outline),
-            );
-            p.line_segment(
-                [pos2(o.x - 3.0, o.y - 3.0), pos2(o.x + 3.0, o.y + 3.0)],
-                Stroke::new(1.0, c.cursor_fill),
-            );
-            p.line_segment(
-                [pos2(o.x - 3.0, o.y + 3.0), pos2(o.x + 3.0, o.y - 3.0)],
-                Stroke::new(1.0, c.cursor_fill),
-            );
-        }
+        _ => {}
     }
 }
 
@@ -624,6 +581,7 @@ pub fn has_precision_variant(c: Cursor) -> bool {
             | Cursor::PenContinue
             | Cursor::PenConvert
             | Cursor::PenJoin
+            | Cursor::PenNew
             | Cursor::Pencil
             | Cursor::Eyedropper
             | Cursor::Bucket
@@ -689,8 +647,9 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
         | Cursor::PenRemove
         | Cursor::PenContinue
         | Cursor::PenConvert
-        | Cursor::PenJoin => {
-            pen(p, at, colors);
+        | Cursor::PenJoin
+        | Cursor::PenNew => {
+            nib(p, at, colors);
             pen_badge(p, at, colors, c);
         }
         Cursor::Text => text_beam(p, at, colors),
@@ -793,6 +752,7 @@ mod tests {
                 Cursor::PenContinue,
                 Cursor::PenConvert,
                 Cursor::PenJoin,
+                Cursor::PenNew,
                 Cursor::ResizeH,
                 Cursor::ResizeV,
                 Cursor::ResizeNeSw,
