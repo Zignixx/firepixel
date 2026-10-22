@@ -1207,6 +1207,188 @@ def r29_selfcheck() -> str:
     return "ok" if not bad else "FAILED: " + "; ".join(bad)
 
 
+def r30_selfcheck() -> str:
+    """R-30 (TW-196): offline check of the unit-start reset after a reference restart inside a unit, with fake
+    reference / side objects that only record calls: the instance count of origctl (`restart` keeps its reason),
+    the unit-start sequence (real start unchanged, restart variant without the once-per-run parts), the check before
+    a step (nothing without a restart; the reset and a fresh opening of the unit's test file after one; once more
+    after a restart during the reset; a LayoutError aborts the reference side) and the hook in
+    OrigSide.open_testfile (a restart inside the opening's script retry -> reset with that file, then return)."""
+    from types import SimpleNamespace
+    bad = []
+
+    # origctl: every new instance counts, the restart reason is kept
+    o = Original.__new__(Original)
+    o.launches, o.launch_reason, o._pending_reason, o.started_by_us = 0, "", "", True
+    o.log = lambda *a: None
+    o.decline_dialogs = lambda: 0
+    o.running = lambda: False
+    o.kill = lambda: None
+    o.start = o._count_launch
+    o.start()
+    o.restart("access violation in script: JSF: ERROR: -1073741819")
+    if (o.launches, o.launch_reason) != (2, "access violation in script: JSF: ERROR: -1073741819"):
+        bad.append(f"launch count {o.launches} {o.launch_reason!r}")
+    o.start()
+    if o.launch_reason != "program was not running":
+        bad.append(f"launch reason without restart {o.launch_reason!r}")
+
+    class FakeSide:
+        name = "orig"
+
+        def __init__(self, calls):
+            self.calls = calls
+            self.last_dock = {"ok": True, "expanded": True, "before": 105, "after": 271, "mode": "expanded",
+                              "clicks": [[1588, 71]]}
+            self.fail_layout = False
+
+        def __getattr__(self, attr):
+            if attr in ("log_foreground", "ensure_foreground", "key_self_test", "layout_request", "reset_light",
+                        "max_undos_guard", "close_floating", "ensure_panel", "reset_unit", "open_testfile"):
+                def f(*a, **k):
+                    self.calls.append((attr,) + a)
+                    if attr == "reset_unit" and self.fail_layout:
+                        raise LayoutError("tools column anchor not found")
+                    return True
+                return f
+            raise AttributeError(attr)
+
+    def fake_runner(launches=0, mark=None, testfile="T04"):
+        calls, logs = [], []
+        ns = SimpleNamespace(calls=calls, logs=logs)
+        ns.orig = SimpleNamespace(launches=launches, launch_reason="access violation in script: JSF",
+                                  kill_hung_own=lambda: calls.append(("kill_hung_own",)),
+                                  close_all_docs=lambda: calls.append(("close_all_docs",)))
+        ns.sides = {"orig": FakeSide(calls)}
+        ns.unit = {"unit": "xs-canvas", "testfile": testfile}
+        ns.unit_aborted = {}
+        ns.key_echo_done = True
+        if mark is not None:
+            ns.orig_launch_mark = mark
+        ns.log = logs.append
+        ns.log_shortcut_sets = lambda: calls.append(("log_shortcut_sets",))
+        ns.testfile = lambda code: Path("C:/no/such/dir") / f"{code}.fw.png"
+        ns.open_testfile = lambda side, code: calls.append(("runner.open_testfile", code))
+        ns.orig_unit_start = lambda *a, **k: Runner.orig_unit_start(ns, *a, **k)
+        return ns
+
+    # the real unit start: the sequence of R-2 .. R-29, log lines as before, the mark taken
+    ns = fake_runner(launches=3)
+    ns.key_echo_done = False
+    ns.sides["orig"].key_self_test = lambda: ns.calls.append(("key_self_test",)) or True
+    if Runner.orig_unit_start(ns, ns.sides["orig"], "toolbox") is not None:
+        bad.append("real unit start aborted")
+    names = [c[0] for c in ns.calls]
+    want = ["log_foreground", "log_shortcut_sets", "ensure_foreground", "key_self_test", "kill_hung_own",
+            "reset_light", "close_all_docs", "max_undos_guard", "close_floating", "ensure_panel", "reset_unit"]
+    if names != want:
+        bad.append(f"real unit start sequence {names}")
+    if ("max_undos_guard", "unit start toolbox") not in ns.calls or ns.orig_launch_mark != 3:
+        bad.append(f"real unit start guard / mark {ns.calls} {getattr(ns, 'orig_launch_mark', None)}")
+    if not any(ln.startswith("unit start toolbox: orig panel dock 105 px -> 271 px (expanded") for ln in ns.logs):
+        bad.append(f"real unit start dock line {ns.logs}")
+
+    # no restart since the mark: nothing happens
+    ns = fake_runner(launches=2, mark=2)
+    if Runner.orig_restart_check(ns, "01_zoom_steps_result") or ns.calls:
+        bad.append(f"reset without a restart {ns.calls}")
+
+    # a restart since the mark: the unit-start reset without the once-per-run parts, then the unit's test file
+    ns = fake_runner(launches=3, mark=2)
+    if not Runner.orig_restart_check(ns, "01_zoom_steps_result"):
+        bad.append("no reset after a restart")
+    names = [c[0] for c in ns.calls]
+    want = ["log_foreground", "ensure_foreground", "layout_request", "kill_hung_own", "reset_light",
+            "close_all_docs", "max_undos_guard", "close_floating", "ensure_panel", "reset_unit", "runner.open_testfile"]
+    if names != want:
+        bad.append(f"restart reset sequence {names}")
+    label = "orig restart in xs-canvas before 01_zoom_steps_result"
+    if ("max_undos_guard", label) not in ns.calls or ("runner.open_testfile", "T04") not in ns.calls:
+        bad.append(f"restart reset guard / test file {ns.calls}")
+    if not ns.logs or not ns.logs[0].startswith(label + ": unit-start reset repeated (restart reason: access violation"):
+        bad.append(f"restart log line {ns.logs[:1]}")
+    if not any(ln.startswith(label + ": orig panel dock 105 px -> 271 px") for ln in ns.logs):
+        bad.append(f"restart dock line {ns.logs}")
+    if ns.orig_launch_mark != 3 or Runner.orig_restart_check(ns, "02_zoom_center_result"):
+        bad.append("reset repeated for the same instance")
+
+    # the interrupted opening's own file is opened, not the unit's test file; a folder test file opens nothing
+    ns = fake_runner(launches=3, mark=2)
+    Runner.orig_restart_check(ns, "06_palette_list_open", Path("T09.fw.png"))
+    if ns.calls[-1:] != [("open_testfile", Path("T09.fw.png"))] or "restart while opening T09.fw.png" not in ns.logs[0]:
+        bad.append(f"path not reopened {ns.calls[-1:]}")
+    ns = fake_runner(launches=3, mark=2, testfile="T11")
+    ns.testfile = lambda code: Path(".")
+    Runner.orig_restart_check(ns, "00_overview_normal")
+    if any(c[0].endswith("open_testfile") for c in ns.calls):
+        bad.append("folder test file opened")
+
+    # a restart during the reset: repeated once more, then the mark follows the instance count
+    ns = fake_runner(launches=3, mark=2)
+    n_close = []
+
+    def close_crash():
+        n_close.append(1)
+        ns.calls.append(("close_all_docs",))
+        if len(n_close) == 1:
+            ns.orig.launches += 1
+
+    ns.orig.close_all_docs = close_crash
+    Runner.orig_restart_check(ns, "00_overview_normal")
+    if len(n_close) != 2 or ns.orig_launch_mark != 4 or not any("restarted again during the reset" in ln for ln in ns.logs):
+        bad.append(f"second restart during the reset {len(n_close)} {ns.orig_launch_mark} {ns.logs[:3]}")
+
+    # busy (reset running): no nested reset
+    ns = fake_runner(launches=3, mark=2)
+    ns.orig_reset_busy = True
+    if Runner.orig_restart_check(ns, "x") or ns.calls:
+        bad.append("nested reset")
+
+    # LayoutError in the restart reset: the reference side of the unit is aborted, no test file opened
+    ns = fake_runner(launches=3, mark=2)
+    ns.sides["orig"].fail_layout = True
+    Runner.orig_restart_check(ns, "03_fit_result")
+    if "orig" not in ns.unit_aborted or any(c[0].endswith("open_testfile") for c in ns.calls):
+        bad.append(f"layout error after restart {ns.unit_aborted} {ns.calls[-1:]}")
+
+    # OrigSide.open_testfile: a restart inside the opening -> reset with this file, nothing else of the opening
+    class Stop(Exception):
+        pass
+
+    seen = []
+    side = OrigSide.__new__(OrigSide)
+    side.ensure_foreground = lambda: None
+    side.reset_light = lambda: None
+
+    def open_doc(path, crash):
+        if crash:
+            side.o.launches += 1
+
+    def jsf(*a, **k):
+        raise Stop()
+
+    def check(where, path=None):
+        seen.append((where, path))
+        return side.o.launches != 0
+
+    side.r = SimpleNamespace(orig_where="06_palette_list_open", orig_restart_check=check)
+    side.view_reset_code = jsf
+    side.o = SimpleNamespace(launches=0, open_doc=lambda path: open_doc(path, True), jsf=jsf)
+    try:
+        OrigSide.open_testfile(side, Path("T09.fw.png"))
+    except Stop:
+        bad.append("opening went on after the restart reset")
+    if seen != [("06_palette_list_open", Path("T09.fw.png"))]:
+        bad.append(f"open_testfile hook {seen}")
+    side.o = SimpleNamespace(launches=0, open_doc=lambda path: open_doc(path, False), jsf=jsf)
+    try:
+        OrigSide.open_testfile(side, Path("T09.fw.png"))
+        bad.append("opening without a restart did not go on")
+    except Stop:
+        pass
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
 def screen_mode_from_window(win: dict):
     """R-24 (TW-163, run 26 `toolbox/13`: the screen-mode buttons read "full screen with menus" in Standard): the
     mode from the main window against the monitor - the primary source. Not covering the monitor -> "standard";
@@ -2785,6 +2967,10 @@ class OrigSide(Side):
             self.r.log(f"open test file: {e}")
         self.reset_light()
         self.o.open_doc(path)
+        # R-30 (TW-196): the opening script's access-violation retry (Original.jsf_retry) may have restarted the
+        # program; the restarted instance gets the unit-start reset, which opens this file afresh itself
+        if self.r.orig_restart_check(getattr(self.r, "orig_where", "?"), path):
+            return
         # unit start (R-4): stroke and fill colour of the tools back to the program's defaults, like a freshly
         # started Firepixel (run 8: auto shapes without stroke and with fill #808080 left by earlier runs)
         colors = ""
@@ -7912,6 +8098,114 @@ class Runner:
             except Exception as e:  # noqa: BLE001
                 self.log(f"restart orig failed: {e}")
 
+    def orig_unit_start(self, side, unit_name: str, restart_where: str = ""):
+        """Unit-start reset of the reference program (R-2, R-15, R-26, R-29): foreground, keyboard layout, no
+        documents, `MaxUndos` guard, no floating panel groups, Properties panel, default layout with the unit's dock
+        mode (`reset_unit` -> `ensure_layout`), align 'to canvas' off, and the pending default colours / pointer tool /
+        text tool reset that the next `open_testfile` applies. Returns the abort message when the layout cannot be
+        restored (LayoutError), else None; other errors before `reset_unit` propagate (the caller recovers).
+        R-30 (TW-196): also run after a restart inside the unit (`restart_where` = the step it precedes); then the
+        once-per-run parts (shortcut sets, key self test) are left out and the log lines name the restart."""
+        label = f"orig restart in {unit_name} before {restart_where}" if restart_where else f"unit start {unit_name}"
+        self.orig_launch_mark = getattr(self.orig, "launches", 0)
+        side.log_foreground(label)
+        if not restart_where:
+            self.log_shortcut_sets()
+        try:
+            side.ensure_foreground()
+        except Exception as e:  # noqa: BLE001
+            self.log(f"{label if restart_where else 'unit start'}: {e}")
+        # R-15 (TW-140): key self test once per run, the keyboard layout at every unit start
+        # R-17: the self test is repeated at the next unit when no echo came back (3 units at most)
+        if not restart_where and not getattr(self, "key_echo_done", False):
+            self.key_echo_tries = getattr(self, "key_echo_tries", 0) + 1
+            self.key_echo_done = bool(side.key_self_test()) or self.key_echo_tries >= 3
+        else:
+            side.layout_request()
+        self.orig.kill_hung_own()
+        # defined start state: no questions open, every document closed without saving
+        side.reset_light()
+        self.orig.close_all_docs()
+        # R-29 (TW-174, RE-26): the History limit back at the factory 20 before the unit's documents
+        side.max_undos_guard(label)
+        # defined layout: no floating panel groups left over from earlier units
+        try:
+            side.close_floating()
+        except Exception as e:  # noqa: BLE001
+            self.log(f"close floating panels: {e}")
+        try:
+            side.ensure_panel("properties")
+        except Exception as e:  # noqa: BLE001
+            self.log(f"properties panel: {e}")
+        try:
+            side.reset_unit()
+            # R-26 (TW-167): what the unit-start layout check measured and restored for the dock
+            # R-29 (TW-174): with the wanted mode and the docked group heights
+            dk = getattr(side, "last_dock", None) or {}
+            state = ("expanded" if dk.get("expanded") else "collapsed to icons") if dk.get("ok") else (
+                f"NOT {dk.get('mode') or 'expanded'}")
+            self.log(f"{label}: orig panel dock {dk.get('before')} px -> "
+                     f"{dk.get('after')} px ({state}, wanted {dk.get('mode')}"
+                     + (f", clicks {dk.get('clicks')}" if dk.get("clicks") else ", nothing restored")
+                     + (f", docked group heights {dk.get('groups_before')} -> {dk.get('groups')}"
+                        if dk.get("groups_before") or dk.get("groups") else "")
+                     + (f", {dk['note']}" if dk.get("note") else "") + ")")
+        except LayoutError as e:
+            # no guessed anchor (R-2): this unit is not played in the reference program
+            self.log(f"UNIT ABORTED (orig): {e}")
+            return f"unit aborted in the reference program: {e}"
+        except Exception as e:  # noqa: BLE001
+            self.log(f"unit reset orig: {e}")
+        return None
+
+    def orig_restart_check(self, where: str, path=None) -> bool:
+        """R-30 (TW-196, run 33: four restarts after a script access violation inside a unit - `preview-options`
+        before 06, `toolbox` and `xs-windows-tabs` at the unit start, `xs-canvas` before 01): a restarted reference
+        instance comes up with its STORED state (right dock collapsed to icons, tool colours #808080 / #c04040, the
+        stored `MaxUndos`), because the unit-start reset ran in the old instance. When the instance count
+        (`Original.launches`) differs from the mark of the last unit-start reset, the whole unit-start reset
+        (`orig_unit_start`) runs again and the test file is opened afresh (`path` = the file the interrupted opening
+        wanted, else the unit's test file), so that the pending default colours, pointer tool and text tool reset
+        are applied too. Called before every reference step, after the unit start and from OrigSide.open_testfile
+        (a restart inside the opening's own script retry, the run-33 case). A restart during this reset repeats it
+        once more. True when a reset ran."""
+        o = getattr(self, "orig", None)
+        if o is None or getattr(self, "orig_reset_busy", False):
+            return False
+        n = getattr(o, "launches", 0)
+        if n == getattr(self, "orig_launch_mark", n):
+            return False
+        side = self.sides["orig"]
+        unit = getattr(self, "unit", None) or {}
+        unit_name, tf = unit.get("unit", "?"), unit.get("testfile")
+        self.orig_reset_busy = True
+        try:
+            for attempt in (1, 2):
+                self.log(f"orig restart in {unit_name} before {where}: unit-start reset repeated ("
+                         + (f"restart reason: {str(getattr(o, 'launch_reason', '') or '?')[:160]}" if attempt == 1
+                            else "restarted again during the reset")
+                         + (f"; restart while opening {Path(path).name}, reopened afterwards" if path is not None else "")
+                         + ")")
+                try:
+                    abort = self.orig_unit_start(side, unit_name, restart_where=where)
+                    if abort:
+                        aborted = getattr(self, "unit_aborted", None)
+                        if aborted is not None:
+                            aborted["orig"] = abort
+                    elif path is not None:
+                        side.open_testfile(path)
+                    elif tf and not self.testfile(tf).is_dir():
+                        self.open_testfile(side, tf)
+                except Exception as e:  # noqa: BLE001
+                    self.log(f"orig restart in {unit_name} before {where}: unit-start reset failed: {e}")
+                if getattr(o, "launches", 0) == getattr(self, "orig_launch_mark", None):
+                    break
+            # whatever happened, the same instance is not reset again before every following step
+            self.orig_launch_mark = getattr(o, "launches", 0)
+        finally:
+            self.orig_reset_busy = False
+        return True
+
     def recover(self, side: Side):
         """After a failure: crash check, close menus/dialogs, reopen the unit's test file."""
         try:
@@ -8435,7 +8729,11 @@ class Runner:
                     self.log(f"restart before unit failed: {e}")
             self.units_played = getattr(self, "units_played", 0) + 1
             self.orig_fails = 0
+            # R-30 (TW-196): shared with orig_restart_check (a restart reset that cannot restore the layout aborts
+            # the reference side like the unit start does)
             aborted: dict = {}
+            self.unit_aborted = aborted
+            self.orig_where = steps[0]["id"] if steps else "the end of the unit"
             for side in self.sides.values():
                 try:
                     side.prepare()
@@ -8443,60 +8741,21 @@ class Runner:
                         side.pending_colors = True  # R-9 (TW-107): default colours with the unit's first document
                         side.pending_text_defaults = True  # R-21 (TW-149): text tool reset like the reference
                     if side.name == "orig":
-                        side.log_foreground(f"unit start {unit_name}")
-                        self.log_shortcut_sets()
-                        try:
-                            side.ensure_foreground()
-                        except Exception as e:  # noqa: BLE001
-                            self.log(f"unit start: {e}")
-                        # R-15 (TW-140): key self test once per run, the keyboard layout at every unit start
-                        # R-17: the self test is repeated at the next unit when no echo came back (3 units at most)
-                        if not getattr(self, "key_echo_done", False):
-                            self.key_echo_tries = getattr(self, "key_echo_tries", 0) + 1
-                            self.key_echo_done = bool(side.key_self_test()) or self.key_echo_tries >= 3
-                        else:
-                            side.layout_request()
-                        self.orig.kill_hung_own()
-                        # defined start state: no questions open, every document closed without saving
-                        side.reset_light()
-                        self.orig.close_all_docs()
-                        # R-29 (TW-174, RE-26): the History limit back at the factory 20 before the unit's documents
-                        side.max_undos_guard(f"unit start {unit_name}")
-                        # defined layout: no floating panel groups left over from earlier units
-                        try:
-                            side.close_floating()
-                        except Exception as e:  # noqa: BLE001
-                            self.log(f"close floating panels: {e}")
-                        try:
-                            side.ensure_panel("properties")
-                        except Exception as e:  # noqa: BLE001
-                            self.log(f"properties panel: {e}")
-                        try:
-                            side.reset_unit()
-                            # R-26 (TW-167): what the unit-start layout check measured and restored for the dock
-                            # R-29 (TW-174): with the wanted mode and the docked group heights
-                            dk = getattr(side, "last_dock", None) or {}
-                            state = ("expanded" if dk.get("expanded") else "collapsed to icons") if dk.get("ok") else (
-                                f"NOT {dk.get('mode') or 'expanded'}")
-                            self.log(f"unit start {unit_name}: orig panel dock {dk.get('before')} px -> "
-                                     f"{dk.get('after')} px ({state}, wanted {dk.get('mode')}"
-                                     + (f", clicks {dk.get('clicks')}" if dk.get("clicks") else ", nothing restored")
-                                     + (f", docked group heights {dk.get('groups_before')} -> {dk.get('groups')}"
-                                        if dk.get("groups_before") or dk.get("groups") else "")
-                                     + (f", {dk['note']}" if dk.get("note") else "") + ")")
-                        except LayoutError as e:
-                            # no guessed anchor (R-2): this unit is not played in the reference program
-                            aborted["orig"] = f"unit aborted in the reference program: {e}"
-                            self.log(f"UNIT ABORTED (orig): {e}")
-                        except Exception as e:  # noqa: BLE001
-                            self.log(f"unit reset orig: {e}")
+                        # R-30 (TW-196): the sequence lives in orig_unit_start, which a restart inside the unit
+                        # repeats (orig_restart_check)
+                        abort = self.orig_unit_start(side, unit_name)
+                        if abort:
+                            aborted["orig"] = abort
                     if unit.get("testfile") and not self.testfile(unit["testfile"]).is_dir():
                         # a folder (T11 = import files) is no document: the steps open its files themselves
                         self.open_testfile(side, unit["testfile"])
                 except Exception as e:  # noqa: BLE001
                     self.log(f"start {side.name}: {e} - recovering")
                     self.recover(side)
+            # R-30 (TW-196): a restart during the unit start (after its reset) gets the reset again before step one
+            self.orig_restart_check(self.orig_where)
             for i, step in enumerate(steps):
+                after = steps[i + 1]["id"] if i + 1 < len(steps) else "the end of the unit"
                 entry = {"unit": unit_name, "step": step["id"], "n": i, "check": step.get("check"),
                          "area": (step.get("shot") or {}).get("area"), "time": time.strftime("%Y-%m-%d %H:%M:%S")}
                 if step.get("cursor") or (step.get("shot") or {}).get("cursor"):
@@ -8522,6 +8781,7 @@ class Runner:
                         entry["result"][name] = {"side": name, "actions": [], "status": "aborted", "error": aborted[name]}
                         continue
                     if name == "orig":
+                        self.orig_where = step["id"]
                         # the program may have ended (crash, quit) since the last step: start it again
                         try:
                             alive = self.orig.running()
@@ -8530,6 +8790,13 @@ class Runner:
                         if not alive:
                             self.log("reference program not running - starting it again")
                             self.recover(side)
+                        # R-30 (TW-196): a restart since the last unit-start reset (recovery or the error count after
+                        # the previous step, a crash between the steps) -> the unit-start reset before this step
+                        self.orig_restart_check(step["id"])
+                        if name in aborted:
+                            entry["result"][name] = {"side": name, "actions": [], "status": "aborted",
+                                                     "error": aborted[name]}
+                            continue
                     try:
                         side.reset_light()
                     except Exception as e:  # noqa: BLE001
@@ -8580,6 +8847,9 @@ class Runner:
                     if tries and rec.get("focus_lost") and rec["status"] == "ok":
                         rec.update(status="error", error=f"focus lost during the step again (retried {tries}x): {rec['focus_lost']}")
                     entry["result"][name] = rec
+                    if name == "orig":
+                        # R-30: a restart from here on (recovery, error count) is reset before the next step
+                        self.orig_where = after
                     if rec["status"] in ("error",):
                         self.recover(side)
                     if name == "orig":
@@ -8691,6 +8961,7 @@ def main(argv=None):
         print(f"R-25 self check: {r25_selfcheck()}")
         print(f"R-26 self check: {r26_selfcheck()}")
         print(f"R-29 self check: {r29_selfcheck()}")
+        print(f"R-30 self check: {r30_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0

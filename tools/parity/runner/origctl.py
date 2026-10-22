@@ -204,6 +204,12 @@ class Original:
         # collected in `closed_dialogs` (the runner moves them into the step record)
         self.keep_dialogs = False
         self.closed_dialogs: list[dict] = []
+        # R-30 (TW-196): every new instance (started here, or a waiting launcher that became the instance) counts;
+        # the runner compares the count with its mark from the last unit-start reset and repeats that reset after a
+        # restart inside a unit. `launch_reason` = why the last instance was started (restart reason, or none).
+        self.launches = 0
+        self.launch_reason = ""
+        self._pending_reason = ""
 
     # ---------------------------------------------------------------- process
     def pid(self) -> int:
@@ -255,11 +261,13 @@ class Original:
             if not self.running():
                 raise OrigError(f"reference process without main window that this runner did not start: "
                                 f"{[p['pid'] for p in others]}")
+            self._count_launch()
             self.decline_dialogs()
             self.place()
             return
         pr = subprocess.Popen([self.exe], cwd=str(Path(self.exe).parent))
         self.own_pids.add(pr.pid)
+        self._count_launch()
         if self.started_by_us is None:
             self.started_by_us = True
         end = time.time() + float(self.cfg.get("start_wait_s", 60))
@@ -275,6 +283,12 @@ class Original:
         # recovery / startup questions: decline
         self.host.call("dialog_close", mode="cancel")
         self.place()
+
+    def _count_launch(self):
+        """R-30 (TW-196): one more instance; the reason given to restart() (or 'program not running') is kept."""
+        self.launches += 1
+        self.launch_reason = self._pending_reason or ("first start" if self.launches == 1 else "program was not running")
+        self._pending_reason = ""
 
     def kill(self):
         pid = self.pid()
@@ -296,7 +310,11 @@ class Original:
         # a restart does not change who owns the instance: one that was running before the run stays open at the end
         owned = self.started_by_us
         self.kill()
-        self.start()
+        self._pending_reason = reason or "restart without a reason"
+        try:
+            self.start()
+        finally:
+            self._pending_reason = ""
         self.started_by_us = owned
 
     def place(self):

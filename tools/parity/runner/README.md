@@ -1136,7 +1136,8 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
 - Run 29 (20 Oct 2026, `toolbox`, `tool-path-reshape`, `xs-select-behind`): TW-167 confirmed - `00_overview_normal`
   25.5 % and `13_view_modes_standard_normal` 25.9 % with the dock expanded on both sides. Known gap: after a mid-unit
   restart of the reference the dock is not checked again until the next layout check (run 29: one restart at the
-  start of `xs-select-behind`, the restarted program came up with the dock expanded).
+  start of `xs-select-behind`, the restarted program came up with the dock expanded). Closed by R-30 (the whole unit-start
+  reset is repeated after a restart inside a unit).
 
 ## R-27 additions (21 Oct 2026)
 
@@ -1252,3 +1253,43 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   22.1–94.8 %, the same diff pixel counts). Second check (`run_r29_test_collapse_2026-10-21`, steps `01`, `04`): the
   dock expanded and the Layers flyout shrunk to 232 x 319 by hand before the run -> collapsed at unit start, flyout
   dragged back to 245 x 389, `04` hides both layers; the run end expanded the dock again (105 -> 271 px).
+
+## R-30 additions (22 Oct 2026)
+
+- **Cause of TW-196 (run 33: the reference came back with its dock collapsed to icons, the stored tool colours
+  #808080 / #c04040 and `MaxUndos` 3 after four restarts inside a unit):** all four restarts (`preview-options` before
+  `06`, `toolbox` and `xs-windows-tabs` at the unit start, `xs-canvas` before `01`) happened while the test file was
+  opened (`open_testfile` / `reopen`): `Original.open_doc` runs its script through `jsf_retry`, which restarts the
+  program after a script access violation and runs the opening script again. The R-2 .. R-29 resets (dock mode, flyout
+  sizes, `MaxUndos`, default colours, text tool reset) ran only at unit start, so the new instance kept its stored
+  state. The step itself was **not** an error: `06_palette_list_open`, `toolbox/00_overview_normal`,
+  `xs-canvas/01_zoom_steps_result` and `xs-windows-tabs/00_overview_normal` are `ok` on both sides, their shots were
+  simply taken in the stored state. No step is repeated after a recovery: a failed step keeps `error`, the side is
+  recovered (`recover`) and the run goes on with the next step (only the R-7 / R-11 focus retries repeat a step).
+- **Instance count:** `Original.launches` counts every new reference instance (`start()` that launched the program,
+  or a waiting launcher that became the instance); `launch_reason` keeps the reason given to `restart()`
+  (`access violation in script: …`, `3 reference errors in a row (…)`, `planned before script-heavy unit …`) or
+  `program was not running`.
+- **`orig_unit_start`:** the reference side's unit-start sequence moved unchanged out of `run_unit` (foreground, key
+  self test or keyboard layout, hung launchers ended, light reset, all documents closed, `max_undos_guard`, floating
+  groups closed, Properties panel, `reset_unit` = `ensure_layout` with the unit's dock mode and the tools anchor, align
+  'to canvas' off, text editor check, flyout size log reset, pending default colours / pointer tool / text tool reset
+  for the next opened document). It sets the mark `orig_launch_mark` = `launches`. The real unit start makes the same
+  calls and writes the same log lines as before.
+- **`orig_restart_check(where, path)`:** when `launches` differs from the mark, the unit-start sequence runs again in
+  its restart variant (no shortcut-set log, no key self test; the keyboard layout is requested) and the test file is
+  opened afresh, so the default colours, the pointer tool and the text tool reset of the first document apply too.
+  Called (1) from `OrigSide.open_testfile` right after the opening script - the run-33 case: the reset runs inside the
+  step's opening action, before the step's further actions and its shot, and reopens the file that was being opened;
+  (2) before every reference step (restarts by `recover`, by the error count `count_orig`, or a crash between steps);
+  (3) after the unit start. A restart during the reset repeats it once more; a LayoutError aborts the reference side of
+  the unit as at unit start. The unit start sets no screen mode, so the repeat does not either. Log:
+  `orig restart in <unit> before <step>: unit-start reset repeated (restart reason: …[; restart while opening <file>,
+  reopened afterwards])`, followed by the unit-start lines with that prefix (`orig MaxUndos (orig restart in …)`,
+  `orig restart in <unit> before <step>: orig panel dock 105 px -> 271 px (expanded, …)`) and the default colour and
+  text tool reset lines of the reopened document.
+- `--dry-run` prints `R-30 self check: ok` (fake reference and side objects: instance count and restart reason, the
+  real and the restart sequence, no reset without a restart and none twice for one instance, the unit's test file or
+  the interrupted file reopened, nothing opened for a folder test file, a second restart during the reset, no nested
+  reset, LayoutError abort, the `open_testfile` hook). Not yet verified on the reference program (it was busy with
+  another measurement); the next run with a restart inside a unit shows the log line above.
