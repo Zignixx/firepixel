@@ -1408,3 +1408,15 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   drag 0 in the reference, 2 in Firepixel. `08`: reference `1: L1obj`, then `0: `; Firepixel `2: (no name)|L1obj`, then
   `1: (no name)` (script and bridge agree; F79/F81 not in the build).
 - `--dry-run` prints `R-33 self check: ok` (dot search on a synthetic row, the two scripts).
+
+## R-34 additions (23 Oct 2026)
+
+- **Layers panel rows are looked up inside the panel only (Q-66):** Firepixel's targets `{layer_row}`, `{object_row}`
+  and `{layer_name}` (and the name used for the triangle column of `{layer_expand}`) are taken from the Layers panel
+  (`layers_row_scan`: the row as it is, else the list wheeled through, then collapsed parents expanded) instead of the
+  first window-wide `ui_find` hit. Run 38 `panel-layers/08_shift_ctrl_result`: the Shift-click's lookup of the unnamed
+  object of "Gemeinsam" wheeled L1obj's row out of the small list (268 x 291 px), and the first hit of "L1obj" was the
+  Properties panel's name field of the selected object - the Ctrl-click landed there (window [152, 932]) and the
+  selection stayed `1: L1obj`. With the lookup in the panel the Ctrl-click hits the row ([1461, 622]) and Firepixel
+  reads `0: ` like the reference (preview 2026-10-23_15-30, Firepixel side alone). The panel's Ctrl mapping was not
+  involved: the bridge sets `ctrl` and `command` on the click, the panel toggles on either.

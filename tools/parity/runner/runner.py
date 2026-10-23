@@ -7229,7 +7229,8 @@ class FpSide(Side):
                 if k in target:
                     # columns of the layers panel row (measured 14.10.): eye and lock at fixed x, the triangle left of the name
                     c = self.resolve({"layer_row": target[k]})
-                    hit = self.find(target[k], None, True, None)
+                    # R-34 (Q-66): the name inside the Layers panel (the same text may stand in another panel)
+                    hit = self.layers_row_scan(target[k], wheel=False) or self.find(target[k], None, True, None)
                     pr = self.area_rect("panel:layers")
                     x = {"layer_eye": pr[0] + 17, "layer_lock": pr[0] + 38}.get(k, hit["rect"][0] - 28)
                     return [x, c[1]]
@@ -7285,17 +7286,18 @@ class FpSide(Side):
                                        f", {len(hits) - 1} other hit(s) left out)")
                             return at(row)
                         self.r.log(f"  fp pref_category {v}: no accesskit row among {len(hits)} hit(s) - first hit")
-                    try:
+                    if k not in ("layer_row", "object_row", "layer_name"):
                         if region:
                             try:
                                 return at(self.find(v, None, True, region))
                             except Unmapped:
                                 pass
                         return at(self.find(v))
-                    except Unmapped:
-                        if k not in ("layer_row", "object_row", "layer_name"):
-                            raise
-                    # the row is scrolled out of the (small) layers panel: wheel through the list and look again
+                    # R-34 (Q-66, run 38 `panel-layers/08_shift_ctrl_result`): a layer or object row is looked up
+                    # inside the Layers panel only. The first window-wide ui_find hit of "L1obj" was the Properties
+                    # panel's name field of the selected object (the row itself was scrolled out of the small list by
+                    # the Shift-click's lookup), so the Ctrl-click landed in that field and the selection stayed.
+                    # The row as it is, else the list wheeled through (it is scrolled out of the small panel)
                     hit = self.layers_row_scan(v)
                     if hit:
                         return hit["center"]
