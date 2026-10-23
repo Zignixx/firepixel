@@ -534,6 +534,62 @@ def slider_points(r, frac, from_frac=None):
     return (start, y), (x_of(frac), y)
 
 
+def slider_column_rect(img: Image.Image, pt, light: int = 240, dark: int = 60, max_len: int = 400):
+    """R-32 (color-popup/23): an open popup slider found in a window image when the bridge reports no slider node
+    (the colour popup's alpha slider in the 23 Oct preview): the slider covers its arrow `pt`, its track is near
+    white (>= `light`, Firepixel 249) with a dark thumb (<= `dark`). From `pt` up and down along the column while
+    the pixels are track or thumb, then left and right at the middle. [l, t, r, b] or None (no track at `pt`)."""
+    x, y = int(pt[0]), int(pt[1])
+    w, h = img.size
+
+    def on(px, py) -> bool:
+        if not (0 <= px < w and 0 <= py < h):
+            return False
+        v = img.getpixel((px, py))
+        m = min(v[:3]) if isinstance(v, tuple) else v
+        mx = max(v[:3]) if isinstance(v, tuple) else v
+        return m >= light or mx <= dark
+    if not on(x, y):
+        return None
+    t = y
+    while t > 0 and y - t < max_len and on(x, t - 1):
+        t -= 1
+    b = y
+    while b < h - 1 and b - y < max_len and on(x, b + 1):
+        b += 1
+    my = (t + b) // 2
+    lx = x
+    while lx > 0 and x - lx < 60 and on(lx - 1, my):
+        lx -= 1
+    rx = x
+    while rx < w - 1 and rx - x < 60 and on(rx + 1, my):
+        rx += 1
+    if b - t < 40 or rx - lx < 4:
+        return None
+    return [lx, t, rx + 1, b + 1]
+
+
+def color_fields_from(boxes, hex_label, rgb_label) -> dict:
+    """R-32 (color-popup/23, TW-206): the colour popup's fields from text boxes [(rect, text)] and the rects of its
+    "HEX:" and "RGB:" labels: hex = the box right of "HEX:" on its row, rgb = the boxes right of "RGB:" on its row
+    (left to right), alpha = the box left of the labels on the RGB row. {"alpha", "hex", "rgb"} (None when missing)."""
+    def cy(r):
+        return (r[1] + r[3]) / 2
+
+    def row(lbl):
+        return sorted([(r, t) for r, t in boxes if abs(cy(r) - cy(lbl)) <= 8 and r[0] >= lbl[2] - 2], key=lambda b: b[0][0])
+    out = {"alpha": None, "hex": None, "rgb": None}
+    if hex_label:
+        h = row(hex_label)
+        out["hex"] = h[0][1] if h else None
+    if rgb_label:
+        out["rgb"] = [t for _, t in row(rgb_label)][:3] or None
+        left = sorted([(r, t) for r, t in boxes if abs(cy(r) - cy(rgb_label)) <= 8 and r[2] <= rgb_label[0] + 2],
+                      key=lambda b: -b[0][0])
+        out["alpha"] = left[0][1] if left else None
+    return out
+
+
 def find_color_cell(img: Image.Image, region, hexcol: str, half: int = 2):
     """Centre of the first swatch cell (reading order) inside `region` (image coordinates) whose pixels around the
     centre all have the colour `hexcol` ('#RRGGBB'). Swatch grids are drawn without anti-aliasing in both programs."""
@@ -1183,7 +1239,11 @@ def r31_selfcheck() -> str:
 
 
 # R-15 (TW-140): text attributes the reference's text tool is reset to at unit start (config `orig.text_defaults`)
-TEXT_DEFAULTS = {"face": "ArialMT", "size": "12pt", "bold": False, "italic": False, "underline": False, "fillColor": "#000000"}
+# R-32 (TW-211, runs 27, 28, 30 and 36: the reference's stored alignment made its new texts right-aligned): + alignment
+TEXT_DEFAULTS = {"face": "ArialMT", "size": "12pt", "bold": False, "italic": False, "underline": False, "fillColor": "#000000",
+                 "alignment": "left"}
+# R-32 (TW-211): the alignment names of `textRuns.initialAttrs.alignment` -> Firepixel's `text.setToolDefaults` code
+TEXT_ALIGN_CODES = {"left": 0, "center": 1, "right": 2, "justify": 3}
 # R-15: after a pointer double-click: active tool and whether exactly one text is selected
 DBL_STATE_JS = ('(function(){var t=0;try{t=(fw.selection.length==1&&fw.selection[0].textChars!=null)?1:0;}catch(e){}'
                 'return "tool="+fw.activeTool+";text="+t;})()')
@@ -1265,6 +1325,31 @@ def dock_group_heights(kids, dock):
     return [int(r[3] - r[1]) for r in sorted(gs, key=lambda r: r[1])]
 
 
+def inspector_group(kids, client):
+    """R-32 (TW-197): the tab group of the reference's Properties inspector among the main window's children
+    (`children` with all=True) when the host's `panel` cannot report it (collapsed to its tab row, the palette then
+    counts as not visible): the widest `OWL.TabGroup` in the lower half of the client that spans at least 40 % of
+    its width (the right-dock groups are about 270 px wide). [l, t, r, b] or None."""
+    c = rect4(client)
+    if not c:
+        return None
+    best = None
+    for k in kids or []:
+        r = rect4(k.get("rect")) if isinstance(k, dict) else None
+        if not r or k.get("class") != "OWL.TabGroup":
+            continue
+        if (r[2] - r[0]) >= 0.4 * (c[2] - c[0]) and r[1] > (c[1] + c[3]) / 2:
+            if best is None or (r[2] - r[0]) > (best[2] - best[0]):
+                best = r
+    return best
+
+
+def inspector_tab_point(group):
+    """R-32 (TW-197): a point on the inspector's first tab ("Eigenschaften", x 72-153 in the R-32 probe of 23 Oct 2026) - 46 px
+    from the group's left edge, 9 px below its top (tab row 19 px high, the same in all three heights)."""
+    return int(group[0] + 46), int(group[1] + 9)
+
+
 def dock_toggle_point(dock):
     """R-26 (TW-167): the dock's collapse/expand button (double arrow at the right end of its 12 px top strip; run
     29 probe: dock [1325, 66, 1596, 996] -> button 1588, 71, the same spot when collapsed [1491, 66, 1596, 996])."""
@@ -1286,6 +1371,40 @@ def r26_selfcheck() -> str:
         bad.append(f"collapsed dock {right_dock(kids, client)}")
     if right_dock(kids[:4], client) is not None or right_dock(kids, None) is not None:
         bad.append("dock found without a right dock")
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
+def r32_selfcheck() -> str:
+    """R-32: offline check of the inspector group pick (window rects of the R-32 probe: collapsed to its tab row, the
+    right-dock groups not taken) and its tab point, the popup slider found in an image, and the colour popup's field
+    reading (rects of the R-32 probe, both programs)."""
+    bad = []
+    client = [0, 0, 1600, 1000]
+    kids = [{"class": "OWL.Dock", "rect": [69, 975, 1325, 996]}, {"class": "OWL.TabGroup", "rect": [69, 976, 1325, 996]},
+            {"class": "OWL.TabGroup", "rect": [1326, 765, 1596, 996]}, {"class": "OWL.TabGroup", "rect": [1326, 78, 1596, 306]}]
+    if inspector_group(kids, client) != [69, 976, 1325, 996] or inspector_tab_point([69, 976, 1325, 996]) != (115, 985):
+        bad.append(f"collapsed inspector {inspector_group(kids, client)}")
+    if inspector_group(kids[2:], client) is not None or inspector_group(kids, None) is not None:
+        bad.append("inspector found without its group")
+    img = Image.new("RGB", (100, 300), (204, 204, 204))
+    for y in range(40, 262):
+        for x in range(30, 48):
+            img.putpixel((x, y), (249, 249, 249))
+    for x in range(32, 46):
+        img.putpixel((x, 50), (40, 40, 40))
+    r = slider_column_rect(img, (38, 120))
+    if r != [30, 40, 48, 262] or slider_column_rect(img, (10, 120)) is not None:
+        bad.append(f"slider in image {r}")
+    o = color_fields_from([([242, 831, 272, 852], "100"), ([364, 808, 460, 829], "808080"), ([364, 831, 394, 852], "128"),
+                           ([398, 831, 428, 852], "128"), ([431, 831, 461, 852], "128")], [338, 810, 361, 830], [332, 833, 362, 853])
+    if o != {"alpha": "100", "hex": "808080", "rgb": ["128", "128", "128"]}:
+        bad.append(f"orig colour fields {o}")
+    o = color_fields_from([([435, 837, 460, 856], "128"), ([402, 837, 427, 856], "128"), ([368, 837, 393, 856], "128"),
+                           ([246, 837, 271, 856], "50"), ([368, 814, 459, 833], "#808080")], [338, 816, 361, 831], [337, 839, 361, 854])
+    if o != {"alpha": "50", "hex": "#808080", "rgb": ["128", "128", "128"]}:
+        bad.append(f"fp colour fields {o}")
+    if TEXT_ALIGN_CODES.get(str(TEXT_DEFAULTS.get("alignment"))) != 0:
+        bad.append("text alignment default")
     return "ok" if not bad else "FAILED: " + "; ".join(bad)
 
 
@@ -2155,6 +2274,10 @@ class OrigSide(Side):
         if dk.get("changed"):
             changed.append(f"panel dock {'expanded' if dk.get('mode') == 'expanded' else 'collapsed to icons'} "
                            f"({dk.get('before')} -> {dk.get('after')} px)")
+        # R-32 (TW-197): the Properties inspector at its expanded height (run 34 started units with it collapsed)
+        ins = self.inspector_expand()
+        if ins.get("changed"):
+            changed.append(f"Properties inspector expanded ({ins.get('before')} -> {ins.get('after')} px)")
         if not self.tools_visible():
             info = self.panel_info("tools")
             self.h.call("menu", path=split_path(info["menu"]), final="invoke", bar=bar, timeout=40)
@@ -2242,6 +2365,67 @@ class OrigSide(Side):
                            f"{out['clicks']} -> {out['after']} px"
                            + ("" if out["ok"] else (" - STILL COLLAPSED" if want_exp else " - STILL EXPANDED")))
         self.last_dock = out
+        return out
+
+    def inspector_state(self) -> dict:
+        """R-32 (TW-197): the Properties inspector's tab group {rect, height, visible} - from the host's `panel` (the
+        group rect, run 36 / R-32 probe: 125 px expanded, 75 px at half height without a document) or, when the
+        palette is collapsed to its tab row (20 px, `panel` answers "not visible"), from the main window's children
+        (inspector_group); {"missing": True} or {"error"}."""
+        title = self.panel_info("properties").get("title") or "Eigenschaften"
+        try:
+            r = rect4((self.h.call("panel", name=title) or {}).get("rect"))
+            if r:
+                return {"rect": [int(x) for x in r], "height": int(r[3] - r[1]), "visible": True}
+        except OrigError as e:
+            if "not visible" not in str(e):
+                return {"error": str(e)[:80]}
+        try:
+            client = self.h.call("main").get("client")
+            g = inspector_group(self.h.list("children", all=True, timeout=40), client)
+        except OrigError as e:
+            return {"error": str(e)[:80]}
+        if not g:
+            return {"missing": True}
+        return {"rect": [int(x) for x in g], "height": int(g[3] - g[1]), "visible": False}
+
+    def inspector_expand(self) -> dict:
+        """R-32 (TW-197, run 34: the inspector started collapsed to its tab row and stayed so until a restart, its shots
+        1256 x 56 px instead of 1256 x 125, the document view 69 px taller): the Properties inspector at its expanded
+        height. A double-click on its first tab cycles expanded (125 px) -> half (75 px) -> tab row only (20 px) ->
+        expanded (R-32 probe, no document open); lower than `orig.inspector_expanded_min_px` (default 110) -> double-
+        clicks (at most 3) until it is reached, read back after each. A group at full height whose inspector tab is
+        merely not in front is left to `ensure_panel`. Result {before, after, clicks, changed, ok, min} stored as
+        `last_inspector`, logged when it clicked (`orig Properties inspector: ...`)."""
+        lim = float(self.r.cfg["orig"].get("inspector_expanded_min_px", 110))
+        st = self.inspector_state()
+        out = {"before": st.get("height"), "after": st.get("height"), "clicks": [], "changed": False, "min": lim}
+        if st.get("error") or st.get("missing"):
+            out["note"] = st.get("error") or "no inspector group"
+            out["ok"] = None
+        else:
+            for _ in range(3):
+                if st.get("height", 0) >= lim:
+                    break
+                pt = inspector_tab_point(st["rect"])
+                try:
+                    self.click_at(pt, count=2)
+                except OrigError as e:
+                    out["clicks"].append({"at": list(pt), "error": str(e)[:80]})
+                    break
+                time.sleep(0.8)
+                st = self.inspector_state()
+                out["clicks"].append({"at": list(pt), "height": st.get("height")})
+                if not st.get("rect"):
+                    break
+            out["after"] = st.get("height")
+            out["ok"] = (out["after"] or 0) >= lim
+            out["changed"] = bool(out["clicks"]) and out["ok"]
+            if out["clicks"]:
+                self.page = None
+                self.r.log(f"orig Properties inspector: {out['before']} px (expanded means >= {lim:g}) -> double-clicks "
+                           f"on its tab {out['clicks']} -> {out['after']} px" + ("" if out["ok"] else " - STILL COLLAPSED"))
+        self.last_inspector = out
         return out
 
     def flyout_size_check(self, p, got=None):
@@ -2501,7 +2685,7 @@ class OrigSide(Side):
         """R-17: the text tool's current attributes - a scratch text from the tool's defaults (`addNewText(r, true)`)
         in the open test document, its attributes read, the text deleted again. {"_error": ...} when not readable."""
         code = ("var d = fw.getDocumentDOM(), out = 'error no document';\n"
-                "function attrs(t) { var a = t.textRuns.initialAttrs, s = []; for (var k in a) if (/^(face|size|bold|italic|underline|fillColor)$/.test(k)) s.push(k + '=' + a[k]); return s.join('|'); }\n"
+                "function attrs(t) { var a = t.textRuns.initialAttrs, s = []; for (var k in a) if (/^(face|size|bold|italic|underline|fillColor|alignment)$/.test(k)) s.push(k + '=' + a[k]); return s.join('|'); }\n"
                 "if (d) { try { d.selectNone(); d.addNewText({left: 10, top: 10, right: 200, bottom: 40}, true);\n"
                 "  if (fw.selection.length == 1) { out = attrs(fw.selection[0]); d.deleteSelection(false); } else { out = 'error scratch text not selected (' + fw.selection.length + ')'; }\n"
                 "} catch (e) { out = 'error ' + e; } }\n"
@@ -2519,8 +2703,8 @@ class OrigSide(Side):
         """R-17 (TW-140, run 20: 36 pt bold italic underlined before and after the R-15 scratch-document reset in all
         seven units - setTextRuns does not reach the tool's defaults): set like a user does it. Nothing selected, the
         text tool from the tools column, then the Properties panel (ui_map `inspector.*`): size field = config size,
-        faux bold / italic / underline clicked when on, text colour through the colour popup's hex field; pointer
-        tool back. Read before and after with a scratch text (text_tool_attrs); the caller reopens the document."""
+        faux bold / italic / underline clicked when on, R-32 (TW-211) the button of the wanted alignment, text colour
+        through the colour popup's hex field; pointer tool back. Read before and after with a scratch text (text_tool_attrs); the caller reopens the document."""
         want = dict(TEXT_DEFAULTS)
         want.update(self.r.cfg["orig"].get("text_defaults") or {})
         t0 = time.time()
@@ -2563,6 +2747,16 @@ class OrigSide(Side):
                         done.append(f"{attr} clicked")
                     except Exception as e:  # noqa: BLE001
                         errs.append(f"{attr}: {str(e)[:100]}")
+            # R-32 (TW-211): the alignment - the Properties panel's button of the wanted alignment (ui_map
+            # `inspector.align_<name>`) clicked while the text tool is active and nothing is selected
+            al = str(want.get("alignment") or "").lower()
+            if al and (not known or str(before.get("alignment", "")).lower() != al):
+                try:
+                    self.click_at(self.resolve(f"inspector.align_{al}")[0])
+                    time.sleep(0.25)
+                    done.append(f"alignment {al} clicked")
+                except Exception as e:  # noqa: BLE001
+                    errs.append(f"alignment: {str(e)[:100]}")
             col = str(want.get("fillColor", "#000000")).lower()
             if not known or str(before.get("fillColor", "")).lower() != col:
                 # R-19 (TW-140, run 21: the colour stayed #808080 - the Enter in the hex field did not commit): first
@@ -2707,6 +2901,9 @@ class OrigSide(Side):
             errs.append(f"colour not {col} after the reset: {after.get('fillColor')}")
         if "_error" not in after and re.sub(r"[^\d.]", "", str(after.get("size", ""))) != want_size:
             errs.append(f"size not {want_size} after the reset: {after.get('size')}")
+        al = str(want.get("alignment") or "").lower()
+        if al and "_error" not in after and str(after.get("alignment", "")).lower() != al:
+            errs.append(f"alignment not {al} after the reset: {after.get('alignment')}")
 
         def fmt(a):
             return a.get("_error") or " ".join(f"{k}={a[k]}" for k in sorted(a))
@@ -5005,7 +5202,23 @@ class OrigSide(Side):
             for w in self.h.list("windows"):
                 if w["hwnd"] == main or w["class"] in skip:
                     continue
-                kids = [k for k in self.h.list("kids", hwnd=w["hwnd"]) if k.get("class") == spec.get("class", "Edit")]
+                allk = self.h.list("kids", hwnd=w["hwnd"])
+                kids = [k for k in allk if k.get("class") == spec.get("class", "Edit")]
+                if spec.get("right_of") or spec.get("left_of"):
+                    # R-32 (color-popup/05, 23): by the label on its row - the colour popup's Edit 0 is the alpha
+                    # field, not HEX (R-32 probe: alpha 242,831, HEX 364,808 right of "HEX:" 338,810). `right_of`:
+                    # the control right of that label, nearest first; `left_of`: the one left of it, nearest first
+                    lab = next((rect4(k["rect"]) for k in allk if k.get("class") == "Static"
+                                and clean_label(k.get("title") or "") == clean_label(spec.get("right_of") or spec.get("left_of"))), None)
+                    if not lab:
+                        continue
+                    cy = (lab[1] + lab[3]) / 2
+                    row = [k for k in kids if abs((rect4(k["rect"])[1] + rect4(k["rect"])[3]) / 2 - cy) <= 8]
+                    if spec.get("right_of"):
+                        row = sorted([k for k in row if rect4(k["rect"])[0] >= lab[2] - 2], key=lambda k: rect4(k["rect"])[0])
+                    else:
+                        row = sorted([k for k in row if rect4(k["rect"])[2] <= lab[0] + 2], key=lambda k: -rect4(k["rect"])[0])
+                    kids = row
                 if len(kids) > int(spec.get("index", 0)):
                     k = dict(kids[int(spec.get("index", 0))], popup=True)
                     r = k["rect"]
@@ -6217,13 +6430,35 @@ class OrigSide(Side):
                 time.sleep(0.5)
             self.values.append({"set_field": str(target), "commit": commit, "text": text})
             return
-        if info and info.get("class") in ("Edit",):
-            self.h.call("set_text", hwnd=info["hwnd"], text=str(value))
+        # R-32 (TW-204, inspector-text/25: the indent 33 never reached the point text): the field's text was set by
+        # WM_SETTEXT before typing, so the typed value equalled the field's text and the Properties panel's indent
+        # field committed nothing (it applies a changed text only; R-32 probe: 0 -> WM_SETTEXT 33 -> typed 33 + Enter
+        # = no change, typed 34 + Enter without it = indent 34). Now typed first; WM_SETTEXT only when the typed text
+        # did not arrive (the field still shows its text from before and that is not the value), then committed again
+        before = None
+        if info and info.get("class") in ("Edit",) and info.get("hwnd"):
+            try:
+                before = str(self.h.call("get_text", hwnd=info["hwnd"]))
+            except OrigError:
+                before = None
         self.click_at(pt, count=2)
         self.h.call("key", combo="ctrl+a")
         self.h.call("type", text=str(value))
         if (commit or "enter") != "none":
             self.h.call("key", combo=commit or "enter")
+        if info and info.get("class") in ("Edit",) and info.get("hwnd"):
+            try:
+                got = str(self.h.call("get_text", hwnd=info["hwnd"]))
+            except OrigError:
+                got = None
+            if got is not None and before is not None and got.strip() == before.strip() \
+                    and re.sub(r"[^\d.-]", "", got) != re.sub(r"[^\d.-]", "", str(value)):
+                self.h.call("set_text", hwnd=info["hwnd"], text=str(value))
+                self.click_at(pt)
+                self.h.call("key", combo="end")
+                if (commit or "enter") != "none":
+                    self.h.call("key", combo=commit or "enter")
+                self.values.append({"set_field": str(target), "typed_text_missing": got, "set_by": "WM_SETTEXT"})
         loc = self.loc_of(target)
         if loc.get("jsf_set"):
             # some inspector fields keep typed text without applying it to the selection (no commit from
@@ -6264,6 +6499,20 @@ class OrigSide(Side):
                   and w["class"] not in ("tooltips_class32",)]
             menus = self.h.call("menus").get("menus") or []
             return {"visible": bool(ws or menus), "windows": sorted({w["class"] for w in ws}), "menus": len(menus)}
+        if key == "popup.color_fields":
+            # R-32 (TW-206): alpha, HEX and RGB of the open colour popup (the top-level window with a "HEX:" label;
+            # R-32 probe: alpha Edit 242,831, HEX Edit 364,808, RGB Edits 364/398/431,831), texts via WM_GETTEXT
+            main = self.h.call("main")["hwnd"]
+            for w in self.h.list("windows"):
+                if w["hwnd"] == main:
+                    continue
+                kids = self.h.list("kids", hwnd=w["hwnd"])
+                lab = {clean_label(k.get("title") or ""): rect4(k["rect"]) for k in kids if k.get("class") == "Static"}
+                if "HEX:" not in lab:
+                    continue
+                boxes = [(rect4(k["rect"]), self.h.call("get_text", hwnd=k["hwnd"])) for k in kids if k.get("class") == "Edit"]
+                return dict(color_fields_from(boxes, lab.get("HEX:"), lab.get("RGB:")), window=w["class"])
+            return {"error": "no colour popup open"}
         return {"title": self.h.call("main")["title"], "dialogs": [d.get("title") for d in self.h.list("dialogs")]}
 
     def option_state(self, target):
@@ -6465,7 +6714,7 @@ class FpSide(Side):
                         "try{L=d.currentLayerNum;}catch(e){}"
                         "function scratch(){d.selectNone();d.addNewText({left:10,top:10,right:200,bottom:40},true);"
                         "if(fw.selection.length!=1)throw 'scratch text not selected ('+fw.selection.length+')';"
-                        "var a=fw.selection[0].textRuns.initialAttrs,s=[],ks=['face','size','bold','italic','underline','fillColor'];"
+                        "var a=fw.selection[0].textRuns.initialAttrs,s=[],ks=['face','size','bold','italic','underline','fillColor','alignment'];"
                         "for(var i=0;i<ks.length;i++)s.push(ks[i]+'='+a[ks[i]]);d.deleteSelection(false);return s.join('|');}"
                         "function back(){try{if(L!==null)d.currentLayerNum=L;}catch(e){}}"
                         "try{return scratch();}catch(e0){var n=0;try{n=d.layers.length;}catch(e){}"
@@ -6579,7 +6828,8 @@ class FpSide(Side):
         """R-21 (TW-149, runs 21 to 23: the reference's texts were ArialMT 12 pt after its unit-start reset,
         Firepixel's stayed in its default Myriad Pro, so every text pair compared two fonts): the same attributes
         (TEXT_DEFAULTS + config `orig.text_defaults`, then `fp.text_defaults`) as the text tool's defaults through
-        the bridge command `text.setToolDefaults` (font, size, bold, italic, underline, color), nothing selected.
+        the bridge command `text.setToolDefaults` (font, size, bold, italic, underline, color; R-32: alignment),
+        nothing selected.
         Read before and after (text_tool_attrs); log `fp unit start text tool reset (…): before … | after …`.
         Config `fp.text_tool_reset: false` switches it off."""
         if not self.r.cfg["fp"].get("text_tool_reset", True):
@@ -6592,6 +6842,10 @@ class FpSide(Side):
         params = {"font": str(want.get("face", "ArialMT")), "size": size_number(want.get("size", 12)) or 12.0,
                   "bold": bool(want.get("bold")), "italic": bool(want.get("italic")),
                   "underline": bool(want.get("underline")), "color": str(want.get("fillColor", "#000000"))}
+        # R-32 (TW-211): the alignment too (left = 0), so that both sides start from the same one
+        al = str(want.get("alignment") or "").lower()
+        if al in TEXT_ALIGN_CODES:
+            params["alignment"] = TEXT_ALIGN_CODES[al]
         err = ""
         for n in (1, 2):
             # R-22 (TW-149 leftovers): one retry after closing menus / dialogs
@@ -6855,7 +7109,13 @@ class FpSide(Side):
                                               "for (var i = d.layers.length - 1; i >= 0; i--) { var L = d.layers[i];"
                                               " if (lay !== null && L.name != lay) continue; var es = L.frames[f].elements;"
                                               " if (es.length > n) return es[n].name; } return null;})()" % (v, lay))
-                        if not v:
+                        if not v or v == "null":
+                            # R-32 (TW-210, panel-layers/08: the object of "Gemeinsam" has no name - its row reads
+                            # "Pfad" like four others): the n-th object row below its layer's row
+                            if target.get("layer"):
+                                hit = self.layers_nth_child_row(int(target[k]), target["layer"])
+                                if hit:
+                                    return hit["center"]
                             raise Unmapped(f"fp object_row {target[k]} not found")
                     region = None
                     if k in ("list_row", "tree_item") and getattr(self, "last_panel", None):
@@ -6900,15 +7160,17 @@ class FpSide(Side):
                         if k not in ("layer_row", "object_row", "layer_name"):
                             raise
                     # the row is scrolled out of the (small) layers panel: wheel through the list and look again
-                    pr = self.area_rect("panel:layers")
-                    pos = [(pr[0] + pr[2]) / 2, (pr[1] + pr[3]) / 2]
-                    for d in [3] * 6 + [-3] * 12:
-                        self.inp([{"type": "wheel", "pos": pos, "delta": [0, -d], "unit": "line"}])
-                        time.sleep(0.15)
-                        hits = [h for h in (self.call("ui_find", {"text": clean_label(str(v)), "exact": True}) or {}).get("hits") or []
-                                if h["center"][0] >= pr[0] and h["center"][1] >= pr[1]]
-                        if hits:
-                            return hits[0]["center"]
+                    hit = self.layers_row_scan(v)
+                    if hit:
+                        return hit["center"]
+                    # R-32 (TW-210, runs 24 to 36: L1obj of "Ebene 1" never found in `panel-layers/07, 08, 10, 12`):
+                    # Firepixel's Layers panel keeps a layer collapsed in an earlier step (06 collapses "Ebene 1"
+                    # and "Ebene 3") collapsed in the reopened test file - the reference reopens it as stored - so
+                    # the row does not exist at all. Its collapsed parent layers are expanded with their triangles
+                    hit = self.layers_expand_to(v, target.get("layer") if k == "object_row" else None,
+                                                is_layer=k in ("layer_row", "layer_name"))
+                    if hit:
+                        return hit["center"]
                     raise Unmapped(f"fp ui_find: '{v}' not found (layers panel scrolled through)")
             raise Unsupported(f"fp target form {list(target)}")
         if isinstance(target, str) and re.match(r"^dialog\.(field|combo|check|button|slider)\.\d+$", target):
@@ -6922,6 +7184,126 @@ class FpSide(Side):
         return self.find_in_popup(str(target))["center"]
 
     LAYER_TARGETS = ("layer_eye", "layer_lock", "layer_expand", "layer_row", "layer_name")
+
+    def layers_row_scan(self, name, wheel=True):
+        """R-32: the row `name` in Firepixel's Layers panel (ui_find, exact, inside the panel): looked up as it is,
+        then - `wheel` - while wheeling the list 6 x 3 lines down and 12 x 3 lines up. The hit or None."""
+        pr = self.area_rect("panel:layers")
+
+        def look():
+            return next((h for h in (self.call("ui_find", {"text": clean_label(str(name)), "exact": True}) or {}).get("hits") or []
+                         if pr[0] <= h["center"][0] <= pr[2] and pr[1] <= h["center"][1] <= pr[3]), None)
+        hit = look()
+        if hit or not wheel:
+            return hit
+        pos = [(pr[0] + pr[2]) / 2, (pr[1] + pr[3]) / 2]
+        for d in [3] * 6 + [-3] * 12:
+            self.inp([{"type": "wheel", "pos": pos, "delta": [0, -d], "unit": "line"}])
+            time.sleep(0.15)
+            hit = look()
+            if hit:
+                return hit
+        return None
+
+    # R-32 (TW-210): names of the layers that hold the object (or the layer) `v`, innermost first (sublayers ->
+    # their parents); `lay` = the layer named in the target (object_row), searched first
+    LAYER_CHAIN_JS = ("(function(){var d=fw.getDocumentDOM(),f=d.currentFrameNum,v=%s,lay=%s,isl=%s,li=-1,i,k;"
+                      "for(i=d.layers.length-1;i>=0&&li<0;i--){var L=d.layers[i];"
+                      "if(isl){if(L.name==v)li=d.getParentLayerNum(i);continue;}"
+                      "if(lay!==null&&L.name!=lay)continue;var es=L.frames[f].elements;"
+                      "for(k=0;k<es.length;k++)if(es[k].name==v){li=i;break;}}"
+                      "var o=[],g=0;while(li>=0&&g<12){o.push(d.layers[li].name);li=d.getParentLayerNum(li);g++;}"
+                      "return o.join('\\n');})()")
+
+    def layers_nth_child_row(self, n, lay):
+        """R-32 (TW-210): the n-th row (top first) of the first indentation level below the row of layer `lay` in
+        Firepixel's Layers panel - for an object without a name. A collapsed layer (no indented row right below it)
+        is expanded with its triangle first; the list is wheeled down while the row lies below the visible part.
+        Logged; the ui_find hit or None."""
+        hit = self.layers_row_scan(lay) or self.layers_expand_to(lay, is_layer=True)
+        if not hit:
+            return None
+        pr = self.area_rect("panel:layers")
+
+        def children():
+            h = self.layers_row_scan(lay, wheel=False)
+            if not h:
+                return h, []
+            texts = sorted([x for x in (self.call("ui_find", {"region": [pr[0], h["rect"][3] - 2, pr[2], pr[3]], "limit": 200})
+                                        or {}).get("hits") or [] if x.get("role") == "text" and x["center"][1] > h["center"][1] + 4],
+                           key=lambda x: x["center"][1])
+            kids = []
+            for x in texts:
+                if x["rect"][0] <= h["rect"][0] + 4:
+                    break
+                kids.append(x)
+            if kids:
+                lvl = min(x["rect"][0] for x in kids)
+                kids = [x for x in kids if abs(x["rect"][0] - lvl) <= 4]
+            return h, kids
+        h, kids = children()
+        note = ""
+        if h and not kids:
+            pt = [h["rect"][0] - 28, h["center"][1]]
+            self.inp([{"type": "click", "pos": pt}, {"type": "wait", "ms": 250}])
+            note = f"'{lay}' was collapsed - expanded with its triangle at {[round(x) for x in pt]}; "
+            h, kids = children()
+        pos = [(pr[0] + pr[2]) / 2, (pr[1] + pr[3]) / 2]
+        for _ in range(6):
+            if not h or len(kids) > n:
+                break
+            self.inp([{"type": "wheel", "pos": pos, "delta": [0, -3], "unit": "line"}])
+            time.sleep(0.15)
+            h, kids = children()
+        row = kids[n] if h and len(kids) > n else None
+        self.r.log(f"  fp layers panel: object row {n} of '{lay}' has no name - {note}rows below it "
+                   f"{[x.get('text') for x in kids]} -> {'row at ' + str([round(c) for c in row['center']]) if row else 'not found'}")
+        if note:
+            self.values.append({"fp_layers_expanded_for": {"row": f"object {n} of {lay}", "parents": [lay], "steps": [note],
+                                                           "found": bool(row)}})
+        return row
+
+    def layers_expand_to(self, v, lay=None, is_layer=False):
+        """R-32 (TW-210): the row `v` (an object, or with `is_layer` a layer) made visible in Firepixel's Layers
+        panel by expanding its collapsed parent layers, outermost first: a parent whose next row of the chain (the
+        child layer, at the end `v`) is not found gets a click on its triangle (28 px left of its name, like
+        `layer_expand`); when the child row still does not show, the click is undone (the parent was expanded) and
+        the lookup gives up. Logged (`fp layers panel: ...`). Returns the row's ui_find hit or None."""
+        try:
+            raw = self.script_value(self.LAYER_CHAIN_JS % (json.dumps(str(v)), json.dumps(lay), "true" if is_layer else "false"))
+        except BridgeError as e:
+            self.r.log(f"  fp layers panel: parent layers of '{v}' not readable: {str(e)[:80]}")
+            return None
+        chain = [x for x in str(raw or "").split("\n") if x and x != "null"]
+        if not chain:
+            return None
+        chain.reverse()  # outermost first
+        steps = []
+        for i, parent in enumerate(chain):
+            child = chain[i + 1] if i + 1 < len(chain) else v
+            ph = self.layers_row_scan(parent)
+            if not ph:
+                steps.append(f"'{parent}' not found")
+                break
+            if self.layers_row_scan(child):
+                continue
+            ph = self.layers_row_scan(parent) or ph
+            pt = [ph["rect"][0] - 28, ph["center"][1]]
+            self.inp([{"type": "click", "pos": pt}, {"type": "wait", "ms": 250}])
+            if self.layers_row_scan(child):
+                steps.append(f"'{parent}' was collapsed - expanded with its triangle at {[round(x) for x in pt]}")
+                continue
+            ph = self.layers_row_scan(parent) or ph
+            pt = [ph["rect"][0] - 28, ph["center"][1]]
+            self.inp([{"type": "click", "pos": pt}, {"type": "wait", "ms": 250}])
+            steps.append(f"'{parent}': its triangle did not show '{child}' - clicked again (undone)")
+            break
+        hit = self.layers_row_scan(v)
+        self.r.log(f"  fp layers panel: row '{v}' not in the list, parent layers {chain}: {'; '.join(steps) or 'all expanded'}"
+                   f" -> {'found at ' + str([round(x) for x in hit['center']]) if hit else 'still not found'}")
+        if steps:
+            self.values.append({"fp_layers_expanded_for": {"row": str(v), "parents": chain, "steps": steps, "found": bool(hit)}})
+        return hit
 
     def layer_drag_points(self, a_from, a_to, fr, to):
         """K-4 (TW-85, panel-layers/04): both ends of a drag between rows of the layers panel are resolved one after
@@ -7730,6 +8112,13 @@ class FpSide(Side):
                 break
             time.sleep(0.2)
         if not hits:
+            # R-32 (color-popup/23): the colour popup's alpha slider has no slider node - found in the window image
+            # at the arrow the last `open` clicked (slider_column_rect)
+            pt = getattr(self, "open_pt", None)
+            r = slider_column_rect(self.window_image()[0], pt) if pt else None
+            if r:
+                self.r.log(f"  fp popup slider: no slider node - track {r} found in the window image at the arrow {pt}")
+                return r
             raise BridgeError("no popup slider open")
         return min(hits, key=lambda h: (h["rect"][2] - h["rect"][0]) * (h["rect"][3] - h["rect"][1]))["rect"]
 
@@ -7752,6 +8141,7 @@ class FpSide(Side):
             if isinstance(target, dict) and any(k in target for k in SWATCH_KEYS):
                 self.values.append({"click_probe": click_probe(self, target, pos)})
         if verb == "open":
+            self.open_pt = [float(pos[0]), float(pos[1])]  # R-32: the arrow of a popup slider (popup_slider_rect)
             try:
                 self.open_before = self.window_image()[0]
             except Exception:  # noqa: BLE001
@@ -7832,6 +8222,20 @@ class FpSide(Side):
             big = bool(bb) and (bb[2] - bb[0]) >= 12 and (bb[3] - bb[1]) >= 12 \
                 and (bb[2] - bb[0]) * (bb[3] - bb[1]) < 0.6 * img.width * img.height
             return {"visible": big, "box": bb}
+        if key == "popup.color_fields":
+            # R-32 (TW-206): alpha, HEX and RGB of the open colour popup (text inputs next to its "HEX:" / "RGB:" labels)
+            lab = {}
+            for t in ("HEX:", "RGB:"):
+                hs = (self.call("ui_find", {"text": t, "exact": True, "limit": 10}) or {}).get("hits") or []
+                if hs:
+                    lab[t] = hs[0]["rect"]
+            if "HEX:" not in lab:
+                return {"error": "no colour popup open"}
+            hx = lab["HEX:"]
+            reg = [hx[0] - 220, hx[1] - 20, hx[2] + 200, hx[3] + 60]
+            boxes = [(h["rect"], h.get("text")) for h in (self.call("ui_find", {"role": "text_input", "region": reg, "limit": 50})
+                                                          or {}).get("hits") or []]
+            return color_fields_from(boxes, lab.get("HEX:"), lab.get("RGB:"))
         return self.state()
 
     def option_state(self, target):
@@ -8309,6 +8713,14 @@ class Runner:
                      + (f", docked group heights {dk.get('groups_before')} -> {dk.get('groups')}"
                         if dk.get("groups_before") or dk.get("groups") else "")
                      + (f", {dk['note']}" if dk.get("note") else "") + ")")
+            # R-32 (TW-197): the Properties inspector's height before and after the layout check
+            ins = getattr(side, "last_inspector", None) or {}
+            if isinstance(ins, dict) and ins:
+                self.log(f"{label}: orig Properties inspector {ins.get('before')} px -> {ins.get('after')} px ("
+                         + ("expanded" if ins.get("ok") else ("NOT EXPANDED" if ins.get("ok") is False else "not read"))
+                         + f", expanded means >= {ins.get('min')}"
+                         + (f", double-clicks {ins.get('clicks')}" if ins.get("clicks") else ", nothing restored")
+                         + (f", {ins['note']}" if ins.get("note") else "") + ")")
         except LayoutError as e:
             # no guessed anchor (R-2): this unit is not played in the reference program
             self.log(f"UNIT ABORTED (orig): {e}")
@@ -9063,7 +9475,8 @@ class Runner:
     def run_end_restore(self):
         """R-29 (TW-174): at the end of the run the reference keeps the History limit 20 (`max_undos_guard`) and the
         right dock in its default mode (`orig_layout.right_dock.default`, expanded) - a run that ended with a panel
-        unit leaves it collapsed to icons otherwise. Only when the lock is free within a minute."""
+        unit leaves it collapsed to icons otherwise; R-32 (TW-197): the Properties inspector expanded. Only when the
+        lock is free within a minute."""
         side = self.sides.get("orig") if getattr(self, "sides", None) else None
         if side is None or self.orig is None or not self.orig.running():
             return
@@ -9076,6 +9489,11 @@ class Runner:
             dk = side.dock_expand("icon" if str(rd.get("default") or "").lower() == "icon" else "expanded")
             self.log(f"run end: orig panel dock {dk.get('before')} px -> {dk.get('after')} px (wanted {dk.get('mode')}"
                      + (f", clicks {dk.get('clicks')}" if dk.get("clicks") else ", nothing restored") + ")")
+            # R-32 (TW-197): the Properties inspector left expanded too
+            ins = side.inspector_expand()
+            self.log(f"run end: orig Properties inspector {ins.get('before')} px -> {ins.get('after')} px"
+                     + (f", double-clicks {ins.get('clicks')}" if ins.get("clicks") else ", nothing restored")
+                     + (f", {ins['note']}" if ins.get("note") else ""))
         except Exception as e:  # noqa: BLE001
             self.log(f"run end restore: {e}")
         finally:
@@ -9131,6 +9549,7 @@ def main(argv=None):
         print(f"R-29 self check: {r29_selfcheck()}")
         print(f"R-30 self check: {r30_selfcheck()}")
         print(f"R-31 self check: {r31_selfcheck()}")
+        print(f"R-32 self check: {r32_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0

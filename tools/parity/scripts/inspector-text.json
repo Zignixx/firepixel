@@ -885,6 +885,53 @@
     "area": "inspector"
    },
    "note": "Row 2 (stroke) grey without stroke; crop to row 2."
+  },
+  {
+   "id": "25_indent_point_text_result",
+   "check": "indent on point text",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T05"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM();d.selectNone();d.addNewText({left:450,top:380,right:690,bottom:420},true);var o=fw.selection[0];o.textChars=\"Absatz eins\\rAbsatz zwei\\rAbsatz drei\";var R=o.textRuns;R.initialAttrs.face=\"ArialMT\";R.initialAttrs.size=\"15pt\";R.initialAttrs.fillColor=\"#000000\";R.initialAttrs.alignment=\"left\";R.initialAttrs.bold=false;R.initialAttrs.italic=false;R.initialAttrs.underline=false;R.initialAttrs.paragraphIndent=0;R.textRuns[0].changedAttrs={};o.textRuns=R;d.setElementName(\"TXP\");o=fw.selection[0];o.autoExpand=true;"
+    },
+    {
+     "select": "TXP"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0],p=s.pixelRect,a=s.textRuns.initialAttrs;return [s.left,s.top,s.width,s.height,p.left,p.top,p.right,p.bottom,s.autoExpand,a.alignment,a.paragraphIndent].join(\",\");})()"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "set_field": {
+      "target": "inspector.indent",
+      "value": "33"
+     }
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0],p=s.pixelRect,a=s.textRuns.initialAttrs;return [s.left,s.top,s.width,s.height,p.left,p.top,p.right,p.bottom,s.autoExpand,a.alignment,a.paragraphIndent].join(\",\");})()"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "record_ui": "document.summary"
+    },
+    {
+     "export_png": "doc"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "R-32 (TW-204, FB-26): indent 33 on a point (auto-width) text of three hard-return paragraphs - TXP, ArialMT 15 pt left at 450,380, made by script (RE spec 61 section 5 mktxt3.jsf) - unlike 13_indent_result (TX2, fixed width). Reference (RE-29): the first line of every paragraph moves by 33, the object's left moves with it, the width stays (58 -> 91, 128 kept), one History row setTextParaIndent(33). Firepixel (F69): the ink moves by 33, left kept, width + 33 (deliberate deviation). Values: bounds and pixelRect, alignment and paragraphIndent before and after, History count. The reference writes Text_ParagraphIndent 33 here; the next unit's text tool reset (activating the text tool) puts it back to 0 (RE spec 56 section 2.4). Bold, italic, underline and indent are set explicitly: addNewText(r, true) takes the text tool's defaults, which earlier steps of this unit change (R-32 probe: Firepixel's TXP started with indent 20 after 13_indent_result, the reference's with 0)."
   }
  ]
 }

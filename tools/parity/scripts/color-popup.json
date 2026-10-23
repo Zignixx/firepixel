@@ -892,6 +892,134 @@
    ],
    "shot": null,
    "note": "compare with measurement RE-5 (re 22-ansicht-bitmap-farbe)"
+  },
+  {
+   "id": "23_alpha_slider_drag_pressed",
+   "check": "alpha slider drag (fields)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "open": "popup.alpha_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.5,
+      "hold": true
+     }
+    },
+    {
+     "record_ui": "popup.color_fields"
+    }
+   ],
+   "shot": {
+    "area": "popup"
+   },
+   "note": "R-32 (TW-206, FB-29): the fill colour popup of R1 (#808080), its alpha arrow clicked, the slider dragged to 50 % and held; shot of the popup and its alpha / HEX / RGB fields read. Expected (RE spec 61 section 2.2): HEX and RGB keep the base colour (808080, 128 128 128) while the alpha changes."
+  },
+  {
+   "id": "23_alpha_slider_drag_canvas_pressed",
+   "check": "alpha slider drag (canvas)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "open": "popup.alpha_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.5,
+      "hold": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "R-32 (TW-206): as 23_alpha_slider_drag_pressed, canvas shot mid-drag. Reference: the canvas does not change before the value is applied; Firepixel (F70) previews the alpha live (deliberate enhancement, TW-171 [N]) - this pair is expected to differ on R1 only."
+  },
+  {
+   "id": "23_alpha_slider_drag_result",
+   "check": "alpha slider drag (result)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "open": "inspector.fill_color"
+    },
+    {
+     "open": "popup.alpha_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.5
+     }
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "popup.color_fields"
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "record_ui": "popup.visible"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].pathAttributes.fillColor : null"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "R-32 (TW-206): released at 50 %, fields read, Enter. Expected: the popup closed, R1's fill #808080 with alpha about 50 % (#80808080), one History row (reference setFillNColor)."
   }
  ]
 }

@@ -46,6 +46,16 @@ one Windows machine, unattended:
 Full runs over all 49 units take about four hours; follow-up runs repeat only the affected units. A run's
 state for a unit is always its newest run.
 
+**Unit start (runner R-32).** Besides the earlier resets (documents closed, layout and dock mode, `MaxUndos`,
+colours, tool stroke, text tool), the unit-start layout check reads the reference's Properties inspector and
+double-clicks its tab until it is at its expanded height (125 px; it cycles expanded → half → tab row only), logged
+as "orig Properties inspector … px -> … px" (TW-197). The text tool reset sets the alignment to left on both sides
+(the reference keeps the alignment last chosen in its Properties panel, e.g. by `inspector-text/15`; TW-211).
+View ▸ Edges stays **off** on both sides: `view_defaults` has switched it off at every opened test file since the
+first run, so selection frames and handles are not in the canvas shots of either program; switching it on would
+shift the baseline of every canvas pair, so steps that judge selection marks switch it on themselves
+(`setShowEdges(true)`, as `xs-select-behind` does), and the reference is left with it off.
+
 ## What the classes mean
 
 | Class | Meaning |
@@ -72,8 +82,10 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
 - **Real mouse dynamics:** brush and pen strokes depend on event timing and pressure; the runner draws with
   fixed steps.
 - **Owner-drawn lists** (layers, library, swatches, history rows) are located by image, not by control, so
-  results there are less certain. Firepixel's Layers panel in the runner (268 × 291 px) is shorter than the
-  reference's flyout (245 × 389 px), so object rows below its visible part are not reached (TW-210).
+  results there are less certain. Firepixel's Layers panel keeps a layer collapsed in an earlier step collapsed
+  in the reopened test file (the reference reopens the stored state); since R-32 the runner expands such parent
+  layers with their triangles before giving up on a row and logs it (TW-210, until run 36 the cause of the
+  `unmapped` rows `panel-layers/07, 08, 10, 12`).
 - **Focus:** other applications taking the foreground make reference steps fail; such steps are repeated or
   counted as errors, never as `ok`.
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images

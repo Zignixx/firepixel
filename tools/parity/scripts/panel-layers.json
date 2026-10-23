@@ -892,6 +892,170 @@
    ],
    "shot": null,
    "note": "record of undo step count via JSF unsure; fp may use ui_state history length instead"
+  },
+  {
+   "id": "23_opacity_slider_drag_pressed",
+   "check": "opacity slider drag (live)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "select": "L1obj"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "open": "layers.opacity_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.3,
+      "hold": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "R-32 (TW-205, FB-28): the Layers panel's opacity arrow clicked with L1obj selected, its slider dragged to 30 % and held - canvas shot mid-drag. Reference (RE spec 61 section 4.1, press mode): the field counts live, the canvas stays unchanged until the release; Firepixel (F70) previews the opacity live on the canvas (deliberate enhancement, TW-171 [N]) - this pair is expected to differ on L1obj only."
+  },
+  {
+   "id": "23_opacity_slider_drag_panel_pressed",
+   "check": "opacity slider drag (field)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "select": "L1obj"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "open": "layers.opacity_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.3,
+      "hold": true
+     }
+    }
+   ],
+   "shot": {
+    "area": "panel:layers"
+   },
+   "note": "R-32 (TW-205): as 23_opacity_slider_drag_pressed, shot of the Layers panel (the field's live value)."
+  },
+  {
+   "id": "23_opacity_slider_click_drag_result",
+   "check": "opacity slider drag, click mode (result)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "select": "L1obj"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "open": "layers.opacity_slider"
+    },
+    {
+     "drag_popup_slider": {
+      "to_fraction": 0.3
+     }
+    },
+    {
+     "wait": 400
+    },
+    {
+     "record_ui": "popup.visible"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].opacity + '|' + fw.selection[0].blendMode : null"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "R-32 (TW-205): the slider opened by a click on its arrow (click mode, unmeasured in RE spec 61 section 7), dragged to 30 % and released; popup state, opacity and History count logged. R-32 probes: neither program applied the value on the release (opacity 100 on both sides)."
+  },
+  {
+   "id": "23_opacity_slider_press_drag_result",
+   "check": "opacity slider drag, press mode (result)",
+   "method": {
+    "orig": "J",
+    "fp": "D"
+   },
+   "both": [
+    {
+     "open_testfile": "T07"
+    },
+    {
+     "panel": "window.layers"
+    },
+    {
+     "select": "L1obj"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "drag": {
+      "from": "layers.opacity_slider",
+      "by": [
+       0,
+       41
+      ],
+      "steps": 12
+     }
+    },
+    {
+     "wait": 400
+    },
+    {
+     "record_ui": "popup.visible"
+    },
+    {
+     "log_value": "fw.selection.length ? fw.selection[0].opacity + '|' + fw.selection[0].blendMode : null"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "R-32 (TW-205): the measured path of RE spec 61 section 4.1 - the opacity arrow pressed, dragged 41 px down and released (reference: 80 live while dragging, applied on the release with one History row setOpacity(80), the slider closed). Expected on both sides: opacity about 80, one History row, the canvas with L1obj at 80 %."
   }
  ]
 }

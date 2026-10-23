@@ -1329,3 +1329,46 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   centred afterwards, FR again `400,200-600,300` on both sides.
 - `--dry-run` prints `R-31 self check: ok` (the script's calls and objects, no `setBrushSize`, balanced brackets,
   read-back parsing with colours in lower case without alpha, the wanted-state check and the side comparison).
+
+## R-32 additions (23 Oct 2026)
+
+- **Properties inspector expanded (TW-197):** `OrigSide.inspector_expand`, called by the layout check (`ensure_layout`,
+  so at unit start, after Tab, after the screen modes and after a restart) and at run end. The inspector's tab group
+  comes from the host's `panel` (125 px expanded, 75 px at half height without a document) or, collapsed to its tab row
+  (20 px, `panel` answers "not visible"), from the main window's children (`inspector_group`: the widest
+  `OWL.TabGroup` in the lower half). A double-click on its first tab (`inspector_tab_point`, 46 px right of the group's
+  left edge, 9 px below its top) cycles expanded -> half -> tab row -> expanded; lower than
+  `orig.inspector_expanded_min_px` (default 110) -> at most three double-clicks, read back after each. Log
+  `orig Properties inspector: 75 px (expanded means >= 110) -> double-clicks on its tab [...] -> 125 px` and
+  `unit start <unit>: orig Properties inspector <before> px -> <after> px (...)`. Verified: half height set by hand
+  before `panel-layers` -> two double-clicks (75 -> 20 -> 125 px) at unit start.
+- **Collapsed layers in Firepixel's Layers panel (TW-210):** the cause of `panel-layers/07, 08, 10, 12` being `unmapped`
+  since run 24 was not the panel's height: Firepixel keeps the panel's disclosure (UI state keyed by layer id) across
+  documents, so the layers `06_expand_result` collapses ("Ebene 1", "Ebene 3") stay collapsed in the reopened T07 and
+  their object rows do not exist (the reference reopens the file's stored state). After the wheel scan
+  (`layers_row_scan`) the lookup now expands the collapsed parent layers with their triangles (`layers_expand_to`,
+  parents by script `LAYER_CHAIN_JS`, outermost first; a click that does not show the child is undone) and logs
+  `fp layers panel: row 'L1obj' not in the list, parent layers ['Ebene 1']: 'Ebene 1' was collapsed - expanded ...`
+  plus a value `fp_layers_expanded_for`. An object without a name (`object_row` of "Gemeinsam") is the n-th row of
+  the first indentation level below its layer's row (`layers_nth_child_row`).
+- **Text tool alignment (TW-211):** `TEXT_DEFAULTS` has `alignment: left`; the reference's reset clicks
+  `inspector.align_left` with the text tool active and nothing selected when the scratch text reads another
+  alignment (the inspector writes it into the tool's defaults, e.g. `inspector-text/15_align_result`), Firepixel's
+  `text.setToolDefaults` gets `alignment: 0`. Both read-backs include `alignment`.
+- **`set_field` in the reference (non-dialog fields):** the field is typed first (double click, Ctrl+A, type, commit);
+  WM_SETTEXT follows only when the field still shows its text from before (typing did not arrive). Before, WM_SETTEXT
+  set the value first, and fields that apply only a changed text (the Properties panel's paragraph indent) committed
+  nothing.
+- **Colour popup controls:** `popup_child` takes `right_of` / `left_of` (a `Static` label on the same row):
+  `popup.hex_field` = the Edit right of "HEX:" (Edit 0 of the popup is the alpha field; runs up to 36 typed the hex
+  value into it and set it by WM_SETTEXT), `popup.alpha_field` / `popup.alpha_slider` = the Edit / arrow left of "RGB:".
+  `record_ui popup.color_fields` reads alpha, HEX and RGB on both sides (`color_fields_from`). Firepixel's alpha
+  slider has no slider node: `popup_slider_rect` then finds the track in the window image at the arrow the last
+  `open` clicked (`slider_column_rect`).
+- **ui_map:** `layers.opacity_field`, `layers.opacity_slider`, `layers.blend_mode` (Layers panel, from the run-36 shots).
+- **New steps (tester feedback batch 6):** `inspector-text/25_indent_point_text_result` (TW-204, indent 33 on a point
+  text of three paragraphs made by script), `panel-layers/23_opacity_slider_*` (TW-205: mid-drag canvas and panel
+  shots, click-mode and press-mode results), `color-popup/23_alpha_slider_*` (TW-206: mid-drag popup and canvas shots,
+  result with Enter, fields read), `inspector-fields/25_pattern_move_*` (TW-207: pattern by the fill category's
+  pattern button, moved by 37/23 with the X/Y fields).
+- `--dry-run` prints `R-32 self check: ok` (inspector group pick and tab point, slider in an image, colour fields).

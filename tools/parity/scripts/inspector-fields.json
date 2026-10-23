@@ -1288,6 +1288,94 @@
    "shot": {
     "area": "inspector"
    }
+  },
+  {
+   "id": "25_pattern_move_normal",
+   "check": "pattern fill before the move",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "inspector.fill_pattern"
+    },
+    {
+     "wait": 400
+    },
+    {
+     "log_value": "(function(){function P(p){return p?Math.round(p.x*100)/100+\"/\"+Math.round(p.y*100)/100:\"null\";}var s=fw.selection[0],a=s.pathAttributes,f=a.fill;return [s.left,s.top,s.width,s.height,f?f.category:\"none\",f&&f.pattern?f.pattern.name:\"\",P(a.fillHandle1),P(a.fillHandle2),P(a.fillHandle3)].join(\",\");})()"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "select_none": true
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "R-32 (TW-207, FB-24/25): R1 (50,50-150,120) gets a pattern by the fill category's pattern button (each program its own default pattern); fill handles and History count logged; shot without selection = the reference picture for 25_pattern_move_result."
+  },
+  {
+   "id": "25_pattern_move_result",
+   "check": "pattern fill moved with X/Y",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T04"
+    },
+    {
+     "select": "R1"
+    },
+    {
+     "click": "inspector.fill_pattern"
+    },
+    {
+     "wait": 400
+    },
+    {
+     "log_value": "(function(){function P(p){return p?Math.round(p.x*100)/100+\"/\"+Math.round(p.y*100)/100:\"null\";}var s=fw.selection[0],a=s.pathAttributes,f=a.fill;return [s.left,s.top,s.width,s.height,f?f.category:\"none\",f&&f.pattern?f.pattern.name:\"\",P(a.fillHandle1),P(a.fillHandle2),P(a.fillHandle3)].join(\",\");})()"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "set_field": {
+      "target": "inspector.x",
+      "value": "87"
+     }
+    },
+    {
+     "set_field": {
+      "target": "inspector.y",
+      "value": "73"
+     }
+    },
+    {
+     "log_value": "(function(){function P(p){return p?Math.round(p.x*100)/100+\"/\"+Math.round(p.y*100)/100:\"null\";}var s=fw.selection[0],a=s.pathAttributes,f=a.fill;return [s.left,s.top,s.width,s.height,f?f.category:\"none\",f&&f.pattern?f.pattern.name:\"\",P(a.fillHandle1),P(a.fillHandle2),P(a.fillHandle3)].join(\",\");})()"
+    },
+    {
+     "log_value": "fw.historyPalette.getStepCount()"
+    },
+    {
+     "select_none": true
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "R-32 (TW-207): as 25_pattern_move_normal, then moved by 37/23 px with the X and Y fields (to 87,73). Expected (RE spec 61 section 1.3): the three fill handles move by +37/+23 and the pixels inside the object are identical to 25_pattern_move_normal shifted by 37/23 (on each side; the patterns of the two programs differ)."
   }
  ]
 }
