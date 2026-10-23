@@ -171,7 +171,12 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     `false` lässt außerdem die Füllgriffe im Dokument stehen, auch bei `transform.matrix` und
     `transform.distort`, außer bei reinem Verschieben; in `run_script` setzen die JSF-Aufrufe
     `scaleSelection`, `rotateSelection`, `setQuadrangle` und `transformSelection` ihn aus ihrer
-    Optionszeichenfolge: `true` nur mit dem Wort `transformAttributes`),
+    Optionszeichenfolge: `true` nur mit dem Wort `transformAttributes`; numerisches *Skalieren* rechnet
+    eine reine Achsenskalierung jedes gewählten Texts, auch in Gruppen, in Schriftgröße und horizontale
+    Skalierung um statt einer Matrix (RE-Spezifikation 66); `transform.matrix` / `transform.distort` tun
+    das nur mit `rememberQuad: true` und genau einem gewählten Text, was Skalieren-Werkzeug und Frei
+    transformieren übergeben, wie `setQuadrangle(…, "rememberQuad")`; `setQuadrangle` nimmt seine Punkte
+    relativ zum Einheitsquadrat der Auswahlgrenzen, Seitenlänge max(Breite, Höhe) um deren Mitte),
     `modify.mask.revealAll` / `modify.mask.hideAll` (leere Maske über dem gewählten Objekt)
   * Text und Auswahl: `text.detachFromPath` (Text wird wieder Rahmen fester Breite = Breite vor dem Anfügen,
     mittig über den Pfadgrenzen; der Pfad kommt oben in die Ebene, Auswahl danach [Pfad, Text]),

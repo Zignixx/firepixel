@@ -83,4 +83,12 @@ impl PageRenderer for FpRenderer {
     fn text_frame(&self, doc: &Document, t: &fp_model::TextElem) -> Option<fp_geom::Rect> {
         crate::render::fp_text_frame(self.0.fonts(), doc, t)
     }
+
+    fn text_fit_boxes(
+        &self,
+        doc: &Document,
+        t: &fp_model::TextElem,
+    ) -> Option<crate::render::TextFitBoxes> {
+        crate::render::fp_text_fit_boxes(self.0.fonts(), doc, t)
+    }
 }

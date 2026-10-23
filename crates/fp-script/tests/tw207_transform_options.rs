@@ -136,17 +136,19 @@ fn set_quadrangle_transforms_handles_only_with_transform_attributes() {
     let corner = |(x, y): (f64, f64)| (100.0 + 1.25 * (x - 100.0), 100.0 + 1.25 * (y - 100.0));
     let mut s = session_with_gradient_rect();
     let h0 = handles(&mut s);
-    // four points as in the API table, the options as fifth argument
+    // four points as in the API table, relative to the unit square (side max(w, h) = 160 about the
+    // centre 180/160, so x0 = 100, y0 = 80; RE spec 66 §2.4): document 100,100–300,250; the
+    // options as fifth argument
     run(
         &mut s,
-        "fw.getDocumentDOM().setQuadrangle({x: 100, y: 100}, {x: 300, y: 100}, {x: 300, y: 250}, {x: 100, y: 250}, 'autoTrimImages transformAttributes')",
+        "fw.getDocumentDOM().setQuadrangle({x: 0, y: 0.125}, {x: 1.25, y: 0.125}, {x: 1.25, y: 1.0625}, {x: 0, y: 1.0625}, 'autoTrimImages transformAttributes')",
     );
     assert_eq!(bounds(&mut s), "100,100,300,250");
     assert_near(handles(&mut s), map(h0, corner), "four-point form");
     let mut s = session_with_gradient_rect();
     run(
         &mut s,
-        "fw.getDocumentDOM().setQuadrangle({x: 100, y: 100}, {x: 300, y: 100}, {x: 300, y: 250}, {x: 100, y: 250}, 'autoTrimImages')",
+        "fw.getDocumentDOM().setQuadrangle({x: 0, y: 0.125}, {x: 1.25, y: 0.125}, {x: 1.25, y: 1.0625}, {x: 0, y: 1.0625}, 'autoTrimImages')",
     );
     assert_near(handles(&mut s), h0, "four-point form without the option");
 }

@@ -2155,6 +2155,13 @@ impl TransformTool {
     }
 }
 
+/// Is the selection exactly one text (not inside a group)?
+fn single_text(ctx: &ToolContext) -> bool {
+    matches!(ctx.selection.elements.as_slice(), [id]
+        if docops::element_on_page(ctx.doc, ctx.page, *id)
+            .is_some_and(|e| matches!(e.kind, fp_model::ElementKind::Text(_))))
+}
+
 impl TransformTool {
     /// Übernehmen der Vorschau als **ein** Befehl (Matrix, Verzerren bzw. 9-Slice).
     fn commit_pending(&mut self, ctx: &ToolContext) -> Option<Invocation> {
@@ -2184,10 +2191,15 @@ impl TransformTool {
                     return None;
                 }
                 // nach einer Drehung beschneidet das Original Bitmaps auf die deckenden Pixel (re 28 L5)
-                Some(Invocation::new(
-                    "transform.matrix",
-                    json!({"matrix": matrix_json(&m), "step": "transform", "autoTrim": rotated, "scaleAttributes": attrs}),
-                ))
+                let mut p = json!({"matrix": matrix_json(&m), "step": "transform", "autoTrim": rotated, "scaleAttributes": attrs});
+                // the Scale tool (also Free Transform and Modify ▸ Transform ▸ Scale) on exactly one
+                // text writes its row with `rememberQuad`: a pure axis scale goes into the font size
+                // and horizontal scale (RE spec 66 §2.2, §3.1); a group or several objects keep the
+                // matrix
+                if self.id == ToolId::Scale && single_text(ctx) {
+                    p["rememberQuad"] = json!(true);
+                }
+                Some(Invocation::new("transform.matrix", p))
             }
             // Skalieren, Drehen, Neigen und Verzerren heißen im Original immer „Transformieren“ (PAR 08/11)
             _ => Some(Invocation::new(

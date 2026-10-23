@@ -1552,12 +1552,14 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         }
         "setRectSides" | "ungroupPrimitives" => u(),
         // setQuadrangle(p1, p2, p3, p4, options) (API table; top left, top right, bottom right,
-        // bottom left): maps the selection bounds onto the four points; the fill handles follow
-        // only with `transformAttributes` (RE spec 61 §1.5)
+        // bottom left): maps the selection bounds onto the four points. The points are relative
+        // to a unit square: the square of side max(width, height) about the centre of the
+        // selection bounds (RE spec 66 §2.4; a 100 × 60 rectangle is x 0…1, y 0.2…0.8). The fill
+        // handles follow only with `transformAttributes` (RE spec 61 §1.5); with `rememberQuad` a
+        // pure axis scale of a single selected text goes into its font size and horizontal scale
+        // (RE spec 66 §3.1)
         "setQuadrangle" => {
-            let pts: Vec<Value> = (0..4)
-                .filter_map(|i| a(i).point().map(|(x, y)| json!([x, y])))
-                .collect();
+            let pts: Vec<(f64, f64)> = (0..4).filter_map(|i| a(i).point()).collect();
             let opts = a(4);
             if pts.len() != 4 {
                 return Err(FwErr::Hr(
@@ -1569,11 +1571,21 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             let Some(b) = bounds(doc, &sel)? else {
                 return u();
             };
+            let side = (b[2] - b[0]).max(b[3] - b[1]);
+            let (x0, y0) = (
+                (b[0] + b[2]) / 2.0 - side / 2.0,
+                (b[1] + b[3]) / 2.0 - side / 2.0,
+            );
+            let quad: Vec<Value> = pts
+                .iter()
+                .map(|(u, v)| json!([x0 + u * side, y0 + v * side]))
+                .collect();
             on_selection(
                 doc,
                 "transform.distort",
-                json!({"rect": {"left": b[0], "top": b[1], "right": b[2], "bottom": b[3]}, "quad": pts,
-                    "scaleAttributes": has_option(&opts, "transformAttributes")}),
+                json!({"rect": {"left": b[0], "top": b[1], "right": b[2], "bottom": b[3]}, "quad": quad,
+                    "scaleAttributes": has_option(&opts, "transformAttributes"),
+                    "rememberQuad": has_option(&opts, "rememberQuad")}),
             )
         }
         // ---------------------------------------------------------- Füllung, Strich, Stile

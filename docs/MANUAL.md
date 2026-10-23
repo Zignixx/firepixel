@@ -200,6 +200,22 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   (`"autoTrimImages transformAttributes"`); with `"autoTrimImages"` alone they stay in the document. For a text the
   numeric transform always scales the fill handles about the centre, and the transform tools always leave them,
   as in the original.
+- **Scaling text changes its font size.** As in the original, a pure scale (no rotation, skew or
+  reflection) of a text is turned into its attributes instead of being stored as a matrix: font size ×
+  vertical factor (to 0.01 pt, at least 4 pt), horizontal scale × horizontal/vertical factor, exact
+  leading, range kerning, indent and paragraph spacing along; baseline shift stays. The text is set
+  again with the new size (sharp, pixel for pixel like a fresh text of that size); a small leftover
+  matrix fits it onto the scaled frame, and none at all when the difference is below a fraction of a
+  pixel (1.5 × of a 60 pt text gives a plain 90 pt text). This happens for *Modify ▸ Transform ▸
+  Numeric Transform* scaling (every selected text, also inside groups) and for the Scale tool, Free
+  Transform and *Modify ▸ Transform ▸ Scale* when exactly one text is selected. Rotating, reflecting,
+  skewing, distorting, the Scale tool on a group or several objects, and a non-uniform scale of a
+  rotated text keep the matrix. A fixed-width text keeps its frame width and wraps again; the
+  leftover matrix then visibly stretches or squashes it, as in the original. *Remove Transformations*
+  keeps the new size. In scripts, `scaleSelection` folds like the dialog; `setQuadrangle` takes its
+  four points relative to a unit square (the square of side max(width, height) about the centre of the
+  selection bounds, so a 100 × 60 rectangle is x 0…1, y 0.2…0.8) and folds a single text only with the
+  option `rememberQuad`.
 - *Modify ▸ Mask ▸ Reveal All / Hide All* puts an empty mask over the selected object. The Layers
   panel and the inspector still show the object itself (e.g. the bitmap) with the mask as a second
   thumbnail.

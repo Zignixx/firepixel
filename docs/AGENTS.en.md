@@ -170,7 +170,12 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     `false` also leaves the fill handles in the document, for `transform.matrix` and `transform.distort` too,
     except on a pure move; in `run_script` the JSF calls `scaleSelection`, `rotateSelection`,
     `setQuadrangle` and `transformSelection` set it from their options string: `true` only with the word
-    `transformAttributes`),
+    `transformAttributes`; a numeric *scale* folds a pure axis scale into the font size and horizontal
+    scale of every selected text, also inside groups, instead of a matrix (RE spec 66);
+    `transform.matrix` / `transform.distort` do so only with `rememberQuad: true` and exactly one
+    selected text, which the Scale tool and Free Transform pass, like `setQuadrangle(…, "rememberQuad")`;
+    `setQuadrangle` takes its points relative to the unit square of the selection bounds, side
+    max(width, height) about their centre),
     `modify.mask.revealAll` / `modify.mask.hideAll` (empty mask over the selected object)
   * Text and selection: `text.detachFromPath` (the text becomes a fixed-width block again, width = width
     before attaching, centered on the path bounds; the path goes to the top of the layer, selection

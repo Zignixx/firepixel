@@ -688,3 +688,4 @@ cmdtext-knopf-neue-ebene-im-ebenen-bedienfeld-be-5fe5af = Knopf „Neue Ebene“
 cmdtext-klick-auf-eine-ebenenzeile-diese-objekte-b0f033 = Klick auf eine Ebenenzeile: diese Objekte mit auswählen (ein Protokollschritt „Ebenenänderung“)
 cmdtext-ziel-ebenen-id-ebene-oder-unterebene = Ziel-Ebenen-ID (Ebene oder Unterebene)
 cmdtext-kopien-statt-verschieben-alt = Kopien statt Verschieben (Alt)
+cmdtext-wie-das-skalieren-werkzeug-eine-reine-ac-1789a5 = wie das Skalieren-Werkzeug: eine reine Achsenskalierung eines einzeln gewählten Texts wird in Schriftgröße und horizontale Skalierung umgerechnet statt als Matrix gespeichert

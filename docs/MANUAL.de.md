@@ -214,6 +214,24 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   (`"autoTrimImages transformAttributes"`); mit `"autoTrimImages"` allein bleiben sie im Dokument. Bei einem Text
   skaliert Numerisch transformieren die Füllgriffe immer um die Mitte, und die Transformationswerkzeuge lassen sie
   immer stehen, wie im Original.
+- **Text skalieren ändert die Schriftgröße.** Wie im Original wird eine reine Skalierung (ohne Drehung,
+  Neigung oder Spiegelung) eines Texts in seine Attribute umgerechnet statt als Matrix gespeichert:
+  Schriftgröße × senkrechter Faktor (auf 0,01 pt, mindestens 4 pt), horizontale Skalierung ×
+  waagerechter/senkrechter Faktor, exakter Zeilenabstand, Laufweite, Einzug und Absatzabstände mit;
+  der Grundlinienversatz bleibt. Der Text wird mit der neuen Größe neu gesetzt (scharf, pixelgleich mit
+  einem frisch gesetzten Text dieser Größe); eine kleine Rest-Matrix passt ihn auf den skalierten Rahmen
+  ein, bei weniger als einem Bruchteil eines Pixels Abweichung gar keine (1,5 × eines 60-pt-Texts ergibt
+  einen einfachen 90-pt-Text). Das gilt für das Skalieren über *Modifizieren ▸ Transformieren ▸
+  Numerisch transformieren* (jeder gewählte Text, auch in Gruppen) und für das Skalieren-Werkzeug, Frei
+  transformieren und *Modifizieren ▸ Transformieren ▸ Skalieren*, wenn genau ein Text gewählt ist.
+  Drehen, Spiegeln, Neigen, Verzerren, das Skalieren-Werkzeug auf einer Gruppe oder mehreren Objekten
+  und ungleichmäßiges Skalieren eines gedrehten Texts behalten die Matrix. Ein Text mit fester Breite
+  behält seine Rahmenbreite und bricht neu um; die Rest-Matrix streckt bzw. staucht ihn dann sichtbar,
+  wie im Original. *Transformationen entfernen* behält die neue Größe. In Skripten rechnet
+  `scaleSelection` wie der Dialog um; `setQuadrangle` nimmt seine vier Punkte relativ zu einem
+  Einheitsquadrat (Quadrat der Seitenlänge max(Breite, Höhe) um die Mitte der Auswahlgrenzen, ein
+  Rechteck 100 × 60 ist also x 0…1, y 0,2…0,8) und rechnet einen einzelnen Text nur mit der Option
+  `rememberQuad` um.
 - *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
   gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
   mit der Maske als zweiter Miniatur.

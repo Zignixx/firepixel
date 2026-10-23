@@ -48,6 +48,55 @@ pub trait PageRenderer: Send + Sync {
     fn text_frame(&self, _doc: &Document, _text: &fp_model::TextElem) -> Option<fp_geom::Rect> {
         None
     }
+
+    /// Layout frame and set boxes of a text for folding a scale into its attributes
+    /// ([`crate::docops::fold_text_scale`], RE spec 66 §3.3). Default: the layout frame for both.
+    fn text_fit_boxes(&self, doc: &Document, text: &fp_model::TextElem) -> Option<TextFitBoxes> {
+        self.text_frame(doc, text).map(|f| TextFitBoxes {
+            frame: f,
+            lines: [f.left as f64, f.top as f64, f.right as f64, f.bottom as f64],
+        })
+    }
+}
+
+/// Boxes of a laid-out text (before `MTXv`) for [`crate::docops::fold_text_scale`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TextFitBoxes {
+    /// Layout frame (`LFTf TOPf RITf BOTf`, what `TextElem::bounds` holds).
+    pub frame: fp_geom::Rect,
+    /// Set box, unrounded: left = leftmost line start, right = end of the widest line (sum of the
+    /// rounded advances), top/bottom = the exact frame top and bottom (ascent above the first
+    /// baseline, descent below the last one).
+    pub lines: [f64; 4],
+}
+
+/// Frame and set boxes over fp-render/fp-text (the same for every renderer with fp-render).
+#[cfg(feature = "render")]
+pub fn fp_text_fit_boxes(
+    fonts: &fp_text::FontDb,
+    doc: &Document,
+    t: &fp_model::TextElem,
+) -> Option<TextFitBoxes> {
+    let block = fp_render::convert::text_block(doc, t);
+    let lay = fp_text::layout(&block, fonts, &fp_text::LayoutOptions::default());
+    let f = lay.frame;
+    if f.right <= f.left && f.bottom <= f.top {
+        return None;
+    }
+    let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
+    for l in &lay.lines {
+        if l.width > 0.0 {
+            lo = lo.min(l.start);
+            hi = hi.max(l.start + l.width);
+        }
+    }
+    if !(lo.is_finite() && hi.is_finite()) {
+        (lo, hi) = (lay.frame_exact[0], lay.frame_exact[2]);
+    }
+    Some(TextFitBoxes {
+        frame: f,
+        lines: [lo, lay.frame_exact[1], hi, lay.frame_exact[3]],
+    })
 }
 
 /// Satzrahmen über fp-render/fp-text (für alle Renderer mit fp-render gleich).

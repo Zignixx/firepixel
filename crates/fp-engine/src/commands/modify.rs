@@ -48,6 +48,72 @@ pub(crate) fn transform_selection(s: &mut Session, m: Matrix3) -> Result<Command
     })
 }
 
+/// Which texts a transformation folds into their attributes (RE spec 66 §3.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum FoldTexts {
+    /// None: the matrix as always.
+    No,
+    /// Every text of the selection, also inside groups (numeric scale, `scaleSelection`).
+    All,
+    /// Only when the selection is exactly one text (Scale tool, Free Transform, `setQuadrangle`
+    /// with `rememberQuad`); a group or several objects keep the matrix.
+    SingleText,
+}
+
+/// [`transform_selection`] that folds a pure axis scale into the attributes of the texts named by
+/// `fold` ([`docops::fold_text_scale`]).
+pub(crate) fn transform_selection_folding(
+    s: &mut Session,
+    m: Matrix3,
+    fold: FoldTexts,
+) -> Result<CommandOutput> {
+    let renderer = s.renderer().cloned();
+    let fold = match (fold, renderer) {
+        (FoldTexts::No, _) | (_, None) => None,
+        (FoldTexts::All, Some(r)) => Some(r),
+        (FoldTexts::SingleText, Some(r)) => s
+            .active()
+            .is_some_and(|d| {
+                d.selection.elements.len() == 1
+                    && docops::element_on_page(&d.doc, d.page, d.selection.elements[0])
+                        .is_some_and(|e| matches!(e.kind, ElementKind::Text(_)))
+            })
+            .then_some(r),
+    };
+    let Some(r) = fold else {
+        return transform_selection(s, m);
+    };
+    let sm = sampler(s);
+    with_doc(s, |d| {
+        let (page, ids) = (d.page, d.selection.elements.clone());
+        if ids.is_empty() {
+            return Err(sel_err("err-sel-nothing"));
+        }
+        let snapshot = Arc::clone(&d.doc);
+        let fit = |t: &fp_model::TextElem| r.text_fit_boxes(&snapshot, t);
+        let doc = Arc::make_mut(&mut d.doc);
+        for id in ids {
+            docops::edit_by_id(doc, page, id, |e| {
+                docops::transform_element_folding_text(e, &m, sm, &fit)
+            });
+        }
+        Ok(CommandOutput::doc())
+    })
+}
+
+/// German source text of the option `rememberQuad` (key in `command_texts.ftl`).
+const REMEMBER_QUAD_TEXT: &str = "wie das Skalieren-Werkzeug: eine reine Achsenskalierung eines einzeln gewählten Texts wird in Schriftgröße und horizontale Skalierung umgerechnet statt als Matrix gespeichert";
+
+/// Option `rememberQuad` of `transform.matrix` / `transform.distort`: the Scale tool and
+/// `setQuadrangle(…, "rememberQuad")` fold a pure axis scale of a single selected text.
+fn remember_quad(p: &crate::command::Params) -> Result<FoldTexts> {
+    Ok(if p.bool_or("rememberQuad", false)? {
+        FoldTexts::SingleText
+    } else {
+        FoldTexts::No
+    })
+}
+
 /// The selected elements as they are now (for [`restore_selected_fill_handles`]).
 pub(crate) fn selection_snapshot(
     s: &Session,
@@ -78,16 +144,18 @@ pub(crate) fn restore_selected_fill_handles(
 }
 
 /// [`transform_selection`]; with `scale_attrs` off a transformation that is not a pure move leaves the
-/// fill handles in the document ("Scale attributes" off, RE spec 61 §1.5).
+/// fill handles in the document ("Scale attributes" off, RE spec 61 §1.5). `fold` as in
+/// [`transform_selection_folding`].
 fn transform_keeping_fill_handles(
     s: &mut Session,
     m: Matrix3,
     scale_attrs: bool,
+    fold: FoldTexts,
 ) -> Result<CommandOutput> {
     let before = (!scale_attrs && !m.is_translation(1e-6))
         .then(|| selection_snapshot(s))
         .flatten();
-    let out = transform_selection(s, m)?;
+    let out = transform_selection_folding(s, m, fold)?;
     if let Some(before) = before {
         restore_selected_fill_handles(s, &before)?;
     }
@@ -2229,7 +2297,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 };
                 let before = (!scale_attrs).then(|| selection_snapshot(s)).flatten();
                 let mc = docops::about(c, &m);
-                let out = transform_selection(s, mc)?;
+                // the numeric scale folds a pure axis scale into the size and horizontal scale of
+                // every text of the selection, also inside groups (RE spec 66 §3.1); rotating keeps
+                // the matrix, resizing was not measured and keeps it too
+                let fold = if p.opt_str("mode")?.as_deref().is_none_or(|m| m == "scale") {
+                    FoldTexts::All
+                } else {
+                    FoldTexts::No
+                };
+                let out = transform_selection_folding(s, mc, fold)?;
                 // "Scale attributes" off: the fill handles stay in the document (RE spec 61 §1.5)
                 if let Some(before) = before {
                     restore_selected_fill_handles(s, &before)?;
@@ -2353,6 +2429,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 json!(true),
                 "Füllungsgriffe mit transformieren; false lässt sie im Dokument stehen (die Transformationswerkzeuge übergeben XformToolXformsBFE)",
             )
+            .opt("rememberQuad", ParamKind::Bool, REMEMBER_QUAD_TEXT)
             .run(|s, p| {
                 let m = matrix_from(p, "matrix")?;
                 let m = match p.opt_point("center")? {
@@ -2368,7 +2445,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     && m.is_translation(1e-6))
                 .then(|| selection_snapshot(s))
                 .flatten();
-                let out = transform_keeping_fill_handles(s, m, attrs)?;
+                let out = transform_keeping_fill_handles(s, m, attrs, remember_quad(p)?)?;
                 if let Some(before) = tool_move {
                     let d = s.doc_mut()?;
                     let page = d.page;
@@ -2401,6 +2478,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 json!(true),
                 "Füllungsgriffe mit transformieren; false lässt sie im Dokument stehen (die Transformationswerkzeuge übergeben XformToolXformsBFE)",
             )
+            .opt("rememberQuad", ParamKind::Bool, REMEMBER_QUAD_TEXT)
             .run(|s, p| {
                 let rr = p.rect("rect")?;
                 let q = p.points("quad")?;
@@ -2412,7 +2490,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 }
                 let m = Matrix3::rect_to_quad(&rr, &[q[0], q[1], q[2], q[3]])
                     .ok_or_else(|| EngineError::Failed(fp_i18n::t("err-degenerate-quad")))?;
-                transform_keeping_fill_handles(s, m, p.bool_or("scaleAttributes", true)?)
+                transform_keeping_fill_handles(
+                    s,
+                    m,
+                    p.bool_or("scaleAttributes", true)?,
+                    remember_quad(p)?,
+                )
             }),
     );
 

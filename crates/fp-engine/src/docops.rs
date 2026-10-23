@@ -1593,6 +1593,204 @@ pub fn transform_element(e: &mut Element, m: &Matrix3, sampler: Sampler) {
     }
 }
 
+/// Layout boxes of a text for [`fold_text_scale`] (usually the session renderer's
+/// [`crate::render::PageRenderer::text_fit_boxes`]).
+pub type TextFitFn<'a> = &'a dyn Fn(&fp_model::TextElem) -> Option<crate::render::TextFitBoxes>;
+
+/// A leftover scale whose set box differs from the target by less than this (px, per axis) becomes
+/// the identity with a whole-pixel origin (RE spec 66 §3.3: 0.074 px measured as identity, 0.25 px
+/// kept as a matrix; the threshold in between is our choice).
+const FOLD_IDENTITY_PX: f64 = 0.15;
+
+/// [`transform_element`] that folds a pure axis scale into the attributes of every text in `e`
+/// (also inside groups, at any depth) with [`fold_text_scale`]; texts it cannot fold and every other
+/// element get the matrix as before. Used by the paths of the reference that fold (RE spec 66 §3.1):
+/// the numeric scale for every text of the selection, the Scale tool and `setQuadrangle` with
+/// `rememberQuad` for a single selected text.
+pub fn transform_element_folding_text(
+    e: &mut Element,
+    m: &Matrix3,
+    sampler: Sampler,
+    fit: TextFitFn,
+) {
+    if m.is_translation(1e-6) {
+        transform_element(e, m, sampler);
+        return;
+    }
+    match &mut e.kind {
+        ElementKind::Text(t) => {
+            if fold_text_scale(t, m, fit) {
+                e.cache = None;
+                return;
+            }
+        }
+        ElementKind::Group(g) => {
+            // the group's own parts (mask, replacement, smart shape) take the matrix; the children
+            // are folded one by one
+            let children = std::mem::take(&mut g.children);
+            transform_element(e, m, sampler);
+            if let ElementKind::Group(g) = &mut e.kind {
+                g.children = children;
+                for c in &mut g.children {
+                    transform_element_folding_text(Arc::make_mut(c), m, sampler, fit);
+                }
+            }
+            return;
+        }
+        _ => {}
+    }
+    transform_element(e, m, sampler);
+}
+
+/// Folds the transformation `m` (document coordinates, row vectors) into the attributes of the
+/// text `t` instead of its matrix, as the reference does for a pure axis scale (RE spec 66 §3):
+///
+/// - only a scale `diag(sx, sy)` with `sx, sy > 0` (plus a move) folds; the text's existing matrix
+///   may rotate, reflect and scale along its axes but not shear; the scale is turned into text
+///   space and must stay diagonal there (uniform, or the text turned by a multiple of 90°);
+/// - size × sy (to 0.01 pt, at least 4 pt), horizontal scale × sx/sy (to 0.001), exact leading ×
+///   sy (percentage leading unchanged), range kerning × sx/sy, indent × sx, space before/after ×
+///   sy; baseline shift, frame width and auto-expand stay;
+/// - the text is laid out again and a leftover scale maps the new set box exactly onto the scaled
+///   old one (point text: the widest line, i.e. the sum of the rounded advances, + 1 px; fixed-width
+///   text: the widest line, which only approximates the reference's target, §2.5/§5); the rotation
+///   and reflection of the old matrix stay. A leftover of about 1 on an unrotated text becomes no
+///   matrix at all, the move goes into a whole-pixel origin.
+///
+/// Point text and fixed-width text written horizontally only; text on or in a path and vertical
+/// text keep the matrix (not measured). Returns whether it folded (`false` = nothing changed).
+pub fn fold_text_scale(t: &mut fp_model::TextElem, m: &Matrix3, fit: TextFitFn) -> bool {
+    let a = &m.m;
+    let (sx, sy) = (a[0][0] as f64, a[1][1] as f64);
+    let tol = 1e-5 * sx.abs().max(sy.abs()).max(1.0);
+    if !m.is_affine()
+        || m.is_translation(1e-6)
+        || (a[0][1] as f64).abs() > tol
+        || (a[1][0] as f64).abs() > tol
+        || sx <= 0.0
+        || sy <= 0.0
+    {
+        return false;
+    }
+    let point = matches!(t.frame_type, None | Some(0));
+    if !(point || t.frame_type == Some(1)) || t.on_path.is_some() || !matches!(t.orientation, 0 | 2)
+    {
+        return false;
+    }
+    let old_m = t.transform.unwrap_or(Matrix3::IDENTITY);
+    if !old_m.is_affine() {
+        return false;
+    }
+    // old matrix = D·R (row vectors): D = lengths of the rows, R = their directions
+    let r0 = (old_m.m[0][0] as f64, old_m.m[0][1] as f64);
+    let r1 = (old_m.m[1][0] as f64, old_m.m[1][1] as f64);
+    let (dx, dy) = (r0.0.hypot(r0.1), r1.0.hypot(r1.1));
+    if dx < 1e-9 || dy < 1e-9 {
+        return false;
+    }
+    let (u0, u1) = ((r0.0 / dx, r0.1 / dx), (r1.0 / dy, r1.1 / dy));
+    if (u0.0 * u1.0 + u0.1 * u1.1).abs() > 1e-4 {
+        return false; // shear
+    }
+    // the scale in text space: R·diag(sx, sy)·Rᵀ
+    let s00 = u0.0 * u0.0 * sx + u0.1 * u0.1 * sy;
+    let s01 = u0.0 * u1.0 * sx + u0.1 * u1.1 * sy;
+    let s11 = u1.0 * u1.0 * sx + u1.1 * u1.1 * sy;
+    if s01.abs() > 1e-5 * s00.max(s11) {
+        return false; // a non-uniform scale across a turned text shears it
+    }
+    let Some(old) = fit(t) else {
+        return false;
+    };
+    let mut n = t.clone();
+    scale_text_attrs(&mut n, s00, s11);
+    let Some(new) = fit(&n) else {
+        return false;
+    };
+    // set boxes (point text: the reference's raw width = sum of the rounded advances + 1)
+    let extra = if point { 1.0 } else { 0.0 };
+    let wh = |b: &[f64; 4]| ((b[2] - b[0] + extra).max(1e-6), (b[3] - b[1]).max(1e-6));
+    let ((ow, oh), (nw, nh)) = (wh(&old.lines), wh(&new.lines));
+    let (tw, th) = (ow * dx * s00, oh * dy * s11);
+    let (fx, fy) = (tw / nw, th / nh);
+    // corner of the old set box after the old matrix and the scale
+    let p0 = m.apply_vec2(old_m.apply_vec2(fp_geom::Vec2::new(old.lines[0], old.lines[1])));
+    let unturned = (u0.0 - 1.0).abs() < 1e-6
+        && u0.1.abs() < 1e-6
+        && u1.0.abs() < 1e-6
+        && (u1.1 - 1.0).abs() < 1e-6;
+    let identity =
+        unturned && (tw - nw).abs() < FOLD_IDENTITY_PX && (th - nh).abs() < FOLD_IDENTITY_PX;
+    n.bounds = new.frame;
+    if identity {
+        // whole-pixel origin (81.5 → 82 measured; 75.5 → 75 in a group is open, §5)
+        let ddx = ((p0.x - new.lines[0]) + 0.5 + 1e-6).floor() as f32;
+        let ddy = ((p0.y - new.lines[1]) + 0.5 + 1e-6).floor() as f32;
+        n.bounds = n.bounds.translate(ddx, ddy);
+        if let Some(r) = &mut n.anchor_rect {
+            r.left += ddx;
+            r.top += ddy;
+            if r.right != 0.0 || r.bottom != 0.0 {
+                r.right += ddx;
+                r.bottom += ddy;
+            }
+        }
+        n.transform = None;
+    } else {
+        let (a, b, c, d) = (fx * u0.0, fx * u0.1, fy * u1.0, fy * u1.1);
+        let (nx, ny) = (new.lines[0], new.lines[1]);
+        let tx = p0.x - (nx * a + ny * c);
+        let ty = p0.y - (nx * b + ny * d);
+        n.transform = Some(Matrix3::from_affine(
+            a as f32, b as f32, c as f32, d as f32, tx as f32, ty as f32,
+        ));
+    }
+    n.detach_story();
+    n.relaid = true;
+    *t = n;
+    true
+}
+
+/// The attribute part of [`fold_text_scale`] for the scale `(sx, sy)` in text space (RE spec 66
+/// §3.2), in the initial attributes and every run.
+fn scale_text_attrs(t: &mut fp_model::TextElem, sx: f64, sy: f64) {
+    let ratio = sx / sy;
+    let size = |v: f32| ((v as f64 * sy * 100.0).round() / 100.0).max(4.0) as f32;
+    let hs = |v: f32| ((v as f64 * ratio * 1000.0).round() / 1000.0) as f32;
+    let by = |v: f32, k: f64| (v as f64 * k) as f32;
+    let defaults = fp_text::CharAttrs::default();
+    // percentage leading (mode 0) stays; exact and additional leading are pixels and scale
+    let scale = |at: &mut fp_model::TextAttrs, mode: &mut i32| {
+        if let Some(m) = at.leading_mode {
+            *mode = m;
+        }
+        at.size = at.size.map(size);
+        at.horizontal_scale = at.horizontal_scale.map(hs);
+        at.tracking = at.tracking.map(|v| by(v, ratio));
+        at.indent = at.indent.map(|v| by(v, sx));
+        at.space_before = at.space_before.map(|v| by(v, sy));
+        at.space_after = at.space_after.map(|v| by(v, sy));
+        if *mode != 0 {
+            at.leading = at.leading.map(|v| by(v, sy));
+        }
+    };
+    // the initial attributes carry the size and horizontal scale every run inherits
+    if t.initial.size.is_none() {
+        t.initial.size = Some(defaults.size as f32);
+    }
+    if t.initial.horizontal_scale.is_none() && (ratio - 1.0).abs() > 1e-9 {
+        t.initial.horizontal_scale = Some(defaults.h_scale as f32);
+    }
+    let mut mode = 0;
+    scale(&mut t.initial, &mut mode);
+    for r in &mut t.runs {
+        scale(&mut r.attrs, &mut mode);
+    }
+    if let Some(r) = &mut t.trailing_attrs {
+        scale(&mut r.attrs, &mut mode);
+    }
+}
+
 /// Puts the fill handles of `e` (paths, also inside groups and compound shapes) back to those of
 /// `orig`, the same element before a transformation. This is a scale or rotation with "Scale
 /// attributes" off: the fill handles stay in the document (RE spec 61 §1.5). Text is not touched:

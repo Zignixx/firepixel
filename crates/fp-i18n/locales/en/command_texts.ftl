@@ -688,3 +688,4 @@ cmdtext-knopf-neue-ebene-im-ebenen-bedienfeld-be-5fe5af = New Layer button of th
 cmdtext-klick-auf-eine-ebenenzeile-diese-objekte-b0f033 = click on a layer row: select these objects as well (one history step "Layer Change")
 cmdtext-ziel-ebenen-id-ebene-oder-unterebene = target layer ID (layer or sublayer)
 cmdtext-kopien-statt-verschieben-alt = copies instead of moving (Alt)
+cmdtext-wie-das-skalieren-werkzeug-eine-reine-ac-1789a5 = like the Scale tool: a pure axis scale of a single selected text is turned into font size and horizontal scale instead of being stored as a matrix
