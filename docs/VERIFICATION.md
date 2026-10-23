@@ -1,6 +1,6 @@
 # Manual verification
 
-Last updated: 2026-10-22
+Last updated: 2026-10-23
 
 This file is the human click-checklist for Firepixel. Most of Firepixel is checked automatically: unit and integration tests, headless UI tests with image series, and a scripted comparison runner that drives Firepixel and the reference application side by side through the automation bridge (`--mcp`) and compares the results. Some things cannot be covered that way and stay **manual**:
 
@@ -140,13 +140,20 @@ refined follow rules of TW-192, R-31 (the same tool stroke on both sides at unit
 On 22 Oct 2026 tester feedback batch 5 (FB-17 to FB-23, TW-198 to TW-203) was measured in RE spec 60 (RE-28) and
 fixed in F62 (`208d0564`), F63 (`bd397c68`), F64 (`8a681109`), F65 (`8c636395`, TW-202) and F66 (`08ef298d`);
 the runner does not reach these interactions, so they are click-test items A4-45 to A4-49. FB-17 turned View ▸
-Tooltips off by default (F64); TW-203 (a Dither fill edge) waits for the user's decision.
+Tooltips off by default (F64); TW-203 (a Dither fill edge) waited for the user's decision and was then built as an
+extension (F67, A4-50).
 Follow-up run 35 (22 Oct 2026, 6 units, runner R-31, preview `2026-10-22_14-27`) changed no step status and no
 compared value: it shows F65 only in the Pointer display of a selected rectangle (outline + corner squares), F64 in
 the slider pop-up placement and the default-off View ▸ Tooltips, and F66 in the width field's tooltip; the Pen, the
 pen cursors, the live sliders, the patterns and the focus return are reached by no step and stay with A4-45 to A4-49.
 The runner item TW-197 did not recur (item below).
-The open checks below come from runs 17 to 35.
+On 23 Oct 2026 tester feedback batch 6 (FB-24 to FB-30, TW-204 to TW-209) was measured in RE spec 61 (RE-29) and
+fixed in F69 (`c9c9a329`, TW-204), F70 (`4657c7cb`, TW-205, TW-206 and the remaining live sliders), F72 (`249f4569`,
+TW-208) and F68 (`99114278`, TW-207; a real-window check over the bridge found 0 differing pixels inside a moved
+pattern-filled shape, after a scripted move and after a pointer drag); the runner does not reach these interactions,
+so they are click-test items A4-51 to A4-55. FB-27 (a blend mode preview while hovering the list) is declined
+(TW-209). Follow-up run 36 over the touched units is to follow.
+The open checks below come from runs 17 to 35 and tester feedback batch 6.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
 - [x] **TW-101** (`xs-file-formats/09`) – resolved in run 13: import by dragging lands on the same pixels 121,120–417,322 in both programs.
@@ -432,6 +439,21 @@ VER-10.28.
 - [ ] **A4-50** (TW-203 / FB-23, Firepixel extension; needs: real window)
   **Steps:** Select a filled rectangle, set Edge to "Dither" with width 15 in the Property Inspector, zoom to 400 %; drag the width slider; set width 0; switch to Feather and back; save as FW-PNG, reopen, and open the same file in a reader that does not know the marker.
   **Expected:** The edge becomes a dithered transition of fully opaque or transparent pixels in a fixed Bayer pattern, no grey ramp; the slider previews live; width 0 looks like Hard; Feather and Dither keep the width; the reopened file still shows Dither, the other reader a Feather of the same width.
+- [ ] **A4-51** (TW-204 / FB-26, RE spec 61 §5, tester feedback batch 6; needs: real window, original for comparison)
+  **Steps:** In both programs create, in a 15 pt font, a one-line point text, a point text with three paragraphs (hard returns), a fixed-width text with one paragraph that wraps softly to three lines and a fixed-width text with three paragraphs. Select each with the Pointer, type 33 into the paragraph indent field of the text inspector and press Enter; then drag the indent slider from its arrow and release; set the indent back to 0. Watch the lines and the selection bounds and read the History.
+  **Expected:** The first line of every paragraph moves right by the indent: every line of the three-paragraph texts, only the first line of the soft-wrapped paragraph, which rewraps (3 → 4 lines). On point text Firepixel keeps the object's left, top and bottom and grows the bounds on the right by the indent (deliberate deviation: the reference moves the left of an auto-width text by the indent and keeps the width; a one-line text kept its bounds). The slider previews live; one "Text Change" row per committed value; leading and spacing unchanged. Note differences, quoting TW-204.
+- [ ] **A4-52** (TW-205 / FB-28, RE spec 61 §4, tester feedback batch 6; needs: real window, real mouse, original for comparison)
+  **Steps:** Select a red path and drag the Opacity slider of the Layers panel from its arrow to 56, then release; press Esc during a second drag; click the arrow, move the thumb and click beside the pop-up. Open the Blend mode list, hover several entries, then pick Multiply. Select two objects with different opacities and blend modes, then click a layer row that holds them; deselect everything. Read the History.
+  **Expected:** Firepixel previews the opacity on the canvas while dragging (the reference only counts the field; deliberate difference); release applies one History row; Esc leaves the object unchanged; the pop-up sits flush with its arrow with the thumb under the press point. Hovering the blend modes previews nothing (as in the reference, TW-209), a choice writes one row. With mixed values both fields are blank (not the first object's value); with no selection both are greyed out. Note differences, quoting TW-205.
+- [ ] **A4-53** (TW-206 / FB-29, RE spec 61 §2, tester feedback batch 6; needs: real window, real mouse, original for comparison)
+  **Steps:** Select a red (`#FF0000`) rectangle and open the fill colour pop-up of the inspector. Press on the opacity arrow next to the "100" field, drag to 50 and release; reopen, type 50 and press Enter; reopen, change the opacity and press Esc twice. Read HEX and RGB at alpha 50 and after reopening the semi-transparent colour. Repeat with the stroke colour pop-up of a blue stroke. Repeat from the Tools panel fill and stroke wells with a vector selected, from the Color Mixer swatches and its channel sliders, and for a text colour and text stroke. Drag the roundness slider of a rectangle. Read the History each time.
+  **Expected:** The canvas follows the opacity while dragging or after typing (the reference updates nothing live; deliberate difference); releasing after a press-and-drag applies and closes the pop-up; Enter applies; Esc closes the slider, then the pop-up, without change. HEX stays `#FF0000` and RGB 255 0 0 at alpha 50, also after reopening (the reference shows a blended value such as `#FF7A7A` on reopening; deliberate difference). The fill becomes `#ff000080` with one row, the stroke `#0000ff80` with one row (the reference two). The Tools panel wells, the Color Mixer and the text colours preview the same way; the roundness slider previews live and writes one row on release. Note differences, quoting TW-206.
+- [ ] **A4-54** (TW-207 / FB-24, FB-25, RE spec 61 §1, tester feedback batch 6; needs: real window, real mouse, original for comparison)
+  **Steps:** Draw a triangle with a thick stroke, pick a pattern fill (for example Bricks) in the inspector and look at the three fill handles with the Pointer. Move the shape by a Pointer drag, by arrow keys and Shift+arrow and by the X and Y fields; duplicate it; undo. Drag fill handle 1 by an odd amount (for example 37/23). Scale the shape to 150 % with Numeric Transform with "Scale attributes" on and off, rotate it by 90°, and scale it with the Scale tool. Repeat the moves at 400 %.
+  **Expected:** The pattern travels with the shape: after every move the pixels inside are the same as before (no joints jump to other columns or rows) and all three handles move by the same delta; dragging handle 1 by 37/23 moves the pattern by exactly 37/23 (no snapping to the tile). A new pattern's handle 1 sits at the centre of the bounds, handle 2 one tile width to the right, handle 3 one tile height up. With "Scale attributes" on the pattern scales and rotates with the shape; off, the handles stay in the document (tile size unchanged). Known rest: Firepixel's Scale and free-transform tools always transform the handles. Note differences, quoting TW-207.
+- [ ] **A4-55** (TW-208 / FB-30, RE spec 61 §3, tester feedback batch 6; needs: real window, real mouse, Windows and macOS, original for comparison)
+  **Steps:** Draw four paths on one layer and one path on a second layer; add a locked layer with an object. In the Layers panel click the bottom path row, then Shift+click the top path row; Shift+click a middle row; Ctrl+click single rows on and off (on the Mac Cmd+click, and also Ctrl+click); Ctrl+Shift+click a row; click a row that is part of the multi-selection; click a layer row, then Shift+click a path row on the other layer; select an object on the canvas, then Shift+click a row.
+  **Expected:** A click selects only that row (the anchor); Shift+click selects the range from the anchor to the row and replaces the selection; Ctrl+click (Cmd on the Mac, and the plain Ctrl key there too) toggles the row and keeps the anchor; Ctrl+Shift+click acts like Shift+click; a click on a selected row keeps the multi-selection; a layer row selects all its objects and becomes the anchor; a range across layers includes the objects in between but not those of locked or shared layers; after a canvas selection the range starts at the topmost selected row. Note differences, quoting TW-208.
 ---
 
 # Part B – Full catalogue
