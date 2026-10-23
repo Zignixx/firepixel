@@ -531,9 +531,11 @@ pub fn default_handles(b: Option<Rect>, shape: i32) -> fp_model::FillHandles {
     let c = Point::new(cx, cy);
     let rot = |s: Point, e: Point| Point::new(s.x - (e.y - s.y), s.y + (e.x - s.x));
     let (start, end, second) = match shape {
+        // linear: h3 = h1 + (height, 0), to the right (RE spec 61 §1.2, RE spec 62 §2.2; no
+        // visible effect for a linear gradient)
         2 => {
             let (s, e) = (Point::new(cx, r.top), Point::new(cx, r.bottom));
-            (s, e, rot(s, e))
+            (s, e, Point::new(s.x + (e.y - s.y), s.y - (e.x - s.x)))
         }
         5 | 8 => {
             let e = Point::new(r.right, r.bottom);

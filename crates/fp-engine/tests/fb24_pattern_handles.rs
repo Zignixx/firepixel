@@ -9,8 +9,14 @@ use fp_engine::Session;
 use fp_model::{ElementId, ElementKind, FillHandles};
 use serde_json::json;
 
-/// Test pattern 16 × 12 in the test profile's pattern folder.
+/// Test pattern 16 × 12 in the test profile's pattern folder, written once per test program
+/// (parallel tests read it; a rewrite while another test loads it gave the stand-in pattern).
 fn write_pattern() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(write_pattern_file);
+}
+
+fn write_pattern_file() {
     let _ = doc_session(10.0, 10.0); // test profile
     let user = fp_i18n::profile::roaming_dir().expect("test profile");
     let path = user.join("Patterns").join("Fb24Muster.png");

@@ -1467,8 +1467,8 @@ pub fn transform_element(e: &mut Element, m: &Matrix3, sampler: Sampler) {
 
 /// Puts the fill handles of `e` (paths, also inside groups and compound shapes) back to those of
 /// `orig`, the same element before a transformation. This is a scale or rotation with "Scale
-/// attributes" off: the fill handles stay in the document (RE spec 61 §1.5). Text keeps its fill
-/// handles in its own transformed space and is not touched.
+/// attributes" off: the fill handles stay in the document (RE spec 61 §1.5). Text is not touched:
+/// [`transform_element`] never moves a text's fill handles except in a pure move (RE spec 62 §2.4).
 pub fn restore_fill_handles(e: &mut Element, orig: &Element) {
     match (&mut e.kind, &orig.kind) {
         (ElementKind::Path(p), ElementKind::Path(o)) => {
@@ -1488,6 +1488,52 @@ pub fn restore_fill_handles(e: &mut Element, orig: &Element) {
             }
             for (x, ox) in c.operands.iter_mut().zip(&o.operands) {
                 restore_fill_handles(Arc::make_mut(x), ox);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Applies `m` to the fill handles (document coordinates) of the texts in `e`, also inside groups.
+/// [`transform_element`] leaves a text's fill handles where they are for anything but a pure move,
+/// as the Scale tool and Free Transform do in the reference; the numeric transform
+/// (`scaleSelection`) transforms them about the centre whatever "Scale attributes" says
+/// (RE spec 62 §2.4, §2.6 Nr. 4/5). Call it after [`transform_element`] with the same matrix.
+pub fn transform_text_fill_handles(e: &mut Element, m: &Matrix3) {
+    if m.is_translation(1e-6) {
+        // a pure move already took the handles along (translate_element)
+        return;
+    }
+    e.cache = None;
+    match &mut e.kind {
+        ElementKind::Text(t) => {
+            apply_pt(m, &mut t.fill_handles.start);
+            apply_pt(m, &mut t.fill_handles.end);
+            apply_pt(m, &mut t.fill_handles.second);
+        }
+        ElementKind::Group(g) => {
+            for c in &mut g.children {
+                transform_text_fill_handles(Arc::make_mut(c), m);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Puts the fill handles of the texts in `e` (also inside groups) back to those of `orig`, the same
+/// element before a transform-tool session that only moved it: the Scale tool and Free Transform
+/// leave a text's fill handles in the document even then (RE spec 62 §2.4, §2.6 Nr. 4).
+pub fn restore_text_fill_handles(e: &mut Element, orig: &Element) {
+    match (&mut e.kind, &orig.kind) {
+        (ElementKind::Text(t), ElementKind::Text(o)) => {
+            if t.fill_handles != o.fill_handles {
+                t.fill_handles = o.fill_handles;
+                e.cache = None;
+            }
+        }
+        (ElementKind::Group(g), ElementKind::Group(o)) => {
+            for (c, oc) in g.children.iter_mut().zip(&o.children) {
+                restore_text_fill_handles(Arc::make_mut(c), oc);
             }
         }
         _ => {}

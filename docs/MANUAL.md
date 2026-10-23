@@ -186,7 +186,9 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   takes the fill handles along. In scripts, `scaleSelection`, `rotateSelection`, `setQuadrangle`
   and `transformSelection` transform the fill handles (and, when scaling, the stroke width) only
   when the options string contains `transformAttributes`, as in the original
-  (`"autoTrimImages transformAttributes"`); with `"autoTrimImages"` alone they stay in the document.
+  (`"autoTrimImages transformAttributes"`); with `"autoTrimImages"` alone they stay in the document. For a text the
+  numeric transform always scales the fill handles about the centre, and the transform tools always leave them,
+  as in the original.
 - *Modify ▸ Mask ▸ Reveal All / Hide All* puts an empty mask over the selected object. The Layers
   panel and the inspector still show the object itself (e.g. the bitmap) with the mask as a second
   thumbnail.
@@ -351,6 +353,15 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   Dither too (the transition starts from the text's anti-aliased glyphs); the text inspector itself offers only
   the *Anti-aliasing level* list (its *No Anti-Alias* entry is the hard edge), so give a text a Feather or Dither
   edge from a script or the command `pi.fill {edge, feather}`.
+
+- **Gradient and pattern fills on text:** a text takes a gradient or pattern fill like a path (`pi.fill`,
+  `setFill`); the glyphs show the fill exactly as a path with the same fill handles would. The handles lie in
+  document coordinates: a new linear gradient runs from the top centre to the bottom centre of the text's bounds, a
+  new pattern has its tile corner on the centre at 100 %. Moving the text (dragging, arrow keys, X/Y fields) takes
+  the handles along; the Scale tool and Free Transform leave them where they are, even when you drag the text inside
+  the transform frame (the text grows or moves, the fill does not); *Numeric Transform* and `scaleSelection` scale
+  them about the centre, with or without "Scale attributes"; editing the text (more characters, another size) leaves
+  them in place.
 
 - **Live Filters (+):** the “+” menu groups the effects as in the original, e.g. *Bevel and Emboss* ▸
   *Inner Bevel*, *Outer Bevel*, *Inset Emboss*, *Raised Emboss*. The kind is part of the menu item;

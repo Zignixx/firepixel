@@ -1255,9 +1255,19 @@ impl Renderer {
             }
         }
         rep.rasterized_texts += 1;
+        let edge = convert::text_fill_edge(t);
+        // gradient, pattern and web-dither fills: the glyph coverage masks the paint a path with
+        // the same fill and fill handles gets; the handles are in document coordinates and follow
+        // the parent mapping only (Q-64, RE spec 62 §2.6)
+        if let Some(fill) = convert::text_paint(t, &parent) {
+            match crate::text_edge::render_with_paint(&lay, edge, &fill) {
+                Ok(img) => return Some(img),
+                Err(_) => rep.approx("text-fill-paint"),
+            }
+        }
         // Feather and Dither fill edges like paths (TW-203); Hard and Anti-Alias stay with the text
         // rasteriser (anti-aliasing level, `FETi` 0 = one sample per pixel)
-        if let Some(img) = crate::text_edge::render_with_edge(&lay, convert::text_fill_edge(t)) {
+        if let Some(img) = crate::text_edge::render_with_edge(&lay, edge) {
             return Some(img);
         }
         Some(fp_text::render::render(&lay, None))

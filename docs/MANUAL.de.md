@@ -198,7 +198,9 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Skripten transformieren `scaleSelection`, `rotateSelection`, `setQuadrangle` und
   `transformSelection` die Füllgriffe (und beim Skalieren die Strichbreite) nur, wenn die
   Optionszeichenfolge `transformAttributes` enthält, wie im Original
-  (`"autoTrimImages transformAttributes"`); mit `"autoTrimImages"` allein bleiben sie im Dokument.
+  (`"autoTrimImages transformAttributes"`); mit `"autoTrimImages"` allein bleiben sie im Dokument. Bei einem Text
+  skaliert Numerisch transformieren die Füllgriffe immer um die Mitte, und die Transformationswerkzeuge lassen sie
+  immer stehen, wie im Original.
 - *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
   gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
   mit der Maske als zweiter Miniatur.
@@ -375,6 +377,15 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Kante und Dither (der Übergang beginnt bei den geglätteten Glyphen); der Text-Inspektor selbst bietet nur die
   Liste *Anti-Aliasing-Stufe* (ihr Eintrag *Kein Anti-Alias* ist der harte Rand), einem Text gibt man eine weiche oder
   Dither-Kante daher per Skript oder mit dem Befehl `pi.fill {edge, feather}`.
+
+- **Verlauf und Muster in Text:** Ein Text nimmt Verlaufs- und Musterfüllungen wie ein Pfad an (`pi.fill`,
+  `setFill`); die Glyphen zeigen die Füllung genau so, wie ein Pfad mit denselben Füllgriffen sie bekäme. Die Griffe
+  liegen in Dokumentkoordinaten: Ein neuer linearer Verlauf läuft von der Mitte der Oberkante zur Mitte der
+  Unterkante der Textgrenzen, ein neues Muster hat seine Kachelecke in der Mitte, bei 100 %. Verschieben (Ziehen,
+  Pfeiltasten, Felder X/Y) nimmt die Griffe mit; das Skalieren-Werkzeug und Frei transformieren lassen sie stehen,
+  auch beim Ziehen im Transformationsrahmen (der Text wird größer oder wandert, die Füllung nicht); *Numerisch
+  transformieren* und `scaleSelection` skalieren sie um die Mitte, mit und ohne „Attribute skalieren“; Bearbeiten
+  des Texts (mehr Zeichen, andere Größe) lässt sie an ihrer Stelle.
 
 - **Filter (+):** Das Menü „+“ gliedert die Effekte wie im Original, z. B. *Abgeflachte Kante und
   Relief* ▸ *Abgeflachte Kante innen*, *Abgeflachte Kante außen*, *Relief vertieft*, *Relief erhaben*.

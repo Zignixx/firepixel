@@ -408,6 +408,28 @@ pub fn text_fill_edge(t: &TextElem) -> fv::FillEdge {
     }
 }
 
+/// Paint of a text whose fill is a gradient, pattern or web dither (Q-64, RE spec 62 §2.6): a path
+/// without contours that carries the fill a path with the same fill attributes and the text's
+/// `fill_handles` would get. The handles (and the texture offset) are in document coordinates and
+/// go through `map` only, not through the text's own matrix. `None` for a solid fill, no fill and
+/// the contour gradient (which needs the outline; the text then keeps its run colours).
+pub fn text_paint(t: &TextElem, map: &PointMap) -> Option<fv::VectorPath> {
+    let (fill, _) = paint(&t.attrs, map_handles(&t.fill_handles, map));
+    let fill = fill?;
+    match &fill.kind {
+        fv::FillKind::Solid(_) => return None,
+        fv::FillKind::Gradient(g) if g.shape == fv::GradientShape::Contour => return None,
+        _ => {}
+    }
+    let mut v = fv::VectorPath::new(Vec::new());
+    v.texture_offset = map.apply(Vec2::new(
+        t.texture_offset.x as f64,
+        t.texture_offset.y as f64,
+    ));
+    v.fill = Some(fill);
+    Some(v)
+}
+
 /// Text (`TXTv`) → [`fp_text::TextBlock`] (ohne `MTXv`; die Abbildung wendet der Renderer auf das
 /// Layout an).
 pub fn text_block(_doc: &Document, t: &TextElem) -> fp_text::TextBlock {

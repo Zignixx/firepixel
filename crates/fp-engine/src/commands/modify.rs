@@ -2228,10 +2228,24 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                 };
                 let before = (!scale_attrs).then(|| selection_snapshot(s)).flatten();
-                let out = transform_selection(s, docops::about(c, &m))?;
+                let mc = docops::about(c, &m);
+                let out = transform_selection(s, mc)?;
                 // "Scale attributes" off: the fill handles stay in the document (RE spec 61 §1.5)
                 if let Some(before) = before {
                     restore_selected_fill_handles(s, &before)?;
+                }
+                // text: the fill handles are transformed about the centre whatever "Scale
+                // attributes" says (RE spec 62 §2.4, `scaleSelection` with and without
+                // `transformAttributes`)
+                {
+                    let d = s.doc_mut()?;
+                    let (page, ids) = (d.page, d.selection.elements.clone());
+                    let doc = Arc::make_mut(&mut d.doc);
+                    for id in ids {
+                        docops::edit_by_id(doc, page, id, |e| {
+                            docops::transform_text_fill_handles(e, &mc)
+                        });
+                    }
                 }
                 // „Attribute skalieren“ wie Info-Bedienfeld/Werkzeug: Strich mit √(sx·sy)
                 let f = (m.m[0][0] * m.m[1][1] - m.m[0][1] * m.m[1][0]).abs().sqrt();
@@ -2348,7 +2362,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let trim = p.opt_bool("autoTrim")?.unwrap_or(false)
                     && s.prefs.get_bool("TransformToolsAutoTrim", true);
                 let attrs = p.bool_or("scaleAttributes", true)?;
+                // a transform-tool session that only moved a text leaves its fill handles in the
+                // document as well (RE spec 62 §2.4); any other pure move takes them along
+                let tool_move = (p.get("step").and_then(|v| v.as_str()) == Some("transform")
+                    && m.is_translation(1e-6))
+                .then(|| selection_snapshot(s))
+                .flatten();
                 let out = transform_keeping_fill_handles(s, m, attrs)?;
+                if let Some(before) = tool_move {
+                    let d = s.doc_mut()?;
+                    let page = d.page;
+                    let doc = Arc::make_mut(&mut d.doc);
+                    for (id, orig) in &before {
+                        docops::edit_by_id(doc, page, *id, |e| {
+                            docops::restore_text_fill_handles(e, orig)
+                        });
+                    }
+                }
                 if trim {
                     trim_selected_bitmaps(s)?;
                 }
