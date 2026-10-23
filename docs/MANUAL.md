@@ -111,7 +111,13 @@ Esc closes open popups and menus).
 otherwise it paints into the selected one. **Eraser**, **Blur** and **Rubber Stamp** work with a
 soft edge as in the original; Esc ends painting and switches to the Pointer. After a Marquee, Lasso
 or Magic Wand selection on a bitmap, Esc exits bitmap mode (History row "Exit Bitmap Mode"), removes the
-pixel selection and switches to the Pointer; the bitmap stays selected. The **Gradient** tool
+pixel selection and switches to the Pointer; the bitmap stays selected. Esc while you are still
+dragging a new marquee or lasso outline cancels the drag and also exits bitmap mode (an older pixel
+selection is removed too) and switches to the Pointer; releasing the mouse then does nothing. Esc in
+the middle of a Brush stroke switches to the Pointer at once and freezes the preview, but the whole
+stroke is still painted when you release the mouse; the next Esc exits bitmap mode. With the
+Marquee or Lasso and a pixel selection the arrow keys move only the marquee (1 px, Shift 10 px);
+consecutive presses are one History row "Move". The **Gradient** tool
 has its own colors (default black → white, a click on the swatch opens the gradient editor);
 "Fill selection" and tolerance are separate from the Paint Bucket. **Replace Color** has its own
 "From" and "To" colors (default green → red).
@@ -183,7 +189,12 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   remembered (preference `NumericXformXformsBFE`, also after Cancel). The Scale, Skew and Distort
   tools and Free Transform follow *Preferences ▸ General ▸ Scale strokes and effects*
   (`XformToolXformsBFE`, on by default) for the fill handles in the same way. A pure move always
-  takes the fill handles along. In scripts, `scaleSelection`, `rotateSelection`, `setQuadrangle`
+  takes the fill handles along. In the Scale, Skew and Distort tools and Free Transform, Enter, a
+  double-click or another tool applies all drags of the session as one History row "Transform";
+  Esc cancels the session: the object returns to its state before the session, the Pointer is
+  active and the row stays as a redo step (*Edit ▸ Redo: Transform* applies it again). Esc while
+  the mouse is still held keeps the preview until you release, then ends the mode without
+  applying anything. In scripts, `scaleSelection`, `rotateSelection`, `setQuadrangle`
   and `transformSelection` transform the fill handles (and, when scaling, the stroke width) only
   when the options string contains `transformAttributes`, as in the original
   (`"autoTrimImages transformAttributes"`); with `"autoTrimImages"` alone they stay in the document. For a text the

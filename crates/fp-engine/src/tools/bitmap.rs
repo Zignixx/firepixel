@@ -58,6 +58,54 @@ pub(crate) fn escape_bitmap_mode(ctx: &ToolContext) -> ToolResponse {
     }
 }
 
+/// Arrow keys in a bitmap selection tool with a pixel selection (re 62 §1.8): only the marquee
+/// moves, 1 px (Shift 10 px), as a key nudge, so consecutive presses are one history row "Move"
+/// and one undo restores the marquee. Ctrl/Alt arrows and arrows without a pixel selection are
+/// left to the menu shortcuts.
+pub(crate) fn nudge_marquee(ev: &ToolEvent, ctx: &ToolContext) -> Option<ToolResponse> {
+    let ToolInput::Key(k) = &ev.input else {
+        return None;
+    };
+    if ev.mods.ctrl || ev.mods.alt || !ctx.selection.has_pixels() {
+        return None;
+    }
+    let s = if ev.mods.shift { 10.0 } else { 1.0 };
+    let (dx, dy) = match k {
+        ToolKey::Left => (-s, 0.0),
+        ToolKey::Right => (s, 0.0),
+        ToolKey::Up => (0.0, -s),
+        ToolKey::Down => (0.0, s),
+        _ => return None,
+    };
+    Some(ToolResponse::commit(vec![Invocation::new(
+        "edit.move",
+        json!({"dx": dx, "dy": dy, "nudge": true}),
+    )]))
+}
+
+/// Escape while a new marquee or (non-polygon) lasso is dragged (re 62 §1.5, measured with the real key):
+/// the drag is dropped and bitmap mode ends at once, an older pixel selection included; the Pointer
+/// becomes active (the release then does nothing) and the bitmap stays selected. One row "Exit
+/// Bitmap Mode"; when this very press opened bitmap mode (a bitmap selected, no mode, no pixel
+/// selection) the reference writes that row twice. Without a bitmap or pixel selection only the
+/// drag is dropped.
+pub(crate) fn escape_selection_drag(ctx: &ToolContext) -> ToolResponse {
+    let exit = || Invocation::new("modify.exitBitmapMode", json!({"row": true}));
+    let commands = if ctx.selection.has_pixels() || ctx.bitmap_mode || ctx.bitmap_worked {
+        vec![exit()]
+    } else if bitmap_target(ctx) {
+        let edit = || Invocation::new("modify.editBitmap", json!({}));
+        vec![edit(), exit(), edit(), exit()]
+    } else {
+        return ToolResponse::default();
+    };
+    ToolResponse {
+        commands,
+        switch_tool: Some(ToolId::Pointer),
+        ..ToolResponse::default()
+    }
+}
+
 /// Esc in einem Malwerkzeug (Pinsel, Bleistift, Radiergummi, Weichzeichner & Co., Stempel …) ohne
 /// laufenden Strich, gemessen am Original (FV-11): Ist eine Bitmap das Ziel (ausgewählt oder
 /// Bitmapmodus), endet der Bitmapmodus und das Werkzeug wechselt zum Zeiger; die Bitmap bleibt
@@ -185,6 +233,12 @@ impl ToolMachine for MarqueeTool {
             return ToolResponse::default();
         }
         let ToolInput::Pointer { kind, pos } = &ev.input else {
+            if self.start.is_none()
+                && self.moving.is_none()
+                && let Some(r) = nudge_marquee(ev, ctx)
+            {
+                return r;
+            }
             if ev.input == ToolInput::Key(ToolKey::Escape) {
                 if self.start.is_none() {
                     // Esc after dragging a marquee: "Exit bitmap mode", pixel selection gone,
@@ -194,7 +248,9 @@ impl ToolMachine for MarqueeTool {
                     return escape_bitmap_mode(ctx);
                 }
                 self.start = None;
+                self.cur = None;
                 self.overlay.clear();
+                return escape_selection_drag(ctx);
             }
             return ToolResponse::default();
         };
@@ -433,6 +489,9 @@ impl ToolMachine for LassoTool {
                 self.commit(ctx)
             }
             ToolInput::Key(ToolKey::Enter) if poly && self.active => self.commit(ctx),
+            ToolInput::Key(_) if !self.active && nudge_marquee(ev, ctx).is_some() => {
+                nudge_marquee(ev, ctx).unwrap_or_default()
+            }
             ToolInput::Key(ToolKey::Escape) => {
                 if !self.active {
                     return escape_bitmap_mode(ctx);
@@ -440,7 +499,10 @@ impl ToolMachine for LassoTool {
                 self.points.clear();
                 self.active = false;
                 self.hover = None;
-                if poly && bitmap_target(ctx) {
+                if !poly {
+                    return escape_selection_drag(ctx);
+                }
+                if bitmap_target(ctx) {
                     // offenes Polygon-Lasso: verwerfen und wie im Original den Bitmapmodus beenden,
                     // Werkzeug → Zeiger, die Bitmap bleibt gewählt (PAR 06/08)
                     let commands = if ctx.bitmap_mode || ctx.selection.has_pixels() {
@@ -544,6 +606,12 @@ pub struct BrushTool {
     deselect_only: bool,
     /// Pinsel: der letzte Zug wurde gemalt (Esc danach beendet den Bitmapmodus mit Verlaufsschritt).
     painted: bool,
+    /// Pinsel: Escape kam mitten im Zug (re 62 §3.4). Der Zug läuft weiter und wird beim Loslassen
+    /// ganz gemalt, die Vorschau bleibt aber auf dem Stand beim Escape stehen; der Zeiger ist dann
+    /// schon aktiv (die Sitzung gibt diesem Werkzeug nur noch Bewegungen und das Loslassen).
+    escaped: bool,
+    /// Eingefrorene Vorschau seit dem Escape.
+    frozen: Option<Overlay>,
 }
 
 /// Abstand (px) des Zugbeginns von der gewählten Bitmap, ab dem der Pinsel ein neues Bitmap malt
@@ -604,6 +672,8 @@ impl BrushTool {
             offset: 0.0,
             deselect_only: false,
             painted: false,
+            escaped: false,
+            frozen: None,
         }
     }
 
@@ -856,12 +926,15 @@ impl BrushTool {
 
     fn overlay_for(&self, ctx: &ToolContext) -> Vec<Overlay> {
         let mut v = Vec::new();
-        if !self.points.is_empty()
+        if let Some(f) = &self.frozen {
+            v.push(f.clone());
+        } else if !self.points.is_empty()
             && let Some(l) = &self.live
         {
             v.push(Overlay::Paint(l.preview()));
         }
         if let Some(h) = self.hover
+            && !self.escaped
             && ctx.prefs.get_bool("UseBrushSizeCursors", true)
             && self.id != ToolId::Pencil
         {
@@ -886,8 +959,23 @@ impl ToolMachine for BrushTool {
         }
         if ev.input == ToolInput::Key(ToolKey::Escape) {
             if self.active && self.id == ToolId::Brush {
-                // Pinsel: Esc mitten im Zug bricht nicht ab (gemessen r14_esc_mid = ganzer Strich)
-                return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
+                // Pinsel: Esc mitten im Zug bricht nicht ab (gemessen r14_esc_mid = ganzer Strich),
+                // aber das Werkzeug wechselt sofort zum Zeiger und die Vorschau friert ein; der Zug
+                // wird beim Loslassen trotzdem ganz gemalt (re 62 §3.4)
+                if !self.escaped {
+                    self.escaped = true;
+                    self.frozen = self
+                        .live
+                        .take()
+                        .filter(|_| !self.points.is_empty())
+                        .map(|l| Overlay::Paint(l.preview()));
+                }
+                return ToolResponse {
+                    overlay: self.overlay_for(ctx),
+                    switch_tool: Some(ToolId::Pointer),
+                    keep_gesture: true,
+                    ..ToolResponse::default()
+                };
             }
             if self.active {
                 // Zug verwerfen: Vorschau weg, kein Befehl, kein Verlaufsschritt
@@ -942,12 +1030,21 @@ impl ToolMachine for BrushTool {
                 if !self.vels.is_empty() {
                     params["velocities"] = json!(self.vels);
                 }
+                let escaped = self.escaped;
                 self.cancel();
                 // Pinsel (01/14), Buntstift und Radiergummi (03/16): Esc danach → „Bitmapmodus beenden“
                 self.painted = true;
-                let cmd = Invocation::new(self.command(), params);
+                let mut commands = vec![Invocation::new(self.command(), params)];
+                if escaped && bitmap_target(ctx) {
+                    // Esc im Zug: der Zeiger ist schon aktiv, der Bitmapmodus bleibt bis zum nächsten
+                    // Esc offen (dann „Bitmapmodus beenden“, re 62 §1.4)
+                    commands.push(Invocation::new(
+                        "modify.editBitmap",
+                        json!({"worked": true}),
+                    ));
+                }
                 return ToolResponse {
-                    commands: vec![cmd],
+                    commands,
                     cursor: self.cursor(),
                     overlay: self.overlay_for(ctx),
                     ..ToolResponse::default()
@@ -985,6 +1082,8 @@ impl BrushTool {
         self.vels.clear();
         self.live = None;
         self.deselect_only = false;
+        self.escaped = false;
+        self.frozen = None;
     }
 
     /// Laufender Malvorgang (Tests, Vorschau).

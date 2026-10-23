@@ -1847,7 +1847,10 @@ enum TDrag {
 /// Skalieren, Neigen und Verzerren: Rahmen mit 8 Griffen und Drehpunkt; Ecke ziehen skaliert
 /// (Umschalt proportional, Alt um die Mitte), außerhalb ziehen dreht um den Drehpunkt (Umschalt
 /// 15°), Drehpunkt ziehen verschiebt ihn, Neigen über die Kantengriffe, Verzerren bewegt Ecken
-/// einzeln. Jeder Zug wird als Befehl übernommen; Eingabe/Doppelklick beendet, Esc verwirft den Zug.
+/// einzeln. Die Züge einer Sitzung werden mit Eingabe/Doppelklick/Werkzeugwechsel als **ein** Schritt
+/// „Transformieren“ übernommen. Escape bricht die Sitzung ab wie im Original (re 62 §3.2): der
+/// Schritt wird angelegt und sofort rückgängig gemacht (bleibt als Wiederholen-Schritt), Zeiger;
+/// Escape bei gehaltener Maus beendet die Sitzung erst beim Loslassen, ohne den Zug anzuwenden.
 #[derive(Clone, Debug)]
 pub struct TransformTool {
     id: ToolId,
@@ -1859,14 +1862,18 @@ pub struct TransformTool {
     cursor: Cursor,
     /// 9-Slice: feste Ränder (links, oben, rechts, unten) in px, vom Benutzer verschoben.
     insets: Option<([f32; 4], Rect)>,
-    /// Noch nicht übernommene Transformation (wie im Original eine Vorschau bis Eingabe,
-    /// Doppelklick oder Werkzeugwechsel; Esc verwirft): Ausgangsrahmen, Ziel-Viereck, Auswahl.
+    /// Noch nicht übernommene Transformation (Vorschau bis Eingabe, Doppelklick oder
+    /// Werkzeugwechsel; Esc legt sie als rückgängig gemachten Schritt an): Ausgangsrahmen,
+    /// Ziel-Viereck, Auswahl.
     pending: Option<(Rect, [Point; 4], Vec<ElementId>)>,
     /// Ein Bildschirmpixel in Dokumentpixeln (letzter Zoom).
     px: f32,
     /// In der laufenden Vorschau wurde gedreht: Bitmaps werden nach dem Übernehmen beschnitten
     /// (`TransformToolsAutoTrim`, re 28 L5).
     rotated: bool,
+    /// Escape kam bei gehaltener Maus: die Vorschau bleibt stehen, beim Loslassen wird der Zug
+    /// verworfen und die Sitzung abgebrochen (re 62 §1.2 b9).
+    esc_held: bool,
 }
 
 impl TransformTool {
@@ -1883,6 +1890,26 @@ impl TransformTool {
             pending: None,
             px: 1.0,
             rotated: false,
+            esc_held: false,
+        }
+    }
+
+    /// Escape: Transformationssitzung abbrechen (re 62 §3.2). Eine angewandte Vorschau wird als
+    /// Schritt „Transformieren“ übernommen und gleich rückgängig gemacht, so dass sie als
+    /// Wiederholen-Schritt im Verlauf bleibt (Strg+Y stellt sie wieder her); ohne Änderung kein
+    /// Schritt.
+    fn cancel_session(&mut self, ctx: &ToolContext) -> ToolResponse {
+        self.drag = None;
+        self.esc_held = false;
+        let commands: Vec<Invocation> = self.commit_pending(ctx).into_iter().collect();
+        self.pending = None;
+        self.pivot = None;
+        self.bounds = None;
+        self.overlay.clear();
+        ToolResponse {
+            undo_after: !commands.is_empty(),
+            commands,
+            ..ToolResponse::default()
         }
     }
 
@@ -2243,6 +2270,7 @@ impl ToolMachine for TransformTool {
                 pos,
             } => {
                 let p = *pos;
+                self.esc_held = false;
                 let kind = self.kind_at(&b, p, tol);
                 self.drag = Some((kind, p, p));
                 self.cursor = self.cursor_for(kind);
@@ -2255,7 +2283,7 @@ impl ToolMachine for TransformTool {
             ToolInput::Pointer {
                 kind: PointerKind::Move,
                 pos,
-            } => {
+            } if !(self.esc_held && self.drag.is_some()) => {
                 if let Some((k, s, _)) = self.drag {
                     let cur = if k == TDrag::Move && ev.mods.shift {
                         constrain_angle(s, *pos, 45.0)
@@ -2344,6 +2372,20 @@ impl ToolMachine for TransformTool {
                 ToolResponse::with_overlay(self.overlay.clone(), self.cursor)
             }
             ToolInput::Pointer {
+                kind: PointerKind::Move,
+                ..
+            } => ToolResponse::with_overlay(self.overlay.clone(), self.cursor),
+            ToolInput::Pointer {
+                kind: PointerKind::Up,
+                ..
+            } if self.esc_held && self.drag.is_some() => {
+                // Escape während des Zugs: nichts anwenden, Sitzung beenden, Zeiger
+                ToolResponse {
+                    switch_tool: Some(ToolId::Pointer),
+                    ..self.cancel_session(ctx)
+                }
+            }
+            ToolInput::Pointer {
                 kind: PointerKind::Up,
                 pos,
             } => {
@@ -2408,16 +2450,17 @@ impl ToolMachine for TransformTool {
                 }
             }
             ToolInput::Key(ToolKey::Escape) if self.drag.is_none() && !self.nine() => {
-                // Esc beendet den Transformationsmodus und **verwirft** die Vorschau wie im Original
-                // (PAR 08/15: Objekt unverändert, kein Verlaufsschritt); danach ist der Zeiger aktiv
-                self.pending = None;
-                self.pivot = None;
-                self.bounds = None;
-                self.overlay.clear();
+                // Esc bricht die Sitzung ab (re 62 §3.2): Objekt zurück in den Ausgangszustand, der
+                // Schritt „Transformieren“ bleibt als Wiederholen-Schritt; danach ist der Zeiger aktiv
                 ToolResponse {
                     switch_tool: Some(ToolId::Pointer),
-                    ..ToolResponse::default()
+                    ..self.cancel_session(ctx)
                 }
+            }
+            ToolInput::Key(ToolKey::Escape) if !self.nine() => {
+                // Esc bei gehaltener Maus: die Vorschau bleibt bis zum Loslassen (re 62 §1.2 b9)
+                self.esc_held = true;
+                ToolResponse::with_overlay(self.overlay.clone(), self.cursor)
             }
             ToolInput::Key(ToolKey::Escape) => {
                 if self.drag.take().is_none() {
@@ -2441,8 +2484,12 @@ impl ToolMachine for TransformTool {
     }
 
     fn finish(&mut self, ctx: &ToolContext) -> ToolResponse {
-        // Werkzeugwechsel bzw. Menübefehl übernimmt die Vorschau
+        // Werkzeugwechsel bzw. Menübefehl übernimmt die Vorschau (nach Escape im Zug: Abbruch)
+        if self.esc_held && self.drag.is_some() {
+            return self.cancel_session(ctx);
+        }
         self.drag = None;
+        self.esc_held = false;
         ToolResponse::commit(self.commit_pending(ctx).into_iter().collect())
     }
 

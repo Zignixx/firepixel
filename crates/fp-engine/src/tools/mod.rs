@@ -428,6 +428,14 @@ pub struct ToolResponse {
     /// Anfrage an die Oberfläche, die kein Befehl der Sitzung erledigen kann (z. B. Exportbereich →
     /// Export-Dialog mit `file.exportArea {rect}` öffnen). Ohne Oberfläche (MCP/CLI) ignoriert.
     pub ui_request: Option<Invocation>,
+    /// Undo the history row `commands` made right after running them, so it stays as a redo step
+    /// (transform mode cancelled with Escape: the session's "Transform" row is undone, re 62 §3.2).
+    /// Nothing is undone when the commands failed or made no row.
+    pub undo_after: bool,
+    /// With `switch_tool`: this machine keeps receiving the moves and the release of the running
+    /// pointer gesture while the new tool is already active (bitmap brush, Escape mid-stroke: the
+    /// Pointer is active at once, the stroke is still painted on release, re 62 §3.4).
+    pub keep_gesture: bool,
 }
 
 impl ToolResponse {

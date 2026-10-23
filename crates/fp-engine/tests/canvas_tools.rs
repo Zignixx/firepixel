@@ -878,7 +878,8 @@ fn free_transform_like_original() {
     pull(&mut s, (151.0, 85.0), (191.0, 85.0), "");
     s.tool_event(&ToolEvent::key(ToolKey::Enter)).expect("Eingabe");
     assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 191.0, 120.0));
-    // Esc verwirft die Änderung (PAR 08/15), beendet den Modus (Zeiger), kein Verlaufsschritt
+    // Esc macht die Sitzung rückgängig (PAR 08/15, re 62 §1.2): Objekt zurück, Modus beendet
+    // (Zeiger), der Schritt „Transformieren“ bleibt als Wiederholen-Schritt
     let (mut s, r1) = setup();
     let n = s.active().unwrap().history.undo_count();
     pull(&mut s, (151.0, 121.0), (191.0, 151.0), "");
@@ -886,6 +887,7 @@ fn free_transform_like_original() {
     assert_eq!(px(bounds(&s, r1)), (50.0, 50.0, 150.0, 120.0), "Esc verwirft");
     assert_eq!(s.tools.active, ToolId::Pointer, "Werkzeug danach Zeiger");
     assert_eq!(s.active().unwrap().history.undo_count(), n);
+    assert_eq!(s.active().unwrap().history.redo_count(), 1, "Wiederholen-Schritt");
     // der nächste Klick wählt (Zeiger) statt zu skalieren
     click(&mut s, 400.0, 300.0);
     assert!(sel(&s).is_empty(), "Klick ins Leere hebt die Auswahl auf");
@@ -927,7 +929,7 @@ fn scale_skew_distort_and_rotate() {
     assert!(approx(b.width(), b.height()) && approx(b.right, c.x + 10.0), "proportional, zweiter Zug auf der Vorschau {b:?} {c:?}");
     assert_eq!(s.active().map(|d| d.history.undo_count()).unwrap_or(0), hist + 1, "ein Schritt");
     undo_redo(&mut s, &before);
-    // Esc mitten im Zug bricht nur den Zug ab: Ausgangslage
+    // Esc mitten im Zug: nichts anwenden (re 62 §1.2 b9): Ausgangslage
     tool(&mut s, ToolId::Scale);
     let before = doc(&s);
     let b0 = bounds(&s, a);

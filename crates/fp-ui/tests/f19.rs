@@ -100,6 +100,35 @@ fn tw71_escape_in_field_keeps_selection() {
     }
 }
 
+/// Q-62 (a) (RE spec 62 §1.1, measured with the real key): Escape in a number field of the
+/// Property inspector does nothing: the typed text stays in the field, the focus stays, no row;
+/// a later Enter applies the typed value.
+#[test]
+fn q62_a_escape_in_field_keeps_text_enter_applies() {
+    let mut h = setup();
+    let rows = |h: &H| st(h).session.active().map(|d| d.history.undo_count()).unwrap_or(0);
+    let width = |h: &H| {
+        let d = st(h).session.active().expect("doc");
+        fp_engine::docops::ids_bounds(&d.doc, d.page, &d.selection.elements).map(|b| b.width().round())
+    };
+    let n = rows(&h);
+    let w = field_with(&h, "120");
+    click(&mut h, w.center());
+    key_mod(&mut h, Key::A, Modifiers::COMMAND);
+    ev(&mut h, Event::Text("123".into()));
+    for _ in 0..2 {
+        key(&mut h, Key::Escape);
+        h.run_steps(2);
+        field_with(&h, "123");
+        assert!(h.ctx.text_edit_focused(), "focus stays in the field");
+        assert_eq!((rows(&h), width(&h), sel(&h)), (n, Some(120.0), 1), "nothing applied, no row");
+    }
+    key(&mut h, Key::Enter);
+    h.run_steps(2);
+    assert_eq!(width(&h), Some(123.0), "Enter applies the typed value");
+    assert_eq!(rows(&h), n + 1);
+}
+
 fn menu_rows(h: &H, p: fp_ui::panels::PanelId) -> Vec<String> {
     fp_ui::menu::build_panel_menu(st(h), p)
         .iter()

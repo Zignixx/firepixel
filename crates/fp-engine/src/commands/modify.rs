@@ -2833,9 +2833,26 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 Requirement::Document,
                 Requirement::AnyOf(ObjectKind::Bitmap),
             ])
-            .run(|s, _| {
+            .opt(
+                "worked",
+                ParamKind::Bool,
+                "the selected bitmaps count as worked on (a brush stroke finished after Escape): leaving the mode is a history step and trims them",
+            )
+            .run(|s, p| {
+                let worked = p.opt_bool("worked")?.unwrap_or(false);
                 let d = s.doc_mut()?;
                 d.bitmap_mode = true;
+                if worked {
+                    let ids: Vec<ElementId> = super::edit::selected_bitmaps(d)
+                        .into_iter()
+                        .map(|(_, e)| e.id)
+                        .collect();
+                    for id in ids {
+                        if !d.bitmap_worked.contains(&id) {
+                            d.bitmap_worked.push(id);
+                        }
+                    }
+                }
                 Ok(CommandOutput::session())
             }),
     );
@@ -2857,9 +2874,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 ParamKind::Bool,
                 "auch die Objektauswahl leeren (Esc nach dem Auswahlrahmen, TW-04)",
             )
+            .opt(
+                "row",
+                ParamKind::Bool,
+                "always make a history step, without counting the bitmaps as worked on (Escape while dragging a marquee or lasso)",
+            )
             .run(|s, p| {
-                // Pinsel: Esc nach dem Zug legt im Original den Schritt „Bitmapmodus beenden“ an (01/14)
-                if p.opt_bool("step")?.unwrap_or(false) {
+                // Pinsel: Esc nach dem Zug legt im Original den Schritt „Bitmapmodus beenden“ an (01/14);
+                // Esc beim Aufziehen eines Auswahlrahmens ebenso (re 62 §1.5)
+                if p.opt_bool("step")?.unwrap_or(false) || p.opt_bool("row")?.unwrap_or(false) {
                     s.force_history_step();
                 }
                 let deselect = p.opt_bool("deselect")?.unwrap_or(false);

@@ -409,6 +409,9 @@ pub struct ToolState {
     /// Aktives Werkzeug.
     pub active: ToolId,
     machine: Box<dyn ToolMachine>,
+    /// Previous tool that still finishes its pointer gesture after a tool change
+    /// (`ToolResponse::keep_gesture`): gets the moves and the release, then is dropped.
+    held: Option<Box<dyn ToolMachine>>,
     /// Zuletzt benutztes Werkzeug je Flyout-Gruppe (`active tool for slot …`).
     pub slot_memory: BTreeMap<String, ToolId>,
     /// Strich- und Füllfarbe (Farbfelder im Werkzeugbedienfeld).
@@ -506,6 +509,7 @@ impl Session {
             tools: ToolState {
                 active: ToolId::Pointer,
                 machine: tools::make_machine(ToolId::Pointer),
+                held: None,
                 slot_memory: BTreeMap::new(),
                 stroke_color: stroke,
                 fill_color: fill,
@@ -683,6 +687,7 @@ impl Session {
         if self.active == Some(i) {
             // laufender Werkzeugvorgang gehört zum geschlossenen Dokument (PAR 09/06)
             self.tools.machine = tools::make_machine(self.tools.active);
+            self.tools.held = None;
         }
         self.docs.remove(i);
         self.events.push(SessionEvent::DocumentClosed(id));
@@ -1085,8 +1090,9 @@ impl Session {
         // the summed offset, across directions and Shift (measured, TW-148: Shift+Right twice and
         // Shift+Down → one row moveSelectionBy({x:20, y:10})). A selection change, another step or
         // an undo in between starts a new row; script calls (`edit.move` without `nudge`,
-        // `edit.nudge.*`) stay one row each.
-        if doc_changed
+        // `edit.nudge.*`) stay one row each. A nudge of the marquee alone (bitmap selection
+        // tool, re 62 §1.8) changes only the pixel selection and merges the same way.
+        if (doc_changed || sel_changed)
             && is_key_nudge(name, params)
             && let Some(top) = d.history.last_mergeable()
             && is_key_nudge(&top.command, &top.params)
@@ -1528,6 +1534,16 @@ impl Session {
     }
 
     fn with_tool_ctx<R>(&mut self, f: impl FnOnce(&mut dyn ToolMachine, &ToolContext) -> R) -> R {
+        self.with_machine_ctx(false, f)
+    }
+
+    /// Like [`Session::with_tool_ctx`]; `held` = the machine that finishes its gesture after a
+    /// tool change (falls back to the active machine without one).
+    fn with_machine_ctx<R>(
+        &mut self,
+        held: bool,
+        f: impl FnOnce(&mut dyn ToolMachine, &ToolContext) -> R,
+    ) -> R {
         // Felder einzeln leihen (kein Klonen von Auswahl/Pixelmaske je Ereignis bzw. Bild)
         let empty_doc;
         let empty_sel;
@@ -1576,13 +1592,23 @@ impl Session {
             view,
             renderer: self.renderer.as_deref(),
         };
-        f(self.tools.machine.as_mut(), &ctx)
+        let m: &mut dyn ToolMachine = match self.tools.held.as_deref_mut() {
+            Some(h) if held => h,
+            _ => self.tools.machine.as_mut(),
+        };
+        f(m, &ctx)
     }
 
     /// Rückmeldung des aktiven Werkzeugs für den aktuellen Zustand (auch ohne Ereignis, z. B.
     /// Transformationsrahmen, Pfadpunkte der Auswahl, Text-Editor).
     pub fn tool_feedback(&mut self) -> Vec<tools::Overlay> {
-        self.with_tool_ctx(|m, ctx| m.feedback(ctx))
+        let mut v = if self.tools.held.is_some() {
+            self.with_machine_ctx(true, |m, ctx| m.feedback(ctx))
+        } else {
+            Vec::new()
+        };
+        v.extend(self.with_tool_ctx(|m, ctx| m.feedback(ctx)));
+        v
     }
 
     /// Läuft im aktiven Werkzeug ein Text-Editor (Tasten an das Werkzeug statt an Menükürzel)?
@@ -1613,6 +1639,7 @@ impl Session {
             self.note_document_tool_fill();
         }
         self.tools.machine = tools::make_machine(self.tools.active);
+        self.tools.held = None;
     }
 
     /// Attribute im offenen Text-Editor an der Markierung bzw. am Caret (Inspektor zeigt sie
@@ -1726,6 +1753,12 @@ impl Session {
     fn run_tool_response(&mut self, mut resp: ToolResponse) -> Result<ToolResponse> {
         let cmds: Vec<Invocation> = std::mem::take(&mut resp.commands);
         let mut first_err = None;
+        // rows made so far (counting rows dropped by `MaxUndos`), for `undo_after`
+        let rows = |s: &Session| {
+            s.active()
+                .map(|d| (d.id, d.history.dropped() + d.history.undo_count()))
+        };
+        let mark = if resp.undo_after { rows(self) } else { None };
         match resp.group.take() {
             Some(label) if !cmds.is_empty() && self.active().is_some() => {
                 // one history step for all commands; an error takes everything back
@@ -1756,10 +1789,21 @@ impl Session {
             }
         }
         resp.commands = cmds;
+        let keep = std::mem::take(&mut resp.keep_gesture);
+        if first_err.is_none()
+            && let Some(m) = mark
+            && rows(self).is_some_and(|r| r.0 == m.0 && r.1 > m.1)
+            && let Err(e) = self.undo()
+        {
+            first_err = Some(e);
+        }
         if let Some(t) = resp.switch_tool.take() {
             let activates_text = t == ToolId::Text && self.tools.active != ToolId::Text;
             self.tools.active = t;
-            self.tools.machine = tools::make_machine(t);
+            let old = std::mem::replace(&mut self.tools.machine, tools::make_machine(t));
+            if keep {
+                self.tools.held = Some(old);
+            }
             if let Some(g) = tools::info(t).map(|i| i.flyout) {
                 self.tools.slot_memory.insert(g.to_string(), t);
             }
@@ -1793,13 +1837,40 @@ impl Session {
     /// Ein Eingabe-Ereignis an das aktive Werkzeug geben; die erzeugten Befehle werden ausgeführt.
     pub fn tool_event(&mut self, ev: &ToolEvent) -> Result<ToolResponse> {
         self.end_live_text_view();
+        if self.tools.held.is_some()
+            && let tools::ToolInput::Pointer { kind, .. } = &ev.input
+        {
+            match kind {
+                // the previous tool finishes its gesture (re 62 §3.4)
+                tools::PointerKind::Move | tools::PointerKind::Up => {
+                    let up = *kind == tools::PointerKind::Up;
+                    let mut resp = self.with_machine_ctx(true, |m, ctx| m.handle(ev, ctx));
+                    resp.switch_tool = None;
+                    resp.keep_gesture = false;
+                    resp.replay.clear();
+                    if up {
+                        self.tools.held = None;
+                    }
+                    return self.run_tool_response(resp);
+                }
+                // a new press: the release of the old gesture was lost
+                _ => self.tools.held = None,
+            }
+        }
         let resp = self.with_tool_ctx(|m, ctx| m.handle(ev, ctx));
         self.run_tool_response(resp)
     }
 
-    /// Aktuelle Vorschau des aktiven Werkzeugs.
+    /// Aktuelle Vorschau des aktiven Werkzeugs (und eines Werkzeugs, das seinen Zug noch beendet).
     pub fn tool_overlay(&self) -> Vec<tools::Overlay> {
-        self.tools.machine.overlay()
+        let mut v = self
+            .tools
+            .held
+            .as_ref()
+            .map(|h| h.overlay())
+            .unwrap_or_default();
+        v.extend(self.tools.machine.overlay());
+        v
     }
 
     /// Setzt Strich- oder Füllfarbe des Werkzeugbedienfelds.

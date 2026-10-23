@@ -313,9 +313,12 @@ fn escape_discards_the_stroke() {
     assert!(s.tool_feedback().iter().any(|o| matches!(o, Overlay::Paint(_))));
     events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
     assert!(s.tool_feedback().iter().any(|o| matches!(o, Overlay::Paint(_))), "Pinsel: Zug läuft weiter");
+    // re 62 §1.4: the Pointer is active at once, the stroke is still painted on release
+    assert_eq!(s.tools.active, ToolId::Pointer);
     events(&mut s, &[ToolEvent::up(250.0, 60.0)]);
     assert_eq!(steps(&s), n0 + 1, "Esc mitten im Zug: Strich vollständig gemalt");
     // der nächste Zug malt wieder
+    tool(&mut s, ToolId::Brush);
     stroke(&mut s, &[(50.0, 100.0), (250.0, 100.0)]);
     assert_eq!(steps(&s), n0 + 2);
 }

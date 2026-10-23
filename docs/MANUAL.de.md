@@ -116,7 +116,14 @@ die Objektauswahl auf (offene Popups und Menüs schließt das erste Esc).
 sonst malt er in die gewählte. **Radiergummi**, **Weichzeichner** und **Stempel** arbeiten mit
 weichem Rand wie im Original; Esc beendet das Malen und wechselt zum Zeiger. Nach einer Auswahl mit
 Auswahlrahmen, Lasso oder Zauberstab auf einer Bitmap beendet Esc den Bitmapmodus (Verlaufszeile
-„Bitmapmodus beenden“), hebt die Pixelauswahl auf und wechselt zum Zeiger; die Bitmap bleibt gewählt. Das Werkzeug
+„Bitmapmodus beenden“), hebt die Pixelauswahl auf und wechselt zum Zeiger; die Bitmap bleibt gewählt. Esc
+während Sie einen neuen Auswahlrahmen oder ein Freihand-Lasso noch aufziehen, bricht das Aufziehen ab,
+beendet ebenfalls den Bitmapmodus (auch eine ältere Pixelauswahl ist weg) und wechselt zum Zeiger; das
+Loslassen bewirkt danach nichts. Esc mitten in einem Pinselstrich wechselt sofort zum Zeiger und lässt
+die Vorschau stehen, beim Loslassen wird der Strich trotzdem ganz gemalt; das nächste Esc beendet den
+Bitmapmodus. Mit Auswahlrahmen oder Lasso und einer Pixelauswahl verschieben die Pfeiltasten nur den
+Auswahlrahmen (1 px, mit Umschalt 10 px); aufeinanderfolgende Tasten sind eine Verlaufszeile
+„Verschieben“. Das Werkzeug
 **Verlauf** hat eigene Farben (Vorgabe Schwarz → Weiß, Klick aufs Farbfeld öffnet den
 Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
 hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
@@ -194,7 +201,13 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Dokument. Der Haken wird gemerkt (Voreinstellung `NumericXformXformsBFE`, auch nach „Abbrechen“).
   Die Werkzeuge Skalieren, Neigen und Verzerren sowie Frei transformieren richten sich bei den
   Füllgriffen ebenso nach *Voreinstellungen ▸ Allgemein ▸ Pinselstriche und Effekte skalieren*
-  (`XformToolXformsBFE`, Vorgabe ein). Reines Verschieben nimmt die Füllgriffe immer mit. In
+  (`XformToolXformsBFE`, Vorgabe ein). Reines Verschieben nimmt die Füllgriffe immer mit. In den
+  Werkzeugen Skalieren, Neigen und Verzerren sowie bei Frei transformieren übernehmen die
+  Eingabetaste, ein Doppelklick oder ein anderes Werkzeug alle Züge der Sitzung als eine
+  Verlaufszeile „Transformieren“; Esc bricht die Sitzung ab: Das Objekt kehrt in den Zustand vor der
+  Sitzung zurück, der Zeiger ist aktiv, und die Zeile bleibt als Wiederholen-Schritt (*Bearbeiten ▸
+  Wiederholen: Transformieren* wendet sie erneut an). Esc bei noch gedrückter Maustaste lässt die
+  Vorschau bis zum Loslassen stehen und beendet dann den Modus, ohne etwas anzuwenden. In
   Skripten transformieren `scaleSelection`, `rotateSelection`, `setQuadrangle` und
   `transformSelection` die Füllgriffe (und beim Skalieren die Strichbreite) nur, wenn die
   Optionszeichenfolge `transformAttributes` enthält, wie im Original
