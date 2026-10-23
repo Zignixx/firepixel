@@ -3,20 +3,25 @@
 Firepixel aims to behave like the reference application button by button. This page explains how that is
 measured, what the figures mean, where the method stops, and gives the current per-unit result.
 
-**Current state (follow-up run 36 over 9 units on top of runs 35, 34 and 33, 23 Oct 2026, all 49 units):** **49
-equal except for design**, 0 real deviations, 0 unclear, 0 under-measured. **Proven 1:1: 100.0 %** (49 / 49; all 49
-units are sufficiently measured). Measurement quota over all 49 units: **87.3 %** (1077 / 1234 steps). Canvas image
-pairs within 1 %: **186 / 212**. Run 36 checked tester feedback batch 6 (F68 to F72, with F67): no class and no
-Firepixel-side step status changed, and none of the batch 6 interactions is reached by a runner step (the Layers
-object-row steps are `unmapped` on Firepixel's side since run 24, new runner item TW-210). Three reference-side errors
-of run 33 are `ok` again (`fx-bevel-emboss-fill/09`, `tool-text/11`, `13`), which raises the quota and the canvas
-count. New: the runner items TW-210 (Firepixel's Layers panel is shorter than the reference's flyout) and TW-211 (the
-reference's stored text alignment) and the question Q-65 (the current layer after opening T07). The tiled canvas of
-BA-098 shows no one-pixel sampling offset at fractional zoom (see `xs-canvas` below).
+**Current state (follow-up run 37 over 9 units on top of runs 36, 35, 34 and 33, 23 Oct 2026, all 49 units):** **47
+equal except for design**, 2 real deviations, 0 unclear, 0 under-measured. **Proven 1:1: 95.9 %** (47 / 49; all 49
+units are sufficiently measured). Measurement quota over all 49 units: **87.8 %** (1090 / 1242 steps). Canvas image
+pairs within 1 %: **191 / 220**. Run 37 repeated the nine units of run 36 with runner R-32, which reaches the
+interactions of tester feedback batch 6 for the first time. `panel-layers` becomes a real deviation: a 41 px
+press-drag of the Layers opacity slider commits 81 in Firepixel and 80 in the reference (TW-205, the slider scale,
+fixed by F79 `7337428e` after the build), and a Shift-click from L1obj to an object on the shared layer selects 2
+objects in Firepixel and 1 in the reference (TW-208, a range across layers, never measured). `inspector-text` becomes
+one too: the same `addNewText` rectangle puts a point text 13 px higher in Firepixel (new TW-214); the indent of
+TW-204 moves the ink by 33 px in both programs and the bounds follow the documented deviation. TW-206 and TW-207 are
+confirmed (identical colour pop-up fields; identical pattern handles and 0 differing pixels inside the moved shape).
+R-32's host fixes make the reference commit its Properties text fields and its HEX field, so `inspector-text/09`,
+`13`, `14` and `color-popup/05` compare real edits for the first time (see "Host fixes" below). The runner items
+TW-197, TW-210 and TW-211 are handled by R-32. New: TW-213 and TW-214 (text created by script), the fix row TW-215
+(F79) and the runner item TW-216 (the Layers drag and selection-dot steps).
 
 **Units: 49.** Over the 48 units classified before run 24 (without the measurement unit `xs-select-behind`, added on
-19 Oct 2026): 48 / 0 / 0 / 0, proven 1:1 100.0 %, quota 86.9 % (1065 / 1225; run 17 alone: 86.3 %), canvas pairs
-176 / 200.
+19 Oct 2026): 46 / 2 / 0 / 0, proven 1:1 95.8 %, quota 87.7 % (1081 / 1233; run 17 alone: 86.3 %), canvas pairs
+182 / 211.
 
 ## Method: scripted comparison runs
 
@@ -24,7 +29,7 @@ The parity runner (`tools/parity/runner/`, see its README) plays the same step s
 one Windows machine, unattended:
 
 1. **Units.** The UI is cut into 49 units (one tool group, one panel, one menu, ten dialogs …). Each unit has a
-   JSON script in `tools/parity/scripts/<unit>.json` with about 20–40 steps (about 1295 steps in total; the
+   JSON script in `tools/parity/scripts/<unit>.json` with about 20–40 steps (about 1305 steps in total; the
    measurement unit `xs-select-behind` has 9) and a test
    document (T01…T10, created for this purpose, not shipped).
 2. **Steps.** A step performs actions (menu, click, drag with modifiers, key, field input, script call) on both
@@ -56,6 +61,25 @@ first run, so selection frames and handles are not in the canvas shots of either
 shift the baseline of every canvas pair, so steps that judge selection marks switch it on themselves
 (`setShowEdges(true)`, as `xs-select-behind` does), and the reference is left with it off.
 
+**Host fixes in R-32 and the pairs they invalidate.** Until run 36 the reference side's `set_field` wrote the value
+with WM_SETTEXT before typing it; fields that apply only a changed text (the Properties panel's leading, paragraph
+indent and space before / after) then saw no change and committed nothing. Run 36's
+`inspector-text/09_leading_result`, `13_indent_result` and `14_space_before_after_result` (and the same steps in every
+earlier run) therefore compared Firepixel's edited text with the reference's unedited one: the reference's exports
+carry the unchanged document's hash in all three. The run 36 note that both programs had indented TX2 before F69 holds
+for Firepixel only. `inspector-fields/05`, `06` and `08` have no pair; there the reference's document now reads
+modified. R-32 types first and uses WM_SETTEXT only when the typed text did not arrive (logged as
+`typed_text_missing`). The colour pop-up's `popup.hex_field` was the pop-up's first Edit control, which is the alpha
+field: since run 24 `color-popup/05_hex_field_result` and `_invalid_result` typed the hex value into the alpha field
+and read the reference's fill #80808000 (alpha 0), so those two values never compared the HEX entry; R-32 takes the
+Edit right of the "HEX:" label. Units not repeated since R-32 keep their older rows; where they set Properties fields
+on the reference side, the next full run re-checks them.
+
+**R-32 in run 37.** The reference's Properties inspector read 125 px at all nine unit starts and at the run end
+(nothing to restore; TW-197), the text tool reset found the reference right-aligned once, at the start of
+`inspector-fields` after `inspector-text/15`, and set it left (TW-211), and the Layers row lookup expanded a collapsed
+parent layer on Firepixel's side three times ("Ebene 1" in `panel-layers/07` and `14`, "Ebene 3" in `08`; TW-210).
+
 ## What the classes mean
 
 | Class | Meaning |
@@ -67,7 +91,7 @@ shift the baseline of every canvas pair, so steps that judge selection marks swi
 
 **Measurement quota** = steps with both sides `ok` / steps without an `unsupported` or `skipped` side (repeated
 steps count with their second attempt). **Proven 1:1** = units "equal except for design" / sufficiently
-measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 to 29, 32 and 34 to 36, 98.0 % after runs 30 and 33); since
+measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 to 29, 32 and 34 to 36, 98.0 % after runs 30 and 33, 95.9 % after runs 31 and 37); since
 run 15 no unit is under-measured, so both figures are the same.
 
 ## Limits
@@ -82,36 +106,39 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
 - **Real mouse dynamics:** brush and pen strokes depend on event timing and pressure; the runner draws with
   fixed steps.
 - **Owner-drawn lists** (layers, library, swatches, history rows) are located by image, not by control, so
-  results there are less certain. Firepixel's Layers panel keeps a layer collapsed in an earlier step collapsed
-  in the reopened test file (the reference reopens the stored state); since R-32 the runner expands such parent
-  layers with their triangles before giving up on a row and logs it (TW-210, until run 36 the cause of the
-  `unmapped` rows `panel-layers/07, 08, 10, 12`).
+  results there are less certain. Up to v0.2.10 Firepixel's Layers panel kept a layer collapsed in an earlier step
+  collapsed in the reopened test file (the reference reopens the stored state); since R-32 the runner expands such
+  parent layers with their triangles before giving up on a row and logs it (TW-210, until run 36 the cause of the
+  `unmapped` rows `panel-layers/07, 08, 10, 12`; run 37 expanded three times). F79 `7337428e` (after run 37's build)
+  makes the panel show the document's stored disclosure, so from run 38 on both programs open T07 as stored; the
+  reference's drag steps `09` and `15` collapse three layers by script first, Firepixel's do not yet (runner item
+  TW-216).
 - **Focus:** other applications taking the foreground make reference steps fail; such steps are repeated or
   counted as errors, never as `ok`.
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images
   cannot be captured.
 
-## Per-unit result (run 36 on top of runs 35, 34 and 33)
+## Per-unit result (run 37 on top of runs 36, 35, 34 and 33)
 
 Each row is the unit's newest run. Nine rows (`panel-layers`, `panel-layers-menu`, `color-popup`,
 `color-popup-contexts`, `inspector-text`, `inspector-fields`, `fx-bevel-emboss-fill`, `tool-text`, `xs-select-behind`)
-come from follow-up run 36 (23 Oct 2026, 07:56–08:57, 9 units, 218 scripted steps, 128 image pairs plus 6 shots
-without a partner), preview build `2026-10-23_07-49` from `main` at `62efd30b` (the code of v0.2.9: run 35's code plus
-F67, the Dither fill edge, and tester feedback batch 6: F68 `99114278` the pattern tile origin at fill handle 1 and the
-measured default handles, F69 `c9c9a329` the paragraph indent on point text, F70 `4657c7cb` the live Layers opacity and
-colour pop-up alpha with HEX / RGB at the base colour, F72 `249f4569` the Layers Shift range and Ctrl toggle), runner
-R-31 as in runs 34 and 35: the tool stroke is logged "same" at all nine unit starts and Firepixel's View ▸ Tooltips
-reads "off already". "Was" compares `color-popup`, `inspector-text`, `inspector-fields` and `xs-select-behind` with
-run 35 and the other five with run 33. The reference was restarted twice: as planned before `color-popup`, and after a
-script access violation in `inspector-text` before `07_direction_vertical_result` (R-30 repeated the unit-start reset;
-no step lost). Two other applications' windows were open at the start (logged); one of them was in the foreground when
-the reference came back from that restart, without a failed step. The reference's dock was in icon mode for the two
-`panel-*` units (Layers flyout 245 × 389 px, as wanted) and expanded for the others with four groups of 228–231 px
-(`inspector-text`: 217–262 px; run 33: five groups of 113–262 px), which moves the overview pairs of
-`fx-bevel-emboss-fill`, `tool-text` and `color-popup-contexts` by +0.5 to +2.5 points against run 33 and that of
-`inspector-text` by −2.1 points against run 35. Its Properties inspector was expanded in every unit (TW-197 did not
-recur). For these rows the canvas pairs are again recomputed with the offset search; the other percentages are the
-runner's `cmp/summary.csv` values.
+come from follow-up run 37 (23 Oct 2026, 11:17–12:23, 9 units, 228 scripted steps, 138 image pairs plus 6 shots
+without a partner), preview build `2026-10-23_11-02` from `main` at `8d1e3a77` (the code of v0.2.10: run 36's code
+plus F73 to F78, that is Feather and Dither on text, the scale-attributes option of the transform tools and scripts,
+the Escape rules of RE spec 62, gradient and pattern fills on text and the save retry; F79 is not in it), runner R-32
+(`f05236b5`, on `main`): the reference's Properties inspector is checked and expanded at unit start (TW-197), the
+Layers row lookup expands collapsed parent layers (TW-210), the text tool reset sets the alignment left (TW-211), the
+reference's `set_field` types before it falls back to WM_SETTEXT, `popup.hex_field` is the Edit right of "HEX:", and
+ten new steps cover tester feedback batch 6 (`inspector-text/25`, four `panel-layers/23`, three `color-popup/23`, two
+`inspector-fields/25`). "Was" compares every row with run 36. The tool stroke is logged "same" at all nine unit starts
+and Firepixel's View ▸ Tooltips reads "off already". The reference was restarted once, as planned before
+`color-popup`; no restart after a script access violation (run 36: one in `inspector-text`). Two other applications'
+windows were open at the start (logged); none took the foreground. The reference's dock was in icon mode for the two
+`panel-*` units (Layers flyout 245 × 389 px, as wanted) and expanded for the others, with four groups of 228–231 px in
+`color-popup` and `color-popup-contexts` and of 217–262 px from `inspector-text` on (run 36: 217–262 px only in
+`inspector-text`), which moves the overview pairs of `inspector-fields`, `fx-bevel-emboss-fill` and `tool-text` by
+−2.1 points against run 36. For these rows the canvas pairs are again recomputed with the offset search; the other
+percentages are the runner's `cmp/summary.csv` values.
 Two rows (`tool-path-reshape`, `toolbox`) come from follow-up run 35 (22 Oct 2026, 14:31–15:15, 6 units, four of them
 repeated in run 36; 178 scripted steps, 107 image pairs plus 1 shot without a partner), preview build `2026-10-22_14-27` from `main` at
 `8c636395` (the code of run 34 plus tester feedback batch 5: F62 built-in patterns and the reset of the inspector's
@@ -181,13 +208,13 @@ below the table.
 | `dialogs-d41-d50` | dialogs | equal except for design | run 33: 91.3 % (21 / 23), unchanged |
 | `filters-adjust-color` | filters | equal except for design | run 33: 69.6 % (16 / 23), unchanged; 4 / 4 canvas pairs within 1 % |
 | `filters-blur-sharpen-noise` | filters | equal except for design | run 33: 79.3 % (23 / 29), unchanged; 10 / 11 canvas pairs within 1 % (`16_preview_box_on_result` 20.0 % as before) |
-| `fx-bevel-emboss-fill` | live effects | equal except for design | run 36: 90.5 % (19 / 21), was 85.7 % (18 / 21), back at its quota before run 33: `09_live_pressed` is `ok` on the reference side again (run 33: "no popup slider open"), pair 24.7 % as in run 30, canvas pair 21.8 % (the open live pop-up in Firepixel's shot, like `01` at 21.1 %); 2 / 4 canvas pairs within 1 % (`13` 0.24 %, `14` 0.11 %, unchanged). **TW-207 (F68) not reached**: no step uses a pattern fill. Firepixel's shots differ from run 33 only in the selected rectangle's display (F65: outline + four corner squares, 15 px in `01`, `09`, `14`). The reference's angle dial `08` changed in its bottom rows (760 px; pair 92.5 → 92.8 %), its dock groups put `00_overview` at 21.8 % (run 33: 19.4 %), and its exports of `12` to `14` changed their hashes with unchanged canvas pairs. `03` (Firepixel: no second combo box) and `11` (both sides) fail as before |
+| `fx-bevel-emboss-fill` | live effects | equal except for design | run 37: 90.5 % (19 / 21), unchanged; 2 / 4 canvas pairs within 1 % (`13` 0.24 %, `14` 0.11 %; `01` 21.1 % and `09_live_pressed` 21.8 % with the open live pop-up in Firepixel's shot); every pair and every compared value as in run 36 except `00_overview` 21.8 → 19.7 % (the reference's dock groups), and both programs' other shots are pixel-identical to run 36. No step uses a pattern fill (TW-207 is measured in `inspector-fields/25`). `03` (Firepixel: no second combo box) and `11` (both sides) fail as before |
 | `fx-shadow-glow` | live effects | equal except for design | run 33: 100.0 % (23 / 23), unchanged; 5 / 6 canvas pairs within 1 % |
 | `fx-stack` | live effects | equal except for design | run 33: 92.0 % (23 / 25), unchanged; 2 / 2 canvas pairs within 1 % |
 | `inspector-bitmap` | property inspector | equal except for design | run 33: 100.0 % (15 / 15), unchanged; 3 / 3 canvas pairs within 1 %. With the reference's dock in icon mode (R-29) the overview and inspector pairs are back at the run 24 values (overview 33.0 %, inspector 22.1–28.8 %; run 30: 21.6 % and 13.3–20.8 %); the Layers flyout pairs `08`, `09` read 55.6–56.5 % (run 24: 41.9–43.0 %, run 30: 79.6–80.7 %) |
-| `inspector-fields` | property inspector | equal except for design | run 36: 86.7 % (26 / 30), unchanged; 0 / 1 canvas pairs within 1 % (`14_popup_drag_live_canvas_pressed` 1.58 % as in run 35, the deliberate live preview of TW-171); every pair and every compared value as in run 35, and Firepixel's other 14 shots are pixel-identical. Firepixel's Edge list now holds the fourth entry Dither (F67, TW-203), so the runner picks "Weiche Kante" 18 px higher (y 893, run 35: 911) in `03` and `10`, and the pop-up shot `10_edge_popup_open` is the slider pop-up alone (36 × 234 px; run 35: 118 × 234 with part of the list; no pair, the reference side fails as before). `20_undo_each_result` (Firepixel: no text field at the stroke size, R1 has no stroke) fails as before |
+| `inspector-fields` | property inspector | equal except for design | run 37: 87.5 % (28 / 32), was 86.7 % (26 / 30); 2 / 3 canvas pairs within 1 % (`14_popup_drag_live_canvas_pressed` 1.58 % as before, TW-171). **TW-207 (F68) reached and confirmed:** in the new steps `25_pattern_move_normal` and `_result` the fill category's pattern button gives R1 the pattern "Cotton" in both programs with identical handles (100/85, 228/85, 100/−25), and the X / Y fields (87, 73) move all three by +37/+23 in both (137/108, 265/108, 137/−2); inside the shape the moved shot is pixel-identical to the unmoved one shifted by 37/23 in each program (0 of 7000 pixels differ) and the two programs' moved shapes are identical too; pairs 0.09 % each (Firepixel writes one History row for the pattern and two for the fields; the reference's read-back reads 0). R-32's `set_field`: the reference's document now reads modified after `05`, `06` and `08` (run 36: unmodified; no pair depends on it), and the log shows WM_SETTEXT only where the typed text did not arrive. The reference's shot `09_opacity_popup_open` caught a 134 × 31 px strip with the document tab instead of the 24 × 222 px pop-up (pair 87.6 → 35.2 %, no comparison of the pop-ups). `00_overview` 21.7 → 19.6 % (the reference's dock groups). Firepixel's 16 older shots are pixel-identical to run 36; `10` (reference side) and `20_undo_each_result` (Firepixel: no text field at the stroke size) fail as before |
 | `inspector-stroke` | property inspector | equal except for design | run 33: 88.2 % (45 / 51), unchanged; 31 / 31 canvas pairs within 1 %. Firepixel's shots and exports are identical to run 30 except the head with nothing selected (`20_tool_default`, which now shows the tool attributes taken from the last selected object, F58) and the stroke preview of the pop-ups `07`, `08`; the reference's `04_edge` results changed (pairs 0.24 → 0.86–0.89 %) and `06_position_outside` fell to 0.19 % (run 30: 0.65 %). `03` and `12` fail on the reference side as before (script errors) |
-| `inspector-text` | property inspector | equal except for design | run 36: 90.0 % (27 / 30), unchanged; 10 / 11 canvas pairs within 1 % at the run 35 values (`21_live_result` 1.88 %); every compared value as in run 35. **TW-204 (F69) not reached**: `13_indent_result` sets the indent 20 on TX2, a fixed-width text of three hard-return paragraphs whose first lines both programs already indented before F69 (pair 0.37 %, canvas 0.35 %; Firepixel's shot pixel-identical to run 35); the point-text case that F69 fixes is in no step. Firepixel's shots are pixel-identical to run 35 except the font list `02` (its scroll bar, 3134 px; pair 92.18 → 92.17 %). The reference shows the document inspector again in `23_tool_vs_object_normal` (24.1 %, the run 33 value; run 35: 19.6 %, the Text tool's inspector) and its dock groups of 217–262 px put `00_overview` at 19.5 % (run 35: 21.6 %, run 33: 19.1 %). The reference was restarted after a script access violation before `07_direction_vertical_result`; R-30 repeated the unit-start reset and no step was lost |
+| `inspector-text` | property inspector | real deviation | run 37: 90.3 % (28 / 31), was 90.0 % (27 / 30); was equal except for design; 11 / 12 canvas pairs within 1 % (`21_live_result` 1.88 %). **Re-evaluated pairs (R-32 `set_field` fix):** the reference now applies leading, indent and space before / after (its exports changed; up to run 36 they carried the unchanged document's hash, the fields committed nothing), and the canvas pairs fall from 0.32 to 0.16 % (`09_leading_result`), 0.35 to 0.15 % (`13_indent_result`) and 0.32 to 0.16 % (`14_space_before_after_result`) with Firepixel's shots pixel-identical to run 36, so both programs' edits agree within 1 %; `10_tracking_result` and `12_hscale_result` change neither program's export, as in run 36. **TW-204 (F69) reached:** `25_indent_point_text_result` sets the indent 33 on TXP, a script-made point text of three paragraphs (ArialMT 15 pt): the ink moves right by 33 px in both programs (`pixelRect` left 450 → 483 and 449 → 482), the reference moves the object's left with the width kept (448 → 481, 85), Firepixel keeps the left within 1 px and widens the bounds (447 → 448, 85 → 117), the documented deviation of TW-204; one History row in Firepixel (the reference's read-back 0 → 0). **New real deviation TW-214:** for the same `addNewText` rectangle (top 380) the text's top reads 378 in the reference and 365 in Firepixel (the ink 13 px higher, its left 1 px further left), which makes most of the pair's 0.52 %. TW-213 (a script-made text keeps the last inspector indent) does not show, because the step's script sets the indent 0. Firepixel's 26 older shots are pixel-identical to run 36; the reference's size slider pop-up `04` changed in 150 px (85.2 → 86.5 %). No reference restart (run 36: one before `07`) |
 | `inspector-web` | property inspector | equal except for design | run 33: 81.2 % (13 / 16), unchanged; values and Firepixel's shots as in run 30 |
 | `menu-commands-window-help` | menus | equal except for design | run 33: 75.0 % (15 / 20), unchanged; with the real Escape the reference's menus are closed at the read-backs of `12` and `16`, which now read empty on both sides (run 30: the reference still listed the open parent menu); `01` (Firepixel's Commands submenu not found) as before |
 | `menu-edit` | menus | equal except for design | run 33: 91.7 % (22 / 24), unchanged since run 31. `02_redo_last_result` reads three R1 at 50,50–150,120 in both programs as in run 31 (TW-173). The reference's History read-back in `01_undo_redo_result` and `22_undo_names_result` returned no rows again (as in run 30; run 31: the select script and Clone, and Clone, Copy, Paste, Delete); Firepixel's rows unchanged. `16` and `17` fail as before |
@@ -198,22 +225,22 @@ below the table.
 | `menu-text` | menus | equal except for design | run 33: 90.9 % (20 / 22), unchanged; 4 / 4 canvas pairs within 1 %; the menu read-backs of `18` and `19` are equal now and `15` closes the editor with the real Escape. `01` (Firepixel's scrolled font menu not found), `05_editor_open` (`unsupported` on the reference side) and `07` (Attach to Path grey in the reference) as before; Firepixel's script oval in `07` now carries the tool attributes (TW-192; not compared) |
 | `menu-view` | menus | equal except for design | run 33: 96.0 % (24 / 25), unchanged; 6 / 6 canvas pairs within 1 %. `15_hide_panels_result` 7.8 % (run 30: 56.2 %): the real F4 (scan code; run 30: the old host path, TW-179) hides the reference's panels like Firepixel's; the menu read-backs of `09`, `16`, `18` and `23` are equal now |
 | `panel-info-align-path` | panels | equal except for design | run 33: 83.3 % (30 / 36), unchanged; 2 / 2 canvas pairs within 1 %. Icon dock (R-29): the Align and Path flyout pairs are back at the run 24 values (32.6–54.3 %; run 30: 30.3–53.2 %). In `15_undo_result` the reference's History count needed a retry with the panel shown and reads 1 → 2 against Firepixel's 0 → 1 (run 30: 0 → 0): one row each, the reference's count includes the runner's select script |
-| `panel-layers` | panels | equal except for design | run 36: 74.1 % (20 / 27), unchanged; Firepixel's 15 shots and the reference's 15 panel shots are pixel-identical to run 33 and every pair reads its run 33 value (Layers flyout 245 × 389 px against Firepixel's panel of 268 × 291 px, pairs 55.6–67.8 %). **TW-205 and TW-208 not reached**: `14_opacity_blend_result` is `unmapped` on both sides (no `layers.opacity_field` in the UI map), and `07_select_object_result`, `08_shift_ctrl_result`, `10_drag_into_layer_result` and `12_selection_dot_result` are `unmapped` on Firepixel's side as in runs 24, 25, 30 and 33 ("fp ui_find: 'L1obj' not found (layers panel scrolled through)"): the object row L1obj of "Ebene 1" lies below the visible part of Firepixel's shorter panel and the lookup's wheel scroll does not bring it into view (runner item TW-210). After opening T07 the reference makes "Ebene 1" current (highlighted, bold; no object row highlighted) and Firepixel "Ebene 3", in every run with a full Layers shot; no step reads the current layer and the pairs hold it only inside their design-level percentages (question Q-65). `22_undo_result`: the reference's History count after the two clicks reads 2 like Firepixel's (run 33: 0; the first read failed and was retried with the History panel shown); Firepixel's `ui_state` tool fill in `21` reads #cc3333 (run 33: #808080; not compared) |
-| `panel-layers-menu` | panels | equal except for design | run 36: 81.0 % (17 / 21), unchanged; every pair reads its run 33 value (menus 15.5–15.6 %, the context menus `03`, `04` 40.7 and 39.4 %, `05_footer` 60.7 %) and both programs' shots are pixel-identical to run 33 except the reference's overview (+0.002 points); every compared value as in run 33, the object context menu `04` with the same 23 entries and states in both programs (TW-193); `10_options_open` still opens no dialog the bridge finds. No step selects a range of rows, so TW-208 is not reached |
+| `panel-layers` | panels | real deviation | run 37: 93.1 % (27 / 29), was 74.1 % (20 / 27); was equal except for design. **TW-210 handled (R-32):** `07_select_object_result`, `08_shift_ctrl_result`, `10_drag_into_layer_result` and `16_shared_layer_normal` are `ok` on Firepixel's side for the first time since run 24: Firepixel had carried the collapse of `06_expand_result` into the reopened T07 (fixed in the product by F79 `7337428e` after the build), and the lookup expanded "Ebene 1" (in `07` and `14`) and "Ebene 3" (in `08`) with their triangles (logged). `07` reads L1obj selected in both programs, `10` the same element count per layer in both (the drag of L1obj onto the locked shared layer changes nothing), `16` pairs at 66.7 %. **TW-208 (F72) reached, real deviation:** in `08` the Shift-click from L1obj to the shared layer's object gives `fw.selection.length` 1 in the reference and 2 in Firepixel, the Ctrl-click on L1obj then 0 and 1, so the reference keeps only L1obj while Firepixel's range adds one object across the layers (see TW-208). **TW-205 (F70) reached, real deviation:** in the new steps `23_opacity_slider_*` the Layers opacity field reads 30 mid-drag in the reference and 31 in Firepixel (`_drag_panel_pressed`, pair 59.4 %), and a 41 px press-drag (`_press_drag_result`) commits 80 against 81 (read back as 81.18 = 207/255; both programs store 8-bit opacity): Firepixel's 212 px track instead of the measured 2 px per per cent, fixed by F79 after the build; canvas pairs 0.10 % there and 2.10 % mid-drag (`_drag_pressed`: Firepixel's deliberate live preview of L1obj, TW-171 `[N]`; the reference's canvas unchanged); in click mode (`_click_drag_result`, 2.10 %) neither program applies the value (100 on both sides), the reference's pop-up closes on the release and Firepixel's stays open with the preview; History count 0 → 1 in Firepixel, the reference's read-back 0 → 0. `14_opacity_blend_result` is `ok` on Firepixel's side (40 / multiply) and `unsupported` on the reference's (its blend mode list "opened no menu and is no Win32 combo box"), and `12_selection_dot_result` is `unmapped` / `unsupported` (no selection-dot target on either side); both were `unmapped` on both sides and leave the measurable steps. `09_drag_reorder_pressed` is now `unmapped` on Firepixel's side ("'Ebene 3' not found": with both layers expanded its list is longer than the panel; pair lost), and in `09_drag_reorder_result` Firepixel moves "Ebene 1" above "Ebene 2" (order Ebene 2, Ebene 1, Ebene 3, …; run 36: unchanged like the reference): the reference collapses three layers by script before the drag and Firepixel does not, and Firepixel's drop point lies at the top edge of its list (runner item TW-216). Firepixel's shots `11`, `13`, `20` and `21` show the expanded layers (pairs 60.3 → 67.3, 66.1 → 65.5, 63.0 → 62.6 and 65.3 → 64.3 %); its other 10 shots and the reference's 15 panel shots are pixel-identical to run 36. Q-65 as before |
+| `panel-layers-menu` | panels | equal except for design | run 37: 81.0 % (17 / 21), unchanged; every pair and every compared value as in run 36 (menus 15.5–15.6 %, the context menus `03`, `04` 40.7 and 39.4 %, `05_footer` 60.7 %), and both programs' shots are pixel-identical to run 36 except the reference's overview (777 px); `10_options_open` still opens no dialog the bridge finds. No step selects a range of rows (TW-208 is measured in `panel-layers/08`) |
 | `panel-misc` | panels | equal except for design | run 33: 87.5 % (14 / 16), unchanged; embedded panels `unsupported`; icon dock: the panel pairs are back at the run 24 values (`06` 53.9 %, `16` 26.8 %) |
 | `panel-optimize` | panels | equal except for design | run 33: 83.3 % (20 / 24), unchanged; icon dock: Optimize flyout 245 × 320 px, panel pairs 42.8–73.9 % (run 24: 34.0–77.7 %, run 30: 43.9–79.6 %) |
 | `panel-library-styles` | panels | equal except for design | run 33: 93.3 % (14 / 15), unchanged; 1 / 1 canvas pairs within 1 %; icon dock: the library pairs are back at the run 24 values (77.3–93.4 %) |
 | `panel-pages-states-history` | panels | equal except for design | run 33: 75.0 % (18 / 24), unchanged since run 31. Icon dock: the Pages and States pairs read 44.4–55.6 %, the run 24/25 values (run 31: 55.6–62.7 %, run 30: 77.1–86.5 %), History 94.7–94.9 %. The History rows of `16_history_replay` and `21_history_merge_nudge` read as in run 31 (one Move row per nudge series in both programs, the reference's runner select scripts besides). `18_history_save_cmd_open`: the reference opens the dialog again (`ok`, as in runs 20 to 25; runs 30 and 31: "no dialog open"), Firepixel's bridge finds no dialog, as in every run since run 20; the onion-skin and loop pop-ups are not found on the reference side, as before |
 | `preview-options` | preview / export | equal except for design | run 33: 76.9 % (30 / 39), unchanged; Firepixel-side errors as in run 24 (`08` and `13`: no text field at dither / smoothing; `24_result_hash_gif/jpeg/png8/png32`: no file dialog for the bridge). The reference was restarted after a script access violation before `06` and ran the rest of the unit with its dock collapsed (TW-196); all pairs within 2 points of run 30 |
 | `preview-views` | preview / export | equal except for design | run 33: 69.6 % (16 / 23), unchanged; Firepixel's shots pixel-identical to run 30 except the running animation `17_anim_buttons_play_pressed` |
-| `color-popup-contexts` | colour | equal except for design | run 36: 68.2 % (15 / 22), unchanged; every compared value as in run 33 (the swap steps `03_toolbox_swap_default_*` read no colour value, TW-186 not measured). Firepixel's toolbox in `04_toolbox_active_normal` now shows the stroke well None and the fill well #808080 like the reference's (run 33: #c04040 and None; the follow rules of F61), pair 62.56 → 62.62 % (the reference's shape and freeform tool slots show other tools, 523 px, also in `03`: +0.01 points); `00_overview` 21.2 → 21.7 % (the reference's dock groups) and `12_panel_mixer_open` 80.6 → 80.5 % (the reference's Mixer); Firepixel's other 11 shots are pixel-identical to run 33. No step touches the alpha slider (TW-206 not reached). `01_toolbox_stroke` fails on the reference side as before |
+| `color-popup-contexts` | colour | equal except for design | run 37: 68.2 % (15 / 22), unchanged; every pair within 0.01 points and every compared value as in run 36; Firepixel's 13 shots and the reference's 11 shots are pixel-identical to run 36 except the reference's overview (757 px). No step here touches the alpha slider (TW-206 is measured in `color-popup/23`). `01_toolbox_stroke` fails on the reference side as before |
 | `tool-path-reshape` | tools | equal except for design | run 35: 100.0 % (23 / 23), unchanged; 13 / 14 canvas pairs within 1 %, all at the run 33 and 34 values (`11_rect_to_path_result` 10.93 %). **TW-202 not reached**: the canvas shots hold P1 (or R1) selected under the Freeform, Reshape Area, Path Scrubber and Knife tools, not under the Pen or the Pointer, which are all F65 changes, so Firepixel's 20 shots are pixel-identical to run 34 and still draw the bounding box with four corner squares (`02` to `08`, `13`); the reference's canvas shots carry no selection display at all, so no pair was above 1 % because of the box and none drops. The tool colours agree in all 10 steps that log them, as in run 34. With the reference's inspector expanded again the inspector head pairs `01`, `12` read 9.7–10.6 % (run 34: 60.2–60.7 %, TW-197; run 33: 9.7–10.6 %) and the overview 21.8 % (run 34: 29.0 %). No step draws with the Pen, so TW-177 is not exercised here |
-| `tool-text` | tools | equal except for design | run 36: 85.2 % (23 / 27), was 77.8 % (21 / 27), back at its quota before run 33: `11_size_live_result` and `13_color_live_result` are `ok` on the reference side again and every first character arrives at once (run 33: "A" and "E" lost), but the reference's drag selection of "123" fails again (TW-146 rest), so its shots keep the 12 pt "Abc 123" while Firepixel's show 72 pt: the canvas pairs `11` 2.35 % and `13` 0.80 % (run 30: 2.35 and 0.79 %) do not compare the edits; 13 / 16 canvas pairs within 1 % (`14_bounds` 1.09 %, `16_overflow` 3.77 %, run 33: 1.05 and 3.56 %; TW-146 rest and TW-165, click-test A1-19). Firepixel's shots are pixel-identical to run 33 (4 caret pixels in `07_select_text_double_click`); its `13` shows "Abc" at 72 pt and no visible "123" after the colour entry, as in runs 30 and 33 (not compared). The reference's new texts are right-aligned at the click point, as in runs 27, 28 and 30 (its stored Text tool state, runner item TW-211): "Hallo Welt" in `07` reads 45,91–101,100 against Firepixel's 101,91–157,100 (run 33: both 101,91–157,100), and the texts of `02`, `03`, `16` sit further right, so the canvas pairs `02` 0.12 → 0.33 %, `03` 0.06 → 0.13 %, `07` 0.08–0.14 → 0.17–0.21 % and `16` rise; `00_overview` 21.5 % (run 33: 19.3 %, the reference's dock groups). 7 `runner error` lines (run 33: 4), all reference-side: no selection highlight over "Welt" in `07` and over "123" in `11` (four lines, plus the size 72 not on the selection) and `13`. `12` (Firepixel's font field not found), `15` and `19_cursor_frame_handle` (frame handle not found, both sides) and `17` (`unmapped`) as before |
+| `tool-text` | tools | equal except for design | run 37: 85.2 % (23 / 27), unchanged; 13 / 16 canvas pairs within 1 % (`11_size_live_result` 2.29 %, `14_bounds` 1.05 %, `16_overflow` 3.75 %; TW-146 rest and TW-165, click-test A1-19). **TW-211 handled (R-32):** the reference's new texts are left-aligned again: "Hallo Welt" in `07` reads 101,91–157,100 in both programs (run 36: the reference 45,91–101,100), and the canvas pairs fall with the offset back at (0, 0): `02` 0.33 → 0.12 %, `03` 0.13 → 0.06 %, `07` 0.17 → 0.08 %, `13` 0.80 → 0.76 %. TW-146 rest: the reference's drag selection of "Welt" and "123" fails again, so `11` and `13` do not compare the edits, and its first character was lost in `12` and `14` (run 36: arrived), so its text in `14_bounds` was discarded at the commit (the pair compares Firepixel's text with an empty canvas). 11 `runner error` lines (run 36: 7), all reference-side: six selection lines, one size line, three lost first characters and one discarded text. Firepixel's shots are pixel-identical to run 36 except the caret (4 px in `07`, 86 px in `13`). `00_overview` 21.5 → 19.3 % (the reference's dock groups). `12` (Firepixel's font field not found), `15` and `19_cursor_frame_handle` (frame handle not found, both sides) and `17` (`unmapped`) as before |
 | `tool-web` | tools | equal except for design | run 34: 96.4 % (27 / 28), unchanged; 14 / 16 canvas pairs within 1 %, all at the run 33 values (`07` guide drag 3.7 %); `11` fails on both sides as before; Firepixel's shots are pixel-identical to run 33. **TW-192 (refined) confirmed**: after Insert ▸ Hotspot / Slice from selection (`12`) Firepixel's tool colours stay white / black like the reference's, in `13` and `15` too (hotspots are not followed; run 33: Firepixel #ff9900 / #c04040); the tool colours agree in all 11 steps that log them (run 33: 3 differed). The inspector pairs `13_inspector_hotspot` and `_slice` read 63.1 and 63.6 % (run 33: 17.5 and 17.9 %; TW-197) |
 | `toolbox` | tools | equal except for design | run 35: 94.6 % (53 / 56), unchanged; 0 / 3 canvas pairs within 1 % (cursor shots `15_cursor_hand`, `_zoom_in`, `_zoom_out` 2.49 % as before); no `runner error`, no reference restart (run 34: one, TW-196). Every pair except the overview reads its run 33 value again and Firepixel's 25 shots are pixel-identical to run 33: Firepixel's fit zoom is 42.8 % as in run 33 (run 34: 44.9 %, with the reference's inspector collapsed, TW-197), so the flyout pairs are back at 31.1–72.7 %; `00_overview_normal` 25.9 % (run 34: 49.8 %, run 33: 64.4 %, run 32: 25.2 %). **TW-202 pen cursors not reached**: the cursor steps hover the Hand and Zoom tools only and no step uses the Pen. View ▸ Tooltips (F64): Firepixel starts with it off ("off already"; run 34: switched on → off); the tooltip pairs `03` read as in run 33. The reference's tool brush reads `bc_Pencil` in `06`, `09` (run 34 after its restart: `bc_Basic`). No step drags the Pointer (TW-176 not exercised) |
 | `tool-autoshapes` | tools | equal except for design | run 34: 97.5 % (39 / 40), was 100.0 % (40 / 40); was real deviation. **TW-195 fixed and confirmed**: the Measure shape turns the tool stroke red in both programs and the Arrow takes the red in both; the Arrow Line is now drawn black on both sides (exports 141 black and no red pixels each; run 33: Firepixel 141 red) and sets the tool stroke back to black in both, so the Spiral, Star, Pie and Connector of `02` and every shape of `03` to `16` are black on both sides and the tool colours agree in all 37 steps that log them (run 33: 29 differed). The tool brush changes at the Measure in both programs (the reference's from Pencil to Basic, Firepixel's shapes from `bn_1-Pixel Anti-Aliased` to `bn_Hard Line`), and Firepixel's Measure shape is no longer selected after drawing. With the R-31 tool stroke the reference's first six shapes have the 1 px anti-aliased stroke like Firepixel's (run 33: a darker, wider stroke, Q-63): 13 of the 17 exports are equal above 32 levels (run 33: 1); the rest are the Chamfer Rectangle's corner cuts (305 px), the Measure label (288 px; run 33: 303), Pie (20 px) and Spiral (10 px), all at or below their run 30 values. **27 / 27** canvas pairs within 1 % (run 33: 26 / 27), 0.01–0.97 % (run 33: 0.16–1.01 %): `05_handle_drag_rounded_corner_result` 0.97 %, `11_connector_result` 0.01 % (run 33: 0.21 %). `10_scale_result` fails on the reference side: another application's window took the foreground in the step and in both repeats. The inspector pair `07` reads 65.5 % (run 33: 29.9 %) with the reference's inspector collapsed (TW-197) |
 | `export-results` | preview / export | equal except for design | run 33: 81.8 % (9 / 11), was 80.0 % (8 / 10): `13_export_area_result_result` is `ok` on the reference side for the first time (the export-area preview opens after the double-click in both programs; run 30: `unsupported`), pair 30.0 %; 4 / 4 canvas pairs within 1 %. JPEG 2000 in the PDF export (BA-101) is not exercised: `10_pdf_result` is `unsupported` on both sides |
-| `color-popup` | colour | equal except for design | run 36: 75.0 % (21 / 28), unchanged; 0 / 2 canvas pairs within 1 % (`18_live_preview_hover` 6.33 %, `20_cursor_hover` 6.34 %, unchanged; capture method only, TW-117); every pair and every compared value as in run 35, and Firepixel's 12 shots are pixel-identical to run 35. **TW-206 (F70) not reached**: no step drags or types the pop-up's alpha; `12_rgb_fields_normal` (HEX and RGB of an opaque colour) reads as before. `05_hex_field_result` and `_invalid_result` read the reference's fill unchanged (#80808000; its field kept only part of the typed text) against Firepixel's #3366cc and #000000, and `15_click_out_result` #fdfdfd against #8b8b8b, as in every run since run 24; `21_undo` fails on the reference side as before. The reference was restarted as planned before the unit |
+| `color-popup` | colour | equal except for design | run 37: 77.4 % (24 / 31), was 75.0 % (21 / 28); 1 / 4 canvas pairs within 1 % (`18_live_preview_hover` 6.33 %, `20_cursor_hover` 6.34 %, unchanged, TW-117). **HEX field (R-32 host fix):** `05_hex_field_result` reads #3366cc and `_invalid_result` #000000 in both programs (every run from 24 to 36: the reference #80808000, because the host typed the value into the alpha field); pair `05_hex_field_focus` 99.55 %. **TW-206 (F70) reached and confirmed:** in the new steps `23_alpha_slider_*` the fill pop-up of R1 reads alpha 50, HEX #808080 and RGB 128 128 128 in both programs mid-drag and after the release, and Enter gives #80808080 with one History row in both (reference 1 → 2, Firepixel 0 → 1); the mid-drag canvas pair is 7.71 % (Firepixel's deliberate live preview of R1 and its pop-up reaching into the canvas shot; the reference's canvas unchanged), the result 0.18 % (Firepixel's selection display), the pop-up pair 87.1 %. Firepixel's `popup.visible` after Enter reports a box although its canvas shot shows no pop-up (a read-back matter, not compared). Firepixel's 12 older shots are pixel-identical to run 36. `15_click_out_result` (#fdfdfd against #8b8b8b) and `21_undo` (reference side) as before. The reference was restarted as planned before the unit |
 | `xs-context-menus` | cross-cutting | equal except for design | run 33: 70.4 % (19 / 27), unchanged; in the canvas and text context menus `01` and `04` Paste is grey on both sides now (run 30: enabled in the reference), so their entries and states are equal |
 | `xs-preferences` | cross-cutting | equal except for design | run 33: 85.0 % (17 / 20), unchanged since run 32; 2 / 3 canvas pairs within 1 % at the run 30 and 32 values (`06` 3.10 %, `07` 0.14 %, `08` 0.09 %); all compared values as in run 32; `03`, `04` and `10` (`unmapped`) and `18` (`unsupported`) as before |
 | `xs-windows-tabs` | cross-cutting | equal except for design | run 34: 73.7 % (14 / 19), unchanged. No reference restart in this unit (run 33: at the unit start, TW-196): `03_tab_overflow` 26.4 % (run 33: 64.9 %, run 30: 26.0 %) and the other window pairs within 0.5 points of run 30 (overview and tabs 21.7 %, cascade 22.1 %, tile 61.0 %); Firepixel's shots differ from run 33 only in the stroke well |
@@ -222,9 +249,37 @@ below the table.
 | `panel-swatches-mixer` | panels | equal except for design | run 33: 96.3 % (26 / 27), unchanged. **TW-174 confirmed**: `19_selected_object_result` reads #efffbf on both sides (run 30: the reference #ffffbf); Swatches flyout 213 × 151 px, pairs back at the run 24 values (75.1–94.8 %). In `20_undo_result` the reference's History count reads 0 before and after the swatch click (run 30: 1 → 2; Firepixel 0 → 1 in both runs) with the History panel not shown in icon mode; the fill after Ctrl+Z is #808080 on both sides |
 | `xs-shortcuts` | cross-cutting | equal except for design | run 33: 92.0 % (23 / 25), unchanged since run 32; `22_enter_canvas_result` reads `[object Group]` in both programs (TW-189) and the redo cases `02`, `17` read as in run 32 (TW-173); every compared value as in run 32. The reference typed the "V" of `15_in_text` at once (run 32: two `runner error` lines). `18` and `19` (`unmapped`) as before |
 | `xs-canvas` | cross-cutting | equal except for design | run 34: 91.7 % (22 / 24), unchanged; 1 / 8 canvas pairs within 1 %, as before. Tiled canvas (BA-098): Firepixel's zoom shots are pixel-identical to run 33; `02_zoom_center_result` 1.50 % at (−2, −3) (run 33: 1.50 % at −1, −3), `02_zoom_center_result_center` 1.49 %, `18_checker` 0.00 %. No reference restart in this unit (run 33: before `01`, TW-196): the window pairs `04`, `05`, `17`, `21`, `22` read 26.0–40.0 % and `20_macro_view` 50.1 %, within 0.4 points of run 31 (25.6–39.6 % and 49.7 %; run 33: 42.9–65.1 % and 38.7 %), and the reference's tool colours read white / black in `08` to `13` like Firepixel's (run 33: #808080 / #c04040). Firepixel's window shots `17`, `20`, `21`, `22` differ from run 33 only in the stroke well. The Pointer drags of `08` (guide snap) and `12` (grid snap) leave TILES at 500,0 and 12,20 in both programs as before (TW-176 not exercised) |
-| `xs-select-behind` | cross-cutting | equal except for design | run 36: 100.0 % (9 / 9), unchanged; 9 / 9 canvas pairs within 1 % at the run 34 and 35 values (0.01–0.51 %); both programs' shots are pixel-identical to run 35 (Firepixel's Pointer display of F65 included) and every compared value reads as before; batch 6 does not touch the unit's steps |
+| `xs-select-behind` | cross-cutting | equal except for design | run 37: 100.0 % (9 / 9), unchanged; 9 / 9 canvas pairs within 1 % at the run 34 to 36 values (0.01–0.51 %); both programs' shots are pixel-identical to run 36 and every compared value reads as before |
 
-Totals over all 49 units (run 36 on top of runs 35, 34 and 33): **49 / 0 / 0 / 0** (proven 1:1 **100.0 %**). Step
+Totals over all 49 units (run 37 on top of runs 36, 35, 34 and 33): **47 / 2 / 0 / 0** (proven 1:1 **95.9 %**). Step
+level: 1090 of 1242 measurable steps `ok` on both sides (**87.8 %**; the nine units 190 / 223, run 36: 177 / 215, with
+the Firepixel-only step `toolbox/17_ai_tools_normal` counted as `ok` as before); over the 48 units before run 24: 1081
+of 1233 (87.7 %). The 228 steps of run 37 (the 218 of run 36 and ten new ones): 190 `ok` on both sides, 22 `unmapped`
+on both sides, 3 reference-side `error` against `ok`, 3 `ok` against a Firepixel-side `error`, 3 `error` on both
+sides, 2 `unsupported` on both sides, 2 `ok` / `unmapped`, 1 `unsupported` / `unmapped`, 1 `unmapped` / `unsupported`
+and 1 `unsupported` / `ok`. Seven step statuses changed against run 36, all in `panel-layers`: `07`, `08`, `10` and
+`16` are `ok` on Firepixel's side (were `unmapped`), `09_drag_reorder_pressed` is `unmapped` on Firepixel's side (was
+`ok`), and `14_opacity_blend_result` (`unsupported` / `ok`) and `12_selection_dot_result` (`unmapped` /
+`unsupported`), both `unmapped` on both sides before, leave the measurable steps; the ten new steps are `ok` on both
+sides. Errors: **34 reference-side and 21 Firepixel-side** (unchanged; the six errors of each side in the nine units
+are the same steps). Canvas image pairs within 1 %: **191 of 220** (run 36: 186 of 212): the eight new canvas pairs
+add five within 1 % (`panel-layers/23_opacity_slider_press_drag_result` 0.10 %,
+`color-popup/23_alpha_slider_drag_result` 0.18 %, `inspector-text/25` 0.52 %,
+`inspector-fields/25_pattern_move_normal` and `_result` 0.09 %) and three above it, all by Firepixel's live preview
+(`panel-layers/23_opacity_slider_drag_pressed` and `_click_drag_result` 2.10 %,
+`color-popup/23_alpha_slider_drag_canvas_pressed` 7.71 %); the other 43 canvas pairs stay on their side of 1 %; over
+the 48 old units 182 of 211. Two classes changed: `panel-layers` and `inspector-text` equal except for design → real
+deviation (TW-205 and TW-208; TW-214, with the bounds of TW-204 as documented). Compared values: `panel-layers/07`,
+`08`, `10` and `14` now read on Firepixel's side (`08` unequal, TW-208), `09_drag_reorder_result` is unequal now
+(TW-216), the reference's `color-popup/05` values now equal Firepixel's (#3366cc, #000000) and its text exports in
+`inspector-text/09`, `13`, `14` show the edits; the new steps add the values of TW-204 to TW-207. Firepixel's shots
+are pixel-identical to run 36 except the four `panel-layers` shots with the expanded layers and the caret in
+`tool-text/07`, `13`. The reference-side changes come from R-32 (the HEX field, the typed fields, the left alignment),
+its dock groups (overview pairs), no restart in `inspector-text`, its lost first characters in `tool-text/12`, `14`
+and its pop-up shot in `inspector-fields/09`. 11 `runner error` lines, all reference-side in `tool-text` (run 36: 7;
+over the newest run of every unit: 11).
+
+Run 36's totals (on top of runs 35, 34 and 33), for comparison: **49 / 0 / 0 / 0** (proven 1:1 **100.0 %**). Step
 level: 1077 of 1234 measurable steps `ok` on both sides (**87.3 %**; the nine units 177 / 215, their baselines
 174 / 215, with the Firepixel-only step `toolbox/17_ai_tools_normal` counted as `ok` as before); over the 48 units
 before run 24: 1068 of 1225 (87.2 %). The 218 steps of run 36: 177 `ok` on both sides, 24 `unmapped` on both sides,
@@ -460,6 +515,36 @@ does not enlarge text, and Ctrl+Shift+E, Ctrl+Alt+Shift+S and Ctrl+Shift+I do ot
 machine (TW-126; the reference machine's active set needs a behaviour description). `panel-optimize` shows one real
 deviation: export formats chosen per slice in the Optimize panel are not stored on the slices (TW-128).
 `xs-preferences` clicks stored settings without a fixed start state (TW-127, runner).
+
+**What run 37 found.** Runner R-32 reaches the interactions of tester feedback batch 6 for the first time, and two of
+them show real deviations. **TW-205:** the Layers panel's opacity slider counts 31 where the reference counts 30
+mid-drag, and a 41 px press-drag commits 81 against 80: Firepixel ran the 212 px track of the other pop-up sliders,
+the reference 2 px per per cent (RE spec 60 §2.3, RE spec 61 §4.1); F79 `7337428e` fixed the scale after the build (to
+confirm in run 38). The read-back 81.18 is the 8-bit storage (81 % = 207/255), which the reference shares, not a
+deviation; the live canvas mid-drag is Firepixel's deliberate preview (TW-171 `[N]`). **TW-208:** a Shift-click from
+L1obj on "Ebene 1" to the object of the shared, locked layer "Gemeinsam" leaves the reference with L1obj alone (1,
+then 0 after the Ctrl-click on L1obj) and Firepixel with two objects (2, then 1). The count is `fw.selection.length`,
+the number of selected objects, not of rows. RE spec 61 §3 measured ranges inside one layer only; F72's rule across
+layers (the objects of the rows in between, objects on locked or shared layers excluded) is our own, and in T07 the
+only object between the two rows that it does not exclude is the one on the hidden "Ebene 2". The reference is the
+oracle: its range either does not cross layers or skips hidden layers too; to measure (TW-208). **TW-214 (new):** the
+same `addNewText` rectangle puts a point text 13 px higher in Firepixel (top 365 against 378) and 1 px further left.
+**TW-204** behaves as documented: the indent moves the ink by 33 px in both programs, the reference moves the object's
+left with the width kept, Firepixel widens it. **TW-206 and TW-207 are confirmed:** identical alpha, HEX and RGB
+fields and #80808080 after Enter; identical pattern handles before and after an X / Y move and 0 differing pixels
+inside the moved shape in both programs. The runner items of R-32 are confirmed: the reference's inspector at 125 px
+at every unit start (TW-197), the Layers object rows found after expanding their parent layers (TW-210; with F79 the
+panel keeps the document's own disclosure, so the expansion will not be needed), the reference's texts left-aligned
+again (TW-211: equal bounds in `tool-text/07`). The host fixes change four earlier comparisons: the HEX field of
+`color-popup/05` (now equal) and the text fields of `inspector-text/09`, `13`, `14` (the reference's edits now happen;
+pairs 0.15–0.16 %). New runner item **TW-216**: the Layers drag steps `09` and `15` collapse three layers by script on
+the reference's side only, so after the runner's expansions Firepixel's `09_drag_reorder_pressed` does not find "Ebene
+3" and its `09_drag_reorder_result` drops at the top edge of a longer list and moves "Ebene 1" above "Ebene 2" (the
+reference refuses the drop into the locked "Ebene 3", RE spec 42 §2); `12_selection_dot_result` has no selection-dot
+target on either side. From R-32's probes: **TW-213** (Firepixel's `addNewText(r, true)` keeps the paragraph indent
+the inspector last wrote, 20 after `inspector-text/13`, where the reference starts at 0; run 37's step sets the indent
+0 in its script, so it does not show). F79 is recorded as **TW-215** (click-test A4-60). TW-176, TW-177, TW-186,
+TW-187 and the Pen display of TW-202 are not reached.
 
 **What run 36 found.** Tester feedback batch 6 (F68 to F72) and F67 change no class, no Firepixel-side step status
 and no Firepixel-side compared value; no new deviation. None of the batch 6 interactions is reached by a runner step:
@@ -843,6 +928,7 @@ TW-179, fixed in runner R-27); this bug was already in the host's first version.
 | 34 (8 units) | 22 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.0 % (86.9 % over the 48 old units); canvas pairs 185 / 209 |
 | 35 (6 units) | 22 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.0 % (86.9 % over the 48 old units); canvas pairs 185 / 209 |
 | 36 (9 units) | 23 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.3 % (87.2 % over the 48 old units); canvas pairs 186 / 212 |
+| 37 (9 units) | 23 Oct 2026 | 47 of 49 (0 under-measured; 2 real deviations, 0 unclear) | **95.9 %** (47 / 49); 95.8 % over the 48 old units; step level 87.8 % (87.7 % over the 48 old units); canvas pairs 191 / 220 |
 
 The next steps are in [ROADMAP.md](../ROADMAP.md): the human click-test, including the macOS re-test by the tester;
 the text selection and size of TW-146 rest and the text tool reset of TW-165 (moved to the click-test A1-19 on
@@ -851,14 +937,13 @@ the text selection and size of TW-146 rest and the text tool reset of TW-165 (mo
 "Text" and "Text Change", Firepixel one; the leading conversion from px back to % is not measured); the click-test
 items of TW-195 and the refined TW-192 (A4-43, A4-44) and of tester feedback batch 5 (A4-45 to A4-49; the Pen display
 and the pen cursor variants of TW-202 are reached by no runner step), of the Dither fill edge (A4-50, A4-56) and of
-tester feedback batch 6 (A4-51 to A4-55; run 36 reached none of its interactions); the runner items TW-197 (set the
-reference's Properties inspector at unit start, runner R-32; it did not recur in runs 35 and 36), TW-210 (Firepixel's
-Layers panel height, so that the object-row steps and TW-208 are measured) and TW-211 (the text alignment in the
-unit-start text tool reset); the questions Q-62 (re-measure with real keys), Q-64 (gradient and pattern fills on text)
+tester feedback batch 6 (A4-51 to A4-55; run 37 reached TW-204 to TW-208) and of F79 (A4-60); the deviations TW-205
+(fixed by F79, to confirm in run 38), TW-208 (the range across layers, to measure), TW-213 and TW-214 (text created by
+script); the runner item TW-216 (the Layers drag and selection-dot steps); the questions Q-62 (re-measure with real keys), Q-64 (gradient and pattern fills on text)
 and Q-65 (the current layer after opening T07). TW-173 was confirmed by run 31, TW-189 by
 run 32, TW-192 (colours), TW-193, TW-194 and the runner item TW-174 by run 33, and TW-195, the refined follow rules of
 TW-192 and the runner item TW-196 by run 34; run 35 saw TW-202 (the Pointer display of a selected rectangle), TW-200
-(the slider pop-up placement) and TW-201 (the tooltips) without a changed value, run 36 none of TW-204 to TW-208; Q-63 is closed; TW-176, TW-177, TW-186 and TW-187 are not
+(the slider pop-up placement) and TW-201 (the tooltips) without a changed value, run 36 none of TW-204 to TW-208, run 37 confirmed TW-206, TW-207 and the runner items TW-197, TW-210 and TW-211; Q-63 is closed; TW-176, TW-177, TW-186 and TW-187 are not
 reached by the runner and stay with the click-test. Run 30 answered the BA-098 question: the tiled canvas shifts no
 sampling position at
 fractional zoom. U-1 rest (PDF layers) and the R3 note of TW-138 were closed on 20 Oct 2026.
