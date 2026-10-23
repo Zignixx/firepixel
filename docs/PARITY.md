@@ -3,21 +3,19 @@
 Firepixel aims to behave like the reference application button by button. This page explains how that is
 measured, what the figures mean, where the method stops, and gives the current per-unit result.
 
-**Current state (follow-up run 40 over 4 units on top of runs 39, 38, 37, 36, 35, 34 and 33, 23 Oct 2026, all 49 units):**
+**Current state (follow-up run 41 over `tool-text` on top of runs 40, 39, 38, 37, 36, 35, 34 and 33, 23 Oct 2026, all 49 units):**
 **48 equal except for design**, 1 real deviation, 0 unclear, 0 under-measured. **Proven 1:1: 98.0 %** (48 / 49; all
 49 units are sufficiently measured). Measurement quota over all 49 units: **87.9 %** (1097 / 1248 steps). Canvas image
-pairs within 1 %: **196 / 225**. Run 40 repeated `tool-text`, `color-popup`, `fx-bevel-emboss-fill` and
-`inspector-fields` with runner R-35 (five text-scale steps for TW-212 and a retry when the reference's pop-up slider is
-not open yet) on preview `2026-10-23_19-26` (the code of v0.2.10 plus F79 to F86). **TW-212 (F86)** is confirmed on the
-numeric and script paths: Numeric Transform 150 % turns the 60 pt point text "Ag" into a plain 90 pt text (horizontal
-scale 1, identity matrix, raw 82,82 111 × 108) in both programs, on each side pixel-equal to a fresh 90 pt text, and
-`scaleSelection(1.5, 1, …)` gives 60 pt with horizontal scale 1.5 and no matrix in both. Under Modify ▸ Transform ▸
-Scale the text folds in both programs too, but the same corner drag (+39/+38 px from each side's own handle) gives
-83.74 pt with a leftover matrix in the reference and 90 pt in Firepixel: Firepixel's transform frame of a text is the
-object's bounds, the reference's is about 10 px larger (new row **TW-219**), so `tool-text` is a real deviation.
-The reference-side pop-up slider retry fired once (`fx-bevel-emboss-fill/09_live_pressed`, the slider open 0.42 s
-after the second click); `color-popup/23_alpha_slider_drag_canvas_pressed` and `inspector-fields/14` opened their
-sliders within the longer wait, and all three steps are `ok` on both sides. No Firepixel regression.
+pairs within 1 %: **196 / 225**. Run 41 repeated `tool-text` with runner R-35 unchanged on preview `2026-10-23_22-35`
+(the code of v0.2.10 plus F79 to F87; F87: the transform frame of a single text is its layout box × 1.3, drags project
+on the unrounded frame). **TW-219 (F87) is not yet confirmed:** Firepixel's frame now lies where the reference's handles
+were measured (handles at 89/137/185 × 89/136/183, drawn 1 screen pixel up and left), and the reference again reads
+83.74 pt with the matrix [0.993, 0, 0, 1.005] after the +39/+38 px corner drag, but R-35 still takes Firepixel's handle
+from the object's bounds (176,174), which since F87 lies inside the frame, so Firepixel's Scale tool moved the text by
++39/+38 px (60 pt, identity) instead of scaling it. This is a runner artefact (new runner row **TW-221**, R-36 pending),
+not a Firepixel regression, so `tool-text` keeps its run 40 class (real deviation, TW-219 measured in run 40) until a
+run with R-36 drags Firepixel's real handle. TW-212 is unchanged on the numeric and script paths; no step status, no
+other compared Firepixel value and no other pair changed beyond noise.
 
 **Units: 49.** Over the 48 units classified before run 24 (without the measurement unit `xs-select-behind`, added on
 19 Oct 2026): 47 / 1 / 0 / 0, proven 1:1 97.9 %, quota 87.8 % (1088 / 1239; run 17 alone: 86.3 %), canvas pairs
@@ -127,7 +125,7 @@ Tooltips ("off already") resets behaved as in run 39.
 
 **Measurement quota** = steps with both sides `ok` / steps without an `unsupported` or `skipped` side (repeated
 steps count with their second attempt). **Proven 1:1** = units "equal except for design" / sufficiently
-measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 to 29, 32, 34 to 36 and 39, 98.0 % after runs 30, 33, 38 and 40, 95.9 % after runs 31 and 37); since
+measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 to 29, 32, 34 to 36 and 39, 98.0 % after runs 30, 33, 38, 40 and 41, 95.9 % after runs 31 and 37); since
 run 15 no unit is under-measured, so both figures are the same.
 
 ## Limits
@@ -159,14 +157,26 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
   counted as errors, never as `ok`.
 - **Transform frames:** with View ▸ Edges off the reference's Scale / Free Transform frame is not in its canvas shots
   (`tool-text/27_text_scale_tool_frame_open` shows Firepixel's frame only), so the frame of a text is compared only
-  through the result of a drag from each side's own handle and RE-34's measured handle positions (TW-219).
+  through the result of a drag from each side's own handle and RE-34's measured handle positions (TW-219). R-35 takes
+  the reference's handle from that measurement (184,182) and Firepixel's from the object's bounds (176,174); since F87
+  Firepixel's handle lies at 184,182 too, so R-35's press on Firepixel's side lands inside the frame and moves the text
+  (run 41, TW-221) until R-36 takes Firepixel's handle from its frame (or the bridge's overlay).
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images
   cannot be captured.
 
-## Per-unit result (run 40 on top of runs 39, 38, 37, 36, 35, 34 and 33)
+## Per-unit result (run 41 on top of runs 40, 39, 38, 37, 36, 35, 34 and 33)
 
-Each row is the unit's newest run. Four rows (`tool-text`, `color-popup`, `fx-bevel-emboss-fill`, `inspector-fields`)
-come from follow-up run 40 (23 Oct 2026, 20:31–21:07, 4 units, 117 scripted steps, 67 image pairs plus 3 shots without
+Each row is the unit's newest run. One row (`tool-text`) comes from follow-up run 41 (23 Oct 2026, 22:36–22:48, 1 unit,
+32 scripted steps, 22 image pairs plus 1 shot without a partner), preview build `2026-10-23_22-35` from `main` at
+`4cf72905` (the code of v0.2.10 plus F79 to F87; F87 `4cf72905`: the transform frame of a single text is its layout box
+scaled by 1.3, drags project on the unrounded frame, RE spec 67), runner R-35 (`e4668846`) unchanged. "Was" compares the
+row with run 40, whose 32 steps the run repeats unchanged. The tool stroke is logged "same" at the unit start, the
+reference's text alignment reads left and Firepixel's View ▸ Tooltips "off already". The reference was not restarted
+(run 40: once, before `04_esc_result`); its dock groups read 217–262 px through the whole unit, so the overview pair
+reads 19.3 % as in run 40. Two other applications' windows were open at the start (logged); none took the foreground.
+The canvas pairs are recomputed with the offset search (± 3 px, 32 levels); the other percentages are the runner's
+`cmp/summary.csv` values.
+Three rows (`color-popup`, `fx-bevel-emboss-fill`, `inspector-fields`) come from follow-up run 40 (23 Oct 2026, 20:31–21:07, 4 units, 117 scripted steps, 67 image pairs plus 3 shots without
 a partner), preview build `2026-10-23_19-26` from `main` at `dfa8a86e` (the code of v0.2.10 plus F79 to F86; F86
 `a895213b`: a pure axis scale of a text folds into its font size and horizontal scale, RE spec 66), runner R-35
 (`e4668846`, on `main`): five text-scale steps in `tool-text` (TW-212) and the reference-side pop-up slider retry; R-34's
@@ -296,7 +306,7 @@ below the table.
 | `preview-views` | preview / export | equal except for design | run 33: 69.6 % (16 / 23), unchanged; Firepixel's shots pixel-identical to run 30 except the running animation `17_anim_buttons_play_pressed` |
 | `color-popup-contexts` | colour | equal except for design | run 39: 68.2 % (15 / 22), unchanged; every pair and every compared value as in run 38; both programs' shots are pixel-identical to run 38 except the reference's overview (21 px). `01_toolbox_stroke` fails on the reference side as before |
 | `tool-path-reshape` | tools | equal except for design | run 35: 100.0 % (23 / 23), unchanged; 13 / 14 canvas pairs within 1 %, all at the run 33 and 34 values (`11_rect_to_path_result` 10.93 %). **TW-202 not reached**: the canvas shots hold P1 (or R1) selected under the Freeform, Reshape Area, Path Scrubber and Knife tools, not under the Pen or the Pointer, which are all F65 changes, so Firepixel's 20 shots are pixel-identical to run 34 and still draw the bounding box with four corner squares (`02` to `08`, `13`); the reference's canvas shots carry no selection display at all, so no pair was above 1 % because of the box and none drops. The tool colours agree in all 10 steps that log them, as in run 34. With the reference's inspector expanded again the inspector head pairs `01`, `12` read 9.7–10.6 % (run 34: 60.2–60.7 %, TW-197; run 33: 9.7–10.6 %) and the overview 21.8 % (run 34: 29.0 %). No step draws with the Pen, so TW-177 is not exercised here |
-| `tool-text` | tools | real deviation | run 40: 87.5 % (28 / 32), was 85.2 % (23 / 27): five new text-scale steps (R-35), all `ok` on both sides; was equal except for design. 18 / 21 canvas pairs within 1 % (the five new 0.11–0.47 %; `11_size_live_result` 2.29 %, `14_bounds` 1.07 %, `16_overflow` 3.75 % as before, TW-146 rest and TW-165, click-test A1-19; `13` 0.76 → 0.78 %, the caret). **TW-212 (F86) confirmed on the numeric and script paths:** `26_text_scale_numeric_150_result` (Numeric Transform 150 %, Enter) turns the point text "Ag" ArialMT 60 pt into 90 pt, horizontal scale 1, identity matrix, raw 82,82 111 × 108, bounds 80,80 115 × 112, `pixelRect` 83,95–188,179 in both programs (History: the reference's `scaleSelection(1.5, 1.5, "autoTrimImages transformAttributes")`, Firepixel's `numericTransform` 150 / 150); on each side the shot equals the fresh 90 pt text of `26_text_scale_fresh90_normal` (the reference 0 px; Firepixel 0 px in the text and its frame, 70 px of its pointer), and reference against Firepixel the glyphs differ by 42 grey pixels (7 above 32 levels; pairs 0.13 and 0.11 % with Firepixel's selection frame). `28_text_scale_numeric_150_100_result` (`scaleSelection(1.5, 1, …)` by script) gives 60 pt with horizontal scale 1.5, identity, raw 82,100 111 × 72 in both (`pixelRect` right 188 against 187; pair 0.13 %). **New TW-219:** in `27_text_scale_tool_corner_result` (Modify ▸ Transform ▸ Scale, the bottom-right corner dragged +39/+38 px from each side's own handle, Enter) both programs fold, but the reference gives 83.74 pt, horizontal scale 1 and a leftover matrix [0.993, 0, 0, 1.005] (row `setQuadrangle(…, "autoTrimImages transformAttributes rememberQuad")`) and Firepixel 90 pt with the identity (`transform.matrix` 1.5 with `rememberQuad`): Firepixel's frame is the bounds 98,98–176,174 (78 px, factor 1.5), the reference's about 10 px larger (handles at 88/136/184 × 88/135/182, factor 1.3957; RE spec 66 §5); pair 0.47 % at (−2, −1). `27_text_scale_tool_frame_open` shows Firepixel's frame only (the reference's View ▸ Edges is off), 0.16 %. Every undo restores 60 pt at raw 100,100 in both. The reference was restarted after a script access violation before `04_esc_result` (the unit-start reset repeated, no step lost); its overview, shot before that with its 217–262 px dock groups, reads 19.3 % (run 39: 21.5 %; run 38: 19.3 %). TW-146 rest: 7 `runner error` lines (run 39: 8; six selection lines and one size line, no lost first character), and the text read before typing in `07_select_text_double_click_focus` finds one empty text again (as in run 38). Firepixel's shots are pixel-identical to run 39 except the caret in `13` (86 px). `12` (Firepixel's font field not found), `15` and `19_cursor_frame_handle` (frame handle not found, both sides) and `17` (`unmapped`) as before |
+| `tool-text` | tools | real deviation | run 41: 87.5 % (28 / 32), unchanged; no step status changed; the class of run 40 stays, because run 41 did not re-measure TW-219 (runner handle position, TW-221). 18 / 21 canvas pairs within 1 % (`11_size_live_result` 2.29 %, `14_bounds` 1.07 %, `16_overflow` 3.75 % as before, TW-146 rest and TW-165, click-test A1-19), all at their run 40 values except the two `27` pairs. **TW-219 (F87) not yet confirmed:** in `27_text_scale_tool_frame_open` Firepixel's frame now lies on the layout box × 1.3 of the point text "Ag" (raw 100,100 74 × 72): the frame line and the eight 5 px handle squares at 89/137/185 × 89/136/183 drawn 1 screen pixel up and left (centred on shot pixels 88/136/184 × 88/135/182, the positions RE-34 measured for the reference's handles; run 40: on the bounds 98,98–176,174), the object's bounds box with its corner squares inside it; the reference's shot shows no frame (View ▸ Edges off, a limit); pair 0.16 → 0.27 %. In `27_text_scale_tool_corner_result` the reference drags from its handle at 184,182 to 223,220 and reads exactly as in run 40: 83.74 pt, horizontal scale 1, matrix [0.993, 0, 0, 1.005] with the translation 5.085 / 23.883, raw 100,80 104 × 100, bounds 102.406,102.263 107.251 × 104.507, `pixelRect` 105,116–202,195, row `setQuadrangle(…, "autoTrimImages transformAttributes rememberQuad")` (its shots pixel-identical to run 40). R-35 still takes Firepixel's handle from the object's bounds and presses at 176,174 (window 473,355, as in run 40), which since F87 lies inside the frame, 8 px left of and above the corner handle, so Firepixel's Scale tool moves the text instead of scaling it: 60 pt, horizontal scale 1, identity, raw 139,138 74 × 72, bounds 137,136 78 × 76, `pixelRect` 140,147–209,203, row `transform.matrix` [1, 0, 0, 1, 39, 38] with `rememberQuad` (run 40: 90 pt by [1.5, 0, 0, 1.5, −49, −49]); pair 0.47 → 0.71 % at (3, −1). A runner artefact (new runner row TW-221, R-36 pending), not a Firepixel regression; F87's engine test `tw219_text_transform_frame` pins 83.74 pt and [0.993, 0, 0, 1.005], t 5.085 / 23.883 for the drag that starts on the handle. **TW-212** unchanged: `26_text_scale_numeric_150_result` gives 90 pt, horizontal scale 1, identity, raw 82,82 111 × 108 in both programs, each side pixel-equal to its fresh 90 pt text of `26_text_scale_fresh90_normal`, and `28_text_scale_numeric_150_100_result` 60 pt with horizontal scale 1.5 in both (`pixelRect` right 188 against 187); pairs 0.13, 0.11 and 0.13 % as in run 40, every undo restores 60 pt at raw 100,100 in both. No reference restart (run 40: one before `04_esc_result`); its overview changed in 725 px of its dock and reads 19.3 % as in run 40. TW-146 rest: 9 `runner error` lines (run 40: 7): the six selection lines and the size line as before and two in `04_esc_result`, where the reference's first character "A" was lost in both attempts ("bc" not typed) and the empty new text was discarded at the commit (the step is `ok` on both sides and has no image pair; run 40: "Abc"); the text read before typing in `07_select_text_double_click_focus` finds one empty text as in run 40. Firepixel's shots are pixel-identical to run 40 except the two `27` shots and the caret in `01` (2 px) and `07_select_text_double_click_focus` (4 px); the caret pair `13` stays at 0.78 %. `12` (Firepixel's font field not found), `15` and `19_cursor_frame_handle` (frame handle not found, both sides) and `17` (`unmapped`) as before |
 | `tool-web` | tools | equal except for design | run 34: 96.4 % (27 / 28), unchanged; 14 / 16 canvas pairs within 1 %, all at the run 33 values (`07` guide drag 3.7 %); `11` fails on both sides as before; Firepixel's shots are pixel-identical to run 33. **TW-192 (refined) confirmed**: after Insert ▸ Hotspot / Slice from selection (`12`) Firepixel's tool colours stay white / black like the reference's, in `13` and `15` too (hotspots are not followed; run 33: Firepixel #ff9900 / #c04040); the tool colours agree in all 11 steps that log them (run 33: 3 differed). The inspector pairs `13_inspector_hotspot` and `_slice` read 63.1 and 63.6 % (run 33: 17.5 and 17.9 %; TW-197) |
 | `toolbox` | tools | equal except for design | run 35: 94.6 % (53 / 56), unchanged; 0 / 3 canvas pairs within 1 % (cursor shots `15_cursor_hand`, `_zoom_in`, `_zoom_out` 2.49 % as before); no `runner error`, no reference restart (run 34: one, TW-196). Every pair except the overview reads its run 33 value again and Firepixel's 25 shots are pixel-identical to run 33: Firepixel's fit zoom is 42.8 % as in run 33 (run 34: 44.9 %, with the reference's inspector collapsed, TW-197), so the flyout pairs are back at 31.1–72.7 %; `00_overview_normal` 25.9 % (run 34: 49.8 %, run 33: 64.4 %, run 32: 25.2 %). **TW-202 pen cursors not reached**: the cursor steps hover the Hand and Zoom tools only and no step uses the Pen. View ▸ Tooltips (F64): Firepixel starts with it off ("off already"; run 34: switched on → off); the tooltip pairs `03` read as in run 33. The reference's tool brush reads `bc_Pencil` in `06`, `09` (run 34 after its restart: `bc_Basic`). No step drags the Pointer (TW-176 not exercised) |
 | `tool-autoshapes` | tools | equal except for design | run 34: 97.5 % (39 / 40), was 100.0 % (40 / 40); was real deviation. **TW-195 fixed and confirmed**: the Measure shape turns the tool stroke red in both programs and the Arrow takes the red in both; the Arrow Line is now drawn black on both sides (exports 141 black and no red pixels each; run 33: Firepixel 141 red) and sets the tool stroke back to black in both, so the Spiral, Star, Pie and Connector of `02` and every shape of `03` to `16` are black on both sides and the tool colours agree in all 37 steps that log them (run 33: 29 differed). The tool brush changes at the Measure in both programs (the reference's from Pencil to Basic, Firepixel's shapes from `bn_1-Pixel Anti-Aliased` to `bn_Hard Line`), and Firepixel's Measure shape is no longer selected after drawing. With the R-31 tool stroke the reference's first six shapes have the 1 px anti-aliased stroke like Firepixel's (run 33: a darker, wider stroke, Q-63): 13 of the 17 exports are equal above 32 levels (run 33: 1); the rest are the Chamfer Rectangle's corner cuts (305 px), the Measure label (288 px; run 33: 303), Pie (20 px) and Spiral (10 px), all at or below their run 30 values. **27 / 27** canvas pairs within 1 % (run 33: 26 / 27), 0.01–0.97 % (run 33: 0.16–1.01 %): `05_handle_drag_rounded_corner_result` 0.97 %, `11_connector_result` 0.01 % (run 33: 0.21 %). `10_scale_result` fails on the reference side: another application's window took the foreground in the step and in both repeats. The inspector pair `07` reads 65.5 % (run 33: 29.9 %) with the reference's inspector collapsed (TW-197) |
@@ -312,7 +322,23 @@ below the table.
 | `xs-canvas` | cross-cutting | equal except for design | run 34: 91.7 % (22 / 24), unchanged; 1 / 8 canvas pairs within 1 %, as before. Tiled canvas (BA-098): Firepixel's zoom shots are pixel-identical to run 33; `02_zoom_center_result` 1.50 % at (−2, −3) (run 33: 1.50 % at −1, −3), `02_zoom_center_result_center` 1.49 %, `18_checker` 0.00 %. No reference restart in this unit (run 33: before `01`, TW-196): the window pairs `04`, `05`, `17`, `21`, `22` read 26.0–40.0 % and `20_macro_view` 50.1 %, within 0.4 points of run 31 (25.6–39.6 % and 49.7 %; run 33: 42.9–65.1 % and 38.7 %), and the reference's tool colours read white / black in `08` to `13` like Firepixel's (run 33: #808080 / #c04040). Firepixel's window shots `17`, `20`, `21`, `22` differ from run 33 only in the stroke well. The Pointer drags of `08` (guide snap) and `12` (grid snap) leave TILES at 500,0 and 12,20 in both programs as before (TW-176 not exercised) |
 | `xs-select-behind` | cross-cutting | equal except for design | run 39: 100.0 % (9 / 9), unchanged; 9 / 9 canvas pairs within 1 % at the run 34 to 38 values (0.01–0.51 %); both programs' shots are pixel-identical to run 38 and every compared value reads as before |
 
-Totals over all 49 units (run 40 on top of runs 39, 38, 37, 36, 35, 34 and 33): **48 / 1 / 0 / 0** (proven 1:1 **98.0 %**).
+Totals over all 49 units (run 41 on top of runs 40, 39, 38, 37, 36, 35, 34 and 33): **48 / 1 / 0 / 0** (proven 1:1 **98.0 %**).
+Step level: 1097 of 1248 measurable steps `ok` on both sides (**87.9 %**; `tool-text` 28 / 32 as in run 40, with the
+Firepixel-only step `toolbox/17_ai_tools_normal` counted as `ok` as before); over the 48 units before run 24: 1088 of
+1239 (87.8 %). The 32 steps of run 41 (the `tool-text` steps of run 40): 28 `ok` on both sides, 2 `error` on both
+sides, 1 `ok` against a Firepixel-side `error` and 1 `unmapped` on both sides; no step status changed. Errors: **34
+reference-side and 21 Firepixel-side**, unchanged. Canvas image pairs within 1 %: **196 of 225**, unchanged: the two
+`27` pairs change and stay within 1 % (`27_text_scale_tool_frame_open` 0.16 → 0.27 % with F87's larger frame,
+`27_text_scale_tool_corner_result` 0.47 → 0.71 % with Firepixel's moved text), the other 19 canvas pairs read their run
+40 values; over the 48 old units 187 of 216. No class changed: `tool-text` stays a real deviation, because the Scale-tool
+drag on Firepixel's side started inside the new frame (TW-221) and so did not re-measure TW-219. Compared values: on
+Firepixel's side only `27_text_scale_tool_corner_result` (moved by +39/+38 px at 60 pt; run 40: 90 pt); on the
+reference's side the text entry of `04_esc_result` (the first character lost, no text; run 40: "Abc"). Firepixel's shots
+are pixel-identical to run 40 except the two `27` shots and the caret in `01` and `07_select_text_double_click_focus`;
+the reference's except its overview (725 px in the dock, pair 19.3 % as before). 9 `runner error` lines, all
+reference-side in `tool-text` (run 40: 7; over the newest run of every unit: 9).
+
+Run 40's totals (on top of runs 39, 38, 37, 36, 35, 34 and 33), for comparison: **48 / 1 / 0 / 0** (proven 1:1 **98.0 %**).
 Step level: 1097 of 1248 measurable steps `ok` on both sides (**87.9 %**; the four units 99 / 116, run 39: 92 / 111,
 with the Firepixel-only step `toolbox/17_ai_tools_normal` counted as `ok` as before); over the 48 units before run 24:
 1088 of 1239 (87.8 %). The 117 steps of run 40 (the 112 of run 39 in these units and five new ones): 99 `ok` on both
@@ -650,6 +676,23 @@ does not enlarge text, and Ctrl+Shift+E, Ctrl+Alt+Shift+S and Ctrl+Shift+I do ot
 machine (TW-126; the reference machine's active set needs a behaviour description). `panel-optimize` shows one real
 deviation: export formats chosen per slice in the Optimize panel are not stored on the slices (TW-128).
 `xs-preferences` clicks stored settings without a fixed start state (TW-127, runner).
+
+**What run 41 found.** F87 changes Firepixel's transform frame of a text as measured, but the run's drag does not reach
+it. **TW-219:** under Modify ▸ Transform ▸ Scale Firepixel's frame of the 60 pt point text "Ag" now lies on its layout box
+× 1.3 (`27_text_scale_tool_frame_open`: the line and the handles at 89/137/185 × 89/136/183, drawn 1 screen pixel up and
+left, the positions RE-34 measured for the reference's handles; run 40: on the bounds 98,98–176,174), and the
+reference again ends at 83.74 pt with the leftover matrix [0.993, 0, 0, 1.005], t 5.085 / 23.883, after its +39/+38 px
+drag from 184,182. Runner R-35, unchanged, still takes Firepixel's handle from the object's bounds and presses at
+176,174, which since F87 lies inside the frame, so Firepixel's Scale tool treats the press as a move: the text stays
+60 pt with the identity and moves to raw 139,138 (row `transform.matrix` [1, 0, 0, 1, 39, 38] with `rememberQuad`). This
+is a runner artefact, recorded as the runner row **TW-221** (R-36: take Firepixel's handle from the frame rule or read
+the overlay's handle position through the bridge), not a regression: F87's engine test pins 83.74 pt and the measured
+matrix for a drag that starts on the handle. TW-219 is therefore not yet confirmed, and `tool-text` keeps the class of
+run 40 (48 / 1 / 0 / 0). **TW-212** stays confirmed on the numeric and script paths (90 pt plain text, 60 pt with
+horizontal scale 1.5, pairs as in run 40). Everything else in the unit reads as in run 40: no step status changed, the
+canvas pairs other than the two `27` pairs are at their run 40 values, Firepixel's other shots are pixel-identical to
+run 40 except the caret, and the reference lost its first character once more (`04_esc_result`, TW-146 rest; 9 `runner
+error` lines, run 40: 7). No reference restart.
 
 **What run 40 found.** F86 is confirmed where the runner's steps reach its fold, and one of the three new paths shows a
 new deviation. **TW-212:** Numeric Transform 150 % turns the 60 pt point text "Ag" into a plain 90 pt text in both
@@ -1136,6 +1179,7 @@ TW-179, fixed in runner R-27); this bug was already in the host's first version.
 | 38 (9 units) | 23 Oct 2026 | 48 of 49 (0 under-measured; 0 real deviations, 1 unclear) | **98.0 %** (48 / 49); 97.9 % over the 48 old units; step level 87.8 % (87.7 % over the 48 old units); canvas pairs 191 / 219 |
 | 39 (9 units) | 23 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.7 % (87.6 % over the 48 old units); canvas pairs 191 / 218 |
 | 40 (4 units) | 23 Oct 2026 | 48 of 49 (0 under-measured; 1 real deviation, 0 unclear) | **98.0 %** (48 / 49); 97.9 % over the 48 old units; step level 87.9 % (87.8 % over the 48 old units); canvas pairs 196 / 225 |
+| 41 (1 unit) | 23 Oct 2026 | 48 of 49 (0 under-measured; 1 real deviation, 0 unclear) | **98.0 %** (48 / 49); 97.9 % over the 48 old units; step level 87.9 % (87.8 % over the 48 old units); canvas pairs 196 / 225 |
 
 The next steps are in [ROADMAP.md](../ROADMAP.md): the human click-test, including the macOS re-test by the tester;
 the text selection and size of TW-146 rest and the text tool reset of TW-165 (moved to the click-test A1-19 on
@@ -1145,13 +1189,13 @@ the text selection and size of TW-146 rest and the text tool reset of TW-165 (mo
 items of TW-195 and the refined TW-192 (A4-43, A4-44) and of tester feedback batch 5 (A4-45 to A4-49; the Pen display
 and the pen cursor variants of TW-202 are reached by no runner step), of the Dither fill edge (A4-50, A4-56) and of
 tester feedback batch 6 (A4-51 to A4-55; run 37 reached TW-204 to TW-208) and of F79 to F86 (A4-60 to A4-65); TW-219
-(the transform frame of a text under the Scale and Free Transform tools is its bounds in Firepixel and about 10 px
-larger in the reference): measure the frame rule (an RE spec), fix it and repeat `tool-text`, then the Scale-tool
-factor of TW-212 follows; TW-217 and TW-218 (F85), which no runner step reaches, for the click-test A4-64; the questions Q-62 (re-measure with real keys) and Q-64 (gradient and pattern
+(the transform frame of a text, measured by RE-35 in RE spec 67 and fixed by F87): runner R-36 for TW-221 (Firepixel's
+Scale-tool handle taken from the frame, not from the object's bounds) and a follow-up run of `tool-text`, which also
+confirms the Scale-tool factor of TW-212, then the click-test A4-66; TW-220 (the transform handle colour, design level); TW-217 and TW-218 (F85), which no runner step reaches, for the click-test A4-64; the questions Q-62 (re-measure with real keys) and Q-64 (gradient and pattern
 fills on text). TW-173 was confirmed by run 31, TW-189 by
 run 32, TW-192 (colours), TW-193, TW-194 and the runner item TW-174 by run 33, and TW-195, the refined follow rules of
 TW-192 and the runner item TW-196 by run 34; run 35 saw TW-202 (the Pointer display of a selected rectangle), TW-200
-(the slider pop-up placement) and TW-201 (the tooltips) without a changed value, run 36 none of TW-204 to TW-208, run 37 confirmed TW-206, TW-207 and the runner items TW-197, TW-210 and TW-211, run 38 TW-205, TW-214, TW-215, the runner item TW-216 and Q-65 (TW-208 in its range), run 39 TW-208 in full (with the runner item Q-66, R-34), run 40 TW-212 on the numeric and script paths (with the fold under the Scale tool, whose factor differs by TW-219); Q-63 is closed; TW-176, TW-177, TW-186 and TW-187 are not
+(the slider pop-up placement) and TW-201 (the tooltips) without a changed value, run 36 none of TW-204 to TW-208, run 37 confirmed TW-206, TW-207 and the runner items TW-197, TW-210 and TW-211, run 38 TW-205, TW-214, TW-215, the runner item TW-216 and Q-65 (TW-208 in its range), run 39 TW-208 in full (with the runner item Q-66, R-34), run 40 TW-212 on the numeric and script paths (with the fold under the Scale tool, whose factor differs by TW-219), run 41 TW-212 again on these paths (TW-219 not reached: the runner's handle position, TW-221); Q-63 is closed; TW-176, TW-177, TW-186 and TW-187 are not
 reached by the runner and stay with the click-test. Run 30 answered the BA-098 question: the tiled canvas shifts no
 sampling position at
 fractional zoom. U-1 rest (PDF layers) and the R3 note of TW-138 were closed on 20 Oct 2026.
