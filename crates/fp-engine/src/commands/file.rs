@@ -166,18 +166,18 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
 
 /// Benennt die Zwischendatei um und wiederholt das bei „Datei wird von einem anderen Prozess
 /// verwendet“ (Windows, Fehler 32: ein Echtzeit-Virenscanner oder Indexdienst hält die frisch
-/// geschriebene Datei für einen Moment) bis zu 20 Mal mit 50 ms Abstand; danach wird die
+/// geschriebene Datei für einen Moment) bis zu 60 Mal mit 100 ms Abstand; danach wird die
 /// Zwischendatei entfernt und der letzte Fehler gemeldet.
 fn rename_retry(tmp: &Path, path: &Path) -> std::io::Result<()> {
-    for attempt in 0..20 {
+    for attempt in 0..60 {
         match std::fs::rename(tmp, path) {
             Ok(()) => return Ok(()),
             Err(e)
-                if attempt < 19
+                if attempt < 59
                     && (e.raw_os_error() == Some(32)
                         || e.kind() == std::io::ErrorKind::PermissionDenied) =>
             {
-                std::thread::sleep(std::time::Duration::from_millis(50));
+                std::thread::sleep(std::time::Duration::from_millis(100));
             }
             Err(e) => {
                 let _ = std::fs::remove_file(tmp);
