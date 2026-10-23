@@ -161,9 +161,11 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
   * Auswahl: `select.set {ids, mode?}`, `select.inRect {rect}`, `select.pointAt {point}`
   * Struktur: `layer.add {name?}`, `layer.setVisible {layer, visible}`, `layer.setActive {layer}`,
     `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`
-  * Bewegen/Transformieren: `edit.move {dx, dy}`, `transform.matrix {matrix}`, `path.setContours {id, contours}`,
+  * Bewegen/Transformieren: `edit.move {dx, dy}`, `transform.matrix {matrix, scaleAttributes?}`, `path.setContours {id, contours}`,
     `modify.transform.numericTransform {mode: scale|resize|rotate, scaleX?, scaleY?, width?, height?, angle?, constrain?, scaleAttributes?}`
-    (`scaleAttributes`, Vorgabe `true`: Strichbreite skaliert mit, wie „Attribute skalieren“ im Dialog),
+    (`scaleAttributes`, Vorgabe `true`: Strichbreite skaliert mit, wie „Attribute skalieren“ im Dialog;
+    `false` lässt außerdem die Füllgriffe im Dokument stehen, auch bei `transform.matrix` und
+    `transform.distort`, außer bei reinem Verschieben),
     `modify.mask.revealAll` / `modify.mask.hideAll` (leere Maske über dem gewählten Objekt)
   * Text und Auswahl: `text.detachFromPath` (Text wird wieder Rahmen fester Breite = Breite vor dem Anfügen,
     mittig über den Pfadgrenzen; der Pfad kommt oben in die Ebene, Auswahl danach [Pfad, Text]),

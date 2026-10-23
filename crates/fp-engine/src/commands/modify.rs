@@ -77,6 +77,23 @@ pub(crate) fn restore_selected_fill_handles(
     Ok(())
 }
 
+/// [`transform_selection`]; with `scale_attrs` off a transformation that is not a pure move leaves the
+/// fill handles in the document ("Scale attributes" off, RE spec 61 §1.5).
+fn transform_keeping_fill_handles(
+    s: &mut Session,
+    m: Matrix3,
+    scale_attrs: bool,
+) -> Result<CommandOutput> {
+    let before = (!scale_attrs && !m.is_translation(1e-6))
+        .then(|| selection_snapshot(s))
+        .flatten();
+    let out = transform_selection(s, m)?;
+    if let Some(before) = before {
+        restore_selected_fill_handles(s, &before)?;
+    }
+    Ok(out)
+}
+
 /// Gewählte Bitmaps nach einer Drehung auf ihre deckenden Pixel beschneiden (re 28 L5: Drehpunkt
 /// war die Mitte der Objektgrenzen vor dem Beschnitt).
 fn trim_selected_bitmaps(s: &mut Session) -> Result<()> {
@@ -2316,6 +2333,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 ParamKind::Bool,
                 "Werkzeug hat gedreht: Bitmaps danach beschneiden (TransformToolsAutoTrim)",
             )
+            .opt_default(
+                "scaleAttributes",
+                ParamKind::Bool,
+                json!(true),
+                "transform the fill handles too; false leaves them in the document (the transform tools pass XformToolXformsBFE)",
+            )
             .run(|s, p| {
                 let m = matrix_from(p, "matrix")?;
                 let m = match p.opt_point("center")? {
@@ -2324,7 +2347,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 };
                 let trim = p.opt_bool("autoTrim")?.unwrap_or(false)
                     && s.prefs.get_bool("TransformToolsAutoTrim", true);
-                let out = transform_selection(s, m)?;
+                let attrs = p.bool_or("scaleAttributes", true)?;
+                let out = transform_keeping_fill_handles(s, m, attrs)?;
                 if trim {
                     trim_selected_bitmaps(s)?;
                 }
@@ -2341,6 +2365,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 ParamKind::Json,
                 "vier Zielpunkte [[x, y] × 4] (lo, ro, ru, lu)",
             )
+            .opt_default(
+                "scaleAttributes",
+                ParamKind::Bool,
+                json!(true),
+                "transform the fill handles too; false leaves them in the document (the transform tools pass XformToolXformsBFE)",
+            )
             .run(|s, p| {
                 let rr = p.rect("rect")?;
                 let q = p.points("quad")?;
@@ -2352,7 +2382,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 }
                 let m = Matrix3::rect_to_quad(&rr, &[q[0], q[1], q[2], q[3]])
                     .ok_or_else(|| EngineError::Failed(fp_i18n::t("err-degenerate-quad")))?;
-                transform_selection(s, m)
+                transform_keeping_fill_handles(s, m, p.bool_or("scaleAttributes", true)?)
             }),
     );
 

@@ -178,7 +178,12 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   no suitable target (e.g. *Simplify...* without a path) report this with a warning, like the
   original; "Don't show again" switches it off.
 - *Modify ▸ Transform ▸ Numeric Transform...:* with "Scale attributes" the stroke width grows with
-  the scaling (rotating never changes it); the checkbox is remembered.
+  the scaling (rotating never changes it) and the fill handles (gradient and pattern) are transformed
+  with the object; without it the fill handles stay where they are in the document. The checkbox is
+  remembered (preference `NumericXformXformsBFE`, also after Cancel). The Scale, Skew and Distort
+  tools and Free Transform follow *Preferences ▸ General ▸ Scale strokes and effects*
+  (`XformToolXformsBFE`, on by default) for the fill handles in the same way. A pure move always
+  takes the fill handles along.
 - *Modify ▸ Mask ▸ Reveal All / Hide All* puts an empty mask over the selected object. The Layers
   panel and the inspector still show the object itself (e.g. the bitmap) with the mask as a second
   thumbnail.

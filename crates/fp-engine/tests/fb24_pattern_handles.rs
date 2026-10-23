@@ -170,3 +170,117 @@ fn scale_moves_handles_only_with_scale_attributes() {
         "{h:?}"
     );
 }
+
+fn stroke_diameter(s: &Session, id: ElementId) -> Option<u32> {
+    fp_engine::docops::path_attrs_of(&el(s, id))
+        .and_then(|a| a.brush.as_ref().map(|b| b.diameter as u32))
+}
+
+/// Scale tool: drag the bottom-right corner of the rectangle (100,100)–(260,220) to (420,340)
+/// (scale 2 about the top-left corner) and confirm with Enter.
+fn scale_by_tool(s: &mut Session) {
+    s.set_tool(fp_engine::ToolId::Scale).expect("Scale tool");
+    events(
+        s,
+        &[
+            fp_engine::ToolEvent::down(260.0, 220.0),
+            fp_engine::ToolEvent::drag(340.0, 280.0),
+            fp_engine::ToolEvent::drag(420.0, 340.0),
+            fp_engine::ToolEvent::up(420.0, 340.0),
+            fp_engine::ToolEvent::key(fp_engine::ToolKey::Enter),
+        ],
+    );
+}
+
+/// TW-207 rest (RE spec 61 §1.5): the transform tools transform the fill handles only while
+/// `XformToolXformsBFE` ("Scale strokes and effects", default on) is on; off, the handles stay in
+/// the document. The stroke width rule of the tools does not depend on the flag.
+#[test]
+fn transform_tools_honour_xform_tool_pref_for_fill_handles() {
+    write_pattern();
+    // on (default): the handles scale with the shape about the top-left corner (100,100)
+    let mut s = doc_session(600.0, 400.0);
+    let r = pattern_rect(&mut s);
+    let h0 = handles(&s, r);
+    assert!(s.prefs.get_bool("XformToolXformsBFE", false), "default on");
+    scale_by_tool(&mut s);
+    assert!(
+        rect_approx(bounds(&s, r), fp_geom::Rect::new(100.0, 100.0, 420.0, 340.0)),
+        "{:?}",
+        bounds(&s, r)
+    );
+    let h = hv(handles(&s, r));
+    let want = [(260.0, 220.0), (292.0, 220.0), (260.0, 196.0)];
+    for (a, b) in h.iter().zip(want) {
+        assert!(approx(a.0, b.0) && approx(a.1, b.1), "{h:?}");
+    }
+    let stroke_on = stroke_diameter(&s, r);
+
+    // off: the shape is scaled, the handles stay in the document
+    let mut s = doc_session(600.0, 400.0);
+    s.prefs
+        .set("XformToolXformsBFE", fp_engine::PrefValue::Bool(false));
+    let r = pattern_rect(&mut s);
+    assert_eq!(hv(handles(&s, r)), hv(h0));
+    scale_by_tool(&mut s);
+    assert!(
+        rect_approx(bounds(&s, r), fp_geom::Rect::new(100.0, 100.0, 420.0, 340.0)),
+        "the shape itself is scaled: {:?}",
+        bounds(&s, r)
+    );
+    assert_eq!(hv(handles(&s, r)), hv(h0), "flag off: handles unchanged");
+    assert_eq!(stroke_diameter(&s, r), stroke_on, "stroke width rule unchanged");
+    // undo puts the shape back, the handles were never moved
+    ex(&mut s, "edit.undo", json!({}));
+    assert_eq!(bounds(&s, r).right, 260.0);
+    assert_eq!(hv(handles(&s, r)), hv(h0));
+
+    // Distort tool with the flag off: the handles stay too
+    s.set_tool(fp_engine::ToolId::Distort).expect("Distort tool");
+    events(
+        &mut s,
+        &[
+            fp_engine::ToolEvent::down(260.0, 220.0),
+            fp_engine::ToolEvent::drag(270.0, 225.0),
+            fp_engine::ToolEvent::drag(280.0, 230.0),
+            fp_engine::ToolEvent::up(280.0, 230.0),
+            fp_engine::ToolEvent::key(fp_engine::ToolKey::Enter),
+        ],
+    );
+    assert!(bounds(&s, r).right > 260.0, "distorted");
+    assert_eq!(hv(handles(&s, r)), hv(h0), "distort, flag off");
+
+    // the numeric transform does not read the tool flag (its own parameter, default on)
+    ex(&mut s, "edit.undo", json!({}));
+    ex(
+        &mut s,
+        "modify.transform.numericTransform",
+        json!({"mode": "scale", "scaleX": 150, "scaleY": 150}),
+    );
+    assert_eq!(
+        hv(handles(&s, r)),
+        [(180.0, 160.0), (204.0, 160.0), (180.0, 142.0)]
+    );
+}
+
+/// `transform.matrix` keeps taking the fill handles along on a pure move even with
+/// `scaleAttributes` off.
+#[test]
+fn transform_matrix_move_takes_handles_along_without_scale_attributes() {
+    write_pattern();
+    let mut s = doc_session(600.0, 400.0);
+    let r = pattern_rect(&mut s);
+    let h0 = handles(&s, r);
+    ex(
+        &mut s,
+        "transform.matrix",
+        json!({"matrix": [1, 0, 0, 1, 10, 5], "scaleAttributes": false}),
+    );
+    assert_eq!(hv(handles(&s, r)), shifted(h0, 10.0, 5.0));
+    ex(
+        &mut s,
+        "transform.matrix",
+        json!({"matrix": [2, 0, 0, 2, 0, 0], "scaleAttributes": false}),
+    );
+    assert_eq!(hv(handles(&s, r)), shifted(h0, 10.0, 5.0), "scale: handles stay");
+}

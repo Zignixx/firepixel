@@ -1028,6 +1028,9 @@ pub fn show_image_size(ctx: &egui::Context, st: &mut AppState) {
 
 /// Gemerkte Werte von „Numerisch transformieren“ (eigene Schlüssel, technisch englisch).
 const NT_MODE: &str = "NumericTransformMode";
+/// "Scale attributes" of the Numeric Transform dialog: its own preference, separate from the
+/// transform tools' `XformToolXformsBFE` (RE spec 61 §1.5).
+const NT_SCALE_ATTRS: &str = "NumericXformXformsBFE";
 const NT_SCALE_X: &str = "NumericTransformScaleX";
 const NT_SCALE_Y: &str = "NumericTransformScaleY";
 const NT_ANGLE: &str = "NumericTransformAngle";
@@ -1070,7 +1073,7 @@ impl NumericTransformDialog {
             cur_w: b.width() as f64,
             cur_h: b.height() as f64,
             angle: p.get_real(NT_ANGLE, 0.0).clamp(-360.0, 360.0),
-            scale_attrs: p.get_bool("XformToolXformsBFE", true),
+            scale_attrs: p.get_bool(NT_SCALE_ATTRS, true),
             constrain: p.get_bool("TransformConstrain", true),
             interpolate: true,
         })
@@ -1082,10 +1085,7 @@ impl NumericTransformDialog {
             "TransformConstrain",
             fp_engine::PrefValue::Bool(self.constrain),
         );
-        p.set(
-            "XformToolXformsBFE",
-            fp_engine::PrefValue::Bool(self.scale_attrs),
-        );
+        p.set(NT_SCALE_ATTRS, fp_engine::PrefValue::Bool(self.scale_attrs));
         p.set(NT_MODE, fp_engine::PrefValue::Int(self.mode as i64));
         match self.mode {
             0 => {
@@ -1159,6 +1159,8 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
         return;
     };
     let mut result = None;
+    // the checkbox is the preference itself: it stays set after Cancel (RE spec 61 §1.5)
+    let mut attrs_toggled = None;
     let modes = tl(&[
         "dlg-numeric-scale",
         "dlg-numeric-resize",
@@ -1329,6 +1331,7 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
                 d.mode != 2,
             ) {
                 d.scale_attrs = b;
+                attrs_toggled = Some(b);
             }
             if let Some(b) = fields::checkbox(
                 ui,
@@ -1368,6 +1371,11 @@ pub fn show_numeric_transform(ctx: &egui::Context, st: &mut AppState) {
             }
         },
     );
+    if let Some(b) = attrs_toggled {
+        st.session
+            .prefs
+            .set(NT_SCALE_ATTRS, fp_engine::PrefValue::Bool(b));
+    }
     match (result, r) {
         (Some(true), _) => {
             st.dialogs.numeric_transform = None;
@@ -1438,5 +1446,46 @@ mod tests {
                 .scale_attrs,
             "gemerkt"
         );
+    }
+
+    /// TW-207 (RE spec 61 §1.5): the checkbox reflects `NumericXformXformsBFE`, not the transform
+    /// tools' `XformToolXformsBFE`, and OK writes only the dialog's own preference.
+    #[test]
+    fn numeric_transform_scale_attributes_use_numeric_pref() {
+        let mut st = st_with_doc();
+        let _ = st.session.execute(
+            "draw.rectangle",
+            json!({"rect": [10, 10, 60, 40], "fillColor": "#808080"}),
+        );
+        st.session
+            .prefs
+            .set("NumericXformXformsBFE", fp_engine::PrefValue::Bool(false));
+        st.session
+            .prefs
+            .set("XformToolXformsBFE", fp_engine::PrefValue::Bool(true));
+        let mut d = NumericTransformDialog::new(&st).expect("Dialog");
+        assert!(!d.scale_attrs, "default from NumericXformXformsBFE");
+        st.session
+            .prefs
+            .set("NumericXformXformsBFE", fp_engine::PrefValue::Bool(true));
+        st.session
+            .prefs
+            .set("XformToolXformsBFE", fp_engine::PrefValue::Bool(false));
+        assert!(
+            NumericTransformDialog::new(&st)
+                .expect("Dialog")
+                .scale_attrs,
+            "the tool preference does not count"
+        );
+        d.scale_attrs = false;
+        d.remember(&mut st.session.prefs);
+        assert!(!st.session.prefs.get_bool("NumericXformXformsBFE", true));
+        assert!(
+            !st.session.prefs.get_bool("XformToolXformsBFE", true),
+            "the tool preference stays untouched"
+        );
+        d.scale_attrs = true;
+        d.remember(&mut st.session.prefs);
+        assert!(!st.session.prefs.get_bool("XformToolXformsBFE", true));
     }
 }

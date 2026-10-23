@@ -2130,8 +2130,11 @@ impl TransformTool {
 
 impl TransformTool {
     /// Übernehmen der Vorschau als **ein** Befehl (Matrix, Verzerren bzw. 9-Slice).
-    fn commit_pending(&mut self) -> Option<Invocation> {
+    fn commit_pending(&mut self, ctx: &ToolContext) -> Option<Invocation> {
         let (orig, q, _) = self.pending.take()?;
+        // "Scale strokes and effects" (`XformToolXformsBFE`, default on): off, the fill handles stay
+        // in the document (RE spec 61 §1.5)
+        let attrs = ctx.prefs.get_bool("XformToolXformsBFE", true);
         let rotated = std::mem::take(&mut self.rotated);
         self.bounds = None;
         self.overlay.clear();
@@ -2156,13 +2159,13 @@ impl TransformTool {
                 // nach einer Drehung beschneidet das Original Bitmaps auf die deckenden Pixel (re 28 L5)
                 Some(Invocation::new(
                     "transform.matrix",
-                    json!({"matrix": matrix_json(&m), "step": "transform", "autoTrim": rotated}),
+                    json!({"matrix": matrix_json(&m), "step": "transform", "autoTrim": rotated, "scaleAttributes": attrs}),
                 ))
             }
             // Skalieren, Drehen, Neigen und Verzerren heißen im Original immer „Transformieren“ (PAR 08/11)
             _ => Some(Invocation::new(
                 "transform.distort",
-                json!({"rect": rect_json(orig), "quad": q.iter().map(|p| pt_json(*p)).collect::<Vec<_>>(), "step": "transform"}),
+                json!({"rect": rect_json(orig), "quad": q.iter().map(|p| pt_json(*p)).collect::<Vec<_>>(), "step": "transform", "scaleAttributes": attrs}),
             )),
         }
     }
@@ -2395,7 +2398,7 @@ impl ToolMachine for TransformTool {
             }
             | ToolInput::Key(ToolKey::Enter) => {
                 self.drag = None;
-                let cmds: Vec<Invocation> = self.commit_pending().into_iter().collect();
+                let cmds: Vec<Invocation> = self.commit_pending(ctx).into_iter().collect();
                 self.bounds = None;
                 self.overlay.clear();
                 ToolResponse {
@@ -2437,10 +2440,10 @@ impl ToolMachine for TransformTool {
         }
     }
 
-    fn finish(&mut self, _ctx: &ToolContext) -> ToolResponse {
+    fn finish(&mut self, ctx: &ToolContext) -> ToolResponse {
         // Werkzeugwechsel bzw. Menübefehl übernimmt die Vorschau
         self.drag = None;
-        ToolResponse::commit(self.commit_pending().into_iter().collect())
+        ToolResponse::commit(self.commit_pending(ctx).into_iter().collect())
     }
 
     fn overlay(&self) -> Vec<Overlay> {

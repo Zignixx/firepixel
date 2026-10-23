@@ -189,7 +189,12 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   kein passendes Ziel finden (z. B. *Vereinfachen…* ohne Pfad), melden das wie im Original mit einer
   Warnung; mit „Nicht mehr anzeigen“ lässt sie sich abschalten.
 - *Modifizieren ▸ Transformieren ▸ Numerisch transformieren…:* Mit „Attribute skalieren“ wächst die
-  Strichbreite beim Skalieren mit (Drehen ändert sie nie); der Haken wird gemerkt.
+  Strichbreite beim Skalieren mit (Drehen ändert sie nie), und die Füllgriffe (Verlauf und Muster)
+  werden mit dem Objekt transformiert; ohne den Haken bleiben die Füllgriffe an ihrer Stelle im
+  Dokument. Der Haken wird gemerkt (Voreinstellung `NumericXformXformsBFE`, auch nach „Abbrechen“).
+  Die Werkzeuge Skalieren, Neigen und Verzerren sowie Frei transformieren richten sich bei den
+  Füllgriffen ebenso nach *Voreinstellungen ▸ Allgemein ▸ Pinselstriche und Effekte skalieren*
+  (`XformToolXformsBFE`, Vorgabe ein). Reines Verschieben nimmt die Füllgriffe immer mit.
 - *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
   gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
   mit der Maske als zweiter Miniatur.

@@ -160,9 +160,11 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
   * Selection: `select.set {ids, mode?}`, `select.inRect {rect}`, `select.pointAt {point}`
   * Structure: `layer.add {name?}`, `layer.setVisible {layer, visible}`, `layer.setActive {layer}`,
     `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`
-  * Moving/transforming: `edit.move {dx, dy}`, `transform.matrix {matrix}`, `path.setContours {id, contours}`,
+  * Moving/transforming: `edit.move {dx, dy}`, `transform.matrix {matrix, scaleAttributes?}`, `path.setContours {id, contours}`,
     `modify.transform.numericTransform {mode: scale|resize|rotate, scaleX?, scaleY?, width?, height?, angle?, constrain?, scaleAttributes?}`
-    (`scaleAttributes`, default `true`: the stroke width scales along, like "Scale attributes" in the dialog),
+    (`scaleAttributes`, default `true`: the stroke width scales along, like "Scale attributes" in the dialog;
+    `false` also leaves the fill handles in the document, for `transform.matrix` and `transform.distort` too,
+    except on a pure move),
     `modify.mask.revealAll` / `modify.mask.hideAll` (empty mask over the selected object)
   * Text and selection: `text.detachFromPath` (the text becomes a fixed-width block again, width = width
     before attaching, centered on the path bounds; the path goes to the top of the layer, selection
