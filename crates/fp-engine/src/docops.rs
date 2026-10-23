@@ -644,21 +644,40 @@ pub fn bottom_unlocked_layer(doc: &Document, page: usize) -> Option<LayerId> {
         .map(|l| l.id)
 }
 
-/// Current layer after the current layer `current` became locked (RE spec 64 §3 rule 7): the next
-/// unlocked layer above it in flat order (the web layer included), else flat index 0.
-pub fn next_unlocked_above(
-    doc: &Document,
-    page: usize,
-    frame: usize,
-    current: LayerId,
-) -> Option<LayerId> {
+/// The current layer for the chosen layer `want` (RE spec 65 rule 3): the first unlocked layer in
+/// flat order from `want` upward (`want` itself first, sublayers inheriting their parent's lock,
+/// the web layer included), then from flat index 0 up to below `want`; with every layer locked flat
+/// index 0. `None` when `want` is not in the page's flat list.
+pub fn resolve_layer(doc: &Document, page: usize, frame: usize, want: LayerId) -> Option<LayerId> {
     let list = flat_layers(doc, page, frame);
-    let at = list.iter().position(|l| l.id == current).unwrap_or(0);
-    list.iter()
-        .skip(at + 1)
+    let at = list.iter().position(|l| l.id == want)?;
+    list[at..]
+        .iter()
+        .chain(&list[..at])
         .find(|l| !l.locked)
         .or_else(|| list.first())
         .map(|l| l.id)
+}
+
+/// Does the layer `l` (or one of its sublayers, at any depth) have the id `id`?
+pub fn layer_tree_contains(l: &Layer, id: LayerId) -> bool {
+    l.id == id
+        || l.cels.iter().any(|c| {
+            c.elements.iter().any(|e| match &e.kind {
+                ElementKind::SubLayer(sl) => layer_tree_contains(sl, id),
+                _ => false,
+            })
+        })
+}
+
+/// Does the layer hold objects of its own in the state (its sublayers do not count)? The Layers
+/// panel draws the selection circle of a layer without them grey (RE spec 65 rule 2).
+pub fn layer_has_own_objects(l: &Layer, frame: usize) -> bool {
+    l.cel(frame).or_else(|| l.cel(0)).is_some_and(|c| {
+        c.elements
+            .iter()
+            .any(|e| !matches!(e.kind, ElementKind::SubLayer(_)))
+    })
 }
 
 /// Is the layer or sublayer `id` locked in the state (itself or through a parent)?

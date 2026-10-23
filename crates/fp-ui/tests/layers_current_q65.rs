@@ -1,5 +1,5 @@
 //! RE spec 64 §2.5 and Q-65 in the Layers panel: an empty circle on every layer row, filled where the
-//! layer holds a selected object (grey on the web layer), the circle does not mark the current layer;
+//! layer holds a selected object (grey on a layer without objects of its own), the circle does not mark the current layer;
 //! with nothing selected the current layer's row is highlighted and bold, with a selection the
 //! selected object rows are highlighted and bold and the current layer plus the layers of the
 //! selection are tinted light; a plain layer-row click writes one "Layer Change" row; on opening the
@@ -195,11 +195,12 @@ fn panel_dots_tints_and_bold_as_measured() {
     assert_eq!([dot(&h, "L1"), dot(&h, "L2"), dot(&h, "L3")].map(|d| d.map(|x| x.0)), [Some(true), Some(true), Some(false)]);
     assert!(!bold(&h, "L3"));
     assert_eq!([tint(&h, "r1"), tint(&h, "r2"), tint(&h, "r3")], ["dark", "dark", "-"]);
-    // a selected slice fills the web layer's circle (grey)
+    // a selected slice fills the web layer's circle, black once the web layer holds an object
+    // (RE spec 65 rule 2)
     let sl = h.state_mut().state.session.execute("web.addSlice", json!({"shape": "rect", "rect": [500, 300, 560, 360]})).expect("slice").value["id"].as_u64().expect("id");
     h.state_mut().state.session.execute("select.set", json!({"ids": [sl]})).expect("sel");
     h.run_steps(5);
-    assert_eq!(dot(&h, WEB), Some((true, col.icon_disabled)));
+    assert_eq!(dot(&h, WEB), Some((true, col.icon_fg)));
     // deselecting: back to the current layer highlighted
     h.state_mut().state.session.execute("select.none", json!({})).expect("none");
     h.run_steps(5);

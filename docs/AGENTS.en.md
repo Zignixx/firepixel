@@ -159,7 +159,11 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     start point by `tolerance` 0…255, default 32), `bitmap.paint`, `bitmap.erase`
   * Selection: `select.set {ids, mode?}`, `select.inRect {rect}`, `select.pointAt {point}`
   * Structure: `layer.add {name?}`, `layer.setVisible {layer, visible}`, `layer.setActive {layer}`,
-    `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`
+    `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`,
+    `selection.moveToLayer {layer, copy?}` (the Layers panel's selection circle: the whole selection as one
+    block to the top of the layer or sub-layer, `copy` = Alt; the moved objects or copies stay selected, the
+    layer becomes current, one *Layer Change* step; nothing happens with nothing selected, a target that
+    already holds a selected object, a locked target, the web layer or a selected slice/hotspot)
   * Moving/transforming: `edit.move {dx, dy}`, `transform.matrix {matrix, scaleAttributes?}`, `path.setContours {id, contours}`,
     `modify.transform.numericTransform {mode: scale|resize|rotate, scaleX?, scaleY?, width?, height?, angle?, constrain?, scaleAttributes?}`
     (`scaleAttributes`, default `true`: the stroke width scales along, like "Scale attributes" in the dialog;
@@ -304,7 +308,8 @@ As in the original:
   (±2147483648). For elements with a vector mask it is the mask area.
 * `dom.guides.locked` reads the effective lock (*View ▸ Guides ▸ Lock Guides*).
 * All layer **numbers** count flat like `dom.layers`: number `i` in `currentLayerNum`, `setLayerVisible(i)`,
-  `setLayerLocked`, `deleteLayer`, `getParentLayerNum`, `moveSelectionToLayer` … means `dom.layers[i]`. A sub-layer
+  `setLayerLocked`, `deleteLayer`, `getParentLayerNum`, `moveSelectionToLayer` … means `dom.layers[i]`
+  (`moveSelectionToLayer(i, copy)` runs `selection.moveToLayer`: one block on top, the selection stays). A sub-layer
   can be the active layer: `currentLayerNum = <sub-layer>` activates it and reads it back;
   `addNewSubLayer(index, name)` creates the sub-layer under `index` (nested), activates it and returns the name;
   `addNewLayer(name, shared)` returns the name. `duplicateLayer`/`reorderLayer` with a sub-layer stay within its

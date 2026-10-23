@@ -387,9 +387,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         }
     };
     // RE spec 64 §2.5: a circle at the right of every layer row, filled where the layer holds a
-    // selected object; it does not mark the current layer (grey on the web layer)
-    let paint_dot = |ui: &Ui, center: Pos2, id: LayerId, web: bool| {
-        let col = if web { c.icon_disabled } else { c.icon_fg };
+    // selected object; it does not mark the current layer. RE spec 65 rule 2: grey where the layer
+    // has no objects of its own (its sublayers do not count), the web layer alike
+    let paint_dot = |ui: &Ui, center: Pos2, id: LayerId, grey: bool| {
+        let col = if grey { c.icon_disabled } else { c.icon_fg };
         ui.painter()
             .circle_stroke(center, 4.5, Stroke::new(1.0, col));
         if sel_layers.contains(&id) {
@@ -619,12 +620,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 );
             }
             // Kennzeichen rechts: über Status geteilt / geteilte Ebene / Masterseite; the web layer
-            // (always shared across states) shows its grey selection circle (RE spec 64 §2.5)
+            // (always shared across states) shows its selection circle (RE spec 64 §2.5)
             let mark = Rect::from_center_size(
                 pos2(rect.right() - 11.0, rect.center().y),
                 vec2(12.0, 12.0),
             );
-            if !web && (l.shared_across_frames || rl.origin != LayerOrigin::Own) {
+            let dot_shown = web || !(l.shared_across_frames || rl.origin != LayerOrigin::Own);
+            if !dot_shown {
                 glyphs::paint(
                     ui.painter(),
                     mark,
@@ -637,7 +639,12 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     true,
                 );
             } else {
-                paint_dot(ui, mark.center(), l.id, web);
+                paint_dot(
+                    ui,
+                    mark.center(),
+                    l.id,
+                    !fp_engine::docops::layer_has_own_objects(l, frame),
+                );
             }
             let kind = RowKind::Layer {
                 id: l.id,
@@ -674,6 +681,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     } else {
                         toggle_flip = Some(l.id.0);
                     }
+                } else if editable && dot_shown && mark.expand(2.0).contains(p) {
+                    // RE spec 65 rule 1 (TW-217): the circle moves the selection into this layer
+                    // (Alt: copies); Shift and Ctrl change nothing; the engine leaves the no-op
+                    // cases (nothing selected, filled circle, locked target, web layer) alone
+                    actions.push(Action::Run(
+                        "selection.moveToLayer".into(),
+                        json!({"layer": l.id.0, "copy": alt}),
+                    ));
                 } else if editable {
                     // a click selects the layer's own objects, not those of its sublayers (re 28
                     // S3); Shift ranges to them, Ctrl toggles them; a locked layer ignores it (re 63)
@@ -832,7 +847,12 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         if sl.shared_across_frames {
                             glyphs::paint(ui.painter(), mark2, Glyph::Distribute, &theme, true);
                         } else {
-                            paint_dot(ui, mark2.center(), sl.id, false);
+                            paint_dot(
+                                ui,
+                                mark2.center(),
+                                sl.id,
+                                !fp_engine::docops::layer_has_own_objects(sl, frame),
+                            );
                         }
                         // Umbenennen per Doppelklick wie bei Ebenen und Objekten (fixg5 Q-05)
                         let renaming = rename.as_ref().is_some_and(
@@ -906,6 +926,15 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                 } else {
                                     toggle_flip = Some(sub_key(e.id));
                                 }
+                            } else if editable
+                                && !sl.shared_across_frames
+                                && mark2.expand(2.0).contains(p)
+                            {
+                                // RE spec 65 rule 1: the circle as on a layer row
+                                actions.push(Action::Run(
+                                    "selection.moveToLayer".into(),
+                                    json!({"layer": sl.id.0, "copy": alt}),
+                                ));
                             } else if editable {
                                 // like a layer row: the sublayer becomes current (new objects land
                                 // in it) and its own objects are selected (B-9); Shift/Ctrl as on a

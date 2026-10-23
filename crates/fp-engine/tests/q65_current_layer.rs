@@ -398,9 +398,9 @@ fn lock_rule_moves_up_or_to_index_0() {
     assert_eq!(cur(&m.s), w);
     lock(&mut m.s, w, true);
     assert_eq!(cur(&m.s), m.l[0]);
-    // unlocking moves nothing
+    // unlocking the chosen layer brings it back (RE spec 65 rule 3, U12/U22)
     lock(&mut m.s, m.l[2], false);
-    assert_eq!(cur(&m.s), m.l[0]);
+    assert_eq!(cur(&m.s), m.l[2]);
 }
 
 #[test]

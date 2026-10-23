@@ -71,7 +71,7 @@ pub use error::{EngineError, Result};
 pub use history::{History, HistoryStep, RecordedCommand, StepKey};
 pub use prefs::{PrefValue, Preferences, Theme};
 pub use selection::{Clipboard, PointRef, SelectMode, Selection, SelectionHistory};
-pub use session::{DocId, DocumentState, ScriptHost, Session, SessionEvent};
+pub use session::{DocId, DocumentState, PageKey, ScriptHost, Session, SessionEvent};
 pub use shortcuts::{Shortcut, ShortcutSet};
 pub use tool_follow::ToolStyle;
 pub use tools::{Modifiers, Overlay, ToolEvent, ToolId, ToolKey, ToolResponse};

@@ -1064,6 +1064,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let n = d.doc.pages.len() + 1;
                     let name =
                         name.unwrap_or_else(|| fp_i18n::tr!("msg-default-page", n = n.to_string()));
+                    d.remember_page_layer();
                     let doc = Arc::make_mut(&mut d.doc);
                     let at = doc.add_page(&name);
                     if let Some(pg) = doc.pages.get_mut(at) {
@@ -1071,7 +1072,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                     d.page = at;
                     d.frame = 0;
-                    d.layer = docops::top_normal_layer(&d.doc, at);
+                    // a new page starts on its flat layer 0 (RE spec 65 P8)
+                    d.choose_layer(
+                        docops::flat_layers(&d.doc, at, 0)
+                            .first()
+                            .map(|l| l.id)
+                            .or_else(|| docops::top_normal_layer(&d.doc, at)),
+                    );
                     d.selection.clear();
                     Ok(CommandOutput::doc_with(json!({"page": at})))
                 })

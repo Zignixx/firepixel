@@ -218,54 +218,6 @@ fn move_sublayer(
     })
 }
 
-/// Verschiebt Elemente oben in eine Unterebene (aktueller Status), Reihenfolge bleibt.
-/// Die Unterebene selbst und ihre Vorfahren bleiben, wo sie sind.
-fn move_into_sublayer(doc: DocId, ids: &[ElementId], sub: ElementId) -> FwResult<()> {
-    super::edit_doc(doc, |d| {
-        let (page, frame) = (d.page, d.frame);
-        let m = d.doc_mut();
-        let Some(target) = fp_engine::docops::find_on_page(m, page, sub) else {
-            return;
-        };
-        // nicht die Unterebene in sich selbst verschieben
-        let blocked: Vec<ElementId> = ids
-            .iter()
-            .copied()
-            .filter(|id| {
-                *id == sub
-                    || fp_engine::docops::find_on_page(m, page, *id).is_some_and(|p| {
-                        target.steps.starts_with(&p.steps) && p.slot == target.slot
-                    })
-            })
-            .collect();
-        let movable: Vec<ElementId> = ids
-            .iter()
-            .copied()
-            .filter(|id| !blocked.contains(id))
-            .collect();
-        // in Stapelfolge (oben zuerst) wie in der Ebene
-        let order: Vec<ElementId> = fp_engine::docops::selectable_ids(m, page, frame)
-            .into_iter()
-            .filter(|i| movable.contains(i))
-            .collect();
-        let mut removed = fp_engine::docops::remove_ids(m, page, &movable);
-        removed.sort_by_key(|(_, e)| order.iter().position(|i| *i == e.id).unwrap_or(usize::MAX));
-        let els: Vec<Arc<fp_model::Element>> = removed.into_iter().map(|(_, e)| e).collect();
-        fp_engine::docops::edit_by_id(m, page, sub, |e| {
-            if let ElementKind::SubLayer(l) = &mut e.kind {
-                let l = Arc::make_mut(l);
-                let ci = if frame < l.cels.len() { frame } else { 0 };
-                if let Some(c) = l.cels.get_mut(ci) {
-                    let c = Arc::make_mut(c);
-                    for (k, x) in els.into_iter().enumerate() {
-                        c.elements.insert(k.min(c.elements.len()), x);
-                    }
-                }
-            }
-        });
-    })
-}
-
 fn pt_arg(a: &Arg) -> FwResult<(f64, f64)> {
     a.point()
         .ok_or_else(|| FwErr::Hr(hr::E_BAD_PARAM_TYPE, "Punkt".into()))
@@ -766,15 +718,15 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             if ids.is_empty() {
                 return u();
             }
-            // layerIndex flach wie `dom.layers` (Unterebenen mitgezählt, Befund F6-1)
-            let (target, sub) = if name == "moveSelectionToNewLayer" {
+            // layerIndex flach wie `dom.layers` (Unterebenen mitgezählt, Befund F6-1); bei einer
+            // Unterebene die ID ihrer inneren Ebene
+            let target = if name == "moveSelectionToNewLayer" {
                 exec(Some(doc), "layer.add", json!({}))?;
-                (layer_id(doc, -1)?, None)
+                layer_id(doc, -1)?
             } else if a(0).i64() < 0 {
-                (layer_id(doc, -1)?, None)
+                layer_id(doc, -1)?
             } else {
-                let e = flat_entry(doc, a(0).i64())?;
-                (e.id, e.sub)
+                flat_entry(doc, a(0).i64())?.id
             };
             let Some(layer) = target else {
                 return Err(FwErr::bad("Ebene"));
@@ -784,21 +736,13 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             } else {
                 a(0).bool()
             };
-            if copy {
-                exec(Some(doc), "edit.duplicate", json!({}))?;
-            }
-            let ids = selection(doc)?;
-            if let Some(sub) = sub {
-                move_into_sublayer(doc, &ids, sub)?;
-                return u();
-            }
-            for (k, id) in ids.iter().enumerate() {
-                exec(
-                    Some(doc),
-                    "pi.element.moveTo",
-                    json!({"id": id.0, "layer": layer, "index": k}),
-                )?;
-            }
+            // RE spec 65 rule 1: the selection as one block to the top of the layer (elementIndex
+            // -1), the moved objects or the copies stay selected, the layer becomes current
+            exec(
+                Some(doc),
+                "selection.moveToLayer",
+                json!({"layer": layer, "copy": copy}),
+            )?;
             u()
         }
         "duplicateLayer" => {

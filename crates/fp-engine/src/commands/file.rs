@@ -528,7 +528,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 // like opening (RE spec 64 §3 rule 1): page 0, state 0, bottom-most unlocked layer
                 d.page = 0;
                 d.frame = 0;
-                d.layer = crate::docops::bottom_unlocked_layer(&d.doc, 0);
+                d.choose_layer(crate::docops::bottom_unlocked_layer(&d.doc, 0));
+                d.page_layers.clear();
                 d.generation += 1;
                 d.saved_generation = d.generation;
                 let (id, g) = (d.id, d.generation);

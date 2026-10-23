@@ -1113,6 +1113,7 @@ cmd-layer-setVisible = Ebene ein-/ausblenden
 cmd-layer-setLocked = Ebene sperren
 cmd-layer-setShared = Ebene über Status teilen
 cmd-layer-setActive = Ebenenänderung
+cmd-selection-moveToLayer = Ebenenänderung
 cmd-layer-move = Ebene verschieben
 cmd-layer-duplicate = Ebene duplizieren
 cmd-page-add = Seite hinzufügen

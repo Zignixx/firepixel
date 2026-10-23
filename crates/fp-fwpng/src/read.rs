@@ -608,7 +608,13 @@ pub fn read_layer(v: &[RawNode], ctx: &mut ReadCtx) -> Layer {
     if let Some(cl) = r.strict_list(k!(b"CLLv"), k!(b"CELv")) {
         let mut s = Rd::new(cl);
         for n in s.take_all(k!(b"CELv")) {
-            cels.push(Arc::new(read_cel(n.children(), ctx)));
+            let mut cel = read_cel(n.children(), ctx);
+            // TW-218 (RE spec 65 rule 4): the file keeps the web layer's lock (`LCKb 1`), but the
+            // reference application drops it on open; normal layers and sublayers keep theirs
+            if web {
+                cel.locked = false;
+            }
+            cels.push(Arc::new(cel));
         }
         cels_extra = ctx.finish(s);
     }

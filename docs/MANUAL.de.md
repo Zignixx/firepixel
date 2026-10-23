@@ -349,13 +349,23 @@ Wichtige Bedienfelder:
   einen Schritt *Ebenenänderung* (Rückgängig stellt aktuelle Ebene und Auswahl zurück). Besteht die
   Auswahl danach aus genau einem Objekt (Bedienfeld, Leinwand, Auswahlrahmen, Alles auswählen,
   Skript), wird dessen Ebene oder Unterebene die aktuelle Ebene; bei zwei und mehr Objekten bleibt die
-  aktuelle Ebene. Sperren der aktuellen Ebene macht die nächste ungesperrte Ebene darüber (auch die
-  Webebene) zur aktuellen. Eine Datei öffnet auf Seite 1 und Status 1 mit der untersten ungesperrten
+  aktuelle Ebene. Aktuell ist stets die erste ungesperrte Ebene ab der gewählten aufwärts (Unterebenen
+  teilen die Sperre ihrer Elternebene, die Webebene zählt mit), mit Umlauf zur untersten Ebene: Sperren
+  der gewählten Ebene rückt die aktuelle nach oben, Entsperren holt sie zurück. Jede Seite merkt sich
+  ihre gewählte Ebene (der erste Besuch nach dem Öffnen beginnt auf der untersten ungesperrten Ebene,
+  eine neue Seite auf ihrer ersten Ebene); ist die aktuelle Ebene nach einem Statuswechsel gesperrt,
+  wird die nächste ungesperrte darüber die gewählte. Eine Datei öffnet auf Seite 1 und Status 1 mit der untersten ungesperrten
   Ebene als aktueller Ebene und ohne Auswahl; das Bedienfeld rollt zu deren Zeile. Ohne Auswahl ist
   die Zeile der aktuellen Ebene hervorgehoben und ihr Name fett; mit Auswahl sind die gewählten
   Objektzeilen hervorgehoben und fett, die aktuelle Ebene und jede Ebene mit einem gewählten Objekt
-  hell getönt. Der Kreis rechts in jeder Ebenenzeile ist gefüllt, wenn die Ebene ein gewähltes Objekt
-  enthält (auf der Webebene grau). Der Knopf *Neue Ebene* legt die Ebene über der aktuellen auf deren
+  hell getönt. Der Kreis rechts in jeder Ebenenzeile ist gefüllt, wenn die Ebene ein gewähltes eigenes
+  Objekt enthält, und grau bei einer Ebene ohne eigene Objekte (Unterebenen zählen nicht, die Webebene
+  ebenso). Ein Klick auf einen leeren Kreis verschiebt alle gewählten Objekte als Block oben in diese
+  Ebene oder Unterebene (ein teilausgewähltes Objekt verlässt seine Gruppe), lässt sie gewählt und macht
+  die Ebene aktuell; Alt+Klick legt stattdessen Kopien dort ab und wählt sie. Das ist ein Schritt
+  *Ebenenänderung*; ohne Auswahl, bei gefülltem Kreis, gesperrter Ebene oder zwischen Webebene und
+  normalen Objekten geschieht nichts. Die Sperre der Webebene bleibt beim Öffnen einer Datei nicht
+  erhalten. Der Knopf *Neue Ebene* legt die Ebene über der aktuellen auf deren
   Stufe an (neben einer aktuellen Unterebene). Ein
   Rechtsklick auf eine Objektzeile wählt zuerst dieses Objekt, sodass *Auswahl auf Hintergrund
   reduzieren*, *Maske hinzufügen* und *Mit darunter liegender auf eine Ebene reduzieren* im Kontextmenü

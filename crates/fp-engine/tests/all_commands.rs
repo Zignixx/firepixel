@@ -1024,6 +1024,13 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
             ex(s, "window.duplicateWindow", json!({}));
             Value::Null
         })),
+        // RE spec 65 rule 1: the rectangle sits in a new layer and goes back to the first one
+        "selection.moveToLayer" => rs(json!({"layer": ids.layer}), Box::new(move |s: &mut Session| {
+            let n = ex(s, "layer.add", json!({}))["layer"].as_u64().unwrap_or(0);
+            ex(s, "pi.element.moveTo", json!({"id": rect.0, "layer": n, "index": 0}));
+            select(s, &[rect]);
+            Value::Null
+        })),
         "layer.setActive" => rs(json!({"layer": ids.layer}), Box::new(|s: &mut Session| {
             ex(s, "layer.add", json!({}));
             Value::Null

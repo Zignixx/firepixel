@@ -160,7 +160,11 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     Anfangspunkt nach `tolerance` 0…255, Vorgabe 32), `bitmap.paint`, `bitmap.erase`
   * Auswahl: `select.set {ids, mode?}`, `select.inRect {rect}`, `select.pointAt {point}`
   * Struktur: `layer.add {name?}`, `layer.setVisible {layer, visible}`, `layer.setActive {layer}`,
-    `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`
+    `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`,
+    `selection.moveToLayer {layer, copy?}` (der Auswahlkreis im Ebenen-Bedienfeld: die ganze Auswahl als ein
+    Block oben in die Ebene oder Unterebene, `copy` = Alt; die verschobenen Objekte bzw. Kopien bleiben gewählt,
+    die Ebene wird aktuell, ein Schritt *Ebenenänderung*; nichts geschieht ohne Auswahl, bei einem Ziel, das
+    schon ein gewähltes Objekt enthält, bei gesperrtem Ziel, bei der Webebene oder gewähltem Slice/Hotspot)
   * Bewegen/Transformieren: `edit.move {dx, dy}`, `transform.matrix {matrix, scaleAttributes?}`, `path.setContours {id, contours}`,
     `modify.transform.numericTransform {mode: scale|resize|rotate, scaleX?, scaleY?, width?, height?, angle?, constrain?, scaleAttributes?}`
     (`scaleAttributes`, Vorgabe `true`: Strichbreite skaliert mit, wie „Attribute skalieren“ im Dialog;
@@ -304,7 +308,8 @@ Wie im Original gilt:
   (±2147483648). Bei Elementen mit Vektormaske ist es der Maskenbereich.
 * `dom.guides.locked` liest die wirksame Sperre (*Ansicht ▸ Hilfslinien ▸ Hilfslinien sperren*).
 * Alle Ebenen**nummern** zählen flach wie `dom.layers`: Nummer `i` in `currentLayerNum`, `setLayerVisible(i)`,
-  `setLayerLocked`, `deleteLayer`, `getParentLayerNum`, `moveSelectionToLayer` … meint `dom.layers[i]`. Eine Unterebene
+  `setLayerLocked`, `deleteLayer`, `getParentLayerNum`, `moveSelectionToLayer` … meint `dom.layers[i]`
+  (`moveSelectionToLayer(i, copy)` führt `selection.moveToLayer` aus: ein Block oben, die Auswahl bleibt). Eine Unterebene
   kann die aktive Ebene sein: `currentLayerNum = <Unterebene>` aktiviert sie und liest sie zurück;
   `addNewSubLayer(index, name)` legt die Unterebene unter `index` an (verschachtelt), aktiviert sie und gibt den
   Namen zurück; `addNewLayer(name, shared)` gibt den Namen zurück. `duplicateLayer`/`reorderLayer` mit einer

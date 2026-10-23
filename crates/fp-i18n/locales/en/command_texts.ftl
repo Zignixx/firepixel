@@ -686,3 +686,5 @@ cmdtext-die-ausgewaehlten-bitmaps-gelten-als-bea-827d65 = the selected bitmaps c
 cmdtext-immer-einen-protokollschritt-anlegen-ohn-2c54c7 = always make a history step, without counting the bitmaps as worked on (Escape while dragging a marquee or lasso)
 cmdtext-knopf-neue-ebene-im-ebenen-bedienfeld-be-5fe5af = New Layer button of the Layers panel: with a current sublayer the new layer becomes its sibling above it
 cmdtext-klick-auf-eine-ebenenzeile-diese-objekte-b0f033 = click on a layer row: select these objects as well (one history step "Layer Change")
+cmdtext-ziel-ebenen-id-ebene-oder-unterebene = target layer ID (layer or sublayer)
+cmdtext-kopien-statt-verschieben-alt = copies instead of moving (Alt)

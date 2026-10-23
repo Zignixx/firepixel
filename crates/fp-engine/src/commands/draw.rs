@@ -221,6 +221,98 @@ fn layer_param(d: &DocumentState, p: &Params) -> Result<LayerId> {
     }
 }
 
+/// RE spec 65 rule 1: the selected objects (a subselected object alone, out of its group; a
+/// selected group whole) go as one block, in their stacking order, to the top of the layer or
+/// sublayer `target` (above its own objects and sublayers); with `copy` copies go there and the
+/// originals stay. The moved objects or the copies stay selected and `target` becomes the chosen
+/// and current layer. Nothing happens (no History row) with nothing selected, when `target`
+/// already holds a selected object (its circle is filled), is locked (itself or through a parent)
+/// or is the web layer, when the selection holds a slice or hotspot, or a selected sublayer
+/// contains `target`.
+fn move_selection_to_layer(
+    d: &mut DocumentState,
+    target: LayerId,
+    copy: bool,
+) -> Result<CommandOutput> {
+    let (page, frame) = (d.page, d.frame);
+    let flat = docops::flat_layers(&d.doc, page, frame);
+    let t = flat
+        .iter()
+        .find(|l| l.id == target)
+        .copied()
+        .ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+    let mut paths = super::selected_paths(d);
+    // an object inside a selected group goes with the group
+    let all = paths.clone();
+    paths.retain(|p| {
+        !all.iter().any(|q| {
+            q.root == p.root
+                && q.slot == p.slot
+                && q.cel == p.cel
+                && q.steps.len() < p.steps.len()
+                && p.steps.starts_with(&q.steps)
+        })
+    });
+    let unchanged = Ok(CommandOutput::doc());
+    if paths.is_empty() || t.locked || t.web {
+        return unchanged;
+    }
+    if paths
+        .iter()
+        .any(|p| docops::owning_layer(&d.doc, page, p) == Some(target))
+    {
+        return unchanged;
+    }
+    let els: Vec<Arc<Element>> = paths
+        .iter()
+        .filter_map(|p| d.doc.element_at(p).cloned())
+        .collect();
+    if els.iter().any(|e| match &e.kind {
+        ElementKind::WebObject(_) => true,
+        ElementKind::SubLayer(sl) => docops::layer_tree_contains(sl, target),
+        _ => false,
+    }) {
+        return unchanged;
+    }
+    let doc = Arc::make_mut(&mut d.doc);
+    let moved: Vec<Arc<Element>> = if copy {
+        els.iter()
+            .map(|e| Arc::new(docops::reassign(doc, e)))
+            .collect()
+    } else {
+        // bottom first, so the addresses of the objects above stay valid
+        let mut out = Vec::new();
+        for p in paths.iter().rev() {
+            let Some(e) = docops::remove_at(doc, p) else {
+                continue;
+            };
+            out.push(e);
+            // a group left without children goes as well
+            if p.steps.len() > 1 {
+                let parent = fp_model::traverse::ElementPath {
+                    steps: p.steps[..p.steps.len() - 1].to_vec(),
+                    ..p.clone()
+                };
+                if doc.element_at(&parent).is_some_and(|g| {
+                    matches!(&g.kind, ElementKind::Group(g) if g.children.is_empty() && g.mask.is_none())
+                }) {
+                    docops::remove_at(doc, &parent);
+                }
+            }
+        }
+        out.reverse();
+        out
+    };
+    let ids: Vec<fp_model::ElementId> = moved.iter().map(|e| e.id).collect();
+    for e in moved.into_iter().rev() {
+        docops::insert_element(doc, page, frame, Some(target), 0, e)
+            .ok_or_else(|| EngineError::Failed(fp_i18n::t("err-object-move-failed")))?;
+    }
+    d.selection.set(ids);
+    d.choose_layer(Some(target));
+    Ok(CommandOutput::doc())
+}
+
 /// Eigene Ebene `id` als oberste Unterebene in die Ebene `target` (Ziehen auf die Mitte der
 /// Zielzeile, re 40 §2a); die verschobene Ebene wird aktiv.
 fn move_layer_into(
@@ -1020,7 +1112,22 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .param("locked", ParamKind::Bool, "gesperrt")
             .run(|s, p| {
                 let v = p.bool_or("locked", true)?;
-                common_edit(s, p, move |e| e.common.locked = v)
+                let locks = |s: &Session| {
+                    s.doc()
+                        .map(|d| docops::flat_layers(&d.doc, d.page, d.frame))
+                        .unwrap_or_default()
+                };
+                let before = locks(s);
+                let out = common_edit(s, p, move |e| e.common.locked = v)?;
+                // a sublayer locked or unlocked in the Layers panel: RE spec 65 rule 3 as for
+                // `layer.setLocked`
+                if locks(s) != before {
+                    with_doc(s, |d| {
+                        d.resolve_current_layer();
+                        Ok(())
+                    })?;
+                }
+                Ok(out)
             }),
     );
     r.add(
@@ -1439,27 +1546,18 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .param("locked", ParamKind::Bool, "gesperrt")
             .run(|s, p| {
                 let v = p.bool_or("locked", true)?;
-                let was_locked = s.doc().is_ok_and(|d| {
-                    d.layer
-                        .is_some_and(|l| docops::layer_locked_in(&d.doc, d.page, d.frame, l))
-                });
                 let out = edit_layer(s, p, move |l| {
                     for c in &mut l.cels {
                         Arc::make_mut(c).locked = v;
                     }
                 })?;
-                // RE spec 64 §3 rule 7: locking the current layer (or a parent of it) moves the
-                // current layer up to the next unlocked one, the web layer included, else index 0
-                if v && !was_locked {
-                    with_doc(s, |d| {
-                        if let Some(cur) = d.layer
-                            && docops::layer_locked_in(&d.doc, d.page, d.frame, cur)
-                        {
-                            d.layer = docops::next_unlocked_above(&d.doc, d.page, d.frame, cur);
-                        }
-                        Ok(())
-                    })?;
-                }
+                // RE spec 65 rule 3 (64 §3 rule 7): locking and unlocking any layer resolve the
+                // current layer again from the chosen one: the first unlocked layer from it
+                // upward, the web layer included, wrapping from flat index 0
+                with_doc(s, |d| {
+                    d.resolve_current_layer();
+                    Ok(())
+                })?;
                 Ok(out)
             }),
     );
@@ -1512,7 +1610,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             if !shared && docops::sublayer_element(&d.doc, d.page, id).is_none() {
                 docops::layer_slot(&d.doc, d.page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
             }
-            d.layer = Some(id);
+            d.choose_layer(Some(id));
             if let Some(ids) = select {
                 let mut usable = Vec::new();
                 for e in ids {
@@ -1531,6 +1629,34 @@ pub(super) fn register(r: &mut CommandRegistry) {
         }
         Ok(CommandOutput::doc())
     }));
+    // RE spec 65 rule 1 (TW-217): the click on a layer's selection circle in the Layers panel
+    // (Alt copies) and the script's `moveSelectionToLayer`: one History row "Layer Change"
+    r.add(
+        cmd(super::MOVE_SELECTION_TO_LAYER)
+            .label("Ebenenänderung")
+            .requires(DOC)
+            .param(
+                "layer",
+                ParamKind::Integer {
+                    min: Some(0),
+                    max: None,
+                },
+                "Ziel-Ebenen-ID (Ebene oder Unterebene)",
+            )
+            .opt_default(
+                "copy",
+                ParamKind::Bool,
+                json!(false),
+                "Kopien statt Verschieben (Alt)",
+            )
+            .run(|s, p| {
+                let copy = p.bool_or("copy", false)?;
+                with_doc(s, |d| {
+                    let target = layer_param(d, p)?;
+                    move_selection_to_layer(d, target, copy)
+                })
+            }),
+    );
     r.add(
         cmd("layer.move")
             .label("Ebene verschieben")
@@ -1677,10 +1803,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         .opt_i64("index")?
                         .map(|v| v.max(0) as usize)
                         .unwrap_or(d.page);
-                    let doc = Arc::make_mut(&mut d.doc);
-                    if i >= doc.pages.len() || doc.pages.len() <= 1 {
+                    if i >= d.doc.pages.len() || d.doc.pages.len() <= 1 {
                         return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
                     }
+                    d.remember_page_layer();
+                    let doc = Arc::make_mut(&mut d.doc);
                     doc.pages.remove(i);
                     if doc.current_page >= doc.pages.len() {
                         doc.current_page = doc.pages.len() - 1;
@@ -1712,6 +1839,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         .opt_i64("index")?
                         .map(|v| v.max(0) as usize)
                         .unwrap_or(d.page);
+                    d.remember_page_layer();
                     let doc = Arc::make_mut(&mut d.doc);
                     let mut pg = (**doc
                         .pages
@@ -1783,9 +1911,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     if i >= d.doc.pages.len() {
                         return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
                     }
+                    // RE spec 65 rule 3: every page keeps its chosen layer; the first visit
+                    // starts on the bottom-most unlocked layer
+                    d.remember_page_layer();
                     d.page = i;
                     d.frame = 0;
-                    d.layer = docops::layer_on_page(&d.doc, i, d.layer);
+                    d.enter_page_layer();
                     d.selection.clear();
                     Ok(CommandOutput::doc())
                 })
@@ -1923,6 +2054,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         return Err(EngineError::NotFound(fp_i18n::t("err-nf-state")));
                     }
                     d.frame = i;
+                    // RE spec 65 rule 3: a layer locked in the new state hands over to the next
+                    // unlocked one above (wrapping), which becomes the chosen layer
+                    d.adopt_resolved_layer();
                     d.selection.clear();
                     Ok(CommandOutput::doc())
                 })

@@ -72,8 +72,13 @@ pub(crate) fn follow_single_selection(
     }
     match crate::docops::owning_layer(&d.doc, d.page, path) {
         Some(l) if d.layer != Some(l) => {
-            d.layer = Some(l);
+            d.choose_layer(Some(l));
             true
+        }
+        // already current: it is the chosen layer now as well (RE spec 65 U23)
+        Some(_) => {
+            d.layer_choice = None;
+            false
         }
         _ => false,
     }
@@ -232,6 +237,14 @@ pub struct DocumentState {
     pub frame: usize,
     /// Aktive Ebene.
     pub layer: Option<LayerId>,
+    /// RE spec 65 rule 3: while a lock rule shows another layer as current than the chosen one,
+    /// `(chosen, current)`; it holds only while `layer` is still that current layer (any other
+    /// change of `layer` makes the new current layer the chosen one). See
+    /// [`DocumentState::chosen_layer`].
+    pub layer_choice: Option<(LayerId, LayerId)>,
+    /// RE spec 65 rule 3: the chosen layer of every page visited before, by page (GUID, else
+    /// index); a page change brings it back.
+    pub page_layers: Vec<(PageKey, LayerId)>,
     /// Steigt bei jeder Inhaltsänderung (auch Undo/Redo): Schlüssel für Render-Caches.
     pub generation: u64,
     /// Generation beim letzten Speichern.
@@ -252,6 +265,23 @@ pub struct DocumentState {
     /// RE spec 59 section 2.3: the tool fill "none" belongs to the document; whether it was none
     /// when this document was left (a new or opened document starts with a solid fill).
     pub tool_fill_none: bool,
+}
+
+/// A page in [`DocumentState::page_layers`]: its GUID (stays with the page when pages are moved),
+/// else its index.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PageKey {
+    pub id: Option<fp_model::Guid>,
+    pub index: usize,
+}
+
+impl PageKey {
+    fn same_page(&self, o: &PageKey) -> bool {
+        match (&self.id, &o.id) {
+            (Some(a), Some(b)) => a == b,
+            _ => self.index == o.index,
+        }
+    }
 }
 
 /// Verknüpfung einer Symbol-Bearbeitungsansicht mit ihrem Dokument („Symbol bearbeiten“,
@@ -296,6 +326,8 @@ impl DocumentState {
             page,
             frame: 0,
             layer,
+            layer_choice: None,
+            page_layers: Vec::new(),
             generation: 0,
             saved_generation: 0,
             bitmap_mode: false,
@@ -345,6 +377,78 @@ impl DocumentState {
         self.page = s.page.min(self.doc.pages.len().saturating_sub(1));
         self.frame = s.frame;
         self.layer = s.layer;
+    }
+
+    /// The chosen layer of the current page (RE spec 65 rule 3): set by a layer row, the selection
+    /// circle, `currentLayerNum =`, a single selected object, a new layer, opening and state
+    /// changes. The current layer [`DocumentState::layer`] is the first unlocked layer from it
+    /// upward; the two differ only while a lock moved the current layer away.
+    pub fn chosen_layer(&self) -> Option<LayerId> {
+        match self.layer_choice {
+            Some((want, at)) if self.layer == Some(at) => Some(want),
+            _ => self.layer,
+        }
+    }
+
+    /// Makes `id` the chosen and the current layer.
+    pub fn choose_layer(&mut self, id: Option<LayerId>) {
+        self.layer = id;
+        self.layer_choice = None;
+    }
+
+    /// RE spec 65 rule 3: the current layer again from the chosen one, after locking or unlocking
+    /// any layer (the chosen layer stays). A chosen layer outside the page's flat layer list
+    /// stays current.
+    pub fn resolve_current_layer(&mut self) {
+        let Some(want) = self.chosen_layer() else {
+            return;
+        };
+        if let Some(cur) = crate::docops::resolve_layer(&self.doc, self.page, self.frame, want) {
+            self.layer = Some(cur);
+            self.layer_choice = (cur != want).then_some((want, cur));
+        }
+    }
+
+    /// RE spec 65 rule 3 for a state change: the current layer from the chosen one in the new
+    /// state, and the result becomes the chosen layer (F1–F7).
+    pub fn adopt_resolved_layer(&mut self) {
+        self.resolve_current_layer();
+        self.layer_choice = None;
+    }
+
+    fn page_key(&self, page: usize) -> PageKey {
+        PageKey {
+            id: self.doc.pages.get(page).and_then(|p| p.id.clone()),
+            index: page,
+        }
+    }
+
+    /// RE spec 65 rule 3: notes the chosen layer of the current page before it is left.
+    pub fn remember_page_layer(&mut self) {
+        let Some(want) = self.chosen_layer() else {
+            return;
+        };
+        let key = self.page_key(self.page);
+        self.page_layers.retain(|(k, _)| !k.same_page(&key));
+        self.page_layers.push((key, want));
+    }
+
+    /// RE spec 65 rule 3 after a page change (call [`DocumentState::remember_page_layer`] on the
+    /// page left first): the layer chosen on the last visit of the current page comes back, on
+    /// the first visit the bottom-most unlocked layer; the current layer is resolved from it.
+    pub fn enter_page_layer(&mut self) {
+        let key = self.page_key(self.page);
+        let flat = crate::docops::flat_layers(&self.doc, self.page, self.frame);
+        let remembered = self
+            .page_layers
+            .iter()
+            .rev()
+            .find(|(k, l)| k.same_page(&key) && flat.iter().any(|f| f.id == *l))
+            .map(|(_, l)| *l);
+        let want =
+            remembered.or_else(|| crate::docops::bottom_unlocked_layer(&self.doc, self.page));
+        self.choose_layer(want);
+        self.resolve_current_layer();
     }
 
     /// Anzahl Status der aktuellen Seite.
@@ -1298,11 +1402,27 @@ impl Session {
             return Ok(());
         }
         let d = self.doc_mut()?;
-        let snap = d
+        // RE spec 65 rule 1.6: undoing "move the selection to a layer" restores the objects and
+        // the selection; the target stays current unless the selection is a single object (its
+        // layer, RE spec 64 rule 4)
+        let keep_layer = d
+            .history
+            .top()
+            .filter(|t| t.command == crate::commands::MOVE_SELECTION_TO_LAYER)
+            .map(|t| t.after.layer);
+        let mut snap = d
             .history
             .undo()
             .ok_or(EngineError::History("err-req-can-undo"))?;
+        if let Some(l) = keep_layer {
+            snap.layer = l;
+        }
         self.apply_history_snapshot(snap);
+        if keep_layer.is_some()
+            && let Some(d) = self.active_mut()
+        {
+            follow_single_selection_now(d);
+        }
         Ok(())
     }
 

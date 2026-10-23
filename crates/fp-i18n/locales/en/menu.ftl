@@ -1113,6 +1113,7 @@ cmd-layer-setVisible = Show/Hide Layer
 cmd-layer-setLocked = Lock Layer
 cmd-layer-setShared = Share Layer to States
 cmd-layer-setActive = Layer Change
+cmd-selection-moveToLayer = Layer Change
 cmd-layer-move = Move Layer
 cmd-layer-duplicate = Duplicate Layer
 cmd-page-add = Add Page

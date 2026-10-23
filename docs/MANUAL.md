@@ -328,13 +328,22 @@ Important panels:
   click on a layer row, which writes one *Layer Change* step (Undo restores the current layer and the
   selection). Whenever the selection ends up as exactly one object (panel, canvas, marquee, Select All,
   script), that object's layer or sub-layer becomes the current layer; with two or more objects the
-  current layer stays. Locking the current layer makes the next unlocked layer above it current (the
-  web layer included). A file opens on page 1 and state 1 with the bottom-most unlocked layer current
+  current layer stays. The current layer is always the first unlocked layer from the chosen one
+  upward (sub-layers share their parent's lock, the web layer included), wrapping around to the bottom
+  layer: locking the chosen layer moves the current layer up, unlocking it brings it back. Each page
+  remembers its chosen layer (the first visit after opening starts on the bottom-most unlocked layer, a
+  new page on its first layer); after a state change in which the current layer is locked, the next
+  unlocked layer above becomes the chosen one. A file opens on page 1 and state 1 with the bottom-most unlocked layer current
   and nothing selected; the panel scrolls to that layer's row. With nothing selected the current
   layer's row is highlighted with a bold name; with a selection the selected object rows are
   highlighted and bold, while the current layer and every layer holding a selected object are tinted
   light. The circle at the right of each layer row is filled where the layer holds a selected object
-  (grey on the web layer). The New Layer button adds the layer above the current one on its level (beside a
+  of its own and grey on a layer without objects of its own (sub-layers do not count, the web layer
+  alike). A click on an empty circle moves all selected objects as one block to the top of that layer
+  or sub-layer (a sub-selected object leaves its group), keeps them selected and makes the layer
+  current; Alt+click puts copies there instead and selects them. It writes one *Layer Change* step and
+  does nothing with nothing selected, on a filled circle, on a locked layer, or between the web layer
+  and normal objects. The web layer's lock is not kept when a file is opened. The New Layer button adds the layer above the current one on its level (beside a
   current sub-layer). A right-click on an object row selects that
   object first, so the context menu's *Flatten Selection*, *Add Mask* and *Merge Down* apply to it
   (*Merge Down* only when the object lies directly above a bitmap). A right-click on a layer row makes

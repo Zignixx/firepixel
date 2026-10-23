@@ -577,6 +577,8 @@ fn step_frame(s: &mut Session, dir: i64) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let n = d.frame_count() as i64;
         d.frame = ((d.frame as i64 + dir).rem_euclid(n)) as usize;
+        // RE spec 65 rule 3, as `state.setCurrent`
+        d.adopt_resolved_layer();
         d.selection.clear();
         Ok(CommandOutput::doc())
     })
@@ -585,9 +587,11 @@ fn step_frame(s: &mut Session, dir: i64) -> Result<CommandOutput> {
 fn step_page(s: &mut Session, dir: i64) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let n = d.doc.pages.len() as i64;
+        // RE spec 65 rule 3, as `page.setCurrent`
+        d.remember_page_layer();
         d.page = ((d.page as i64 + dir).rem_euclid(n.max(1))) as usize;
         d.frame = 0;
-        d.layer = docops::layer_on_page(&d.doc, d.page, d.layer);
+        d.enter_page_layer();
         d.selection.clear();
         Ok(CommandOutput::doc())
     })

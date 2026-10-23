@@ -85,6 +85,9 @@ pub fn register_all(r: &mut CommandRegistry) {
 
 pub(crate) const DOC: &[Requirement] = &[Requirement::Document];
 pub(crate) const SEL: &[Requirement] = &[Requirement::Document, Requirement::Selection];
+/// The command behind the Layers panel's selection circle and the script's
+/// `moveSelectionToLayer` (RE spec 65 rule 1); undoing it keeps the target layer current.
+pub(crate) const MOVE_SELECTION_TO_LAYER: &str = "selection.moveToLayer";
 
 /// ARGB als `#rrggbb` bzw. `#rrggbbaa`.
 pub fn argb_hex(c: Argb) -> String {

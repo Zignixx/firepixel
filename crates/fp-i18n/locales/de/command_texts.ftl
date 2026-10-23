@@ -686,3 +686,5 @@ cmdtext-die-ausgewaehlten-bitmaps-gelten-als-bea-827d65 = die ausgewählten Bitm
 cmdtext-immer-einen-protokollschritt-anlegen-ohn-2c54c7 = immer einen Protokollschritt anlegen, ohne die Bitmaps als bearbeitet zu zählen (Escape beim Aufziehen eines Auswahlrahmens oder Lassos)
 cmdtext-knopf-neue-ebene-im-ebenen-bedienfeld-be-5fe5af = Knopf „Neue Ebene“ im Ebenen-Bedienfeld: bei aktueller Unterebene wird die neue Ebene ihr Geschwister darüber
 cmdtext-klick-auf-eine-ebenenzeile-diese-objekte-b0f033 = Klick auf eine Ebenenzeile: diese Objekte mit auswählen (ein Protokollschritt „Ebenenänderung“)
+cmdtext-ziel-ebenen-id-ebene-oder-unterebene = Ziel-Ebenen-ID (Ebene oder Unterebene)
+cmdtext-kopien-statt-verschieben-alt = Kopien statt Verschieben (Alt)
