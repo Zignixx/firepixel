@@ -165,7 +165,9 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     `modify.transform.numericTransform {mode: scale|resize|rotate, scaleX?, scaleY?, width?, height?, angle?, constrain?, scaleAttributes?}`
     (`scaleAttributes`, Vorgabe `true`: Strichbreite skaliert mit, wie „Attribute skalieren“ im Dialog;
     `false` lässt außerdem die Füllgriffe im Dokument stehen, auch bei `transform.matrix` und
-    `transform.distort`, außer bei reinem Verschieben),
+    `transform.distort`, außer bei reinem Verschieben; in `run_script` setzen die JSF-Aufrufe
+    `scaleSelection`, `rotateSelection`, `setQuadrangle` und `transformSelection` ihn aus ihrer
+    Optionszeichenfolge: `true` nur mit dem Wort `transformAttributes`),
     `modify.mask.revealAll` / `modify.mask.hideAll` (leere Maske über dem gewählten Objekt)
   * Text und Auswahl: `text.detachFromPath` (Text wird wieder Rahmen fester Breite = Breite vor dem Anfügen,
     mittig über den Pfadgrenzen; der Pfad kommt oben in die Ebene, Auswahl danach [Pfad, Text]),

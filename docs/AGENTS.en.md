@@ -164,7 +164,9 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     `modify.transform.numericTransform {mode: scale|resize|rotate, scaleX?, scaleY?, width?, height?, angle?, constrain?, scaleAttributes?}`
     (`scaleAttributes`, default `true`: the stroke width scales along, like "Scale attributes" in the dialog;
     `false` also leaves the fill handles in the document, for `transform.matrix` and `transform.distort` too,
-    except on a pure move),
+    except on a pure move; in `run_script` the JSF calls `scaleSelection`, `rotateSelection`,
+    `setQuadrangle` and `transformSelection` set it from their options string: `true` only with the word
+    `transformAttributes`),
     `modify.mask.revealAll` / `modify.mask.hideAll` (empty mask over the selected object)
   * Text and selection: `text.detachFromPath` (the text becomes a fixed-width block again, width = width
     before attaching, centered on the path bounds; the path goes to the top of the layer, selection

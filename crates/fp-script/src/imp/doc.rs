@@ -35,6 +35,13 @@ pub(super) fn selection(doc: DocId) -> FwResult<Vec<ElementId>> {
     info(doc).map(|i| i.2)
 }
 
+/// Does the JSF transform options string (`"autoTrimImages transformAttributes"`) contain the word
+/// `word`? A missing argument counts as an empty string.
+pub(super) fn has_option(opts: &Arg, word: &str) -> bool {
+    opts.str()
+        .is_some_and(|t| t.split_whitespace().any(|w| w == word))
+}
+
 /// Befehl auf der Auswahl; leere Auswahl → nichts tun (wie das Original bei Attribut-Methoden).
 pub(super) fn on_selection(doc: DocId, name: &str, params: Value) -> FwResult<JsValue> {
     if selection(doc)?.is_empty() {
@@ -1303,16 +1310,20 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             "element.setBounds",
             json!({"width": a(0).f64().max(0.0), "height": a(1).f64().max(0.0)}),
         ),
+        // RE spec 61 §1.5: the fill handles (and the stroke width) are transformed only with the
+        // option `transformAttributes`; without it they stay in the document
         "scaleSelection" => on_selection(
             doc,
             "modify.transform.numericTransform",
-            json!({"mode": "scale", "scaleX": a(0).f64() * 100.0, "scaleY": a(1).f64() * 100.0, "constrain": false}),
+            json!({"mode": "scale", "scaleX": a(0).f64() * 100.0, "scaleY": a(1).f64() * 100.0, "constrain": false,
+                "scaleAttributes": has_option(&a(2), "transformAttributes")}),
         ),
         // re 28 L5: Drehen beschneidet Bitmaps nur mit der Option `autoTrimImages`; Skalieren nie
         "rotateSelection" => on_selection(
             doc,
             "modify.transform.numericTransform",
-            json!({"mode": "rotate", "angle": a(0).f64(), "autoTrim": a(1).str().is_some_and(|t| t.split_whitespace().any(|w| w == "autoTrimImages"))}),
+            json!({"mode": "rotate", "angle": a(0).f64(), "autoTrim": has_option(&a(1), "autoTrimImages"),
+                "scaleAttributes": has_option(&a(1), "transformAttributes")}),
         ),
         "reflectSelection" => {
             let (h, v) = (a(0).bool(), a(1).bool());
@@ -1327,7 +1338,11 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
         "transformSelection" => {
             let m = a(0).json();
             let mat = m.get("matrix").cloned().unwrap_or(m);
-            on_selection(doc, "transform.matrix", json!({"matrix": mat}))
+            on_selection(
+                doc,
+                "transform.matrix",
+                json!({"matrix": mat, "scaleAttributes": has_option(&a(1), "transformAttributes")}),
+            )
         }
         "removeTransformation" => {
             on_selection(doc, "modify.transform.removeTransformations", json!({}))

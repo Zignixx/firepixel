@@ -3,8 +3,8 @@
 //! landen hier; was auch hier fehlt, meldet „nicht implementiert“.
 
 use super::doc::{
-    arg_str, bounds, current_layer_index, flat_entries, flat_entry, jserr, layer_id, on_selection,
-    rect_arr, selection, top_layer_id,
+    arg_str, bounds, current_layer_index, flat_entries, flat_entry, has_option, jserr, layer_id,
+    on_selection, rect_arr, selection, top_layer_id,
 };
 use super::{element, exec, ni, wrap_ids};
 use crate::bindings::hr;
@@ -1607,24 +1607,30 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             u()
         }
         "setRectSides" | "ungroupPrimitives" => u(),
+        // setQuadrangle(p1, p2, p3, p4, options) (API table; top left, top right, bottom right,
+        // bottom left): maps the selection bounds onto the four points; the fill handles follow
+        // only with `transformAttributes` (RE spec 61 §1.5)
         "setQuadrangle" => {
-            let q = a(0).json();
-            let pts: Vec<Value> = ["topLeft", "topRight", "bottomRight", "bottomLeft"]
-                .iter()
-                .filter_map(|k| {
-                    q.get(*k)
-                        .and_then(conv::point_of)
-                        .map(|(x, y)| json!([x, y]))
-                })
+            let pts: Vec<Value> = (0..4)
+                .filter_map(|i| a(i).point().map(|(x, y)| json!([x, y])))
                 .collect();
-            if pts.len() == 4 {
-                on_selection(doc, "transform.distort", json!({"quad": pts}))
-            } else {
-                Err(FwErr::Hr(
+            let opts = a(4);
+            if pts.len() != 4 {
+                return Err(FwErr::Hr(
                     hr::E_BAD_PARAM,
-                    "Viereck {topLeft, topRight, bottomRight, bottomLeft}".into(),
-                ))
+                    "vier Punkte (oben links, oben rechts, unten rechts, unten links)".into(),
+                ));
             }
+            let sel = selection(doc)?;
+            let Some(b) = bounds(doc, &sel)? else {
+                return u();
+            };
+            on_selection(
+                doc,
+                "transform.distort",
+                json!({"rect": {"left": b[0], "top": b[1], "right": b[2], "bottom": b[3]}, "quad": pts,
+                    "scaleAttributes": has_option(&opts, "transformAttributes")}),
+            )
         }
         // ---------------------------------------------------------- Füllung, Strich, Stile
         "applyCurrentFill" => {

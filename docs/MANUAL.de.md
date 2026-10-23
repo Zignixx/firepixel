@@ -194,7 +194,11 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Dokument. Der Haken wird gemerkt (Voreinstellung `NumericXformXformsBFE`, auch nach „Abbrechen“).
   Die Werkzeuge Skalieren, Neigen und Verzerren sowie Frei transformieren richten sich bei den
   Füllgriffen ebenso nach *Voreinstellungen ▸ Allgemein ▸ Pinselstriche und Effekte skalieren*
-  (`XformToolXformsBFE`, Vorgabe ein). Reines Verschieben nimmt die Füllgriffe immer mit.
+  (`XformToolXformsBFE`, Vorgabe ein). Reines Verschieben nimmt die Füllgriffe immer mit. In
+  Skripten transformieren `scaleSelection`, `rotateSelection`, `setQuadrangle` und
+  `transformSelection` die Füllgriffe (und beim Skalieren die Strichbreite) nur, wenn die
+  Optionszeichenfolge `transformAttributes` enthält, wie im Original
+  (`"autoTrimImages transformAttributes"`); mit `"autoTrimImages"` allein bleiben sie im Dokument.
 - *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
   gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
   mit der Maske als zweiter Miniatur.
