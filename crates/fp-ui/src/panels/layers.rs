@@ -11,7 +11,7 @@ use crate::inspector::fields::{self, Dl};
 use crate::inspector::glyphs::{self, Glyph};
 use crate::inspector::obj_quads::{BLEND_ITEMS, blend_index, blend_names};
 use crate::theme::Theme;
-use egui::{Align2, Color32, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
+use egui::{Align2, Color32, Id, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_model::{Element, ElementKind, LayerId, LayerKind, LayerOrigin};
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -61,6 +61,8 @@ const FLIPPED: &str = "layers-disclosure-flipped";
 const DRAG: &str = "layers-drag";
 const RENAME: &str = "layers-rename";
 const ANCHOR: &str = "layers-anchor";
+/// Documents whose list was already scrolled to the current layer once (on opening).
+const SCROLL_SEEN: &str = "layers-scroll-seen";
 
 /// Key of a list row for the selection anchor (FB-30, RE spec 61 §3). Layer and sublayer rows carry
 /// their layer id, object rows their element id (two separate number spaces).
@@ -363,6 +365,47 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         b.sort();
         a == b
     });
+    // RE spec 64 §2.5: the layers and sublayers holding a selected object (their own objects,
+    // objects in groups count for the group's layer) – filled dot and light tint
+    let sel_layers: std::collections::HashSet<LayerId> = if selected.is_empty() {
+        Default::default()
+    } else {
+        fp_engine::docops::find_many_on_page(&doc, page, &selected)
+            .into_iter()
+            .flatten()
+            .filter_map(|p| fp_engine::docops::owning_layer(&doc, page, &p))
+            .collect()
+    };
+    // with nothing selected the current layer's row is highlighted and bold; with a selection the
+    // current layer and the layers of the selection are tinted light, not bold
+    let row_marks = |id: LayerId| -> (bool, bool) {
+        let cur = active_layer == Some(id);
+        if selected.is_empty() {
+            (cur, false)
+        } else {
+            (false, cur || sel_layers.contains(&id))
+        }
+    };
+    // RE spec 64 §2.5: a circle at the right of every layer row, filled where the layer holds a
+    // selected object; it does not mark the current layer (grey on the web layer)
+    let paint_dot = |ui: &Ui, center: Pos2, id: LayerId, web: bool| {
+        let col = if web { c.icon_disabled } else { c.icon_fg };
+        ui.painter()
+            .circle_stroke(center, 4.5, Stroke::new(1.0, col));
+        if sel_layers.contains(&id) {
+            ui.painter().circle_filled(center, 2.0, col);
+        }
+    };
+    // on opening a document the list scrolls to the current layer's row (RE spec 64 §1.1)
+    let scroll_seen: BTreeSet<u64> = ui
+        .data(|dd| dd.get_temp(Id::new(SCROLL_SEEN)))
+        .unwrap_or_default();
+    let scroll_to_current = !scroll_seen.contains(&doc_id.0);
+    if scroll_to_current {
+        let mut seen = scroll_seen.clone();
+        seen.insert(doc_id.0);
+        ui.data_mut(|dd| dd.insert_temp(Id::new(SCROLL_SEEN), seen));
+    }
     let first_sel = selected
         .first()
         .and_then(|id| fp_engine::docops::element_on_page(&doc, page, *id));
@@ -489,8 +532,11 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             let l = &rl.layer;
             let editable = rl.origin == LayerOrigin::Own;
             let web = l.kind == LayerKind::Web;
-            let is_active = active_layer == Some(l.id) && (layer_selected || selected.is_empty());
-            let (rect, resp) = common::row(ui, 23.0, is_active);
+            let (is_active, tinted) = row_marks(l.id);
+            let (rect, resp) = common::row_tinted(ui, 23.0, is_active, tinted);
+            if scroll_to_current && active_layer == Some(l.id) {
+                ui.scroll_to_rect(rect, None);
+            }
             // Sichtbarkeit, Sperre
             let eye_r = Rect::from_min_size(rect.min, vec2(20.0, rect.height()));
             let lock_r = Rect::from_min_size(
@@ -572,12 +618,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     name_r.width(),
                 );
             }
-            // Kennzeichen rechts: über Status geteilt / geteilte Ebene / Masterseite
+            // Kennzeichen rechts: über Status geteilt / geteilte Ebene / Masterseite; the web layer
+            // (always shared across states) shows its grey selection circle (RE spec 64 §2.5)
             let mark = Rect::from_center_size(
                 pos2(rect.right() - 11.0, rect.center().y),
                 vec2(12.0, 12.0),
             );
-            if l.shared_across_frames || rl.origin != LayerOrigin::Own {
+            if !web && (l.shared_across_frames || rl.origin != LayerOrigin::Own) {
                 glyphs::paint(
                     ui.painter(),
                     mark,
@@ -589,10 +636,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     &theme,
                     true,
                 );
-            } else if active_layer == Some(l.id) {
-                ui.painter()
-                    .circle_stroke(mark.center(), 4.5, Stroke::new(1.0, c.icon_fg));
-                ui.painter().circle_filled(mark.center(), 2.0, c.icon_fg);
+            } else {
+                paint_dot(ui, mark.center(), l.id, web);
             }
             let kind = RowKind::Layer {
                 id: l.id,
@@ -721,10 +766,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     let e = &e;
                     let sel = selected_set.contains(&e.id);
                     if let ElementKind::SubLayer(sl) = &e.kind {
-                        // aktive Unterebene hervorheben wie eine aktive Ebene (B-9)
-                        let sub_active = active_layer == Some(sl.id);
-                        let hl = sel || (sub_active && (layer_selected || selected.is_empty()));
-                        let (r2, resp2) = common::row(ui, 23.0, hl);
+                        // current sublayer marked like a current layer (B-9, RE spec 64 §2.5); a
+                        // selected sublayer element is highlighted like a selected object
+                        let (cur_row, tint_row) = row_marks(sl.id);
+                        let hl = sel || cur_row;
+                        let (r2, resp2) = common::row_tinted(ui, 23.0, hl, tint_row);
+                        if scroll_to_current && active_layer == Some(sl.id) {
+                            ui.scroll_to_rect(r2, None);
+                        }
                         let eye2 = Rect::from_min_size(r2.min, vec2(20.0, r2.height()));
                         let lock2 = Rect::from_min_size(
                             pos2(r2.left() + 21.0, r2.top()),
@@ -782,13 +831,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         );
                         if sl.shared_across_frames {
                             glyphs::paint(ui.painter(), mark2, Glyph::Distribute, &theme, true);
-                        } else if sub_active {
-                            ui.painter().circle_stroke(
-                                mark2.center(),
-                                4.5,
-                                Stroke::new(1.0, c.icon_fg),
-                            );
-                            ui.painter().circle_filled(mark2.center(), 2.0, c.icon_fg);
+                        } else {
+                            paint_dot(ui, mark2.center(), sl.id, false);
                         }
                         // Umbenennen per Doppelklick wie bei Ebenen und Objekten (fixg5 Q-05)
                         let renaming = rename.as_ref().is_some_and(
@@ -1186,18 +1230,19 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         let seq = ObjSeq::build(&layers, frame);
         let (ids, a) = row_click(&seq, &selected, anchor, row, m);
         // a plain click on an unlocked layer or sublayer row also makes it the current layer
-        if let RowKey::Layer(lid) = row
-            && m == ClickMods::default()
-            && !seq.row_locked(row)
-        {
-            actions.push(Action::Run(
-                "layer.setActive".into(),
-                json!({"layer": lid.0}),
-            ));
-        }
-        if let Some(ids) = ids {
-            let ids: Vec<u64> = ids.iter().map(|x| x.0).collect();
-            actions.push(Action::Run("select.set".into(), json!({"ids": ids})));
+        // and selects its own objects in one History row "Layer Change" (RE spec 64 §2.4)
+        let ids: Option<Vec<u64>> = ids.map(|v| v.iter().map(|x| x.0).collect());
+        match (row, ids) {
+            (RowKey::Layer(lid), ids) if m == ClickMods::default() && !seq.row_locked(row) => {
+                actions.push(Action::Run(
+                    "layer.setActive".into(),
+                    json!({"layer": lid.0, "select": ids.unwrap_or_default()}),
+                ));
+            }
+            (_, Some(ids)) => {
+                actions.push(Action::Run("select.set".into(), json!({"ids": ids})));
+            }
+            _ => {}
         }
         if new_anchor.is_none() {
             new_anchor = a;
@@ -1266,7 +1311,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let new_layer = if alt {
         Action::Run("layer.duplicate".into(), json!({}))
     } else {
-        Action::Run("layer.add".into(), json!({}))
+        // above the current layer on its level, beside a current sublayer (RE spec 64 §1.3)
+        Action::Run("layer.add".into(), json!({"sibling": true}))
     };
     let tips: [String; 5] = [
         "panel-layers-new-sublayer",

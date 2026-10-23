@@ -787,7 +787,9 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
         "element.setBrushSensitivity" => r(json!({"ids": [rect.0], "values": {"PZ": 50, "SO": 20}})),
         "layer.rename" => r(json!({"name": "x"})),
         "layer.setVisible" => r(json!({"visible": false})),
-        "layer.setLocked" => r(json!({"locked": true})),
+        // explicit layer: without one the command locks the current layer, which then moves up
+        // (RE spec 64 rule 7), so repeating it would lock the next layer
+        "layer.setLocked" => r(json!({"layer": ids.layer, "locked": true})),
         "layer.setShared" => r(json!({"shared": true})),
         "layer.setExpanded" => r(json!({"expanded": false})),
         "layer.move" => rs(json!({"index": 0}), Box::new(|s: &mut Session| {

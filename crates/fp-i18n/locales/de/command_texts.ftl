@@ -684,3 +684,5 @@ cmdtext-arrow-key-nudge-with-copy-the-history-ro-69900c = Pfeiltasten-Verschiebu
 cmdtext-fuellungsgriffe-mit-transformieren-false-2696e8 = Füllungsgriffe mit transformieren; false lässt sie im Dokument stehen (die Transformationswerkzeuge übergeben XformToolXformsBFE)
 cmdtext-die-ausgewaehlten-bitmaps-gelten-als-bea-827d65 = die ausgewählten Bitmaps gelten als bearbeitet (ein nach Escape beendeter Pinselstrich): das Verlassen des Modus ist ein Protokollschritt und beschneidet sie
 cmdtext-immer-einen-protokollschritt-anlegen-ohn-2c54c7 = immer einen Protokollschritt anlegen, ohne die Bitmaps als bearbeitet zu zählen (Escape beim Aufziehen eines Auswahlrahmens oder Lassos)
+cmdtext-knopf-neue-ebene-im-ebenen-bedienfeld-be-5fe5af = Knopf „Neue Ebene“ im Ebenen-Bedienfeld: bei aktueller Unterebene wird die neue Ebene ihr Geschwister darüber
+cmdtext-klick-auf-eine-ebenenzeile-diese-objekte-b0f033 = Klick auf eine Ebenenzeile: diese Objekte mit auswählen (ein Protokollschritt „Ebenenänderung“)

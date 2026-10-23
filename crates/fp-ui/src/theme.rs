@@ -213,6 +213,9 @@ pub struct Palette {
     pub list_border: Color32,
     pub list_selected_bg: Color32,
     pub list_selected_text: Color32,
+    /// Lighter highlight beside a selection (Layers panel: current layer and layers holding
+    /// selected objects, RE spec 64 §2.5).
+    pub list_selected_light_bg: Color32,
     pub list_hover_bg: Color32,
     pub list_row_line: Color32,
     pub button_bg: Color32,
@@ -455,6 +458,7 @@ impl Theme {
             list_bg: g(237),
             list_border: rgb(130, 135, 144),
             list_selected_bg: rgb(168, 198, 237),
+            list_selected_light_bg: rgb(211, 226, 245),
             list_selected_text: g(0),
             list_hover_bg: rgb(212, 225, 243),
             list_row_line: g(205),
@@ -585,6 +589,7 @@ impl Theme {
             list_bg: g(50),
             list_border: g(25),
             list_selected_bg: rgb(52, 92, 140),
+            list_selected_light_bg: rgb(51, 71, 95),
             list_selected_text: g(255),
             list_hover_bg: g(62),
             list_row_line: g(42),
@@ -715,6 +720,7 @@ impl Theme {
             list_bg: black,
             list_border: g(40),
             list_selected_bg: rgb(0, 60, 80),
+            list_selected_light_bg: rgb(0, 30, 40),
             list_selected_text: g(255),
             list_hover_bg: g(20),
             list_row_line: g(24),

@@ -88,6 +88,17 @@ fn highlighted(h: &H, label: &str) -> bool {
     rs.iter().any(|r| r.contains(p))
 }
 
+/// Is the row of `label` tinted light (current layer or layer of the selection with a selection)?
+fn tinted(h: &H, label: &str) -> bool {
+    let p = find(h, label).expect(label);
+    let col = fp_ui::theme::Theme::current(&h.ctx).colors.list_selected_light_bg;
+    let mut rs = Vec::new();
+    for cs in &h.output().shapes {
+        fills(&cs.shape, col, &mut rs);
+    }
+    rs.iter().any(|r| r.contains(p))
+}
+
 fn active(h: &H) -> fp_model::LayerId {
     h.state().state.session.active().and_then(|d| d.layer).expect("aktiv")
 }
@@ -116,8 +127,10 @@ fn active_sublayer_is_highlighted_and_click_activates_it() {
     let p = find(&h, "Hauptebene").expect("Ebenenzeile");
     click(&mut h, p);
     assert_ne!(active(&h), sub);
-    assert!(highlighted(&h, "Hauptebene"));
-    // (die Unterebenenzeile bleibt hier hervorgehoben: sie gehört zu den ausgewählten Objekten der Ebene)
+    // the row selected the layer's own rectangle: with a selection the current layer is tinted
+    // light, not highlighted (RE spec 64 §2.5)
+    assert!(!highlighted(&h, "Hauptebene"));
+    assert!(tinted(&h, "Hauptebene"));
     // Klick auf die Unterebenenzeile: aktiv, hervorgehoben, Auswahl = ihre (keine) Objekte
     let p = find(&h, "Unter A").expect("Unterebenenzeile");
     click(&mut h, p);

@@ -158,7 +158,10 @@ fn ba039_brush_on_locked_layer_paints_on_free_layer_below() {
     ex(&mut s, "layer.add", json!({}));
     let upper = s.active().and_then(|d| d.layer).expect("neue Ebene");
     assert_ne!(lower, upper);
+    // locking the current layer moves the current layer up (RE spec 64 rule 7): make the locked
+    // layer current again (row right-click / script) to reach the measured situation
     ex(&mut s, "layer.setLocked", json!({"locked": true}));
+    ex(&mut s, "layer.setActive", json!({"layer": upper.0}));
     tool(&mut s, ToolId::Brush);
     events(&mut s, &[ToolEvent::down(60.0, 450.0), ToolEvent::drag(130.0, 450.0)]);
     s.tool_event(&ToolEvent::up(200.0, 450.0)).expect("keine Meldung");

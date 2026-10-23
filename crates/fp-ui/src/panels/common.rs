@@ -112,6 +112,12 @@ pub fn reorder_rows(
 
 /// Zeile einer Liste (Auswahlfarbe, Hover, Trennlinie).
 pub fn row(ui: &mut Ui, height: f32, selected: bool) -> (Rect, egui::Response) {
+    row_tinted(ui, height, selected, false)
+}
+
+/// Like [`row`], with a second, lighter highlight `tint` for rows that are not selected themselves
+/// (the Layers panel's current layer and the layers holding selected objects, RE spec 64 §2.5).
+pub fn row_tinted(ui: &mut Ui, height: f32, selected: bool, tint: bool) -> (Rect, egui::Response) {
     let theme = Theme::current(ui.ctx());
     let (rect, resp) =
         ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::click_and_drag());
@@ -122,6 +128,9 @@ pub fn row(ui: &mut Ui, height: f32, selected: bool) -> (Rect, egui::Response) {
             ui.painter()
                 .rect_stroke(rect, 0.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
         }
+    } else if tint {
+        ui.painter()
+            .rect_filled(rect, 0.0, c.list_selected_light_bg);
     } else if resp.hovered() {
         ui.painter().rect_filled(rect, 0.0, c.list_hover_bg);
     }

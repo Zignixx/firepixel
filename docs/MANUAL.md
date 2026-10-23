@@ -324,7 +324,18 @@ Important panels:
   of them. The anchor counts while its object is still selected, even after a selection on the
   canvas; otherwise the bottom-most selected object is the anchor, and with nothing selected a
   Shift+click selects from the row to the bottom-most object. Clicks on rows of a locked layer (or of
-  a sub-layer of one) change nothing. Selecting in the panel writes no History steps. A right-click on an object row selects that
+  a sub-layer of one) change nothing. Selecting in the panel writes no History steps, except the plain
+  click on a layer row, which writes one *Layer Change* step (Undo restores the current layer and the
+  selection). Whenever the selection ends up as exactly one object (panel, canvas, marquee, Select All,
+  script), that object's layer or sub-layer becomes the current layer; with two or more objects the
+  current layer stays. Locking the current layer makes the next unlocked layer above it current (the
+  web layer included). A file opens on page 1 and state 1 with the bottom-most unlocked layer current
+  and nothing selected; the panel scrolls to that layer's row. With nothing selected the current
+  layer's row is highlighted with a bold name; with a selection the selected object rows are
+  highlighted and bold, while the current layer and every layer holding a selected object are tinted
+  light. The circle at the right of each layer row is filled where the layer holds a selected object
+  (grey on the web layer). The New Layer button adds the layer above the current one on its level (beside a
+  current sub-layer). A right-click on an object row selects that
   object first, so the context menu's *Flatten Selection*, *Add Mask* and *Merge Down* apply to it
   (*Merge Down* only when the object lies directly above a bitmap). A right-click on a layer row makes
   it the current layer and keeps the selection; on the web layer the share-to-pages entries are grey.

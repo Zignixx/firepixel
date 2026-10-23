@@ -525,9 +525,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 d.doc = Arc::new(doc);
                 d.history = crate::history::History::new(prefs_max);
                 d.selection.clear();
-                d.page = d.doc.current_page.min(d.doc.pages.len().saturating_sub(1));
+                // like opening (RE spec 64 §3 rule 1): page 0, state 0, bottom-most unlocked layer
+                d.page = 0;
                 d.frame = 0;
-                d.layer = crate::docops::top_normal_layer(&d.doc, d.page);
+                d.layer = crate::docops::bottom_unlocked_layer(&d.doc, 0);
                 d.generation += 1;
                 d.saved_generation = d.generation;
                 let (id, g) = (d.id, d.generation);

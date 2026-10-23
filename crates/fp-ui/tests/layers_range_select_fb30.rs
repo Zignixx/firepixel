@@ -370,7 +370,8 @@ fn layers_shift_range_over_layers_and_layer_rows() {
     reset(&mut h);
     click(&mut h, "obj a", SHIFT);
     assert_eq!(sel3(&h, &o), ALL, "T28");
-    assert_eq!(history_rows(&h), rows, "selection changes in the panel write no History rows");
+    // the one plain layer-row click (T7, "L2") writes a "Layer Change" row (RE spec 64 §2.4)
+    assert_eq!(history_rows(&h), rows + 1, "other selection changes in the panel write no History rows");
 }
 
 /// V3, T17: objects of a collapsed layer (no rows shown) count in the range.

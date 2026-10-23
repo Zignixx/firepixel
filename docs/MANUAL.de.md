@@ -345,7 +345,18 @@ Wichtige Bedienfelder:
   gewählt ist, auch nach einer Auswahl auf der Leinwand; sonst gilt das unterste gewählte Objekt, und
   ohne Auswahl wählt Umschalt+Klick von der Zeile bis zum untersten Objekt. Klicks auf Zeilen einer
   gesperrten Ebene (oder einer Unterebene davon) bewirken nichts. Auswählen im Bedienfeld schreibt
-  keine Schritte in den Verlauf. Ein
+  keine Schritte in den Verlauf, ausgenommen der schlichte Klick auf eine Ebenenzeile: er schreibt
+  einen Schritt *Ebenenänderung* (Rückgängig stellt aktuelle Ebene und Auswahl zurück). Besteht die
+  Auswahl danach aus genau einem Objekt (Bedienfeld, Leinwand, Auswahlrahmen, Alles auswählen,
+  Skript), wird dessen Ebene oder Unterebene die aktuelle Ebene; bei zwei und mehr Objekten bleibt die
+  aktuelle Ebene. Sperren der aktuellen Ebene macht die nächste ungesperrte Ebene darüber (auch die
+  Webebene) zur aktuellen. Eine Datei öffnet auf Seite 1 und Status 1 mit der untersten ungesperrten
+  Ebene als aktueller Ebene und ohne Auswahl; das Bedienfeld rollt zu deren Zeile. Ohne Auswahl ist
+  die Zeile der aktuellen Ebene hervorgehoben und ihr Name fett; mit Auswahl sind die gewählten
+  Objektzeilen hervorgehoben und fett, die aktuelle Ebene und jede Ebene mit einem gewählten Objekt
+  hell getönt. Der Kreis rechts in jeder Ebenenzeile ist gefüllt, wenn die Ebene ein gewähltes Objekt
+  enthält (auf der Webebene grau). Der Knopf *Neue Ebene* legt die Ebene über der aktuellen auf deren
+  Stufe an (neben einer aktuellen Unterebene). Ein
   Rechtsklick auf eine Objektzeile wählt zuerst dieses Objekt, sodass *Auswahl auf Hintergrund
   reduzieren*, *Maske hinzufügen* und *Mit darunter liegender auf eine Ebene reduzieren* im Kontextmenü
   dafür gelten (Letzteres nur, wenn das Objekt direkt über einer Bitmap liegt). Ein Rechtsklick auf eine

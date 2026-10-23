@@ -250,6 +250,42 @@ fn move_layer_into(
     Ok(())
 }
 
+/// The Layers panel's New Layer button with a current sublayer (RE spec 64 §1.3): a new sublayer
+/// directly above the current one in the same parent, which becomes current. `None` when the
+/// current layer is not a sublayer.
+fn add_sibling_sublayer(
+    d: &mut crate::session::DocumentState,
+    name: Option<&str>,
+) -> Result<Option<fp_model::LayerId>> {
+    let page = d.page;
+    let Some(el) = d.layer.and_then(|l| docops::as_sublayer(&d.doc, page, l)) else {
+        return Ok(None);
+    };
+    let path = docops::find_on_page(&d.doc, page, el)
+        .ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+    let count = docops::flat_layers(&d.doc, page, d.frame).len();
+    let doc = Arc::make_mut(&mut d.doc);
+    let frames = doc
+        .pages
+        .get(page)
+        .map(|pg| pg.root.frame_count as usize)
+        .unwrap_or(1)
+        .max(1);
+    let label = name
+        .map(str::to_string)
+        .unwrap_or_else(|| fp_i18n::tr!("msg-default-layer", n = count.to_string()));
+    let mut idg = std::mem::take(&mut doc.ids);
+    let sub = fp_model::Layer::new(&mut idg, &label, LayerKind::Normal, frames);
+    let id = sub.id;
+    let e = Element::new(idg.element(), ElementKind::SubLayer(Arc::new(sub)));
+    doc.ids = idg;
+    let (list, at) = docops::parent_list_mut(doc, &path)
+        .ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
+    list.insert(at, Arc::new(e));
+    d.layer = Some(id);
+    Ok(Some(id))
+}
+
 fn edit_layer(
     s: &mut Session,
     p: &Params,
@@ -1265,10 +1301,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .label("Ebene hinzufügen")
             .requires(DOC)
             .opt("name", ParamKind::String, "Name")
+            .opt(
+                "sibling",
+                ParamKind::Bool,
+                "Knopf „Neue Ebene“ im Ebenen-Bedienfeld: bei aktueller Unterebene wird die neue Ebene ihr Geschwister darüber",
+            )
             .run(|s, p| {
                 let n = p.opt_str("name")?;
+                let sibling = p.bool_or("sibling", false)?;
                 with_doc(s, |d| {
-                    let id = super::edit::add_layer(d, n.as_deref(), LayerKind::Normal)?;
+                    let id = match sibling {
+                        true => add_sibling_sublayer(d, n.as_deref())?,
+                        false => None,
+                    };
+                    let id = match id {
+                        Some(id) => id,
+                        None => super::edit::add_layer(d, n.as_deref(), LayerKind::Normal)?,
+                    };
                     Ok(CommandOutput::doc_with(json!({"layer": id.0})))
                 })
             }),
@@ -1390,11 +1439,28 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .param("locked", ParamKind::Bool, "gesperrt")
             .run(|s, p| {
                 let v = p.bool_or("locked", true)?;
-                edit_layer(s, p, move |l| {
+                let was_locked = s.doc().is_ok_and(|d| {
+                    d.layer
+                        .is_some_and(|l| docops::layer_locked_in(&d.doc, d.page, d.frame, l))
+                });
+                let out = edit_layer(s, p, move |l| {
                     for c in &mut l.cels {
                         Arc::make_mut(c).locked = v;
                     }
-                })
+                })?;
+                // RE spec 64 §3 rule 7: locking the current layer (or a parent of it) moves the
+                // current layer up to the next unlocked one, the web layer included, else index 0
+                if v && !was_locked {
+                    with_doc(s, |d| {
+                        if let Some(cur) = d.layer
+                            && docops::layer_locked_in(&d.doc, d.page, d.frame, cur)
+                        {
+                            d.layer = docops::next_unlocked_above(&d.doc, d.page, d.frame, cur);
+                        }
+                        Ok(())
+                    })?;
+                }
+                Ok(out)
             }),
     );
     r.add(
@@ -1429,8 +1495,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 })
             }),
     );
-    r.add(cmd("layer.setActive").label("Aktive Ebene").requires(DOC).param("layer", ParamKind::Integer { min: Some(0), max: None }, "Ebenen-ID").run(|s, p| {
-        with_doc(s, |d| {
+    // The plain click on a layer row passes `select` (the row's own objects): one History row
+    // "Layer Change" whose undo restores the current layer and the selection (RE spec 64 §2.4);
+    // without `select` only the current layer changes and no row is written.
+    r.add(cmd("layer.setActive").label("Ebenenänderung").requires(DOC).param("layer", ParamKind::Integer { min: Some(0), max: None }, "Ebenen-ID").opt("select", ParamKind::Ids, "Klick auf eine Ebenenzeile: diese Objekte mit auswählen (ein Protokollschritt „Ebenenänderung“)").run(|s, p| {
+        let select = p.opt_ids("select")?;
+        let row = select.is_some();
+        let changed = with_doc(s, |d| {
+            let before = (d.layer, d.selection.elements.clone());
             let id = layer_param(d, p)?;
             // eigene Ebene oder über Seiten geteilte Ebene dieser Seite
             let shared = d.doc.pages.get(d.page).is_some_and(|pg| {
@@ -1441,8 +1513,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 docops::layer_slot(&d.doc, d.page, id).ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
             }
             d.layer = Some(id);
-            Ok(CommandOutput::doc())
-        })
+            if let Some(ids) = select {
+                let mut usable = Vec::new();
+                for e in ids {
+                    let path = docops::find_on_page(&d.doc, d.page, e)
+                        .ok_or(EngineError::ElementNotFound(e.0))?;
+                    if !docops::is_locked(&d.doc, d.page, &path) {
+                        usable.push(e);
+                    }
+                }
+                d.selection.set(usable);
+            }
+            Ok(before != (d.layer, d.selection.elements.clone()))
+        })?;
+        if row && changed {
+            s.force_history_step();
+        }
+        Ok(CommandOutput::doc())
     }));
     r.add(
         cmd("layer.move")

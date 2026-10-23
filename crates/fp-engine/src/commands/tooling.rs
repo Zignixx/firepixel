@@ -149,9 +149,20 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("params", ParamKind::Json, "Parameter des Auswahlbefehls")
             .run(|s, p| {
                 let c = p.str("command")?;
+                let before = s.active().map(|d| d.selection.elements.clone());
                 let out = run_inner(s, &c, p.get("params").cloned().unwrap_or_else(|| json!({})))?;
+                // RE spec 64 §3 rule 4: one selected object makes its layer current, no History row
+                let moved = match (before, s.active_mut()) {
+                    (Some(b), Some(d)) if b != d.selection.elements => {
+                        crate::session::follow_single_selection_now(d)
+                    }
+                    _ => false,
+                };
                 if let Some(id) = s.active_id() {
                     s.emit(crate::session::SessionEvent::SelectionChanged(id));
+                    if moved {
+                        s.emit(crate::session::SessionEvent::LocationChanged(id));
+                    }
                 }
                 Ok(CommandOutput {
                     effect: crate::command::Effect::None,

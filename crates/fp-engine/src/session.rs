@@ -49,6 +49,42 @@ fn selection_paths(
     ids.into_iter().zip(paths).collect()
 }
 
+/// RE spec 64 §3 rule 4: a selection that ends up as exactly one object makes that object's layer
+/// or sublayer current, whichever way it was selected (panel row, canvas, marquee, Select All,
+/// script); 0 or 2+ objects keep it. Call after the selection's elements changed; `paths` are the
+/// addresses of the current selection. Hotspots and slices (web layer) were not measured and keep
+/// the current layer. Returns whether the current layer changed.
+pub(crate) fn follow_single_selection(
+    d: &mut DocumentState,
+    paths: &std::collections::HashMap<fp_model::ElementId, Option<fp_model::traverse::ElementPath>>,
+) -> bool {
+    let [only] = d.selection.elements.as_slice() else {
+        return false;
+    };
+    let Some(Some(path)) = paths.get(only) else {
+        return false;
+    };
+    if d.doc
+        .element_at(path)
+        .is_some_and(|e| matches!(e.kind, fp_model::ElementKind::WebObject(_)))
+    {
+        return false;
+    }
+    match crate::docops::owning_layer(&d.doc, d.page, path) {
+        Some(l) if d.layer != Some(l) => {
+            d.layer = Some(l);
+            true
+        }
+        _ => false,
+    }
+}
+
+/// [`follow_single_selection`] for a selection changed outside a History step (`tool.pick`).
+pub(crate) fn follow_single_selection_now(d: &mut DocumentState) -> bool {
+    let paths = selection_paths(&d.doc, d.page, &d.selection);
+    follow_single_selection(d, &paths)
+}
+
 /// Is this step an arrow-key nudge from the canvas (`edit.move` with `nudge`, without `ids`)?
 pub(crate) fn is_key_nudge(name: &str, params: &Value) -> bool {
     name == "edit.move"
@@ -244,8 +280,11 @@ impl DocumentState {
         title: String,
         prefs: &Preferences,
     ) -> DocumentState {
-        let page = doc.current_page.min(doc.pages.len().saturating_sub(1));
-        let layer = crate::docops::top_normal_layer(&doc, page);
+        // RE spec 64 §3 rule 1 (Q-65): a document opens on page 0 and state 0 with the bottom-most
+        // unlocked layer current; the file keeps none of these. `doc.current_page` stays the page
+        // the stored root copy and flat image belong to (the writer and render checks need it).
+        let page = 0;
+        let layer = crate::docops::bottom_unlocked_layer(&doc, page);
         DocumentState {
             id,
             doc: Arc::new(doc),
@@ -1047,6 +1086,13 @@ impl Session {
         let paths = selection_paths(&doc, page, &d.selection);
         d.selection
             .retain_existing(|eid| paths.get(&eid).is_some_and(Option::is_some));
+        // RE spec 64 §3 rule 4 (see `follow_single_selection`); a group step was already handled
+        // by its inner commands (a script may set the layer after selecting). The change writes
+        // no History row of its own (rule 6): `loc_changed` alone never adds a row, and `SILENT`
+        // selection commands stay out of the History.
+        if name != "history.replay" && before.selection.elements != d.selection.elements {
+            follow_single_selection(d, &paths);
+        }
         let doc_changed = !Arc::ptr_eq(&before.doc, &d.doc);
         let sel_changed = before.selection != d.selection;
         let loc_changed =

@@ -119,6 +119,9 @@ pub fn begin_edit(
     }
     let id = s.add_document(doc, None);
     let st = s.doc_mut()?;
+    // the editing view keeps its top normal layer current (the open rule of RE spec 64 was
+    // measured for files, not for symbol editing)
+    st.layer = crate::docops::top_normal_layer(&st.doc, 0);
     // TW-36: Titel wie im Original „<Dokument> (Symbol)“ (Bearbeitung im Fenster des Dokuments)
     st.title = format!("{parent_title} (Symbol)");
     st.symbol_edit = Some(SymbolEdit {

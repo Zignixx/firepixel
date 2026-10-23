@@ -590,6 +590,115 @@ pub fn layer_on_page(doc: &Document, page: usize, current: Option<LayerId>) -> O
     }
 }
 
+/// One entry of a page's flat layer list in script `dom.layers` order (RE spec 64 §3).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FlatLayer {
+    pub id: LayerId,
+    /// Locked in the state, itself or through a parent layer (a sublayer inherits the lock,
+    /// RE spec 64 O13).
+    pub locked: bool,
+    pub web: bool,
+}
+
+/// The page's layers flat as `dom.layers` lists them: index 0 = the bottom layer, a layer's
+/// sublayers right after it (bottom one first, nested ones after their parent), the web layer
+/// last. Master-page slots have no layer of their own and are left out.
+pub fn flat_layers(doc: &Document, page: usize, frame: usize) -> Vec<FlatLayer> {
+    fn subs(l: &Layer, frame: usize, locked: bool, out: &mut Vec<FlatLayer>) {
+        let Some(cel) = l.cel(frame).or_else(|| l.cel(0)) else {
+            return;
+        };
+        for e in cel.elements.iter().rev() {
+            if let ElementKind::SubLayer(sl) = &e.kind {
+                let lk = locked || e.common.locked || sl.cel(frame).is_some_and(|c| c.locked);
+                out.push(FlatLayer {
+                    id: sl.id,
+                    locked: lk,
+                    web: false,
+                });
+                subs(sl, frame, lk, out);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    for (_, l) in own_layers(doc, page) {
+        let locked = l.cel(frame).is_some_and(|c| c.locked);
+        out.push(FlatLayer {
+            id: l.id,
+            locked,
+            web: l.kind == LayerKind::Web,
+        });
+        subs(&l, frame, locked, &mut out);
+    }
+    out
+}
+
+/// Current layer after opening or reverting a file (RE spec 64 §3 rule 1, Q-65): the first layer
+/// in flat `dom.layers` order that is not locked in state 0; visibility does not matter and the
+/// web layer counts as never locked (its lock is not kept, O12). Without any, flat index 0.
+pub fn bottom_unlocked_layer(doc: &Document, page: usize) -> Option<LayerId> {
+    let list = flat_layers(doc, page, 0);
+    list.iter()
+        .find(|l| !l.locked || l.web)
+        .or_else(|| list.first())
+        .map(|l| l.id)
+}
+
+/// Current layer after the current layer `current` became locked (RE spec 64 §3 rule 7): the next
+/// unlocked layer above it in flat order (the web layer included), else flat index 0.
+pub fn next_unlocked_above(
+    doc: &Document,
+    page: usize,
+    frame: usize,
+    current: LayerId,
+) -> Option<LayerId> {
+    let list = flat_layers(doc, page, frame);
+    let at = list.iter().position(|l| l.id == current).unwrap_or(0);
+    list.iter()
+        .skip(at + 1)
+        .find(|l| !l.locked)
+        .or_else(|| list.first())
+        .map(|l| l.id)
+}
+
+/// Is the layer or sublayer `id` locked in the state (itself or through a parent)?
+pub fn layer_locked_in(doc: &Document, page: usize, frame: usize, id: LayerId) -> bool {
+    flat_layers(doc, page, frame)
+        .iter()
+        .any(|l| l.id == id && l.locked)
+}
+
+/// Layer or sublayer an element at `path` belongs to (RE spec 64 §3 rule 4): the innermost
+/// sublayer on the way to it, otherwise the layer of the page slot; an object inside a group
+/// belongs to the group's layer. A selected sublayer element stands for that sublayer.
+pub fn owning_layer(doc: &Document, page: usize, path: &ElementPath) -> Option<LayerId> {
+    let mut layer = match path.root {
+        RootRef::SharedLayer(i) => doc.shared_layers.get(i)?.layer.as_ref()?.id,
+        _ => match doc.pages.get(page)?.root.layers.get(path.slot)? {
+            LayerSlot::Own(l) => l.id,
+            LayerSlot::Shared(r) => doc.shared_layer(&r.id)?.layer.as_ref()?.id,
+            _ => return None,
+        },
+    };
+    for i in 0..path.steps.len() {
+        let inner = i + 1 == path.steps.len()
+            || matches!(path.steps.get(i + 1), Some(PathStep::SubLayerCel(_)));
+        if !inner || matches!(path.steps[i], PathStep::SubLayerCel(_)) {
+            continue;
+        }
+        let pre = ElementPath {
+            steps: path.steps[..=i].to_vec(),
+            ..path.clone()
+        };
+        if let Some(e) = doc.element_at(&pre)
+            && let ElementKind::SubLayer(sl) = &e.kind
+        {
+            layer = sl.id;
+        }
+    }
+    Some(layer)
+}
+
 /// Ebene per ID: eine Ebene der Seite (eigene oder über Seiten geteilte) oder eine Unterebene darin.
 pub fn layer_by_id(doc: &Document, page: usize, id: LayerId) -> Option<Arc<Layer>> {
     if let Some((_, l)) = own_layers(doc, page).into_iter().find(|(_, l)| l.id == id) {
