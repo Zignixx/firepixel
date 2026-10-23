@@ -290,7 +290,12 @@ with the layout format of the original.
 Important panels:
 
 - **Layers:** visibility (eye), lock, sub-layers; drag to reorder. Sub-layers are indented folder
-  rows with an expander; double-click a row to rename it. A right-click on an object row selects that
+  rows with an expander; double-click a row to rename it. A click on an object row selects only that
+  object and sets the anchor; Shift+click selects all object rows from the anchor to the clicked row
+  (across layers and sub-layers, replacing the selection); Ctrl+click (Cmd+click on macOS) adds or
+  removes one row and keeps the anchor; Ctrl+Shift+click acts like Shift+click. A click on a row that
+  is part of a multi-selection keeps the selection, and a click on a
+  layer row selects all objects of that layer. A right-click on an object row selects that
   object first, so the context menu's *Flatten Selection*, *Add Mask* and *Merge Down* apply to it
   (*Merge Down* only when the object lies directly above a bitmap). A right-click on a layer row makes
   it the current layer and keeps the selection; on the web layer the share-to-pages entries are grey.

@@ -306,6 +306,12 @@ Wichtige Bedienfelder:
 
 - **Ebenen:** Sichtbarkeit (Auge), Sperre (Schloss), Unterebenen; Ziehen ordnet um. Unterebenen
   stehen eingerückt als Ordnerzeile mit Aufklapper; Doppelklick auf die Zeile benennt sie um. Ein
+  Klick auf eine Objektzeile wählt nur dieses Objekt und setzt den Anker; Umschalt+Klick wählt alle
+  Objektzeilen vom Anker bis zur angeklickten Zeile (über Ebenen und Unterebenen hinweg, die Auswahl
+  wird ersetzt); Strg+Klick (unter macOS Befehl+Klick) nimmt eine Zeile hinzu oder heraus und lässt
+  den Anker stehen; Strg+Umschalt+Klick wirkt wie Umschalt+Klick. Ein Klick auf eine Zeile einer
+  Mehrfachauswahl lässt die Auswahl stehen, ein Klick auf eine
+  Ebenenzeile wählt alle Objekte dieser Ebene. Ein
   Rechtsklick auf eine Objektzeile wählt zuerst dieses Objekt, sodass *Auswahl auf Hintergrund
   reduzieren*, *Maske hinzufügen* und *Mit darunter liegender auf eine Ebene reduzieren* im Kontextmenü
   dafür gelten (Letzteres nur, wenn das Objekt direkt über einer Bitmap liegt). Ein Rechtsklick auf eine

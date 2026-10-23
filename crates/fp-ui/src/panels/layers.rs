@@ -55,6 +55,95 @@ enum Drag {
 const COLLAPSED: &str = "layers-collapsed";
 const DRAG: &str = "layers-drag";
 const RENAME: &str = "layers-rename";
+const ANCHOR: &str = "layers-anchor";
+
+/// Key of a list row for the selection anchor (FB-30, RE spec 61 §3). Layer and sublayer rows carry
+/// their layer id, object rows their element id (two separate number spaces).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RowKey {
+    Layer(LayerId),
+    Element(fp_model::ElementId),
+}
+
+/// What a click on an object row does with the selection (RE spec 61 §3.3).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct ClickMods {
+    /// Shift: range from the anchor, replaces the selection (Ctrl+Shift behaves the same).
+    range: bool,
+    /// Ctrl (Cmd on macOS): toggle the row, the anchor stays.
+    toggle: bool,
+}
+
+/// Maps the keyboard modifiers of a row click. `command` is Ctrl on Windows/Linux and Cmd on macOS
+/// (egui sets `mac_cmd` there as well); the Ctrl key itself also toggles, so a Ctrl+click on a Mac
+/// does what the tester expected instead of nothing.
+fn click_mods(m: &egui::Modifiers) -> ClickMods {
+    ClickMods {
+        range: m.shift,
+        toggle: m.command || m.mac_cmd || m.ctrl,
+    }
+}
+
+/// Selection after a click on the object row `clicked` (FB-30, TW-208, RE spec 61 §3.3).
+///
+/// `order` lists the panel's rows top to bottom as shown (rows of collapsed layers left out), each
+/// with the object it selects in a range (`None`: layer/sublayer row, object of a layer that is not
+/// editable, locked object). `anchor` is the last plain click, already checked for validity by the
+/// caller. Returns the new selection in panel order (`None`: unchanged) and the new anchor.
+///
+/// - Click: only this row, anchor = this row; a click on a row of a multi-selection keeps it.
+/// - Shift (also Ctrl+Shift): range anchor…row across the shown rows (objects of layers and
+///   sublayers in between included), replaces the selection; without a usable anchor the topmost
+///   selected row is the anchor, without a selection it is a plain click.
+/// - Ctrl/Cmd: toggles the row, the anchor stays.
+fn object_row_click(
+    order: &[(RowKey, Option<fp_model::ElementId>)],
+    selected: &[fp_model::ElementId],
+    anchor: Option<RowKey>,
+    clicked: fp_model::ElementId,
+    mods: ClickMods,
+) -> (Option<Vec<fp_model::ElementId>>, Option<RowKey>) {
+    let pos = |k: RowKey| order.iter().position(|(r, _)| *r == k);
+    let here = RowKey::Element(clicked);
+    let plain = (Some(vec![clicked]), Some(here));
+    if mods.range {
+        let start = anchor.filter(|a| pos(*a).is_some()).or_else(|| {
+            order
+                .iter()
+                .find(|(r, _)| matches!(r, RowKey::Element(id) if selected.contains(id)))
+                .map(|(r, _)| *r)
+        });
+        let (Some(a), Some(b)) = (start, pos(here)) else {
+            return plain;
+        };
+        let Some(a_pos) = pos(a) else {
+            return plain;
+        };
+        let (lo, hi) = (a_pos.min(b), a_pos.max(b));
+        let ids: Vec<fp_model::ElementId> = order[lo..=hi]
+            .iter()
+            .filter_map(|(r, sel)| sel.or((*r == here).then_some(clicked)))
+            .collect();
+        return (Some(ids), Some(a));
+    }
+    if mods.toggle {
+        let mut ids: Vec<fp_model::ElementId> = selected.to_vec();
+        if ids.contains(&clicked) {
+            ids.retain(|x| *x != clicked);
+        } else {
+            ids.push(clicked);
+        }
+        // panel order, like the original's selection after a toggle (RE spec 61 §3.2); objects
+        // whose rows are not shown keep their place after them
+        let rank = |id: &fp_model::ElementId| pos(RowKey::Element(*id)).unwrap_or(usize::MAX);
+        ids.sort_by_key(rank);
+        return (Some(ids), anchor.or(Some(here)));
+    }
+    if selected.len() > 1 && selected.contains(&clicked) {
+        return (None, anchor);
+    }
+    plain
+}
 
 fn element_label(e: &Element) -> String {
     if let Some(n) = &e.common.name
@@ -225,7 +314,21 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     };
     let press_origin = ui.input(|i| i.pointer.press_origin());
     let rename: Option<RowKind> = ui.data(|dd| dd.get_temp(Id::new(RENAME)));
-    let shift = ui.input(|i| i.modifiers.shift || i.modifiers.command);
+    // FB-30 (RE spec 61 §3): Shift = range from the anchor, Ctrl/Cmd = toggle
+    let mods = ui.input(|i| click_mods(&i.modifiers));
+    // anchor of the last plain click with the selection the panel left behind (sorted ids); it
+    // counts while the document and that selection are unchanged (a selection made on the canvas
+    // or by a command drops it, a Shift+click then ranges from the topmost selected row)
+    let mut sel_sorted: Vec<u64> = selected.iter().map(|x| x.0).collect();
+    sel_sorted.sort_unstable();
+    let anchor: Option<RowKey> = ui
+        .data(|dd| dd.get_temp::<(u64, RowKey, Vec<u64>)>(Id::new(ANCHOR)))
+        .filter(|(doc, _, snap)| *doc == doc_id.0 && *snap == sel_sorted)
+        .map(|(_, k, _)| k);
+    let mut new_anchor: Option<(RowKey, Vec<u64>)> = None;
+    // shown rows top to bottom for Shift ranges; object clicks are resolved after the list is built
+    let mut order: Vec<(RowKey, Option<fp_model::ElementId>)> = Vec::new();
+    let mut pending_click: Option<(fp_model::ElementId, ClickMods)> = None;
     let alt = ui.input(|i| i.modifiers.alt);
     // Miniaturoptionen (0 = keine; Vorgabe 32 → 24 px wie im Original „mittel“)
     let tpx = (st
@@ -386,6 +489,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         "layer.setActive".into(),
                         json!({"layer": l.id.0}),
                     ));
+                    new_anchor = Some((RowKey::Layer(l.id), ids.clone()));
                     actions.push(Action::Run("select.set".into(), json!({"ids": ids})));
                 } else if rl.origin == LayerOrigin::Shared {
                     actions.push(Action::Run(
@@ -459,6 +563,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
             menu_rows.push(resp.clone());
             rows.push(RowInfo { kind, rect, locked });
+            order.push((RowKey::Layer(l.id), None));
             if is_collapsed {
                 continue;
             }
@@ -620,6 +725,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                     "layer.setActive".into(),
                                     json!({"layer": sl.id.0}),
                                 ));
+                                new_anchor = Some((RowKey::Layer(sl.id), ids.clone()));
                                 actions.push(Action::Run("select.set".into(), json!({"ids": ids})));
                             }
                         }
@@ -669,8 +775,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                 locked: false,
                             });
                         }
+                        order.push((RowKey::Layer(sl.id), None));
                         continue;
                     }
+                    // object row in a Shift range: own editable layer, not locked
+                    order.push((
+                        RowKey::Element(e.id),
+                        (editable && !e.common.locked).then_some(e.id),
+                    ));
                     // BA-099: rows outside the visible part of the list only take their place
                     // (pages with thousands of objects built every row each frame)
                     let next =
@@ -905,17 +1017,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                 json!({"ids": [e.id.0], "locked": !e.common.locked}),
                             ));
                         } else if editable {
-                            let mut ids: Vec<u64> = if shift {
-                                selected.iter().map(|x| x.0).collect()
-                            } else {
-                                Vec::new()
-                            };
-                            if shift && ids.contains(&e.id.0) {
-                                ids.retain(|x| *x != e.id.0);
-                            } else {
-                                ids.push(e.id.0);
-                            }
-                            actions.push(Action::Run("select.set".into(), json!({"ids": ids})));
+                            // resolved after the loop: a Shift range needs the rows below as well
+                            pending_click = Some((e.id, mods));
                         }
                     }
                     // Q-59 (RE spec 58 §3.2): a right-click on an object row selects the object like a
@@ -924,6 +1027,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     // selection keeps the selection as it is
                     if resp2.secondary_clicked() && editable && !selected_set.contains(&e.id) {
                         actions.push(Action::Run("select.set".into(), json!({"ids": [e.id.0]})));
+                        new_anchor = Some((RowKey::Element(e.id), vec![e.id.0]));
                     }
                     if (resp2.double_clicked() || resp2.triple_clicked()) && editable {
                         rename_start = Some(kind.clone());
@@ -944,6 +1048,27 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
         }
     });
+    if let Some((id, m)) = pending_click {
+        let (ids, a) = object_row_click(&order, &selected, anchor, id, m);
+        let after: Vec<u64> = match ids {
+            Some(ids) => {
+                let ids: Vec<u64> = ids.iter().map(|x| x.0).collect();
+                actions.push(Action::Run(
+                    "select.set".into(),
+                    json!({"ids": ids.clone()}),
+                ));
+                ids
+            }
+            None => sel_sorted.clone(),
+        };
+        if new_anchor.is_none() {
+            new_anchor = a.map(|k| (k, after));
+        }
+    }
+    if let Some((k, mut snap)) = new_anchor {
+        snap.sort_unstable();
+        ui.data_mut(|dd| dd.insert_temp(Id::new(ANCHOR), (doc_id.0, k, snap)));
+    }
     ui.data_mut(|dd| match eye_drag {
         Some(mut v) => {
             v.2 = pointer.map(|p| p.y);
@@ -1464,5 +1589,158 @@ mod tests {
             out.iter().map(|(d, _, e)| (*d, e.id.0)).collect::<Vec<_>>(),
             vec![(0, a.id.0), (0, b.id.0)]
         );
+    }
+
+    fn eid(n: u64) -> fp_model::ElementId {
+        fp_model::ElementId(n)
+    }
+
+    /// Measured list (RE spec 61 §3.1): web layer, Layer 1, O4…O1 (ids 4…1).
+    fn measured_order() -> Vec<(RowKey, Option<fp_model::ElementId>)> {
+        let mut v = vec![
+            (RowKey::Layer(LayerId(100)), None),
+            (RowKey::Layer(LayerId(101)), None),
+        ];
+        for n in [4, 3, 2, 1] {
+            v.push((RowKey::Element(eid(n)), Some(eid(n))));
+        }
+        v
+    }
+
+    const CLICK: ClickMods = ClickMods {
+        range: false,
+        toggle: false,
+    };
+    const SHIFT: ClickMods = ClickMods {
+        range: true,
+        toggle: false,
+    };
+    const CTRL: ClickMods = ClickMods {
+        range: false,
+        toggle: true,
+    };
+    const CTRL_SHIFT: ClickMods = ClickMods {
+        range: true,
+        toggle: true,
+    };
+
+    /// Replays a click sequence like the panel does (selection and anchor carried over).
+    fn replay(steps: &[(u64, ClickMods)]) -> Vec<Vec<u64>> {
+        let order = measured_order();
+        let (mut sel, mut anchor): (Vec<fp_model::ElementId>, Option<RowKey>) = (Vec::new(), None);
+        let mut out = Vec::new();
+        for (n, m) in steps {
+            let (ids, na) = object_row_click(&order, &sel, anchor, eid(*n), *m);
+            if let Some(ids) = ids {
+                sel = ids;
+            }
+            anchor = na.or(anchor);
+            out.push(sel.iter().map(|x| x.0).collect());
+        }
+        out
+    }
+
+    /// FB-30 / TW-208: the measured sequences of RE spec 61 §3.2.
+    #[test]
+    fn fb30_row_click_rules_as_measured() {
+        let got = replay(&[(4, CLICK), (1, SHIFT), (2, CTRL), (2, CTRL), (3, SHIFT)]);
+        assert_eq!(
+            got,
+            vec![
+                vec![4],
+                vec![4, 3, 2, 1],
+                vec![4, 3, 1],
+                vec![4, 3, 2, 1],
+                vec![4, 3]
+            ]
+        );
+        assert_eq!(
+            replay(&[(1, CLICK), (4, CTRL), (2, SHIFT)]),
+            vec![vec![1], vec![4, 1], vec![2, 1]]
+        );
+        assert_eq!(
+            replay(&[(1, CLICK), (4, CTRL), (2, CTRL_SHIFT)]),
+            vec![vec![1], vec![4, 1], vec![2, 1]],
+            "Ctrl+Shift behaves like Shift"
+        );
+        assert_eq!(
+            replay(&[(1, CLICK), (3, CTRL_SHIFT)]),
+            vec![vec![1], vec![3, 2, 1]]
+        );
+        // all four selected, a click on O3 keeps them, Shift+click O3 ranges from the anchor O1
+        assert_eq!(
+            replay(&[(1, CLICK), (4, SHIFT), (3, CLICK), (3, SHIFT)]),
+            vec![vec![1], vec![4, 3, 2, 1], vec![4, 3, 2, 1], vec![3, 2, 1]]
+        );
+        assert_eq!(
+            replay(&[(3, CLICK), (3, SHIFT), (3, CTRL)]),
+            vec![vec![3], vec![3], vec![]]
+        );
+    }
+
+    /// Range from a layer anchor and across layer/sublayer rows: the object rows in between count,
+    /// layer rows and objects of other non-editable or locked rows do not.
+    #[test]
+    fn fb30_range_across_layers_and_fallback_anchor() {
+        let order = vec![
+            (RowKey::Layer(LayerId(1)), None),
+            (RowKey::Element(eid(10)), Some(eid(10))),
+            (RowKey::Layer(LayerId(2)), None), // sublayer row
+            (RowKey::Element(eid(11)), Some(eid(11))),
+            (RowKey::Element(eid(12)), None), // locked object
+            (RowKey::Layer(LayerId(3)), None),
+            (RowKey::Element(eid(13)), Some(eid(13))),
+        ];
+        let (ids, a) =
+            object_row_click(&order, &[], Some(RowKey::Element(eid(10))), eid(13), SHIFT);
+        assert_eq!(ids, Some(vec![eid(10), eid(11), eid(13)]));
+        assert_eq!(a, Some(RowKey::Element(eid(10))), "Shift keeps the anchor");
+        let (ids, _) =
+            object_row_click(&order, &[], Some(RowKey::Layer(LayerId(1))), eid(11), SHIFT);
+        assert_eq!(
+            ids,
+            Some(vec![eid(10), eid(11)]),
+            "range from a layer anchor"
+        );
+        // no anchor: topmost selected row
+        let (ids, a) = object_row_click(&order, &[eid(13), eid(11)], None, eid(10), SHIFT);
+        assert_eq!(ids, Some(vec![eid(10), eid(11)]));
+        assert_eq!(a, Some(RowKey::Element(eid(11))));
+        // nothing selected, no anchor: plain click
+        let (ids, a) = object_row_click(&order, &[], None, eid(11), SHIFT);
+        assert_eq!(ids, Some(vec![eid(11)]));
+        assert_eq!(a, Some(RowKey::Element(eid(11))));
+        // the clicked row itself is part of the range even when locked
+        let (ids, _) =
+            object_row_click(&order, &[], Some(RowKey::Element(eid(11))), eid(12), SHIFT);
+        assert_eq!(ids, Some(vec![eid(11), eid(12)]));
+    }
+
+    /// Ctrl on Windows/Linux and Cmd on macOS (egui `command`/`mac_cmd`) toggle; the Ctrl key on a
+    /// Mac toggles too; Shift ranges.
+    #[test]
+    fn fb30_click_modifiers_per_platform() {
+        assert_eq!(click_mods(&egui::Modifiers::NONE), CLICK);
+        assert_eq!(click_mods(&egui::Modifiers::SHIFT), SHIFT);
+        // Windows/Linux: Ctrl sets ctrl and command
+        let win_ctrl = egui::Modifiers {
+            ctrl: true,
+            command: true,
+            ..Default::default()
+        };
+        assert_eq!(click_mods(&win_ctrl), CTRL);
+        // macOS: Cmd sets mac_cmd and command, the Ctrl key only ctrl
+        let mac_cmd = egui::Modifiers {
+            mac_cmd: true,
+            command: true,
+            ..Default::default()
+        };
+        assert_eq!(click_mods(&mac_cmd), CTRL);
+        assert_eq!(click_mods(&egui::Modifiers::CTRL), CTRL);
+        assert_eq!(
+            click_mods(&(egui::Modifiers::SHIFT | egui::Modifiers::COMMAND)),
+            CTRL_SHIFT
+        );
+        assert_eq!(click_mods(&egui::Modifiers::ALT), CLICK);
     }
 }
