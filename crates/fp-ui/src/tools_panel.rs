@@ -868,6 +868,23 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
             }
             Some(ColorChoice::Placement(_)) | None => {}
         }
+        // live canvas preview of the pending alpha on the selected vectors (FB-29); the fill of
+        // the Paint Bucket commits as a solid fill and is not previewed
+        if vectors
+            && (is_stroke || st.session.tools.active != fp_engine::ToolId::PaintBucket)
+            && let Some(c) = crate::inspector::color_picker::pending_color(
+                ui.ctx(),
+                Id::new(("well", is_stroke)),
+            )
+        {
+            use crate::inspector::preview::{InspectorPreview, PreviewValue};
+            let v = if is_stroke {
+                PreviewValue::StrokeColor(c)
+            } else {
+                PreviewValue::FillColor(c)
+            };
+            st.inspector_preview = InspectorPreview::for_selection(st, v);
+        }
         if !is_stroke {
             crate::inspector::obj_quads::toolbar_fill_popups(ui, st, well);
         }

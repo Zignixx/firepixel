@@ -844,6 +844,13 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             },
             Some(_) | None => {}
         }
+        // live canvas preview of the pending alpha of the colour pop-up (FB-29, TW-206)
+        if tgt == Target::Selection
+            && en
+            && let Some(c) = popups::color_button_pending(ui.ctx(), id.with("sw"))
+        {
+            st.inspector_preview = InspectorPreview::for_selection(st, PreviewValue::FillColor(c));
+        }
     }
     // Füllart-Knöpfe Keine / Einfarbig / Verlauf / Muster; „Verlauf“ und „Muster“ stellen um und
     // öffnen sofort das zugehörige Popup (Original, PAR 18/01). Der Werkzeug-Inspektor des Verlaufs
@@ -1496,6 +1503,13 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
         ),
         Some(_) | None => {}
     }
+    // live canvas preview of the pending alpha of the colour pop-up (FB-29, TW-206)
+    if tgt == Target::Selection
+        && en
+        && let Some(c) = popups::color_button_pending(ui.ctx(), id.with("sw"))
+    {
+        st.inspector_preview = InspectorPreview::for_selection(st, PreviewValue::StrokeColor(c));
+    }
     if let Some(v) = fields::number(
         ui,
         id.with("w"),
@@ -2142,6 +2156,14 @@ fn rect_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {
         en,
     ) {
         st.run("pi.roundness", json!({"value": v, "pixels": px_mode}));
+    }
+    // live canvas preview of the dragged roundness (Firepixel enhancement like FB-09)
+    if en && let Some(value) = fields::slider_live(ui.ctx(), "pi-round") {
+        let v = PreviewValue::Roundness {
+            value,
+            pixels: px_mode,
+        };
+        st.inspector_preview = InspectorPreview::for_selection(st, v);
     }
     if let Some(i) = fields::combo(
         ui,
@@ -3383,6 +3405,16 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     ) {
         set_text(ui, st, tgt, json!({"color": ui_commands::hex(c)}));
     }
+    // live canvas preview of the pending alpha of the colour pop-up (FB-29)
+    let pending = popups::color_button_pending(ui.ctx(), id.with("color")).filter(|_| en);
+    if let Some(c) = pending
+        && st.session.text_edit_attrs().is_none()
+    {
+        st.inspector_preview = InspectorPreview::for_selection(
+            st,
+            PreviewValue::Text(json!({"color": ui_commands::hex(c)})),
+        );
+    }
     super::glyphs::paint(
         ui.painter(),
         d.r(1.0, 16.0, 12.0, 11.0),
@@ -3892,6 +3924,10 @@ fn text_stroke_field(ui: &mut Ui, st: &mut AppState, d: Dl, id: Id) {
             json!({"placement": crate::inspector::color_picker::placement_name(k)}),
         ),
         Some(_) | None => {}
+    }
+    // live canvas preview of the pending alpha of the colour pop-up (FB-29)
+    if en && let Some(c) = popups::color_button_pending(ui.ctx(), id.with("stroke")) {
+        st.inspector_preview = InspectorPreview::for_selection(st, PreviewValue::StrokeColor(c));
     }
 }
 

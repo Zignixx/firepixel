@@ -79,6 +79,17 @@ pub fn color_button_with(
     super::color_picker::popup(ui, &resp, st, color, footer)
 }
 
+/// Pending colour (changed opacity) of the open colour pop-up of the swatch drawn by
+/// [`color_button`] / [`color_button_with`] with the same `id` (FB-29: live canvas preview of the
+/// alpha); see [`super::color_picker::pending_color`].
+pub fn color_button_pending(
+    ctx: &egui::Context,
+    id: impl std::hash::Hash + std::fmt::Debug,
+) -> Option<Argb> {
+    // same ids as `color_button_with` → `fields::swatch`
+    super::color_picker::pending_color(ctx, Id::new(Id::new(id)))
+}
+
 /// Farbwähler-Popup an einer Antwort (öffnet beim Klick darauf).
 pub fn color_popup(
     ui: &mut Ui,

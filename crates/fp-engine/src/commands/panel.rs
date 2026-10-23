@@ -2871,6 +2871,40 @@ pub fn tool_brush_from(new_stroke: Option<&Value>, new_brush: Option<&Value>) ->
     b
 }
 
+/// Corner roundness of a rectangle primitive like `pi.roundness` (`value` in percent, or in pixels
+/// of the current size with `pixels`); other elements are left as they are. Also used for the live
+/// canvas preview of the roundness slider (a copy of the document, no history step).
+pub fn apply_roundness(e: &mut Element, value: f64, pixels: bool) {
+    let ElementKind::Path(pe) = &mut e.kind else {
+        return;
+    };
+    let Some(pr) = pe.primitive.as_mut() else {
+        return;
+    };
+    // Pixel beziehen sich auf die aktuelle Größe (nach B/H-Änderungen steckt die
+    // Skalierung in der Matrix, PAR 17/05)
+    let (w, h) = primitive_size(pr);
+    let half = (w.min(h) / 2.0).max(1e-6);
+    let frac = if pixels {
+        (value as f32 / half).clamp(0.0, 1.0)
+    } else {
+        (value as f32 / 100.0).clamp(0.0, 1.0)
+    };
+    pr.roundness = frac;
+    pr.roundness_pixels = Some(pixels);
+    let m = pr.transform;
+    let local = crate::geometry::rect_contour(pr.rect, frac as f64);
+    let map = |q: Point| m.apply(q);
+    let mut c = local;
+    for n in &mut c.nodes {
+        n.anchor = map(n.anchor);
+        n.pred = map(n.pred);
+        n.succ = map(n.succ);
+    }
+    pe.contours = vec![c];
+    pe.polyline = None;
+}
+
 /// Aktuelle Breite und Höhe einer Rechteck-Grundform in Dokumentpixeln (Rechteck durch die Matrix).
 pub fn primitive_size(pr: &fp_model::RectPrimitive) -> (f32, f32) {
     let m = pr.transform;
@@ -3794,36 +3828,7 @@ pub fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let v = p.f64("value")?;
                 let px = p.bool_or("pixels", false)?;
-                edit_each(s, p, |e, _| {
-                    let ElementKind::Path(pe) = &mut e.kind else {
-                        return;
-                    };
-                    let Some(pr) = pe.primitive.as_mut() else {
-                        return;
-                    };
-                    // Pixel beziehen sich auf die aktuelle Größe (nach B/H-Änderungen steckt die
-                    // Skalierung in der Matrix, PAR 17/05)
-                    let (w, h) = primitive_size(pr);
-                    let half = (w.min(h) / 2.0).max(1e-6);
-                    let frac = if px {
-                        (v as f32 / half).clamp(0.0, 1.0)
-                    } else {
-                        (v as f32 / 100.0).clamp(0.0, 1.0)
-                    };
-                    pr.roundness = frac;
-                    pr.roundness_pixels = Some(px);
-                    let m = pr.transform;
-                    let local = crate::geometry::rect_contour(pr.rect, frac as f64);
-                    let map = |q: Point| m.apply(q);
-                    let mut c = local;
-                    for n in &mut c.nodes {
-                        n.anchor = map(n.anchor);
-                        n.pred = map(n.pred);
-                        n.succ = map(n.succ);
-                    }
-                    pe.contours = vec![c];
-                    pe.polyline = None;
-                })
+                edit_each(s, p, |e, _| apply_roundness(e, v, px))
             }),
     );
 

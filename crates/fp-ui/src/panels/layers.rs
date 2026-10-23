@@ -134,6 +134,18 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let (head, _) = ui.allocate_exact_size(vec2(ui.available_width(), 24.0), Sense::hover());
     let dl = Dl::at(head.min + vec2(2.0, 1.0));
     let en = first_sel.is_some();
+    // both act on the selected objects (layers have no opacity or blend mode of their own); mixed
+    // values of several selected objects show a blank field (RE-29, re 61 §4)
+    let sel_elems: Vec<Arc<fp_model::Element>> = selected
+        .iter()
+        .filter_map(|id| fp_engine::docops::element_on_page(&doc, page, *id))
+        .collect();
+    let mixed_op = sel_elems
+        .windows(2)
+        .any(|w| w[0].common.opacity != w[1].common.opacity);
+    let mixed_bl = sel_elems
+        .windows(2)
+        .any(|w| w[0].common.blend != w[1].common.blend);
     let names = blend_names();
     let bl = first_sel
         .as_ref()
@@ -144,7 +156,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         "layers-blend",
         dl.r(1.0, 2.0, 80.0, 12.0),
         &names,
-        Some(bl),
+        (!mixed_bl).then_some(bl),
         en,
     ) && BLEND_ITEMS[i].1 >= 0
     {
@@ -167,12 +179,20 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         "layers-opacity",
         dl.r(120.0, 2.0, 21.0, 12.0),
         Some(dl.r(142.0, 2.0, 9.0, 12.0)),
-        op.or(Some(100.0)),
+        if mixed_op { None } else { op.or(Some(100.0)) },
         (0.0, 100.0),
         0,
         en,
     ) {
         st.run("element.setOpacity", json!({"opacity": v}));
+    }
+    // live canvas preview of the dragged value like the inspector's opacity slider (FB-28,
+    // TW-205); applied on release / pop-up close, the Blend mode menu stays a plain commit
+    if en && let Some(v) = fields::slider_live(ui.ctx(), "layers-opacity") {
+        st.inspector_preview = crate::inspector::preview::InspectorPreview::for_selection(
+            st,
+            crate::inspector::preview::PreviewValue::Opacity(v),
+        );
     }
     let collapsed: BTreeSet<u64> = ui
         .data(|dd| dd.get_temp(Id::new(COLLAPSED)))

@@ -110,6 +110,18 @@ pub fn apply_color(st: &mut AppState, c: Argb, stroke: bool) {
     }
 }
 
+/// Live canvas preview of a pending colour that [`apply_color`] would apply to the selection
+/// (FB-29): fill or stroke colour of the selected objects, no history step.
+fn preview_color(st: &mut AppState, c: Argb, stroke: bool) {
+    use crate::inspector::preview::{InspectorPreview, PreviewValue};
+    let v = if stroke {
+        PreviewValue::StrokeColor(c)
+    } else {
+        PreviewValue::FillColor(c)
+    };
+    st.inspector_preview = InspectorPreview::for_selection(st, v);
+}
+
 /// Farbfelder-Bedienfeld: Satzauswahl, Schnellmenü (wie das Bedienfeldmenü 6919), Raster.
 /// Klick übernimmt die Farbe (Umschalt: Strich), Strg+Klick löscht das Farbfeld.
 pub fn swatches(ui: &mut Ui, st: &mut AppState) {
@@ -317,6 +329,10 @@ pub fn mixer(ui: &mut Ui, st: &mut AppState) {
         if let Some(crate::inspector::popups::ColorChoice::Color(nc)) = choice {
             apply_color(st, nc, *is_stroke);
         }
+        // live canvas preview of the pending alpha on the selection (FB-29)
+        if let Some(pc) = crate::inspector::color_picker::pending_color(ui.ctx(), resp.id) {
+            preview_color(st, pc, *is_stroke);
+        }
     }
     // Standardfarben / Tauschen
     let br = Rect::from_min_size(pos2(area.left() + 4.0, area.top() + 66.0), vec2(18.0, 16.0));
@@ -381,6 +397,17 @@ pub fn mixer(ui: &mut Ui, st: &mut AppState) {
         ) {
             new_fields[i] = fp_color::models::mixer_slider_text(model, i, v);
             edited = true;
+        }
+        // live canvas preview of the dragged channel on the selection (Firepixel enhancement)
+        let arrow_id = Id::new(("mixer-ch-arrow", model_v, i));
+        if let Some(v) = ui.data(|d| d.get_temp::<f64>(arrow_id.with("val"))) {
+            let mut pending = fields_txt.clone();
+            pending[i] = fp_color::models::mixer_slider_text(model, i, v);
+            let refs: Vec<&str> = pending.iter().map(|s| s.as_str()).collect();
+            if let Some((r, g, b)) = fp_color::models::mixer_parse(model, &refs) {
+                let c = Argb(0xff00_0000 | (r as u32) << 16 | (g as u32) << 8 | b as u32);
+                preview_color(st, c, stroke_active);
+            }
         }
     }
     if edited {

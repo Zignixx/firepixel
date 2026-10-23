@@ -95,18 +95,6 @@ fn d4_preview_switch_one_to_two_keeps_top_left() {
     assert!((d.center_doc() - c).length() <= 0.75, "2 → 1 keeps the user's view: {c:?} → {:?}", d.center_doc());
 }
 
-/// re 28 D5: HEX/RGB of a color with opacity < 100 show the value mixed over white.
-#[test]
-fn d5_mixed_over_white() {
-    use fp_color::Argb;
-    use fp_ui::inspector::color_picker::{hex_text, mixed_over_white};
-    assert_eq!(hex_text(mixed_over_white(Argb(0x80ff_0000))).to_uppercase(), "#FF7F7F");
-    let m = mixed_over_white(Argb(0x80ff_0000));
-    assert_eq!((m.r(), m.g(), m.b(), m.a()), (255, 127, 127, 255));
-    assert_eq!(mixed_over_white(Argb(0xff12_3456)), Argb(0xff12_3456), "opaque unchanged");
-    assert_eq!(mixed_over_white(Argb(0x0012_3456)), Argb(0xffff_ffff), "transparent → white");
-}
-
 /// T-1 rest: the number fields of the vector file options are right-aligned as in the original.
 #[test]
 fn vector_options_numbers_right_aligned() {

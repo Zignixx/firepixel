@@ -328,6 +328,10 @@ struct CpState {
     rgb: [String; 3],
     /// Klappschieber der Deckkraft offen.
     slider: bool,
+    /// The opacity arrow was pressed and is dragged (RE-29, re 61 §2): the value follows the
+    /// pointer and is applied on release, which closes the pop-up; Esc restores the opacity held
+    /// here (value, typed flag) from before the drag.
+    slider_drag: Option<(u8, bool)>,
     /// Farbdialog (Farbkreis) offen.
     sys: bool,
     /// Bild, in dem das Popup aufging (der öffnende Klick zählt nicht als Pipette).
@@ -381,6 +385,20 @@ pub fn live_color(ctx: &egui::Context, swatch: Id) -> Option<Option<Argb>> {
     ctx.data(|d| d.get_temp::<Option<Argb>>(popup_id(swatch).with("live")))
 }
 
+/// Pending colour of the open pop-up of the swatch `swatch` once its opacity was changed (alpha
+/// slider dragged or the opacity field typed): the colour Enter would apply, with the pending alpha
+/// (FB-29, TW-206). The callers show it as a live preview on the canvas; `None` while the pop-up is
+/// closed or its opacity untouched. Esc closing the pop-up discards it (nothing is applied).
+pub fn pending_color(ctx: &egui::Context, swatch: Id) -> Option<Argb> {
+    let pid = popup_id(swatch);
+    if !egui::Popup::is_id_open(ctx, pid) {
+        return None;
+    }
+    let s = ctx.data(|d| d.get_temp::<CpState>(state_id(pid)))?;
+    s.opacity_dirty
+        .then(|| s.finish(s.work.unwrap_or(Argb(0xff00_0000))))
+}
+
 /// Rechteck der Rasterzelle (c, r) im Popup mit Ursprung `o`.
 pub fn cell_rect(o: Pos2, c: usize, r: usize) -> Rect {
     Rect::from_min_size(
@@ -395,14 +413,6 @@ fn c32(c: Argb) -> Color32 {
 
 fn opaque(c: Argb) -> Argb {
     Argb(c.0 | 0xff00_0000)
-}
-
-/// HEX/RGB display of a color with opacity < 100 (re 28 D5): the color mixed over white,
-/// `round(c·a + 255·(1 − a))` per channel, opaque. Example `#ff000080` → `#FF7F7F`.
-pub fn mixed_over_white(c: Argb) -> Argb {
-    let a = c.a() as u32;
-    let mix = |v: u32| (v * a + 255 * (255 - a) + 127) / 255;
-    Argb(0xff00_0000 | mix(c.r() as u32) << 16 | mix(c.g() as u32) << 8 | mix(c.b() as u32))
 }
 
 fn opacity_of(start: Option<Argb>) -> u8 {
@@ -426,6 +436,7 @@ impl CpState {
             op: String::new(),
             rgb: Default::default(),
             slider: false,
+            slider_drag: None,
             sys: false,
             opened_pass: pass,
             page: None,
@@ -435,19 +446,12 @@ impl CpState {
             shot_pending: None,
             track: false,
         };
-        s.fill_buffers(s.display(work));
+        // HEX/RGB always show the base colour, never blended with its alpha (RE-29, re 61 §2: the
+        // reference keeps #FF0000 / 255 0 0 while the alpha is edited; its blended value on
+        // reopening a semi-transparent colour is deliberately not copied); the alpha shows only
+        // in the opacity field
+        s.fill_buffers(work);
         s
-    }
-
-    /// Color shown in HEX/RGB: the untouched working color with its opacity mixed over white
-    /// (re 28 D5), everything else (hover, typed values) as is.
-    fn display(&self, c: Option<Argb>) -> Option<Argb> {
-        match c {
-            Some(w) if !self.dirty && Some(w) == self.work => {
-                Some(mixed_over_white(self.finish(w)))
-            }
-            other => other,
-        }
     }
 
     fn fill_buffers(&mut self, c: Option<Argb>) {
@@ -784,7 +788,13 @@ fn body(
     let esc = ctx.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape));
     let enter = ctx.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter));
     if esc {
-        if s.slider {
+        if let Some((op, dirty)) = s.slider_drag.take() {
+            // Esc during a drag from the arrow: back to the opacity before the drag
+            s.opacity = op;
+            s.opacity_dirty = dirty;
+            s.op = op.to_string();
+            s.slider = false;
+        } else if s.slider {
             s.slider = false;
         } else if s.sys {
             s.sys = false;
@@ -827,8 +837,10 @@ fn body(
     };
     let own = [pid.with("backdrop"), pid.with("area")];
     let (sys_open, slider_open) = (s.sys, s.slider);
-    let blocked =
-        |p: Pos2| (sys_open && sys_rect.contains(p)) || (slider_open && slider_rect.contains(p));
+    let dragging = s.slider_drag.is_some();
+    let blocked = |p: Pos2| {
+        dragging || (sys_open && sys_rect.contains(p)) || (slider_open && slider_rect.contains(p))
+    };
     let mut hover_cell = None;
     let mut shot_frame = false;
     let mut live: Option<Argb> = None;
@@ -907,11 +919,7 @@ fn body(
     ctx.data_mut(|d| d.insert_temp(pid.with("live"), shown));
     if !focused {
         let keep_op = s.op.clone();
-        s.fill_buffers(if live.is_none() {
-            s.display(shown)
-        } else {
-            shown
-        });
+        s.fill_buffers(shown);
         if s.opacity_dirty {
             s.op = keep_op;
         }
@@ -927,6 +935,7 @@ fn body(
     }
     ctx.set_sublayer(back_layer, layer);
     let mut sys_res = None;
+    let mut drag_released = false;
     egui::Area::new(layer.id)
         .order(Order::Foreground)
         .fixed_pos(union.min)
@@ -1054,7 +1063,7 @@ fn body(
                 }
                 let dd = Rect::from_min_max(o + vec2(47.0, 214.0), o + vec2(61.0, 235.0));
                 let ddr = ui
-                    .interact(dd, pid.with("op-dd"), Sense::click())
+                    .interact(dd, pid.with("op-dd"), Sense::click_and_drag())
                     .on_hover_text(texts::t("pi-color-opacity"));
                 p.rect_stroke(
                     dd,
@@ -1072,6 +1081,14 @@ fn body(
                 super::glyphs::chevron_down(&p, dd, c.icon_fg);
                 if ddr.clicked() {
                     s.slider = !s.slider;
+                }
+                // press on the arrow and drag: the slider follows the pointer, release applies
+                if ddr.drag_started() {
+                    s.slider = true;
+                    s.slider_drag = Some((s.opacity, s.opacity_dirty));
+                }
+                if ddr.drag_stopped() && s.slider_drag.is_some() {
+                    drag_released = true;
                 }
             }
             // RGB
@@ -1233,9 +1250,14 @@ fn body(
                     Stroke::new(1.0, c.field_border),
                     StrokeKind::Inside,
                 );
-                if let Some(pp) = resp.interact_pointer_pos().filter(|_| {
-                    resp.dragged() || resp.clicked() || resp.is_pointer_button_down_on()
-                }) {
+                let at = if s.slider_drag.is_some() {
+                    pointer
+                } else {
+                    resp.interact_pointer_pos().filter(|_| {
+                        resp.dragged() || resp.clicked() || resp.is_pointer_button_down_on()
+                    })
+                };
+                if let Some(pp) = at {
                     let v = (1.0 - (pp.y - track.top()) / track.height()).clamp(0.0, 1.0);
                     s.opacity = (v * 100.0).round() as u8;
                     s.opacity_dirty = true;
@@ -1253,6 +1275,13 @@ fn body(
     ctx.move_to_top(back_layer);
     if close {
         return (out, true);
+    }
+    // release after dragging from the opacity arrow: apply and close (RE-29, re 61 §2)
+    if drag_released || (s.slider_drag.is_some() && !ctx.input(|i| i.pointer.primary_down())) {
+        s.slider_drag = None;
+        s.slider = false;
+        let rgb = s.work.unwrap_or(Argb(0xff00_0000));
+        return (Some(ColorChoice::Color(s.finish(rgb))), true);
     }
     if s.sys {
         match sys_res {

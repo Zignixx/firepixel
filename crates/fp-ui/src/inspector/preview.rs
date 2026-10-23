@@ -14,8 +14,13 @@
 //! softness, fill edge feather, fill and stroke texture amount, and the text fields font size,
 //! tracking, leading, indent, space before/after and horizontal scale (selected text objects; with
 //! the text editor open only the field shows the pending value).
+//!
+//! Extended by FB-28/FB-29 (TW-205/TW-206): the Layers panel's opacity slider, the pending alpha
+//! (and colour) of the fill and stroke colour pop-ups of the inspector, the Tools panel and the
+//! Color Mixer, the Color Mixer's channel sliders and the rectangle roundness.
 
 use crate::app_state::AppState;
+use fp_color::Argb;
 use fp_engine::DocId;
 use fp_model::element::ElementKind;
 use fp_model::{Document, Element, ElementId};
@@ -40,6 +45,13 @@ pub enum PreviewValue {
     StrokeTextureAmount(f64),
     /// Text attributes, the parameters of `text.applyAttributes` (e.g. `{"size": 40}`).
     Text(serde_json::Value),
+    /// Fill colour with alpha, like `pi.fill {color}` (no fill yet: a solid fill is created).
+    FillColor(Argb),
+    /// Stroke colour with alpha, like `pi.stroke {color}` on objects that have a stroke (an object
+    /// without a stroke gets one only on commit).
+    StrokeColor(Argb),
+    /// Corner roundness of a rectangle primitive like `pi.roundness {value, pixels}`.
+    Roundness { value: f64, pixels: bool },
 }
 
 /// A pending slider value shown on the canvas of one document.
@@ -86,6 +98,11 @@ impl InspectorPreview {
             PreviewValue::FillTextureAmount(v) => (4u8, v.to_bits()).hash(&mut h),
             PreviewValue::StrokeTextureAmount(v) => (5u8, v.to_bits()).hash(&mut h),
             PreviewValue::Text(p) => (6u8, p.to_string()).hash(&mut h),
+            PreviewValue::FillColor(c) => (7u8, c.0).hash(&mut h),
+            PreviewValue::StrokeColor(c) => (8u8, c.0).hash(&mut h),
+            PreviewValue::Roundness { value, pixels } => {
+                (9u8, value.to_bits(), *pixels).hash(&mut h)
+            }
         }
         h.finish() | 1
     }
@@ -144,6 +161,24 @@ impl InspectorPreview {
                             f.texture_amount = pct(*v) * 10;
                         }
                     });
+                }
+                PreviewValue::FillColor(c) => {
+                    fp_engine::docops::edit_path_attrs(e, &|a| {
+                        a.fill_color = *c;
+                        if a.fill.is_none() {
+                            a.fill = Some(fp_model::Fill::solid());
+                        }
+                    });
+                }
+                PreviewValue::StrokeColor(c) => {
+                    fp_engine::docops::edit_path_attrs(e, &|a| {
+                        if a.brush.is_some() {
+                            a.stroke_color = *c;
+                        }
+                    });
+                }
+                PreviewValue::Roundness { value, pixels } => {
+                    fp_engine::commands::panel::apply_roundness(e, *value, *pixels);
                 }
                 PreviewValue::Text(_) => {}
             });

@@ -312,14 +312,21 @@ The **Properties inspector** at the bottom shows, depending on the selection, fi
 opacity, blending mode, Live Filters (+/−) and text or symbol settings.
 
 - **Pop-up sliders (▾):** while you move the thumb, the canvas previews the value live (preview only) for
-  opacity, stroke size, stroke edge softness, fill edge feather, fill and stroke texture amount, and for selected
-  text objects font size, tracking, leading, indent, space before and after and horizontal scale (with the text
-  editor open only the field shows the value). Press on the arrow and drag: the value is applied on release; Esc
+  opacity (also the Opacity slider in the Layers panel, which like its Blend mode list acts on the selected objects
+  and is blank when they have different values), stroke size, stroke edge softness, fill edge feather, fill
+  and stroke texture amount, rectangle roundness, the channel sliders of the Color Mixer (on the selection), and for
+  selected text objects font size, tracking, leading, indent, space before and after and horizontal scale (with the
+  text editor open only the field shows the value). Press on the arrow and drag: the value is applied on release; Esc
   discards it. Click the arrow: the slider stays open and the value is applied when you click beside it or press
   Enter; Esc discards it. A typed value is applied with Enter, Tab or a click into the document; a click on empty
   panel space applies nothing. Each apply is one History step; an unchanged value makes none. The slider opens
   flush left with its arrow, with the thumb of the current value under the point where you pressed; near the
   window edge it is moved just enough to stay inside (the first drag then sets the value under the pointer).
+- **Colour pop-up opacity:** when you change the opacity of a colour pop-up (its slider next to the "100" field, or
+  a typed value) for the fill or stroke of the selection — in the inspector, in the Tools panel or in the Color
+  Mixer — the canvas previews the colour with that opacity while the pop-up is open. Enter, or releasing after a
+  press-and-drag on the opacity arrow, applies it (one History step); Esc closes the opacity slider and then the
+  pop-up without any change.
 
 - **Fill edge:** *Hard*, *Anti-Alias*, *Feather* and *Dither*. Feather and Dither use the width field next to the
   list (a new Feather or Dither edge starts at 10 px). *Dither* gives a retro pixel-art edge: the same transition as
@@ -352,7 +359,10 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
 - **Color picker:** a click on a color box opens the popup with swatches, HEX field and eyedropper.
   While you move over the window, the eyedropper picks up every visible color, also over panels,
   menus and open dialogs. A click applies the color. Outside the Firepixel window the working color
-  stays.
+  stays. HEX and RGB always show the base color; its opacity shows only in the opacity field and in
+  the preview box (the reference shows a color mixed over white when it reopens a semi-transparent
+  color; Firepixel deliberately does not). Press on the opacity arrow and drag: the opacity follows
+  the pointer and is applied on release, which closes the popup; Esc during the drag cancels.
 
 ## Trace Bitmap
 

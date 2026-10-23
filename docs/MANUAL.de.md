@@ -331,8 +331,10 @@ Der **Eigenschaften-Inspektor** unten zeigt je nach Auswahl Füllung, Strich, De
 Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
 
 - **Popup-Schieber (▾):** Während Sie den Regler bewegen, zeigt die Arbeitsfläche den Wert live als Vorschau – bei
-  Deckkraft, Strichstärke, Kantenweichheit des Strichs, weicher Kante der Füllung, Texturmenge von Füllung und Strich
-  sowie bei gewählten Textobjekten für Schriftgröße, Laufweite, Zeilenabstand, Einzug, Abstand davor und danach und
+  Deckkraft (auch beim Deckkraft-Schieber im Ebenen-Bedienfeld, der wie dessen Mischmodus-Liste auf die gewählten
+  Objekte wirkt und bei unterschiedlichen Werten leer ist), Strichstärke, Kantenweichheit des Strichs, weicher
+  Kante der Füllung, Texturmenge von Füllung und Strich, Eckenrundung des Rechtecks, den Kanalschiebern des
+  Farbmischers (an der Auswahl) sowie bei gewählten Textobjekten für Schriftgröße, Laufweite, Zeilenabstand, Einzug, Abstand davor und danach und
   horizontale Skalierung (bei offenem Texteditor zeigt nur das Feld den Wert). Auf den Pfeil drücken und ziehen: Der
   Wert gilt beim Loslassen; Esc verwirft ihn. Auf den Pfeil klicken: Der Schieber bleibt offen, und der Wert gilt,
   wenn Sie daneben klicken oder die Eingabetaste drücken; Esc verwirft ihn. Ein eingetippter Wert gilt mit
@@ -340,6 +342,12 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Jedes Übernehmen ist ein Schritt im Verlauf; ein unveränderter Wert erzeugt keinen. Der Schieber öffnet sich links
   bündig mit dem Pfeil, der Regler beim aktuellen Wert unter der Stelle, an der Sie gedrückt haben; am Fensterrand
   wird er gerade so weit verschoben, dass er hineinpasst (die erste Bewegung setzt dann den Wert unter dem Zeiger).
+- **Deckkraft im Farb-Popup:** Ändern Sie die Deckkraft eines Farb-Popups (sein Schieber neben dem Feld „100“ oder
+  ein getippter Wert) für Füllung oder Strich der Auswahl – im Inspektor, in der Werkzeugleiste oder im
+  Farbmischer –, zeigt die Arbeitsfläche die Farbe mit dieser Deckkraft als Vorschau, solange das Popup offen ist.
+  Die Eingabetaste oder das Loslassen nach Drücken und Ziehen am Deckkraft-Pfeil übernimmt sie (ein Schritt im
+  Verlauf); Esc schließt erst den Deckkraft-Schieber und dann das
+  Popup ohne Änderung.
 
 - **Rand der Füllung:** *Hart*, *Anti-Alias*, *Weiche Kante* und *Dither*. Weiche Kante und Dither nutzen das
   Breitenfeld neben der Liste (ein neuer weicher oder Dither-Rand beginnt mit 10 px). *Dither* ergibt einen
@@ -376,7 +384,10 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
 - **Farbwähler:** Ein Klick auf ein Farbfeld öffnet das Popup mit Farbfeldern, HEX-Feld und Pipette. Die
   Pipette nimmt beim Überfahren jede sichtbare Farbe im Fenster auf, auch über Bedienfeldern, Menüs und
   offenen Dialogen. Ein Klick übernimmt die Farbe. Außerhalb des Firepixel-Fensters bleibt die
-  Arbeitsfarbe.
+  Arbeitsfarbe. HEX und RGB zeigen immer die Grundfarbe; ihre Deckkraft steht nur im Deckkraftfeld und im
+  Vorschaufeld (das Original zeigt beim erneuten Öffnen einer halbtransparenten Farbe eine über Weiß
+  gemischte Farbe; Firepixel bewusst nicht). Auf den Deckkraft-Pfeil drücken und ziehen: Die Deckkraft folgt
+  dem Zeiger und gilt beim Loslassen, das Popup schließt sich; Esc während des Ziehens bricht ab.
 
 ## Bitmap nachzeichnen
 
