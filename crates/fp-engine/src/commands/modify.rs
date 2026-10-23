@@ -2351,7 +2351,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 "scaleAttributes",
                 ParamKind::Bool,
                 json!(true),
-                "transform the fill handles too; false leaves them in the document (the transform tools pass XformToolXformsBFE)",
+                "Füllungsgriffe mit transformieren; false lässt sie im Dokument stehen (die Transformationswerkzeuge übergeben XformToolXformsBFE)",
             )
             .run(|s, p| {
                 let m = matrix_from(p, "matrix")?;
@@ -2399,7 +2399,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 "scaleAttributes",
                 ParamKind::Bool,
                 json!(true),
-                "transform the fill handles too; false leaves them in the document (the transform tools pass XformToolXformsBFE)",
+                "Füllungsgriffe mit transformieren; false lässt sie im Dokument stehen (die Transformationswerkzeuge übergeben XformToolXformsBFE)",
             )
             .run(|s, p| {
                 let rr = p.rect("rect")?;
@@ -2836,7 +2836,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt(
                 "worked",
                 ParamKind::Bool,
-                "the selected bitmaps count as worked on (a brush stroke finished after Escape): leaving the mode is a history step and trims them",
+                "die ausgewählten Bitmaps gelten als bearbeitet (ein nach Escape beendeter Pinselstrich): das Verlassen des Modus ist ein Protokollschritt und beschneidet sie",
             )
             .run(|s, p| {
                 let worked = p.opt_bool("worked")?.unwrap_or(false);
@@ -2877,7 +2877,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt(
                 "row",
                 ParamKind::Bool,
-                "always make a history step, without counting the bitmaps as worked on (Escape while dragging a marquee or lasso)",
+                "immer einen Protokollschritt anlegen, ohne die Bitmaps als bearbeitet zu zählen (Escape beim Aufziehen eines Auswahlrahmens oder Lassos)",
             )
             .run(|s, p| {
                 // Pinsel: Esc nach dem Zug legt im Original den Schritt „Bitmapmodus beenden“ an (01/14);

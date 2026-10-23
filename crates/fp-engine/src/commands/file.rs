@@ -160,8 +160,32 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
     }
     let tmp = path.with_extension("fpsave.tmp");
     std::fs::write(&tmp, bytes)?;
-    std::fs::rename(&tmp, path)?;
+    rename_retry(&tmp, path)?;
     Ok(())
+}
+
+/// Benennt die Zwischendatei um und wiederholt das bei „Datei wird von einem anderen Prozess
+/// verwendet“ (Windows, Fehler 32: ein Echtzeit-Virenscanner oder Indexdienst hält die frisch
+/// geschriebene Datei für einen Moment) bis zu 20 Mal mit 50 ms Abstand; danach wird die
+/// Zwischendatei entfernt und der letzte Fehler gemeldet.
+fn rename_retry(tmp: &Path, path: &Path) -> std::io::Result<()> {
+    for attempt in 0..20 {
+        match std::fs::rename(tmp, path) {
+            Ok(()) => return Ok(()),
+            Err(e)
+                if attempt < 19
+                    && (e.raw_os_error() == Some(32)
+                        || e.kind() == std::io::ErrorKind::PermissionDenied) =>
+            {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            Err(e) => {
+                let _ = std::fs::remove_file(tmp);
+                return Err(e);
+            }
+        }
+    }
+    unreachable!()
 }
 
 /// Speichert das aktive Dokument. `flattened`: `Some(true)` = „Reduziertes PNG“ (re\20 §5),

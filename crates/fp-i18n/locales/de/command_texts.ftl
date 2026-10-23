@@ -681,3 +681,6 @@ cmdtext-felder-der-html-einstellungen-fp-model-h-c0ba73 = Felder der HTML-Einste
 cmdtext-gespeicherten-standard-entfernen-es-gelt-893276 = gespeicherten Standard entfernen (es gelten wieder die eingebauten Vorgaben)
 cmdtext-crop-tool-limit-the-frame-to-the-canvas-4c0a60 = Zuschneidewerkzeug: Rahmen auf die Leinwand begrenzen und danach alles auswählen (Objekte außerhalb werden gemäß Voreinstellung CropDocCropsImages gelöscht)
 cmdtext-arrow-key-nudge-with-copy-the-history-ro-69900c = Pfeiltasten-Verschiebung (mit Kopie heißt die Protokollzeile „Duplizieren“)
+cmdtext-fuellungsgriffe-mit-transformieren-false-2696e8 = Füllungsgriffe mit transformieren; false lässt sie im Dokument stehen (die Transformationswerkzeuge übergeben XformToolXformsBFE)
+cmdtext-die-ausgewaehlten-bitmaps-gelten-als-bea-827d65 = die ausgewählten Bitmaps gelten als bearbeitet (ein nach Escape beendeter Pinselstrich): das Verlassen des Modus ist ein Protokollschritt und beschneidet sie
+cmdtext-immer-einen-protokollschritt-anlegen-ohn-2c54c7 = immer einen Protokollschritt anlegen, ohne die Bitmaps als bearbeitet zu zählen (Escape beim Aufziehen eines Auswahlrahmens oder Lassos)
