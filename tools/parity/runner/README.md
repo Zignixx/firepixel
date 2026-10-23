@@ -1465,3 +1465,32 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   reference after a foreground take-back (the runner's step repeat made it `ok`), second probe `23_..._result` failed with
   the popup gone (case b, before the chain replay existed), third probe all seven steps `ok` on both sides without a retry.
   The retry paths themselves were not triggered in a probe.
+
+## R-36 additions (23 Oct 2026)
+
+- **Transform handles by one rule on both sides (TW-219 step, RE spec 67 section 3):** R-35's
+  `tool-text/27_text_scale_tool_corner_result` pressed Firepixel's bottom-right handle at the object bounds 176,174; since
+  F87 Firepixel's frame of a single text is the reference's (layout box x 1.3), so that press lay inside the frame and the
+  Scale tool moved the text (run 41: raw 139,138). New verb `transform_handles` (both sides, before the transform command:
+  a script in the reference ends the session) reads `TRANSFORM_FRAME_JS` by script - selection count, one text or not,
+  autoExpand, raw rect, matrix, object bounds - and `transform_frame_rule` derives the frame: exactly one point text = raw
+  rect scaled by 1.3 about its centre (0.15 x width / height on each side, an empty box grows by 2), mapped through the
+  text's matrix (axis-aligned: the outline rect, otherwise the four mapped corners); anything else = the united object
+  bounds. Shown handles: corners rounded half up to whole document pixels, middle handles between the rounded corners. A
+  fixed-width text is `unsupported` (its set box comes from the layout, spec section 2.4). Value `transform_handles`
+  {selected, text, rule, raw, matrix, frame (unrounded corners), shown (8 handles, 0 = top left, clockwise), used, script}.
+- **Canvas point `{"transform_handle": h}`** (h = 0-7 or `tl t tr r br b bl l`): the shown handle of the step's
+  `transform_handles`, mapped onto the side, then 1 screen pixel up and left, where both programs draw it (reference
+  measured 184,182 for the shown corner 185,183). Each use is logged under `used` {handle, doc_shown, side_point}. Step 27
+  now drags `{"from": {"transform_handle": "br"}, "by": [39, 38]}` on both sides (no `per_side`); 27_frame_open logs the
+  frame as well. The frame read-back is cleared at every step start.
+- **Probe** (preview 2026-10-23_22-35 = main 4cf72905 with F87, `run_r36_probe_tool-text`): both sides read
+  `1|1|1|100,100,74,72|1,0,0,0,1,0,0,0,1|98,98,176,174` -> frame 88.9,89.2-185.1,182.8, shown 89/137/185 x 89/136/183;
+  press document 184,182 on both (reference screen 481,365, Firepixel window 481,363), release 223,220. 27 corner result,
+  reference | Firepixel: `83.739998pt` | `83.73999786376953pt`, hs 1, matrix `[0.993,0,0,1.005]` t 5.085/23.883, raw
+  100,80 104 x 100, bounds 102.406,102.263 107.251 x 104.507, pixelRect 105,116-202,195 on both; `fontsize` 83 | 84;
+  History `setQuadrangle(..., rememberQuad)` | `transform.matrix [1.39566, 0, 0, 1.39566, -35.174, -35.293]`. Undo
+  60 pt, raw 100,100 on both. 27 frame open: Firepixel's handle squares at 86-90 / 182-186 x 86-90 / 180-184 (centres
+  88/184 x 88/182 = shown - 1), but drawn in the selection blue (0,153,255), with the pointer's bounds frame and handles
+  (96-100 ...) inside it; the reference's shot shows neither (Edges off). Other non-ok steps unchanged from run 41 (12 fp,
+  15 and 19 both, 17 unmapped both).

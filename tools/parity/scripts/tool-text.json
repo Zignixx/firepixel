@@ -1233,6 +1233,9 @@
      "select": "TS"
     },
     {
+     "transform_handles": {}
+    },
+    {
      "command": "modify.transform.scale"
     },
     {
@@ -1247,7 +1250,7 @@
      "key": "Escape"
     }
    ],
-   "note": "R-35 (TW-212): the transform frame of TS after Modify > Transform > Scale. Reference (RE spec 66 section 2.2): handles at document 88/136/184 x 88/135/182, a square around the centre larger than the object's bounds 98,98-176,174; the reference's shot shows no frame (no selection outline either: the runs set View > Edges off, view default ShowEdges false). Firepixel (R-35 probe, preview 2026-10-23_19-26): frame on the bounds 98,98-176,174 (handles 98/137/176 x 98/136/174). No script runs between the menu command and the shot on the reference side (`no_zoom_log`): a script there ends the transform session (R-35 probe of 27_text_scale_tool_corner_result: with the drag's tool-state script before it, the drag scaled nothing).",
+   "note": "R-35 (TW-212): the transform frame of TS after Modify > Transform > Scale. Reference (RE spec 66 section 2.2): handles at document 88/136/184 x 88/135/182, a square around the centre larger than the object's bounds 98,98-176,174; the reference's shot shows no frame (no selection outline either: the runs set View > Edges off, view default ShowEdges false). Firepixel since F87 (RE spec 67): the same frame rule (before: on the bounds 98,98-176,174). R-36: `transform_handles` before the command logs the frame derived on each side by the shared rule (one point text: raw rect x 1.3 about its centre, corners rounded half up; otherwise the bounds): shown 89/137/185 x 89/136/183, drawn 1 screen px up and left. No script runs between the menu command and the shot on the reference side (`no_zoom_log`): a script there ends the transform session (R-35 probe of 27_text_scale_tool_corner_result: with the drag's tool-state script before it, the drag scaled nothing).",
    "no_zoom_log": true
   },
   {
@@ -1274,43 +1277,24 @@
      "panel": "window.history"
     },
     {
+     "transform_handles": {}
+    },
+    {
      "command": "modify.transform.scale"
     },
     {
      "wait": 300
     },
     {
-     "per_side": {
-      "orig": [
-       {
-        "canvas_drag": {
-         "from": [
-          184,
-          182
-         ],
-         "by": [
-          39,
-          38
-         ],
-         "no_state": true
-        }
-       }
+     "canvas_drag": {
+      "from": {
+       "transform_handle": "br"
+      },
+      "by": [
+       39,
+       38
       ],
-      "fp": [
-       {
-        "canvas_drag": {
-         "from": [
-          176,
-          174
-         ],
-         "by": [
-          39,
-          38
-         ],
-         "no_state": true
-        }
-       }
-      ]
+      "no_state": true
      }
     },
     {
@@ -1334,7 +1318,7 @@
      "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
     }
    ],
-   "note": "R-35 (TW-212, F86, RE spec 66 section 2.2): TS 'Ag' 60 pt, Modify > Transform > Scale (= Scale tool session), bottom-right corner handle dragged by +39/+38 from each side's own handle (reference document 184,182 as measured by RE-34; Firepixel 176,174 = its frame on the object's bounds, R-35 probe - the same mouse motion therefore gives a larger factor there); the drag runs without the tool-state scripts (`no_state`), which end the reference's transform session, Enter. Reference: size 83.739998pt, horizontalScale 1, matrix [0.993,0,0,1.005] t 5.085/23.883, History row setQuadrangle(..., \"autoTrimImages transformAttributes rememberQuad\") named 'Transformieren' (the corner scales proportionally, also without Shift). Values as in 26; after the shot Ctrl+Z and the state again."
+   "note": "R-35 (TW-212, F86, RE spec 66 section 2.2): TS 'Ag' 60 pt, Modify > Transform > Scale (= Scale tool session), bottom-right corner handle dragged by +39/+38 from the handle each side derives by the same rule (R-36: `transform_handles` before the command reads raw rect, matrix and bounds by script; one point text: raw rect x 1.3 about its centre, corners rounded half up = 185,183, pressed 1 screen px up and left where both programs draw it = document 184,182, as RE-34 measured in the reference; R-35 took Firepixel's handle from the bounds 176,174, inside F87's frame, so the text was moved); the drag runs without the tool-state scripts (`no_state`), which end the reference's transform session, Enter. Reference: size 83.739998pt, horizontalScale 1, matrix [0.993,0,0,1.005] t 5.085/23.883, History row setQuadrangle(..., \"autoTrimImages transformAttributes rememberQuad\") named 'Transformieren' (the corner scales proportionally, also without Shift). Values as in 26; after the shot Ctrl+Z and the state again."
   },
   {
    "id": "28_text_scale_numeric_150_100_result",

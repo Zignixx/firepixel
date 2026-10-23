@@ -1810,6 +1810,88 @@ def parse_xy(v, spec):
         raise Unmapped(f"canvas point '{spec}' not found (script returned {s!r})") from None
 
 
+# R-36 (TW-219 step, RE spec 67 section 3): the transform frame of the Scale / Skew / Distort tools, Free Transform and
+# Modify > Transform > Scale, derived by the same rule on both sides from what both script APIs read back: the
+# selection count, whether the one selected object is a text, autoExpand, the raw rect, the matrix and the object
+# bounds. Read BEFORE the transform command - a script run in the reference ends a transform session (R-35).
+TRANSFORM_FRAME_JS = (
+    '(function(){var S=fw.selection,n=S?S.length:0;if(!n)return "0";var s=S[0];'
+    'function r(v){return Math.round(v*1e6)/1e6;}'
+    'var t=(n==1&&typeof s.textChars=="string")?1:0,m="";'
+    'try{if(s.transform&&s.transform.matrix){var q=s.transform.matrix,a=[];for(var j=0;j<q.length;j++)a.push(r(q[j]));'
+    'm=a.join(",");}}catch(e){}'
+    'var L=1e9,T=1e9,R=-1e9,B=-1e9;for(var i=0;i<n;i++){var o=S[i];L=Math.min(L,o.left);T=Math.min(T,o.top);'
+    'R=Math.max(R,o.left+o.width);B=Math.max(B,o.top+o.height);}'
+    'return [n,t,t?(s.autoExpand?1:0):"",t?[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(","):"",m,'
+    '[r(L),r(T),r(R),r(B)].join(",")].join("|");})()')
+
+TRANSFORM_HANDLE_NAMES = ("tl", "t", "tr", "r", "br", "b", "bl", "l")
+
+
+def round_half_up(v: float) -> int:
+    return int((v + 0.5 + 1e-9) // 1)
+
+
+def transform_frame_rule(val) -> dict:
+    """R-36: transform frame and its 8 shown handles (document pixels, 0 = top left, clockwise as `pick_handle`'s
+    frame) from TRANSFORM_FRAME_JS's read-back "n|text|autoExpand|rawL,T,W,H|matrix|boundsL,T,R,B".
+    Exactly one point text: its raw rect (= set box) scaled by 1.3 about its centre (0.15 x width left and right,
+    0.15 x height top and bottom; an empty box grows by 2), unrounded, mapped through the text's matrix (axis-aligned:
+    the outline rect; otherwise the four mapped corners in frame order). Anything else: the united object bounds.
+    Shown: corners rounded half up to whole document pixels, middle handles = midpoints of the rounded corners
+    (RE spec 67 section 2.10). Both programs draw the frame line and handles 1 screen pixel up and left of that
+    (applied in `Side.transform_handle_point`). A fixed-width text's set box comes from its layout (spec section
+    2.4) and cannot be read by script: Unsupported."""
+    parts = (str(val if not isinstance(val, dict) else val.get("result")).strip().strip("'\"").split("|") + [""] * 6)[:6]
+    try:
+        n = int(float(parts[0] or 0))
+    except ValueError:
+        raise RuntimeError(f"transform frame: script returned {val!r}") from None
+    if n <= 0:
+        raise RuntimeError("transform frame: nothing selected")
+    nums = lambda t: [float(v) for v in t.split(",")] if t else []  # noqa: E731
+    text, ae, raw, mat, bounds = parts[1] == "1", parts[2], nums(parts[3]), nums(parts[4]), nums(parts[5])
+    rec = {"selected": n, "text": text}
+    if text:
+        if ae != "1":
+            raise Unsupported("transform frame of a fixed-width text: its set box comes from the layout (RE spec 67 "
+                              "section 2.4), not readable by script")
+        l, t, w, h = raw
+        dx, dy = (2.0, 2.0) if w <= 0 or h <= 0 else (0.15 * w, 0.15 * h)
+        f = [l - dx, t - dy, l + w + dx, t + h + dy]
+        quad = [(f[0], f[1]), (f[2], f[1]), (f[2], f[3]), (f[0], f[3])]
+        rec.update(rule="text raw x 1.3", raw=raw)
+        ident = [1, 0, 0, 0, 1, 0, 0, 0, 1]
+        if len(mat) >= 8 and any(abs(a - b) > 1e-9 for a, b in zip(mat, ident)):
+            a, b, c, d, tx, ty = mat[0], mat[1], mat[3], mat[4], mat[6], mat[7]
+            mp = lambda x, y: (a * x + c * y + tx, b * x + d * y + ty)  # noqa: E731
+            q = [mp(x, y) for x, y in quad]
+            if abs(b) < 1e-9 and abs(c) < 1e-9:
+                xs, ys = [p[0] for p in q], [p[1] for p in q]
+                quad = [(min(xs), min(ys)), (max(xs), min(ys)), (max(xs), max(ys)), (min(xs), max(ys))]
+            else:
+                quad = q
+            rec["matrix"] = mat
+    else:
+        l, t, r_, b_ = bounds
+        quad = [(l, t), (r_, t), (r_, b_), (l, b_)]
+        rec.update(rule="object bounds")
+    rq = [(round_half_up(x), round_half_up(y)) for x, y in quad]
+    mid = lambda p, q: ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)  # noqa: E731
+    shown = [rq[0], mid(rq[0], rq[1]), rq[1], mid(rq[1], rq[2]), rq[2], mid(rq[2], rq[3]), rq[3], mid(rq[3], rq[0])]
+    rec["frame"] = [[round(x, 3), round(y, 3)] for x, y in quad]
+    rec["shown"] = [[float(x), float(y)] for x, y in shown]
+    return rec
+
+
+def transform_handle_index(h) -> int:
+    if isinstance(h, int) or (isinstance(h, str) and h.isdigit()):
+        return int(h) % 8
+    if str(h).lower() in TRANSFORM_HANDLE_NAMES:
+        return TRANSFORM_HANDLE_NAMES.index(str(h).lower())
+    raise Unmapped(f"transform handle {h!r}: index 0-7 or one of {list(TRANSFORM_HANDLE_NAMES)}")
+
+
 class Side:
     name = "?"
 
@@ -1838,6 +1920,37 @@ class Side:
 
     def script_eval(self, expr):
         raise NotImplementedError
+
+    def transform_handles(self, arg=None) -> dict:
+        """R-36 (TW-219 step): verb `transform_handles` - the transform frame of the selection by the shared rule
+        (`transform_frame_rule`, TRANSFORM_FRAME_JS read by script on this side), kept for `{"transform_handle": h}`
+        canvas points of the same step and logged as value `transform_handles` {selected, text, rule, raw, matrix,
+        frame (unrounded corners), shown (8 handles, document px), used (handle points taken), script}. Run it
+        before the transform command: a script in the reference ends the transform session."""
+        val = self.script_eval(TRANSFORM_FRAME_JS)
+        rec = transform_frame_rule(val)
+        rec["script"] = val if not isinstance(val, dict) else val.get("result")
+        self.transform_frame = rec
+        self.values.append({"transform_handles": rec})
+        self.r.log(f"{'fp ' if self.name == 'fp' else ''}transform handles: {rec['rule']}, frame {rec['frame'][0]} - "
+                   f"{rec['frame'][2]}, shown {rec['shown'][0]} / {rec['shown'][4]}")
+        return rec
+
+    def transform_handle_point(self, h):
+        """R-36: side point of handle `h` (0-7 or tl/t/tr/r/br/b/bl/l) of the frame read by `transform_handles`
+        earlier in the step: the shown (rounded) handle mapped onto this side's screen / window, then 1 screen pixel
+        up and left, where both programs draw it (RE spec 67 section 2.10: the reference measured 184,182 for the
+        shown corner 185,183)."""
+        rec = getattr(self, "transform_frame", None)
+        if not rec:
+            raise Unsupported("transform_handle without a preceding `transform_handles` in the step")
+        i = transform_handle_index(h)
+        x, y = rec["shown"][i]
+        pt = self.doc_point_on_side(x, y)
+        pt = [pt[0] - 1, pt[1] - 1] if isinstance(pt, list) else (pt[0] - 1, pt[1] - 1)
+        rec.setdefault("used", []).append({"handle": TRANSFORM_HANDLE_NAMES[i], "doc_shown": [x, y],
+                                           "side_point": [round(v, 2) for v in pt]})
+        return pt
 
     def tool_stroke_reset(self, why="unit start") -> dict:
         """R-31 (Q-63): the tool stroke set explicitly - tip `bn_1-Pixel Anti-Aliased` 1 px centred in the default
@@ -1895,6 +2008,8 @@ class Side:
                 a = inner
         if isinstance(a, dict) and "view_frac" in a:
             pt = self.view_frac_point(a["view_frac"])
+        elif isinstance(a, dict) and "transform_handle" in a:
+            pt = self.transform_handle_point(a["transform_handle"])  # R-36
         else:
             pt = self.doc_point_on_side(*self.canvas_doc_point(arg))
         if allow_outside:
@@ -6148,6 +6263,8 @@ class OrigSide(Side):
             self.values.append({"selection": self.jsf_value(SELECTION_NAMES_JS, why="log_selection")})
         elif verb == "history_rows":
             self.history_rows(arg)
+        elif verb == "transform_handles":
+            self.transform_handles(arg)  # R-36
         elif verb in ("log_value", "log"):
             expr = arg if isinstance(arg, str) else arg.get("value") or arg.get("expr")
             if isinstance(arg, dict) and not expr:
@@ -8205,6 +8322,8 @@ class FpSide(Side):
             self.values.append(rec)
         elif verb == "history_rows":
             self.history_rows(arg)
+        elif verb == "transform_handles":
+            self.transform_handles(arg)  # R-36
         elif verb in ("log_value", "log"):
             expr = arg if isinstance(arg, str) else arg.get("value") or arg.get("expr")
             if isinstance(arg, dict) and not expr:
@@ -9554,6 +9673,7 @@ class Runner:
         rec = {"side": side.name, "actions": [], "status": "ok", "want_before": before_img is not None}
         actions = list(step.get("both") or []) + list(step.get(side.name) or [])
         side.values = []
+        side.transform_frame = None  # R-36: frame read by `transform_handles` holds for one step
         side.popup_edit = None  # R-8: popup edit of the previous step is forgotten
         side.before_img = before_img
         side.open_before = None
