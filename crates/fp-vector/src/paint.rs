@@ -2,10 +2,11 @@
 //!
 //! - Vollton: Farbe `FCLi`; Farb-Alpha < 255 wirkt wie Deckkraft (B Laufzeit T5).
 //! - Verläufe: [`crate::gradient`].
-//! - **Muster** (`FSHi = 15`, `@007e6780`): nächster Nachbar, Texel
-//!   `(trunc(Lx) mod W, trunc(Ly) mod H)` mit `L = p1 + (u·W/100, −v·H/100) + (0, H)`; ARGB direkt.
-//!   Wie die Referenz mit analytisch invertierter Matrix (91 % der Pixel; die trigonometrische
-//!   Matrix `@007e3f50` ist nicht nachgebaut, 07 §5.4, offen).
+//! - **Muster** (`FSHi = 15`): nearest neighbour, texel `(⌊u·W/100⌋ mod W, ⌊−v·H/100⌋ mod H)`
+//!   with `(u, v)` relative to handle 1; ARGB as is. Measured (RE spec 61 §1.4): tile pixel (0,0)
+//!   sits exactly on `p1`, tile x runs along `p1→p2`, tile rows run opposite to `p1→p3`, no snapping
+//!   to the tile size and no seam left of or above `p1` (floor, not truncation). The pattern
+//!   therefore travels with the fill handles, i.e. with the object (FB-24, FB-25).
 //! - **Web-Dither** (`FSHi = 16`, `@007e4740`): `rx = round_half_away(ix − p1x) & 1`, `ry` analog;
 //!   Farbe `FD[1 + 2·ry + rx]`.
 //! - **Textur** (`TXFv`, `FTBi`): `w = ⌊FTBi·255/1000⌋`, Kachelung modulo Texturgröße, Ursprung
@@ -52,13 +53,15 @@ fn round_half_away(v: f64) -> i64 {
     }
 }
 
-/// Python `int(v) % m` (Abschneiden, dann nichtnegativer Rest); nicht-endlich → 0.
+/// `⌊v⌋ mod m` as a non-negative index; non-finite → 0. A tiny tolerance keeps values such as
+/// 36.999999999 (rounding in the handle inversion) on the integer they stand for.
 #[inline]
-fn trunc_mod(v: f64, m: usize) -> usize {
+fn floor_mod(v: f64, m: usize) -> usize {
     if !v.is_finite() || m == 0 {
         return 0;
     }
-    v.trunc().rem_euclid(m as f64) as usize
+    let i = (v + 1e-7).floor().rem_euclid(m as f64) as usize;
+    i.min(m - 1)
 }
 
 enum Kind {
@@ -67,7 +70,6 @@ enum Kind {
     Pattern {
         img: std::sync::Arc<RgbaImage>,
         uv: crate::gradient::UvMap,
-        p1: Vec2,
     },
     WebDither {
         colors: [u32; 4],
@@ -125,7 +127,6 @@ impl<'a> FillPainter<'a> {
                 Kind::Pattern {
                     img: img.clone(),
                     uv: crate::gradient::UvMap::new(h),
-                    p1: h.p1,
                 }
             }
             FillKind::WebDither(c) => Kind::WebDither {
@@ -156,12 +157,12 @@ impl<'a> FillPainter<'a> {
         match &self.kind {
             Kind::Solid(c) => *c,
             Kind::Gradient(g) => g.color(x as f64, y as f64).0,
-            Kind::Pattern { img, uv, p1 } => {
+            Kind::Pattern { img, uv } => {
+                // (u, v) are relative to handle 1 already: tile origin = p1 (RE spec 61 §1.6)
                 let (w, h) = (img.width(), img.height());
                 let (u, v) = uv.map(x as f64, y as f64);
-                let lx = p1.x + u * w as f64 / 100.0;
-                let ly = p1.y - v * h as f64 / 100.0 + h as f64;
-                let (tx, ty) = (trunc_mod(lx, w), trunc_mod(ly, h));
+                let tx = floor_mod(u * w as f64 / 100.0, w);
+                let ty = floor_mod(-v * h as f64 / 100.0, h);
                 let p = img.data()[ty * w + tx];
                 ((p[3] as u32) << 24) | ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | p[2] as u32
             }
@@ -236,6 +237,71 @@ mod tests {
     use fp_color::Argb;
     use fp_geom::IRect;
     use std::sync::Arc;
+
+    /// 3 × 2 tile, every pixel distinct: red = column, green = row.
+    fn tile() -> Arc<RgbaImage> {
+        let px: Vec<[u8; 4]> = (0..2u8)
+            .flat_map(|y| (0..3u8).map(move |x| [x * 10, y * 10, 7, 255]))
+            .collect();
+        Arc::new(RgbaImage::from_raw(IRect::new(0, 0, 3, 2), px).unwrap())
+    }
+
+    fn texel(x: u32, y: u32) -> u32 {
+        0xFF00_0000 | (x * 10) << 16 | (y * 10) << 8 | 7
+    }
+
+    fn pattern_fill(p1: Vec2, p2: Vec2, p3: Vec2) -> Fill {
+        let mut f = Fill::solid(Argb(0xFF00_0000));
+        f.kind = FillKind::Pattern(tile());
+        f.handles = GradientHandles { p1, p2, p3 };
+        f
+    }
+
+    /// RE spec 61 §1.4: tile pixel (0,0) on handle 1, x along h1→h2, rows opposite to h1→h3, floor
+    /// (no doubled column or row at h1).
+    #[test]
+    fn pattern_tile_origin_sits_on_handle_1() {
+        let path = VectorPath::default();
+        let p1 = Vec2::new(10.0, 20.0);
+        let f = pattern_fill(p1, Vec2::new(13.0, 20.0), Vec2::new(10.0, 18.0));
+        let p = FillPainter::new(&path, &f).unwrap();
+        assert_eq!(p.color(10, 20), texel(0, 0));
+        assert_eq!(p.color(11, 20), texel(1, 0));
+        assert_eq!(p.color(12, 21), texel(2, 1));
+        assert_eq!(p.color(13, 22), texel(0, 0));
+        // left of and above h1: the previous tile, no seam
+        assert_eq!(p.color(9, 20), texel(2, 0));
+        assert_eq!(p.color(8, 20), texel(1, 0));
+        assert_eq!(p.color(10, 19), texel(0, 1));
+        assert_eq!(p.color(7, 17), texel(0, 1));
+    }
+
+    /// FB-24/FB-25: moving the handles by (37, 23) moves the pattern by exactly (37, 23), for
+    /// tile-sized and for scaled handles.
+    #[test]
+    fn pattern_moves_with_the_handles() {
+        let path = VectorPath::default();
+        let d = Vec2::new(37.0, 23.0);
+        for (p2, p3) in [
+            (Vec2::new(13.0, 20.0), Vec2::new(10.0, 18.0)),
+            (Vec2::new(16.0, 20.0), Vec2::new(10.0, 16.0)),
+            (Vec2::new(11.5, 20.0), Vec2::new(10.0, 15.0)),
+        ] {
+            let p1 = Vec2::new(10.0, 20.0);
+            let a = pattern_fill(p1, p2, p3);
+            let b = pattern_fill(p1 + d, p2 + d, p3 + d);
+            let (pa, pb) = (
+                FillPainter::new(&path, &a).unwrap(),
+                FillPainter::new(&path, &b).unwrap(),
+            );
+            assert_eq!(pa.color(10, 20), texel(0, 0));
+            for y in 0..40 {
+                for x in 0..40 {
+                    assert_eq!(pa.color(x, y), pb.color(x + 37, y + 23), "({x},{y}) {p2:?}");
+                }
+            }
+        }
+    }
 
     #[test]
     fn web_dither_and_texture() {

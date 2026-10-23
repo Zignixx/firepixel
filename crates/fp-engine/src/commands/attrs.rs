@@ -156,6 +156,25 @@ fn edit_targets(
     })
 }
 
+/// Like [`edit_targets`], with each element's bounds before the edit.
+fn edit_targets_with_bounds(
+    s: &mut crate::session::Session,
+    p: &Params,
+    f: impl Fn(&mut fp_model::Element, Option<fp_geom::Rect>),
+) -> Result<CommandOutput> {
+    with_doc(s, |d| {
+        let (page, ids) = (d.page, target_ids(d, p)?);
+        let doc = Arc::make_mut(&mut d.doc);
+        for id in ids {
+            let bounds = docops::element_on_page(doc, page, id)
+                .and_then(|e| docops::element_bounds(doc, &e));
+            docops::edit_by_id(doc, page, id, |e| f(e, bounds))
+                .ok_or(EngineError::ElementNotFound(id.0))?;
+        }
+        Ok(CommandOutput::doc())
+    })
+}
+
 pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("element.setCustomData")
@@ -345,7 +364,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         (node, name)
                     }
                 };
-                edit_targets(s, p, |e| {
+                let tile = (node.bitmap.image.grid.width, node.bitmap.image.grid.height);
+                edit_targets_with_bounds(s, p, |e, bounds| {
+                    let was_pattern = docops::path_attrs_of(e)
+                        .is_some_and(|a| super::panel::fill_kind(a.fill.as_ref()) == 3);
                     let node = Arc::clone(&node);
                     let name = name.clone();
                     docops::edit_path_attrs(e, &move |a| {
@@ -364,6 +386,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         });
                         a.fill = Some(f);
                     });
+                    // a new pattern fill gets the measured default handles (centre, one tile right,
+                    // one tile up; RE spec 61 §1.6); an existing pattern keeps its handles
+                    if !was_pattern && let Some(b) = bounds {
+                        super::panel::set_handles(
+                            e,
+                            fp_model::new::default_pattern_handles(b, tile.0, tile.1),
+                            true,
+                        );
+                    }
                 })
             }),
     );

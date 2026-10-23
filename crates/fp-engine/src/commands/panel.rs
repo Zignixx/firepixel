@@ -571,7 +571,7 @@ pub fn replace_handles(e: &mut Element, h: fp_model::FillHandles) {
     set_handles(e, h, true);
 }
 
-fn set_handles(e: &mut Element, h: fp_model::FillHandles, force: bool) {
+pub(super) fn set_handles(e: &mut Element, h: fp_model::FillHandles, force: bool) {
     match &mut e.kind {
         ElementKind::Path(pe) => {
             if force || degenerate(&pe.fill_handles) {
@@ -3490,9 +3490,18 @@ pub fn register(r: &mut CommandRegistry) {
                             });
                         let force = after != before || untouched;
                         let h = if after == 3 {
-                            bounds
-                                .map(fp_model::new::default_fill_handles)
-                                .unwrap_or_else(|| default_handles(None, 2))
+                            // new pattern fill: centre of the bounds, one tile right and one tile
+                            // up (pattern at 100 %, RE spec 61 §1.6)
+                            let tile = docops::path_attrs_of(e).and_then(|a| {
+                                a.fill.as_ref().and_then(fp_model::new::pattern_tile_size)
+                            });
+                            match (bounds, tile) {
+                                (Some(b), Some((tw, th))) => {
+                                    fp_model::new::default_pattern_handles(b, tw, th)
+                                }
+                                (Some(b), None) => fp_model::new::default_fill_handles(b),
+                                _ => default_handles(None, 2),
+                            }
                         } else {
                             default_handles(bounds, sh)
                         };

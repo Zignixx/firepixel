@@ -1030,10 +1030,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let y = p.f64_or("y", b.top as f64)? as f32;
                     let w = p.f64_or("width", b.width() as f64)? as f32;
                     let h = p.f64_or("height", b.height() as f64)? as f32;
-                    let out = super::modify::transform_selection(
-                        s,
-                        docops::rect_to_rect(b, Rect::new(x, y, x + w, y + h)),
-                    )?;
+                    let m = docops::rect_to_rect(b, Rect::new(x, y, x + w, y + h));
+                    let scale_attrs = s.prefs.get_bool("Firepixel_InfoScaleAttributes", true);
+                    // "Scale attributes" off: a resize leaves the fill handles in the document; a
+                    // pure move always takes them along (RE spec 61 §1.3/§1.5)
+                    let before = (!scale_attrs && !m.is_translation(1e-6))
+                        .then(|| super::modify::selection_snapshot(s))
+                        .flatten();
+                    let out = super::modify::transform_selection(s, m)?;
+                    if let Some(before) = before {
+                        super::modify::restore_selected_fill_handles(s, &before)?;
+                    }
                     // Strich mitskalieren wie im Original („Attribute skalieren“, Vorgabe ein; Faktor
                     // √(sx·sy), z. B. 8 px bei doppelter Breite → 11 px, PAR 17/16)
                     let (sx, sy) = (
@@ -1045,9 +1052,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         },
                     );
                     let f = (sx * sy).abs().sqrt();
-                    if (f - 1.0).abs() > 1e-6
-                        && s.prefs.get_bool("Firepixel_InfoScaleAttributes", true)
-                    {
+                    if (f - 1.0).abs() > 1e-6 && scale_attrs {
                         let d = s.doc_mut()?;
                         let ids = d.selection.elements.clone();
                         let page = d.page;

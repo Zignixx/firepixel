@@ -1465,6 +1465,35 @@ pub fn transform_element(e: &mut Element, m: &Matrix3, sampler: Sampler) {
     }
 }
 
+/// Puts the fill handles of `e` (paths, also inside groups and compound shapes) back to those of
+/// `orig`, the same element before a transformation. This is a scale or rotation with "Scale
+/// attributes" off: the fill handles stay in the document (RE spec 61 §1.5). Text keeps its fill
+/// handles in its own transformed space and is not touched.
+pub fn restore_fill_handles(e: &mut Element, orig: &Element) {
+    match (&mut e.kind, &orig.kind) {
+        (ElementKind::Path(p), ElementKind::Path(o)) => {
+            p.fill_handles = o.fill_handles;
+            if let (Some(pr), Some(op)) = (&mut p.primitive, &o.primitive) {
+                pr.fill_handles = op.fill_handles;
+            }
+        }
+        (ElementKind::Group(g), ElementKind::Group(o)) => {
+            for (c, oc) in g.children.iter_mut().zip(&o.children) {
+                restore_fill_handles(Arc::make_mut(c), oc);
+            }
+        }
+        (ElementKind::CompoundShape(c), ElementKind::CompoundShape(o)) => {
+            for (x, ox) in c.result.iter_mut().zip(&o.result) {
+                restore_fill_handles(Arc::make_mut(x), ox);
+            }
+            for (x, ox) in c.operands.iter_mut().zip(&o.operands) {
+                restore_fill_handles(Arc::make_mut(x), ox);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// Matrix „Rechteck `from` auf Rechteck `to` abbilden“ (Skalieren + Verschieben).
 pub fn rect_to_rect(from: Rect, to: Rect) -> Matrix3 {
     let sx = if from.width() != 0.0 {

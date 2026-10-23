@@ -577,9 +577,45 @@ pub fn default_fill_handles(b: Rect) -> FillHandles {
     }
 }
 
+/// Fill handles of a **new pattern fill**, measured (RE spec 61 §1.2/§1.6): handle 1 at the centre of
+/// the bounds, handle 2 one tile width to the right, handle 3 one tile height up, so the pattern is
+/// shown at 100 % with tile pixel (0,0) on the centre. A missing or empty tile size falls back to
+/// [`default_fill_handles`].
+pub fn default_pattern_handles(b: Rect, tile_w: u32, tile_h: u32) -> FillHandles {
+    if tile_w == 0 || tile_h == 0 {
+        return default_fill_handles(b);
+    }
+    let c = Point::new((b.left + b.right) / 2.0, (b.top + b.bottom) / 2.0);
+    FillHandles {
+        valid: true,
+        start: c,
+        end: Point::new(c.x + tile_w as f32, c.y),
+        second: Point::new(c.x, c.y - tile_h as f32),
+    }
+}
+
+/// Tile size `(width, height)` of a pattern fill's image, if it has one.
+pub fn pattern_tile_size(f: &Fill) -> Option<(u32, u32)> {
+    let img = f.pattern.as_ref()?.image.as_ref()?;
+    let g = &img.bitmap.image.grid;
+    (g.width > 0 && g.height > 0).then_some((g.width, g.height))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_pattern_handles_centre_and_tile_size() {
+        // RE spec 61 §1.2: rectangle 100,100–260,220 with a 94 × 88 tile → (180,160) (274,160) (180,72)
+        let h = default_pattern_handles(Rect::new(100.0, 100.0, 260.0, 220.0), 94, 88);
+        assert!(h.valid);
+        assert_eq!(h.start, Point::new(180.0, 160.0));
+        assert_eq!(h.end, Point::new(274.0, 160.0));
+        assert_eq!(h.second, Point::new(180.0, 72.0));
+        let b = Rect::new(0.0, 0.0, 10.0, 10.0);
+        assert_eq!(default_pattern_handles(b, 0, 5), default_fill_handles(b));
+    }
 
     #[test]
     fn new_document_structure() {

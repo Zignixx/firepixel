@@ -48,6 +48,35 @@ pub(crate) fn transform_selection(s: &mut Session, m: Matrix3) -> Result<Command
     })
 }
 
+/// The selected elements as they are now (for [`restore_selected_fill_handles`]).
+pub(crate) fn selection_snapshot(
+    s: &Session,
+) -> Option<Vec<(fp_model::ElementId, Arc<fp_model::Element>)>> {
+    let d = s.active()?;
+    Some(
+        d.selection
+            .elements
+            .iter()
+            .filter_map(|&id| docops::element_on_page(&d.doc, d.page, id).map(|e| (id, e)))
+            .collect(),
+    )
+}
+
+/// Puts the fill handles of the selected elements back to `before` (transformation with "Scale
+/// attributes" off, RE spec 61 §1.5).
+pub(crate) fn restore_selected_fill_handles(
+    s: &mut Session,
+    before: &[(fp_model::ElementId, Arc<fp_model::Element>)],
+) -> Result<()> {
+    let d = s.doc_mut()?;
+    let page = d.page;
+    let doc = Arc::make_mut(&mut d.doc);
+    for (id, orig) in before {
+        docops::edit_by_id(doc, page, *id, |e| docops::restore_fill_handles(e, orig));
+    }
+    Ok(())
+}
+
 /// Gewählte Bitmaps nach einer Drehung auf ihre deckenden Pixel beschneiden (re 28 L5: Drehpunkt
 /// war die Mitte der Objektgrenzen vor dem Beschnitt).
 fn trim_selected_bitmaps(s: &mut Session) -> Result<()> {
@@ -2181,7 +2210,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         Matrix3::scaling((sx.unwrap_or(100.0) / 100.0) as f32, (sy.unwrap_or(100.0) / 100.0) as f32)
                     }
                 };
+                let before = (!scale_attrs).then(|| selection_snapshot(s)).flatten();
                 let out = transform_selection(s, docops::about(c, &m))?;
+                // "Scale attributes" off: the fill handles stay in the document (RE spec 61 §1.5)
+                if let Some(before) = before {
+                    restore_selected_fill_handles(s, &before)?;
+                }
                 // „Attribute skalieren“ wie Info-Bedienfeld/Werkzeug: Strich mit √(sx·sy)
                 let f = (m.m[0][0] * m.m[1][1] - m.m[0][1] * m.m[1][0]).abs().sqrt();
                 if scale_attrs && (f - 1.0).abs() > 1e-6 {
