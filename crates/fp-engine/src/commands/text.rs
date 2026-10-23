@@ -415,22 +415,26 @@ fn detached_text(
 /// frame keeps its top (`TOPf` = the old frame top) and the stored anchor becomes the first
 /// baseline (`TOAf` = top + first-line ascent: Arial 30 pt +26, Arial 13 pt +12, Myriad Pro 20 pt
 /// +17), with `RIAf = BOAf = 0`; the left edge stays. The offset is taken from Firepixel's own
-/// point-text layout (frame top = anchor - first-line ascent), so the frame top is kept exactly.
+/// point-text layout (frame top = anchor - first-line ascent), so the frame top and the left edge
+/// are kept exactly.
 fn point_anchor_from_frame(
     doc: &fp_model::Document,
     t: &TextElem,
     r: Option<&dyn crate::render::PageRenderer>,
 ) -> fp_geom::Rect {
     let frame = t.anchor_rect.unwrap_or(t.bounds);
-    let top = frame.top;
+    let (left, top) = (frame.left, frame.top);
     let mut n = t.clone();
     n.frame_type = Some(0);
-    n.anchor_rect = Some(fp_geom::Rect::new(frame.left, top, 0.0, 0.0));
-    let ascent = r
+    n.anchor_rect = Some(fp_geom::Rect::new(left, top, 0.0, 0.0));
+    // TW-214 (re 63 section 2.3): the left edge stays too; a point frame starts at
+    // floor(min(anchor x, ink left)), so a glyph with a negative left bearing (Arial "A") would
+    // move it 1 px left: the anchor moves right by that much (ink 100 -> 101, run 37 449 -> 450)
+    let (dx, ascent) = r
         .and_then(|r| r.text_frame(doc, &n))
-        .map(|f| top - f.top)
-        .unwrap_or_else(|| first_size(t));
-    fp_geom::Rect::new(frame.left, top + ascent, 0.0, 0.0)
+        .map(|f| (left - f.left, top - f.top))
+        .unwrap_or_else(|| (0.0, first_size(t)));
+    fp_geom::Rect::new(left + dx, top + ascent, 0.0, 0.0)
 }
 
 /// Namen der Glättung (JS `antiAliasMode` bzw. „none“ = keine Kantenglättung).

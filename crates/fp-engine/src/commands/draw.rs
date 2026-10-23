@@ -704,15 +704,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     .map(|n| super::text::orientation_code(&n))
                     .unwrap_or(d_ori);
                 let runs = super::text::parse_runs(p, &text)?;
-                let font = p
-                    .opt_str("font")?
-                    .unwrap_or_else(|| s.tools.options.text_font.clone());
-                let size = p.f64_or("size", s.tools.options.text_size as f64)? as f32;
+                // `initFromPrefs: false` (script `addNewText(rect, false)`): factory font and size
+                // (MyriadPro-Regular 12 pt, re 63 section 2.2), alignment, style and leading
+                // instead of the text tool's defaults (re 50 section 2.3)
+                let from_prefs = p.opt_bool("initFromPrefs")?.unwrap_or(true);
+                let (tool_font, tool_size) = if from_prefs {
+                    (
+                        s.tools.options.text_font.clone(),
+                        s.tools.options.text_size as f64,
+                    )
+                } else {
+                    let f = crate::tools::factory_text_font();
+                    (f.unwrap_or_else(|| "Arial".into()), 12.0)
+                };
+                let font = p.opt_str("font")?.unwrap_or(tool_font);
+                let size = p.f64_or("size", tool_size)? as f32;
                 let color = p.opt_color("color")?.unwrap_or(s.tools.options.text_color);
                 let rect = p.opt_rect("rect")?;
-                // `initFromPrefs: false` (script `addNewText(rect, false)`): factory alignment,
-                // style and leading instead of the `Text_*` defaults (re 50 section 2.3)
-                let from_prefs = p.opt_bool("initFromPrefs")?.unwrap_or(true);
                 let (lead, pref_attrs) = if from_prefs {
                     (
                         s.prefs.get_real("Text_Leading", 1.2),

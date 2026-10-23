@@ -146,6 +146,29 @@ fn run37_point_text_top_matches_the_reference() {
         (382.0, 430.0),
         "pixelRect top/bottom: {v}"
     );
-    assert!((num(0) - 448.0).abs() <= 1.0, "left: {v}");
+    // TW-214 (re 63 section 2.3): the left edge stays too, the ink moves 1 px right ("A")
+    assert_eq!((num(0), num(4)), (448.0, 450.0), "left/pixelRect left: {v}");
     assert_eq!(n[8], "true");
+}
+
+/// The same text before `autoExpand` (re 63 section 2.2, `c_par`): fixed frame 448,378 244 x 56
+/// (first line 16 + 2 x 18), `pixelRect` 449,380-530,428.
+#[test]
+fn run37_fixed_frame_matches_the_reference() {
+    if !has_font("ArialMT") {
+        return;
+    }
+    let mut s = session();
+    let v = result(
+        &mut s,
+        &format!(
+            "{NEW} var d = fw.getDocumentDOM(); d.selectNone(); d.addNewText({{left: 450, top: 380, right: 690, bottom: 420}}, true);\n\
+             var o = fw.selection[0]; o.textChars = 'Absatz eins\\rAbsatz zwei\\rAbsatz drei'; var R = o.textRuns;\n\
+             R.initialAttrs.face = 'ArialMT'; R.initialAttrs.size = '15pt'; R.initialAttrs.fillColor = '#000000'; R.initialAttrs.alignment = 'left';\n\
+             R.initialAttrs.bold = false; R.initialAttrs.italic = false; R.initialAttrs.underline = false; R.initialAttrs.paragraphIndent = 0;\n\
+             R.textRuns[0].changedAttrs = {{}}; o.textRuns = R; var t = fw.selection[0], p = t.pixelRect;\n\
+             [t.left, t.top, t.width, t.height, p.left, p.top, p.right, p.bottom, t.autoExpand].join(',')"
+        ),
+    );
+    assert_eq!(v, "448,378,244,56,449,380,530,428,false");
 }

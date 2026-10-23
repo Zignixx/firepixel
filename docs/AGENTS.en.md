@@ -310,7 +310,10 @@ As in the original:
   `addNewLayer(name, shared)` returns the name. `duplicateLayer`/`reorderLayer` with a sub-layer stay within its
   parent layer.
 * More script details as in the original: `addNewHotspot("slice", …)` creates a slice, shape `"oval"` a circle
-  hotspot; `addNewText(rect, true)` takes the Text tool defaults. `antiAliased`/`antiAliasMode` read and set the
+  hotspot; `addNewText(rect, bInitFromPrefs)` always creates a fixed-width frame of the rect's width (object = rect
+  plus 2 px on each side; a zero-width rect gives a 10 px frame without ink), `true` with the Text tool defaults,
+  `false` with the factory defaults (Myriad Pro 12 pt); `autoExpand = true` keeps the object's top and left edge.
+  `antiAliased`/`antiAliasMode` read and set the
   text anti-aliasing (`"none"` = hard edge). `fw.setActiveViewScale(scale, center)` sets zoom and centre.
   `toSource` writes `null` in an array as a gap (`[1, ]`). The **tool attributes** (`dom.pathAttributes`: fill,
   fill colour, stroke colour, tip, size, placement) are shared with the drawing tools and the Tools panel:

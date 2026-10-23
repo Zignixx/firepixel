@@ -310,7 +310,10 @@ Wie im Original gilt:
   Namen zurück; `addNewLayer(name, shared)` gibt den Namen zurück. `duplicateLayer`/`reorderLayer` mit einer
   Unterebene bleiben in deren Elternebene.
 * Weitere Skript-Details wie im Original: `addNewHotspot("slice", …)` legt ein Segment an, Form `"oval"` einen
-  Kreis-Hotspot; `addNewText(rect, true)` nimmt die Vorgaben des Textwerkzeugs. `antiAliased`/`antiAliasMode`
+  Kreis-Hotspot; `addNewText(rect, bInitFromPrefs)` legt immer einen Rahmen fester Breite in Rechteckbreite an
+  (Objekt = Rechteck plus 2 px je Seite; ein Rechteck der Breite 0 ergibt einen 10-px-Rahmen ohne Tinte), `true` mit
+  den Vorgaben des Textwerkzeugs, `false` mit den Werksvorgaben (Myriad Pro 12 pt); `autoExpand = true` behält
+  Oberkante und linke Kante des Objekts. `antiAliased`/`antiAliasMode`
   lesen und setzen die Textglättung (`"none"` = harte Kante). `fw.setActiveViewScale(scale, center)` setzt Zoom
   und Mittelpunkt. `toSource` gibt `null` in einem Array als Lücke aus (`[1, ]`). `setFillColor`/`setBrushColor`
   ohne Auswahl setzen die Farben des Werkzeugbedienfelds. `filterSelection`/`filterSelectionByName` wandeln

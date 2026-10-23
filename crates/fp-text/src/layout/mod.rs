@@ -61,6 +61,10 @@ pub const PATH_TEXT_OFFSET: f64 = 5.0;
 /// Versatz für aufrechte Glyphen (Modus senkrecht, vertikal verzerrt; Korpus 09 T3 am besten bei 2).
 pub const PATH_TEXT_OFFSET_UPRIGHT: f64 = 2.0;
 
+/// Shown width (px) of a horizontal fixed-width frame of width 0 (re 63 section 2.2, B: script
+/// `addNewText` with a zero-width rect gives an object 14 px wide and no ink).
+pub const ZERO_WIDTH_FRAME: f64 = 10.0;
+
 /// Umbruchart eines Steuerzeichens.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Break {
@@ -625,6 +629,7 @@ impl<'a> Builder<'a> {
         let last_run = b.runs.len().saturating_sub(1);
         let n_lines = lines.len();
         let mut last_ext = first_ext;
+        let mut last_base = y - base_shift;
         for li in 0..n_lines {
             if li > 0 {
                 y += self.line_step(&lines[li]);
@@ -688,6 +693,10 @@ impl<'a> Builder<'a> {
             };
             let g0 = glyphs.len();
             let mut carets = vec![x0 + w; chars.len() + 1];
+            // TW-214 (re 63 section 2.3): fixed-width text sits on whole pixels, each line at
+            // `round(top + d·s + k·step)` (Arial 12 pt: 109/123/137 from 108.6). The hinted
+            // rasterizer rounds the baseline (`render::snapped_origin`); the layout keeps the exact
+            // value, which "Convert to Paths" needs (TW-56b, Myriad Pro 14 pt ink bottom 194)
             for (k, it) in items.iter().enumerate() {
                 let a = self.attrs(it.run).clone();
                 let gx = x0 + xs[k];
@@ -790,6 +799,7 @@ impl<'a> Builder<'a> {
                 carets,
                 paragraph_start: para_start,
             });
+            last_base = y - base_shift;
         }
         let asc = first_ext.0;
         let (desc, emb) = (last_ext.1, last_ext.2);
@@ -806,20 +816,33 @@ impl<'a> Builder<'a> {
             (frame_exact[3] - 1e-6).ceil() as f32,
         );
         if fixed {
-            let bottom = y + emb;
+            // TW-214 (re 63 section 2.3, B): the horizontal frame ends at the descent (`head.yMin`)
+            // below the unrounded last baseline, rounded up; one line is `ceil((d + desc)·s)`
+            // (Arial 12/15/30/60 pt -> 13/16/32/63, Myriad Pro 60 -> 58, Times 60 -> 61), each
+            // further line adds leading·s (Arial 12 pt, three lines: 42). Corpus of stored fixed
+            // frames: bottom exact 630/676 (before, with the em box rounded: 305/676)
+            let bottom = if vertical { y + emb } else { last_base + desc };
             frame_exact = [
                 b.bounds.left as f64,
                 y_anchor,
                 b.bounds.right as f64,
                 bottom,
             ];
-            // Unterkante gerundet (F6: Original TX3 16 pt zweizeilig 35, TX2 48; Korpus exakt 305/676 statt 271 mit Aufrunden)
-            frame = Rect::new(
-                b.bounds.left,
-                b.bounds.top,
-                b.bounds.right,
-                bottom.round() as f32,
-            );
+            // vertical text keeps the em-box bottom, rounded
+            let bottom = if vertical {
+                bottom.round()
+            } else {
+                (bottom - 1e-6).ceil()
+            };
+            // a frame of width 0 (script `addNewText` with a zero-width rect) shows 10 px wide,
+            // without ink (re 63 section 2.2: object 14 px wide incl. the 2 px margins)
+            let right = if !vertical && b.bounds.right <= b.bounds.left {
+                frame_exact[2] = b.bounds.left as f64 + ZERO_WIDTH_FRAME;
+                b.bounds.left + ZERO_WIDTH_FRAME as f32
+            } else {
+                b.bounds.right
+            };
+            frame = Rect::new(b.bounds.left, b.bounds.top, right, bottom as f32);
         }
         if too_narrow {
             glyphs.clear();

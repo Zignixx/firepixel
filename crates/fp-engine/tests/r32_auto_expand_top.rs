@@ -47,3 +47,37 @@ fn fixed_to_auto_keeps_the_frame_top() {
     ex(&mut s, "text.setProperties", json!({"frameType": "auto"}));
     assert_eq!(geometry(&s, id).0, anchor);
 }
+
+/// TW-214 (re 63 section 2.3): the left edge stays too. A point frame starts at
+/// floor(min(anchor x, ink left)); Arial "A" bears left, so the anchor moves 1 px right and the
+/// frame keeps its left edge (ink 100 -> 101 in the reference). Myriad Pro and Times do not move.
+#[test]
+fn fixed_to_auto_keeps_the_left_edge() {
+    for (font, text, anchor_x) in [
+        ("ArialMT", "Ag", 101.0),
+        ("ArialMT", "Zeile", 100.0),
+        ("TimesNewRomanPSMT", "Adg", 100.0),
+    ] {
+        if fp_text::FontDb::shared().find_ps(font).is_none() {
+            eprintln!("skipped: {font} not installed");
+            continue;
+        }
+        let mut s = doc_session(600.0, 400.0);
+        let v = ex(
+            &mut s,
+            "draw.text",
+            json!({"text": text, "rect": [100, 100, 300, 200], "font": font, "size": 12,
+                   "color": "#000000", "initFromPrefs": false}),
+        );
+        let id = ElementId(v["id"].as_u64().unwrap_or(0));
+        select(&mut s, &[id]);
+        ex(&mut s, "text.setProperties", json!({"frameType": "auto"}));
+        let (anchor, frame, _) = geometry(&s, id);
+        assert_eq!(anchor[0], anchor_x, "{font} {text} anchor x");
+        assert_eq!(
+            (frame[0], frame[1]),
+            (100.0, 100.0),
+            "{font} {text} frame left/top"
+        );
+    }
+}

@@ -1030,11 +1030,9 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
                 p["orientation"] = json!("horizontalLtr");
                 p["initFromPrefs"] = json!(false);
             }
-            if (r[2] - r[0]).abs() > 2.0 {
-                p["rect"] = rect_arr(r);
-            } else {
-                p["anchor"] = json!([r[0], r[1] + 12.0]);
-            }
+            // both values make a fixed-width frame of the rect's width (re 63 section 2.2); a rect
+            // of width 0 stays 0 wide (no ink) and shows 10 px wide (fp-text `ZERO_WIDTH_FRAME`)
+            p["rect"] = rect_arr(r);
             exec(Some(doc), "draw.text", p)?;
             u()
         }

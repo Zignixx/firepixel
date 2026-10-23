@@ -693,7 +693,6 @@ pub fn default_gradient_colors() -> Vec<Argb> {
 /// Vorgabeschrift des Textwerkzeugs: wie im Original „Myriad Pro“, wenn installiert (UX-A W14,
 /// `docs\screenshots\paritaet\a_133`), sonst `Text_Font` (Werksvorgabe Arial).
 pub fn default_text_font(p: &Preferences) -> String {
-    const ORIGINAL: &str = "Myriad Pro";
     // im Menü Text ▸ Schrift ohne Text gewählt (MN-2): gespeicherte Vorgabe gilt
     if let Some(f) = p
         .values
@@ -703,14 +702,16 @@ pub fn default_text_font(p: &Preferences) -> String {
     {
         return f;
     }
-    if fp_text::FontDb::shared()
+    factory_text_font().unwrap_or_else(|| p.get_str("Text_Font", "Arial"))
+}
+
+/// Factory font of new text ("MyriadPro-Regular" in the reference; also script
+/// `addNewText(r, false)`, re 63 section 2.2): "Myriad Pro" when installed.
+pub fn factory_text_font() -> Option<String> {
+    const ORIGINAL: &str = "Myriad Pro";
+    fp_text::FontDb::shared()
         .find_family(ORIGINAL, false, false)
-        .is_some()
-    {
-        ORIGINAL.to_string()
-    } else {
-        p.get_str("Text_Font", "Arial")
-    }
+        .map(|_| ORIGINAL.to_string())
 }
 
 impl ToolOptions {
