@@ -334,11 +334,18 @@ Wichtige Bedienfelder:
   Schritt im Verlauf, in der Datei gespeichert), daher zeigt jedes Dokument und jede wieder geöffnete
   Datei ihre Ebenen so, wie sie gespeichert wurden. Ein
   Klick auf eine Objektzeile wählt nur dieses Objekt und setzt den Anker; Umschalt+Klick wählt alle
-  Objektzeilen vom Anker bis zur angeklickten Zeile (über Ebenen und Unterebenen hinweg, die Auswahl
-  wird ersetzt); Strg+Klick (unter macOS Befehl+Klick) nimmt eine Zeile hinzu oder heraus und lässt
-  den Anker stehen; Strg+Umschalt+Klick wirkt wie Umschalt+Klick. Ein Klick auf eine Zeile einer
-  Mehrfachauswahl lässt die Auswahl stehen, ein Klick auf eine
-  Ebenenzeile wählt alle Objekte dieser Ebene. Ein
+  Objekte vom Anker bis zur angeklickten Zeile in der Reihenfolge des Dokuments, von oben nach unten
+  über Ebenen und Unterebenen hinweg (Objekte ausgeblendeter und zugeklappter Ebenen zählen mit,
+  Objekte gesperrter Ebenen nicht), die Auswahl wird ersetzt; Strg+Klick (unter macOS Befehl+Klick)
+  nimmt ein Objekt hinzu oder heraus und lässt den Anker stehen; Strg+Umschalt+Klick wirkt wie
+  Umschalt+Klick. Ein Klick auf eine Zeile einer Mehrfachauswahl lässt die Auswahl stehen. Ein Klick
+  auf eine Ebenenzeile wählt die eigenen Objekte der Ebene (ohne die ihrer Unterebenen) und macht sie
+  zur aktuellen Ebene; Umschalt+Klick auf eine Ebenenzeile beendet den Bereich bei den eigenen
+  Objekten der Ebene, Strg+Klick schaltet jedes davon einzeln um. Der Anker gilt, solange sein Objekt
+  gewählt ist, auch nach einer Auswahl auf der Leinwand; sonst gilt das unterste gewählte Objekt, und
+  ohne Auswahl wählt Umschalt+Klick von der Zeile bis zum untersten Objekt. Klicks auf Zeilen einer
+  gesperrten Ebene (oder einer Unterebene davon) bewirken nichts. Auswählen im Bedienfeld schreibt
+  keine Schritte in den Verlauf. Ein
   Rechtsklick auf eine Objektzeile wählt zuerst dieses Objekt, sodass *Auswahl auf Hintergrund
   reduzieren*, *Maske hinzufügen* und *Mit darunter liegender auf eine Ebene reduzieren* im Kontextmenü
   dafür gelten (Letzteres nur, wenn das Objekt direkt über einer Bitmap liegt). Ein Rechtsklick auf eine

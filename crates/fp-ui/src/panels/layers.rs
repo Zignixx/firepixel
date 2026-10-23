@@ -89,65 +89,207 @@ fn click_mods(m: &egui::Modifiers) -> ClickMods {
     }
 }
 
-/// Selection after a click on the object row `clicked` (FB-30, TW-208, RE spec 61 §3.3).
+/// One object of the page's object order (RE spec 63 §1.3).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SeqItem {
+    id: fp_model::ElementId,
+    /// The layer or sublayer whose own object it is.
+    owner: LayerId,
+    /// Left out of ranges and not clickable: the object itself, its layer or a parent layer is
+    /// locked, or the layer is not the page's own (shared from another page, master page).
+    locked: bool,
+}
+
+/// The object order of the current page and state as the Layers panel lists it top to bottom
+/// (layers top to bottom, sublayers at their place inside the parent layer), independent of
+/// whether a layer is collapsed (TW-208 rest, RE spec 63 §1.3).
+#[derive(Clone, Debug, Default)]
+struct ObjSeq {
+    items: Vec<SeqItem>,
+    /// Layers and sublayers whose rows ignore clicks (locked themselves or through a parent, or
+    /// not the page's own).
+    locked_layers: BTreeSet<LayerId>,
+}
+
+impl ObjSeq {
+    /// Builds the order from the page's layers (`layers` bottom to top as stored).
+    fn build(layers: &[fp_model::ResolvedLayer], frame: usize) -> ObjSeq {
+        fn walk(
+            els: &[Arc<Element>],
+            owner: LayerId,
+            locked: bool,
+            frame: usize,
+            out: &mut ObjSeq,
+        ) {
+            for e in els {
+                if let ElementKind::SubLayer(sl) = &e.kind {
+                    // a locked parent locks its sublayers (RE spec 63 §1.2 `sublocked`)
+                    let sub_locked =
+                        locked || e.common.locked || sl.cel(frame).is_some_and(|c| c.locked);
+                    if sub_locked {
+                        out.locked_layers.insert(sl.id);
+                    }
+                    if let Some(cel) = sl.cel(frame) {
+                        walk(&cel.elements, sl.id, sub_locked, frame, out);
+                    }
+                } else {
+                    out.items.push(SeqItem {
+                        id: e.id,
+                        owner,
+                        locked: locked || e.common.locked,
+                    });
+                }
+            }
+        }
+        let mut out = ObjSeq::default();
+        for rl in layers.iter().rev() {
+            let l = &rl.layer;
+            let locked = rl.origin != LayerOrigin::Own || l.cel(frame).is_some_and(|c| c.locked);
+            if locked {
+                out.locked_layers.insert(l.id);
+            }
+            if let Some(cel) = l.cel(frame) {
+                walk(&cel.elements, l.id, locked, frame, &mut out);
+            }
+        }
+        out
+    }
+
+    fn pos(&self, id: fp_model::ElementId) -> Option<usize> {
+        self.items.iter().position(|it| it.id == id)
+    }
+
+    /// Clicks on this row change nothing (RE spec 63 §1.3 rule 1).
+    fn row_locked(&self, row: RowKey) -> bool {
+        match row {
+            RowKey::Layer(l) => self.locked_layers.contains(&l),
+            RowKey::Element(id) => self.items.iter().any(|it| it.id == id && it.locked),
+        }
+    }
+
+    /// Positions a row stands for in a range: an object row its object, a layer or sublayer row
+    /// the first to the last of its own objects (without those of its sublayers).
+    fn span(&self, row: RowKey) -> Option<(usize, usize)> {
+        match row {
+            RowKey::Element(id) => self.pos(id).map(|p| (p, p)),
+            RowKey::Layer(l) => {
+                let mut own = self
+                    .items
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, it)| it.owner == l)
+                    .map(|(i, _)| i);
+                let first = own.next()?;
+                Some((first, own.next_back().unwrap_or(first)))
+            }
+        }
+    }
+
+    /// The layer's own objects a click on its row selects or toggles (locked ones left out).
+    fn own_unlocked(&self, l: LayerId) -> Vec<fp_model::ElementId> {
+        self.items
+            .iter()
+            .filter(|it| it.owner == l && !it.locked)
+            .map(|it| it.id)
+            .collect()
+    }
+
+    /// The anchor in effect (RE spec 63 §1.3 rule 5): the stored one while its object (a layer
+    /// anchor: one of its own objects) is selected, else the bottom-most selected object of the
+    /// order, with nothing selected the bottom-most object of the page.
+    fn effective_anchor(
+        &self,
+        selected: &[fp_model::ElementId],
+        anchor: Option<RowKey>,
+    ) -> Option<RowKey> {
+        let valid = anchor.filter(|a| match *a {
+            RowKey::Element(id) => selected.contains(&id) && self.pos(id).is_some(),
+            RowKey::Layer(l) => self
+                .items
+                .iter()
+                .any(|it| it.owner == l && selected.contains(&it.id)),
+        });
+        valid.or_else(|| {
+            selected
+                .iter()
+                .filter_map(|id| self.pos(*id))
+                .max()
+                .or_else(|| self.items.len().checked_sub(1))
+                .map(|p| RowKey::Element(self.items[p].id))
+        })
+    }
+
+    /// `ids` in the order of the panel; objects outside the order keep their place after them.
+    fn sorted(&self, mut ids: Vec<fp_model::ElementId>) -> Vec<fp_model::ElementId> {
+        ids.sort_by_key(|id| self.pos(*id).unwrap_or(usize::MAX));
+        ids
+    }
+}
+
+/// Selection after a click on the row `row` (object, layer or sublayer row) with Shift or Ctrl,
+/// or a plain click on an object row (FB-30, TW-208; RE spec 61 §3.3, RE spec 63 §1.3).
 ///
-/// `order` lists the panel's rows top to bottom as shown (rows of collapsed layers left out), each
-/// with the object it selects in a range (`None`: layer/sublayer row, object of a layer that is not
-/// editable, locked object). `anchor` is the last plain click, already checked for validity by the
-/// caller. Returns the new selection in panel order (`None`: unchanged) and the new anchor.
+/// `selected` is the current selection, `anchor` the stored anchor (checked here, rule 5).
+/// Returns the new selection in panel order (`None`: unchanged) and the anchor to store (`None`:
+/// keep the stored one).
 ///
-/// - Click: only this row, anchor = this row; a click on a row of a multi-selection keeps it.
-/// - Shift (also Ctrl+Shift): range anchor…row across the shown rows (objects of layers and
-///   sublayers in between included), replaces the selection; without a usable anchor the topmost
-///   selected row is the anchor, without a selection it is a plain click.
-/// - Ctrl/Cmd: toggles the row, the anchor stays.
-fn object_row_click(
-    order: &[(RowKey, Option<fp_model::ElementId>)],
+/// - A row of a locked object or layer: nothing changes.
+/// - Shift (also Ctrl+Shift): range over the page's object order from the anchor's span to the
+///   row's span (a layer row spans its own objects), locked objects left out, objects of hidden,
+///   collapsed and shared layers and of sublayers included; replaces the selection, the anchor
+///   stays.
+/// - Ctrl/Cmd: toggles the object, on a layer row each own object one by one; the anchor stays.
+/// - Plain click on an object row: only this object, anchor = this row; a click on a row of a
+///   multi-selection keeps it. A plain click on a layer row selects its own objects and makes the
+///   layer the anchor (the panel also makes it the current layer).
+fn row_click(
+    seq: &ObjSeq,
     selected: &[fp_model::ElementId],
     anchor: Option<RowKey>,
-    clicked: fp_model::ElementId,
+    row: RowKey,
     mods: ClickMods,
 ) -> (Option<Vec<fp_model::ElementId>>, Option<RowKey>) {
-    let pos = |k: RowKey| order.iter().position(|(r, _)| *r == k);
-    let here = RowKey::Element(clicked);
-    let plain = (Some(vec![clicked]), Some(here));
+    if seq.row_locked(row) {
+        return (None, None);
+    }
     if mods.range {
-        let start = anchor.filter(|a| pos(*a).is_some()).or_else(|| {
-            order
-                .iter()
-                .find(|(r, _)| matches!(r, RowKey::Element(id) if selected.contains(id)))
-                .map(|(r, _)| *r)
-        });
-        let (Some(a), Some(b)) = (start, pos(here)) else {
-            return plain;
+        let Some(a) = seq.effective_anchor(selected, anchor) else {
+            return (None, None);
         };
-        let Some(a_pos) = pos(a) else {
-            return plain;
+        let (Some((a0, a1)), Some((b0, b1))) = (seq.span(a), seq.span(row)) else {
+            return (None, None);
         };
-        let (lo, hi) = (a_pos.min(b), a_pos.max(b));
-        let ids: Vec<fp_model::ElementId> = order[lo..=hi]
+        let (lo, hi) = (a0.min(b0), a1.max(b1));
+        let ids = seq.items[lo..=hi]
             .iter()
-            .filter_map(|(r, sel)| sel.or((*r == here).then_some(clicked)))
+            .filter(|it| !it.locked)
+            .map(|it| it.id)
             .collect();
         return (Some(ids), Some(a));
     }
     if mods.toggle {
-        let mut ids: Vec<fp_model::ElementId> = selected.to_vec();
-        if ids.contains(&clicked) {
-            ids.retain(|x| *x != clicked);
-        } else {
-            ids.push(clicked);
+        let flip = match row {
+            RowKey::Element(id) => vec![id],
+            RowKey::Layer(l) => seq.own_unlocked(l),
+        };
+        if flip.is_empty() {
+            return (None, None);
         }
-        // panel order, like the original's selection after a toggle (RE spec 61 §3.2); objects
-        // whose rows are not shown keep their place after them
-        let rank = |id: &fp_model::ElementId| pos(RowKey::Element(*id)).unwrap_or(usize::MAX);
-        ids.sort_by_key(rank);
-        return (Some(ids), anchor.or(Some(here)));
+        let mut ids: Vec<fp_model::ElementId> = selected.to_vec();
+        for id in flip {
+            if ids.contains(&id) {
+                ids.retain(|x| *x != id);
+            } else {
+                ids.push(id);
+            }
+        }
+        return (Some(seq.sorted(ids)), None);
     }
-    if selected.len() > 1 && selected.contains(&clicked) {
-        return (None, anchor);
+    match row {
+        RowKey::Element(id) if selected.len() > 1 && selected.contains(&id) => (None, None),
+        RowKey::Element(id) => (Some(vec![id]), Some(row)),
+        RowKey::Layer(l) => (Some(seq.own_unlocked(l)), Some(row)),
     }
-    plain
 }
 
 fn element_label(e: &Element) -> String {
@@ -322,19 +464,16 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let rename: Option<RowKind> = ui.data(|dd| dd.get_temp(Id::new(RENAME)));
     // FB-30 (RE spec 61 §3): Shift = range from the anchor, Ctrl/Cmd = toggle
     let mods = ui.input(|i| click_mods(&i.modifiers));
-    // anchor of the last plain click with the selection the panel left behind (sorted ids); it
-    // counts while the document and that selection are unchanged (a selection made on the canvas
-    // or by a command drops it, a Shift+click then ranges from the topmost selected row)
-    let mut sel_sorted: Vec<u64> = selected.iter().map(|x| x.0).collect();
-    sel_sorted.sort_unstable();
+    // anchor of the last plain row click in this document; whether it still counts depends on
+    // the selection when a Shift+click uses it (TW-208 rest, RE spec 63 §1.3 rule 5)
     let anchor: Option<RowKey> = ui
-        .data(|dd| dd.get_temp::<(u64, RowKey, Vec<u64>)>(Id::new(ANCHOR)))
-        .filter(|(doc, _, snap)| *doc == doc_id.0 && *snap == sel_sorted)
-        .map(|(_, k, _)| k);
-    let mut new_anchor: Option<(RowKey, Vec<u64>)> = None;
-    // shown rows top to bottom for Shift ranges; object clicks are resolved after the list is built
-    let mut order: Vec<(RowKey, Option<fp_model::ElementId>)> = Vec::new();
-    let mut pending_click: Option<(fp_model::ElementId, ClickMods)> = None;
+        .data(|dd| dd.get_temp::<(u64, RowKey)>(Id::new(ANCHOR)))
+        .filter(|(doc, _)| *doc == doc_id.0)
+        .map(|(_, k)| k);
+    let mut new_anchor: Option<RowKey> = None;
+    // row clicks (name part of object, layer and sublayer rows) are resolved after the list is
+    // built, over the page's whole object order (collapsed layers included)
+    let mut pending_click: Option<(RowKey, ClickMods)> = None;
     let alt = ui.input(|i| i.modifiers.alt);
     // Miniaturoptionen (0 = keine; Vorgabe 32 → 24 px wie im Original „mittel“)
     let tpx = (st
@@ -381,7 +520,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 Rect::from_center_size(pos2(rect.left() + 50.0, rect.center().y), vec2(10.0, 10.0));
             // own and shared layers: the flag of the document; master-page layers: flipped per document
             let model_disclosure = matches!(rl.origin, LayerOrigin::Own | LayerOrigin::Shared);
-            let is_open = l.expanded != (!model_disclosure && flipped.contains(&(doc_id.0, l.id.0)));
+            let is_open =
+                l.expanded != (!model_disclosure && flipped.contains(&(doc_id.0, l.id.0)));
             let is_collapsed = !is_open;
             paint_triangle(ui, tri, is_open, c.icon_fg);
             glyphs::paint(
@@ -490,23 +630,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         toggle_flip = Some(l.id.0);
                     }
                 } else if editable {
-                    // wie im Original: Klick auf die Ebenenzeile wählt die eigenen Objekte der Ebene aus,
-                    // nicht die ihrer Unterebenen (re 28 S3)
-                    let ids: Vec<u64> = l
-                        .cel(frame)
-                        .map(|cel| {
-                            own_objects(&cel.elements)
-                                .into_iter()
-                                .map(|id| id.0)
-                                .collect()
-                        })
-                        .unwrap_or_default();
-                    actions.push(Action::Run(
-                        "layer.setActive".into(),
-                        json!({"layer": l.id.0}),
-                    ));
-                    new_anchor = Some((RowKey::Layer(l.id), ids.clone()));
-                    actions.push(Action::Run("select.set".into(), json!({"ids": ids})));
+                    // a click selects the layer's own objects, not those of its sublayers (re 28
+                    // S3); Shift ranges to them, Ctrl toggles them; a locked layer ignores it (re 63)
+                    pending_click = Some((RowKey::Layer(l.id), mods));
                 } else if rl.origin == LayerOrigin::Shared {
                     actions.push(Action::Run(
                         "pi.layer.setActiveShared".into(),
@@ -579,7 +705,6 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
             menu_rows.push(resp.clone());
             rows.push(RowInfo { kind, rect, locked });
-            order.push((RowKey::Layer(l.id), None));
             if is_collapsed {
                 continue;
             }
@@ -738,23 +863,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                     toggle_flip = Some(sub_key(e.id));
                                 }
                             } else if editable {
-                                // wie eine Ebenenzeile: Unterebene wird aktiv (neue Objekte landen
-                                // darin), ihre Objekte werden ausgewählt (B-9)
-                                let ids: Vec<u64> = sl
-                                    .cel(frame)
-                                    .map(|cel| {
-                                        own_objects(&cel.elements)
-                                            .into_iter()
-                                            .map(|id| id.0)
-                                            .collect()
-                                    })
-                                    .unwrap_or_default();
-                                actions.push(Action::Run(
-                                    "layer.setActive".into(),
-                                    json!({"layer": sl.id.0}),
-                                ));
-                                new_anchor = Some((RowKey::Layer(sl.id), ids.clone()));
-                                actions.push(Action::Run("select.set".into(), json!({"ids": ids})));
+                                // like a layer row: the sublayer becomes current (new objects land
+                                // in it) and its own objects are selected (B-9); Shift/Ctrl as on a
+                                // layer row (re 63 §1.3)
+                                pending_click = Some((RowKey::Layer(sl.id), mods));
                             }
                         }
                         if (resp2.double_clicked() || resp2.triple_clicked())
@@ -803,14 +915,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                 locked: false,
                             });
                         }
-                        order.push((RowKey::Layer(sl.id), None));
                         continue;
                     }
-                    // object row in a Shift range: own editable layer, not locked
-                    order.push((
-                        RowKey::Element(e.id),
-                        (editable && !e.common.locked).then_some(e.id),
-                    ));
                     // BA-099: rows outside the visible part of the list only take their place
                     // (pages with thousands of objects built every row each frame)
                     let next =
@@ -1046,7 +1152,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             ));
                         } else if editable {
                             // resolved after the loop: a Shift range needs the rows below as well
-                            pending_click = Some((e.id, mods));
+                            pending_click = Some((RowKey::Element(e.id), mods));
                         }
                     }
                     // Q-59 (RE spec 58 §3.2): a right-click on an object row selects the object like a
@@ -1055,7 +1161,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     // selection keeps the selection as it is
                     if resp2.secondary_clicked() && editable && !selected_set.contains(&e.id) {
                         actions.push(Action::Run("select.set".into(), json!({"ids": [e.id.0]})));
-                        new_anchor = Some((RowKey::Element(e.id), vec![e.id.0]));
+                        new_anchor = Some(RowKey::Element(e.id));
                     }
                     if (resp2.double_clicked() || resp2.triple_clicked()) && editable {
                         rename_start = Some(kind.clone());
@@ -1076,26 +1182,29 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
         }
     });
-    if let Some((id, m)) = pending_click {
-        let (ids, a) = object_row_click(&order, &selected, anchor, id, m);
-        let after: Vec<u64> = match ids {
-            Some(ids) => {
-                let ids: Vec<u64> = ids.iter().map(|x| x.0).collect();
-                actions.push(Action::Run(
-                    "select.set".into(),
-                    json!({"ids": ids.clone()}),
-                ));
-                ids
-            }
-            None => sel_sorted.clone(),
-        };
+    if let Some((row, m)) = pending_click {
+        let seq = ObjSeq::build(&layers, frame);
+        let (ids, a) = row_click(&seq, &selected, anchor, row, m);
+        // a plain click on an unlocked layer or sublayer row also makes it the current layer
+        if let RowKey::Layer(lid) = row
+            && m == ClickMods::default()
+            && !seq.row_locked(row)
+        {
+            actions.push(Action::Run(
+                "layer.setActive".into(),
+                json!({"layer": lid.0}),
+            ));
+        }
+        if let Some(ids) = ids {
+            let ids: Vec<u64> = ids.iter().map(|x| x.0).collect();
+            actions.push(Action::Run("select.set".into(), json!({"ids": ids})));
+        }
         if new_anchor.is_none() {
-            new_anchor = a.map(|k| (k, after));
+            new_anchor = a;
         }
     }
-    if let Some((k, mut snap)) = new_anchor {
-        snap.sort_unstable();
-        ui.data_mut(|dd| dd.insert_temp(Id::new(ANCHOR), (doc_id.0, k, snap)));
+    if let Some(k) = new_anchor {
+        ui.data_mut(|dd| dd.insert_temp(Id::new(ANCHOR), (doc_id.0, k)));
     }
     ui.data_mut(|dd| match eye_drag {
         Some(mut v) => {
@@ -1622,15 +1731,18 @@ mod tests {
     }
 
     /// Measured list (RE spec 61 §3.1): web layer, Layer 1, O4…O1 (ids 4…1).
-    fn measured_order() -> Vec<(RowKey, Option<fp_model::ElementId>)> {
-        let mut v = vec![
-            (RowKey::Layer(LayerId(100)), None),
-            (RowKey::Layer(LayerId(101)), None),
-        ];
-        for n in [4, 3, 2, 1] {
-            v.push((RowKey::Element(eid(n)), Some(eid(n))));
+    fn measured_seq() -> ObjSeq {
+        ObjSeq {
+            items: [4, 3, 2, 1]
+                .into_iter()
+                .map(|n| SeqItem {
+                    id: eid(n),
+                    owner: LayerId(101),
+                    locked: false,
+                })
+                .collect(),
+            locked_layers: BTreeSet::new(),
         }
-        v
     }
 
     const CLICK: ClickMods = ClickMods {
@@ -1652,11 +1764,11 @@ mod tests {
 
     /// Replays a click sequence like the panel does (selection and anchor carried over).
     fn replay(steps: &[(u64, ClickMods)]) -> Vec<Vec<u64>> {
-        let order = measured_order();
+        let seq = measured_seq();
         let (mut sel, mut anchor): (Vec<fp_model::ElementId>, Option<RowKey>) = (Vec::new(), None);
         let mut out = Vec::new();
         for (n, m) in steps {
-            let (ids, na) = object_row_click(&order, &sel, anchor, eid(*n), *m);
+            let (ids, na) = row_click(&seq, &sel, anchor, RowKey::Element(eid(*n)), *m);
             if let Some(ids) = ids {
                 sel = ids;
             }
@@ -1704,42 +1816,247 @@ mod tests {
         );
     }
 
-    /// Range from a layer anchor and across layer/sublayer rows: the object rows in between count,
-    /// layer rows and objects of other non-editable or locked rows do not.
-    #[test]
-    fn fb30_range_across_layers_and_fallback_anchor() {
-        let order = vec![
-            (RowKey::Layer(LayerId(1)), None),
-            (RowKey::Element(eid(10)), Some(eid(10))),
-            (RowKey::Layer(LayerId(2)), None), // sublayer row
-            (RowKey::Element(eid(11)), Some(eid(11))),
-            (RowKey::Element(eid(12)), None), // locked object
-            (RowKey::Layer(LayerId(3)), None),
-            (RowKey::Element(eid(13)), Some(eid(13))),
-        ];
-        let (ids, a) =
-            object_row_click(&order, &[], Some(RowKey::Element(eid(10))), eid(13), SHIFT);
-        assert_eq!(ids, Some(vec![eid(10), eid(11), eid(13)]));
-        assert_eq!(a, Some(RowKey::Element(eid(10))), "Shift keeps the anchor");
-        let (ids, _) =
-            object_row_click(&order, &[], Some(RowKey::Layer(LayerId(1))), eid(11), SHIFT);
-        assert_eq!(
-            ids,
-            Some(vec![eid(10), eid(11)]),
-            "range from a layer anchor"
+    /// The six-object document of RE spec 63 §1.1, built with commands: "L1" (bottom) with e, f,
+    /// "L2" with c, d, "L3" (top) with a, b; in each layer the first object above the second.
+    /// Variants of L2: normal, hidden, locked, collapsed, shared (across states), sub (sublayer
+    /// "U2" with g, h at the top of L2), sublocked (sub, L2 locked). Returns the object order and
+    /// the row keys by name.
+    fn doc3(variant: &str) -> (ObjSeq, Vec<(String, RowKey)>) {
+        fn ex(s: &mut fp_engine::Session, c: &str, p: serde_json::Value) -> serde_json::Value {
+            s.execute(c, p).unwrap_or_else(|e| panic!("{c}: {e}")).value
+        }
+        let mut s = fp_engine::Session::default();
+        ex(
+            &mut s,
+            "file.new",
+            json!({"width": 700, "height": 400, "background": "#ffffff"}),
         );
-        // no anchor: topmost selected row
-        let (ids, a) = object_row_click(&order, &[eid(13), eid(11)], None, eid(10), SHIFT);
-        assert_eq!(ids, Some(vec![eid(10), eid(11)]));
-        assert_eq!(a, Some(RowKey::Element(eid(11))));
-        // nothing selected, no anchor: plain click
-        let (ids, a) = object_row_click(&order, &[], None, eid(11), SHIFT);
-        assert_eq!(ids, Some(vec![eid(11)]));
-        assert_eq!(a, Some(RowKey::Element(eid(11))));
-        // the clicked row itself is part of the range even when locked
-        let (ids, _) =
-            object_row_click(&order, &[], Some(RowKey::Element(eid(11))), eid(12), SHIFT);
-        assert_eq!(ids, Some(vec![eid(11), eid(12)]));
+        let mut keys: Vec<(String, RowKey)> = Vec::new();
+        let mut rect = |s: &mut fp_engine::Session, name: &str, x: f64| {
+            let v = ex(
+                s,
+                "draw.rectangle",
+                json!({"rect": [x, 20.0, x + 60.0, 80.0]}),
+            );
+            let id = v["id"].as_u64().expect("id");
+            ex(s, "element.setName", json!({"ids": [id], "name": name}));
+            keys.push((name.into(), RowKey::Element(eid(id))));
+        };
+        let active = |s: &fp_engine::Session| s.active().and_then(|d| d.layer).expect("layer");
+        let l1 = active(&s);
+        ex(&mut s, "layer.rename", json!({"layer": l1.0, "name": "L1"}));
+        rect(&mut s, "f", 20.0);
+        rect(&mut s, "e", 100.0);
+        let l2 = LayerId(
+            ex(&mut s, "layer.add", json!({"name": "L2"}))["layer"]
+                .as_u64()
+                .expect("L2"),
+        );
+        rect(&mut s, "d", 180.0);
+        rect(&mut s, "c", 260.0);
+        let l3 = LayerId(
+            ex(&mut s, "layer.add", json!({"name": "L3"}))["layer"]
+                .as_u64()
+                .expect("L3"),
+        );
+        rect(&mut s, "b", 340.0);
+        rect(&mut s, "a", 420.0);
+        let mut layer_keys = vec![("L1", l1), ("L2", l2), ("L3", l3)];
+        if variant.starts_with("sub") {
+            ex(&mut s, "layer.setActive", json!({"layer": l2.0}));
+            ex(&mut s, "pi.layer.addSub", json!({"name": "U2"}));
+            let u2 = active(&s);
+            rect(&mut s, "h", 500.0);
+            rect(&mut s, "g", 580.0);
+            layer_keys.push(("U2", u2));
+        }
+        match variant {
+            "hidden" => {
+                ex(
+                    &mut s,
+                    "layer.setVisible",
+                    json!({"layer": l2.0, "visible": false}),
+                );
+            }
+            "locked" | "sublocked" => {
+                ex(
+                    &mut s,
+                    "layer.setLocked",
+                    json!({"layer": l2.0, "locked": true}),
+                );
+            }
+            "collapsed" => {
+                ex(
+                    &mut s,
+                    "layer.setExpanded",
+                    json!({"layer": l2.0, "expanded": false}),
+                );
+            }
+            "shared" => {
+                ex(
+                    &mut s,
+                    "layer.setShared",
+                    json!({"layer": l2.0, "shared": true}),
+                );
+            }
+            _ => {}
+        }
+        for (n, l) in layer_keys {
+            keys.push((n.into(), RowKey::Layer(l)));
+        }
+        let d = s.active().expect("doc");
+        (ObjSeq::build(&d.doc.resolved_layers(d.page), d.frame), keys)
+    }
+
+    /// Replays a step list on a `doc3` variant and returns the selection after each step as the
+    /// object names in panel order. Steps: `x` click on row x, `+x` Shift, `^x` Ctrl, `=x` canvas
+    /// click on x (`=` alone: canvas click into empty space), `=+x` Shift+canvas click on x.
+    fn replay3(variant: &str, steps: &str) -> Vec<String> {
+        let (seq, keys) = doc3(variant);
+        let key = |n: &str| {
+            keys.iter()
+                .find(|(k, _)| k == n)
+                .map(|(_, r)| *r)
+                .unwrap_or_else(|| panic!("row {n}"))
+        };
+        let el = |n: &str| match key(n) {
+            RowKey::Element(id) => id,
+            RowKey::Layer(_) => panic!("{n} is a layer"),
+        };
+        let name = |id: &fp_model::ElementId| {
+            keys.iter()
+                .find(|(_, r)| *r == RowKey::Element(*id))
+                .map(|(k, _)| k.clone())
+                .unwrap_or_default()
+        };
+        let (mut sel, mut anchor): (Vec<fp_model::ElementId>, Option<RowKey>) = (Vec::new(), None);
+        let mut out = Vec::new();
+        for st in steps.split_whitespace() {
+            if let Some(rest) = st.strip_prefix('=') {
+                // a canvas selection change does not touch the panel's anchor
+                if let Some(x) = rest.strip_prefix('+') {
+                    let id = el(x);
+                    if sel.contains(&id) {
+                        sel.retain(|y| *y != id);
+                    } else {
+                        sel.push(id);
+                    }
+                } else if rest.is_empty() {
+                    sel.clear();
+                } else {
+                    sel = vec![el(rest)];
+                }
+            } else {
+                let (m, n) = match st.as_bytes()[0] {
+                    b'+' => (SHIFT, &st[1..]),
+                    b'^' => (CTRL, &st[1..]),
+                    _ => (CLICK, st),
+                };
+                let (ids, na) = row_click(&seq, &sel, anchor, key(n), m);
+                if let Some(ids) = ids {
+                    sel = ids;
+                }
+                anchor = na.or(anchor);
+            }
+            let mut names: Vec<String> = seq.sorted(sel.clone()).iter().map(name).collect();
+            names.retain(|n| !n.is_empty());
+            out.push(names.join(" "));
+        }
+        out
+    }
+
+    /// TW-208 rest: every measured sequence of RE spec 63 §1.2 (`fw.selection` after each step).
+    #[test]
+    fn layers_range_over_document_order_as_measured() {
+        let all = "a b c d e f";
+        let cases: &[(&str, &str, &str, &[&str])] = &[
+            ("V0", "normal", "a +f", &["a", all]),
+            ("T3", "normal", "f +a", &["f", all]),
+            ("T4", "normal", "c +a +e", &["c", "a b c", "c d e"]),
+            ("V1", "hidden", "a +f", &["a", all]),
+            ("T11", "hidden", "a +d", &["a", "a b c d"]),
+            ("T18", "hidden", "c", &["c"]),
+            ("V2", "locked", "a +f", &["a", "a b e f"]),
+            ("T15", "locked", "e +a", &["e", "a b e"]),
+            ("T1", "locked", "a +c", &["a", "a"]),
+            ("T13", "locked", "a ^c", &["a", "a"]),
+            ("T14", "locked", "a +L2", &["a", "a"]),
+            ("T2", "locked", "c +f", &["", "f"]),
+            ("V3", "collapsed", "a +f", &["a", all]),
+            ("T17", "collapsed", "a +L2", &["a", "a b c d"]),
+            ("V4", "shared", "a +f", &["a", all]),
+            ("V5", "sub", "a +f", &["a", "a b g h c d e f"]),
+            ("T16", "sublocked", "a +f", &["a", "a b e f"]),
+            ("T5", "normal", "a +L1", &["a", all]),
+            ("T6", "normal", "a +L2", &["a", "a b c d"]),
+            ("T21", "sub", "a +L2", &["a", "a b g h c d"]),
+            ("T21b", "sub", "f +L2", &["f", "c d e f"]),
+            ("T7", "normal", "L2 +f", &["c d", "c d e f"]),
+            ("T12", "normal", "L2 +a", &["c d", "a b c d"]),
+            (
+                "T8",
+                "normal",
+                "a +f ^c ^L2",
+                &["a", all, "a b d e f", "a b c e f"],
+            ),
+            ("T9", "normal", "a +L1 ^e", &["a", all, "a b c d f"]),
+            ("T10", "normal", "a ^e +c", &["a", "a e", "a b c"]),
+            ("T19", "normal", "a =e +c", &["a", "e", "c d e"]),
+            ("T20", "normal", "a =+e +c", &["a", "a e", "a b c"]),
+            ("T22", "normal", "a =e =+c +f", &["a", "e", "c e", "e f"]),
+            ("T23", "normal", "e =+b +c", &["e", "b e", "c d e"]),
+            ("T24", "normal", "a =+e ^c +f", &["a", "a e", "a c e", all]),
+            ("T26", "normal", "e ^c ^e +a", &["e", "c e", "c", "a b c"]),
+            (
+                "T29",
+                "normal",
+                "e ^c ^a ^e +f",
+                &["e", "c e", "a c e", "a c", "c d e f"],
+            ),
+            (
+                "T29b",
+                "normal",
+                "e ^c ^a ^e +d",
+                &["e", "c e", "a c e", "a c", "c d"],
+            ),
+            ("T25", "normal", "a = +c", &["a", "", "c d e f"]),
+            ("T27", "normal", "a ^a +c", &["a", "", "c d e f"]),
+            ("T28", "normal", "+a", &[all]),
+            ("T28b", "normal", "+c", &["c d e f"]),
+        ];
+        for (nr, variant, steps, want) in cases {
+            assert_eq!(replay3(variant, steps), *want, "{nr} ({variant}): {steps}");
+        }
+    }
+
+    /// The object order counts collapsed layers and sublayers in place; locks reach sublayers.
+    #[test]
+    fn layers_object_order_with_locks() {
+        let (seq, keys) = doc3("sublocked");
+        let key = |n: &str| keys.iter().find(|(k, _)| k == n).map(|(_, r)| *r).expect(n);
+        let names: Vec<String> = seq
+            .items
+            .iter()
+            .map(|it| {
+                keys.iter()
+                    .find(|(_, r)| *r == RowKey::Element(it.id))
+                    .map(|(k, _)| k.clone())
+                    .unwrap_or_default()
+            })
+            .collect();
+        assert_eq!(names.join(" "), "a b g h c d e f");
+        for n in ["L2", "U2", "g", "c"] {
+            assert!(seq.row_locked(key(n)), "{n} locked through L2");
+        }
+        for n in ["L1", "L3", "a", "f"] {
+            assert!(!seq.row_locked(key(n)), "{n} not locked");
+        }
+        // a layer row spans its own objects only (U2's g, h are not part of L2's span)
+        let (seq, keys) = doc3("sub");
+        let key = |n: &str| keys.iter().find(|(k, _)| k == n).map(|(_, r)| *r).expect(n);
+        assert_eq!(seq.span(key("L2")), Some((4, 5)));
+        assert_eq!(seq.span(key("U2")), Some((2, 3)));
+        assert_eq!(seq.own_unlocked(LayerId(u64::MAX)), Vec::new());
     }
 
     /// Ctrl on Windows/Linux and Cmd on macOS (egui `command`/`mac_cmd`) toggle; the Ctrl key on a

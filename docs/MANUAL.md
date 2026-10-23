@@ -314,11 +314,17 @@ Important panels:
   rows with an expander; double-click a row to rename it. The triangle of a layer or sub-layer
   expands or collapses it; this state belongs to the document (one History step, saved in the file),
   so every document and every reopened file shows its own layers as they were stored. A click on an object row selects only that
-  object and sets the anchor; Shift+click selects all object rows from the anchor to the clicked row
-  (across layers and sub-layers, replacing the selection); Ctrl+click (Cmd+click on macOS) adds or
-  removes one row and keeps the anchor; Ctrl+Shift+click acts like Shift+click. A click on a row that
-  is part of a multi-selection keeps the selection, and a click on a
-  layer row selects all objects of that layer. A right-click on an object row selects that
+  object and sets the anchor; Shift+click selects all objects from the anchor to the clicked row in
+  the document's order, top to bottom across layers and sub-layers (objects of hidden and collapsed
+  layers count, objects of locked layers are left out), replacing the selection; Ctrl+click
+  (Cmd+click on macOS) adds or removes one object and keeps the anchor; Ctrl+Shift+click acts like
+  Shift+click. A click on a row that is part of a multi-selection keeps the selection. A click on a
+  layer row selects the layer's own objects (not those of its sub-layers) and makes it the current
+  layer; Shift+click on a layer row ends the range at the layer's own objects, Ctrl+click toggles each
+  of them. The anchor counts while its object is still selected, even after a selection on the
+  canvas; otherwise the bottom-most selected object is the anchor, and with nothing selected a
+  Shift+click selects from the row to the bottom-most object. Clicks on rows of a locked layer (or of
+  a sub-layer of one) change nothing. Selecting in the panel writes no History steps. A right-click on an object row selects that
   object first, so the context menu's *Flatten Selection*, *Add Mask* and *Merge Down* apply to it
   (*Merge Down* only when the object lies directly above a bitmap). A right-click on a layer row makes
   it the current layer and keeps the selection; on the web layer the share-to-pages entries are grey.
