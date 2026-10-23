@@ -311,7 +311,9 @@ with the layout format of the original.
 Important panels:
 
 - **Layers:** visibility (eye), lock, sub-layers; drag to reorder. Sub-layers are indented folder
-  rows with an expander; double-click a row to rename it. A click on an object row selects only that
+  rows with an expander; double-click a row to rename it. The triangle of a layer or sub-layer
+  expands or collapses it; this state belongs to the document (one History step, saved in the file),
+  so every document and every reopened file shows its own layers as they were stored. A click on an object row selects only that
   object and sets the anchor; Shift+click selects all object rows from the anchor to the clicked row
   (across layers and sub-layers, replacing the selection); Ctrl+click (Cmd+click on macOS) adds or
   removes one row and keeps the anchor; Ctrl+Shift+click acts like Shift+click. A click on a row that
@@ -348,6 +350,8 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   panel space applies nothing. Each apply is one History step; an unchanged value makes none. The slider opens
   flush left with its arrow, with the thumb of the current value under the point where you pressed; near the
   window edge it is moved just enough to stay inside (the first drag then sets the value under the pointer).
+  The opacity sliders (inspector, tool options, Layers panel and the colour pop-up's opacity) move 1 % per 2 px
+  and always give a whole per cent, like the reference.
 - **Colour pop-up opacity:** when you change the opacity of a colour pop-up (its slider next to the "100" field, or
   a typed value) for the fill or stroke of the selection — in the inspector, in the Tools panel or in the Color
   Mixer — the canvas previews the colour with that opacity while the pop-up is open. Enter, or releasing after a

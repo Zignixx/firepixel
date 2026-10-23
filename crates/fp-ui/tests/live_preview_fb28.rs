@@ -14,7 +14,7 @@ use fp_color::Argb;
 use fp_ui::FirepixelApp;
 use fp_ui::app_state::{AppState, UiSettings};
 use fp_ui::inspector::color_picker as cp;
-use fp_ui::inspector::fields::{VSLIDER_PAD, VSLIDER_TRACK};
+use fp_ui::inspector::fields::VTrack;
 use fp_ui::inspector::preview::PreviewValue;
 use serde_json::json;
 use std::sync::Arc;
@@ -107,18 +107,18 @@ fn sliders(h: &H) -> Vec<Rect> {
     h.query_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::Slider)).map(|n| n.rect()).collect()
 }
 
-/// Press on the arrow `arrow` of a pop-up slider and drag the thumb to `frac` of the track (0 =
-/// bottom, 1 = top) without releasing; returns the pointer position.
-fn arrow_drag_to(h: &mut H, arrow: Pos2, frac: f32) -> Pos2 {
+/// Press on the arrow `arrow` of a pop-up slider with the track `track` and drag the thumb to
+/// `frac` of the track (0 = bottom, 1 = top) without releasing; returns the pointer position.
+fn arrow_drag_to(h: &mut H, arrow: Pos2, frac: f32, track: VTrack) -> Pos2 {
     ev(h, Event::PointerMoved(arrow));
     press(h, arrow, true);
     for i in 1..=4 {
         ev(h, Event::PointerMoved(arrow + egui::vec2(0.0, 4.0 * i as f32)));
     }
     let sr = *sliders(h).first().expect("pop-up slider open");
-    let tt = sr.top() + VSLIDER_PAD;
+    let tt = sr.top() + track.pad;
     let from = arrow + egui::vec2(0.0, 16.0);
-    let to = Pos2::new(arrow.x, tt + VSLIDER_TRACK * (1.0 - frac));
+    let to = Pos2::new(arrow.x, tt + track.len * (1.0 - frac));
     for i in 1..=12 {
         ev(h, Event::PointerMoved(from + (to - from) * (i as f32 / 12.0)));
     }
@@ -164,7 +164,7 @@ fn layers_opacity_slider_previews_live_and_applies_once() {
     let (mut h, r) = harness();
     let a = layers_arrow(&mut h).center();
     let (n0, d0) = (undo_count(&h), doc(&h));
-    let to = arrow_drag_to(&mut h, a, 0.41);
+    let to = arrow_drag_to(&mut h, a, 0.41, VTrack::PERCENT);
     assert_eq!(preview(&h), Some(PreviewValue::Opacity(41.0)), "live preview while dragging");
     assert_ne!(shown_preview_key(&h), 0, "canvas image rendered from the preview");
     assert!(Arc::ptr_eq(&doc(&h), &d0), "document untouched while dragging");
@@ -185,7 +185,7 @@ fn layers_opacity_slider_esc_discards() {
     let (mut h, r) = harness();
     let a = layers_arrow(&mut h).center();
     let (n0, d0) = (undo_count(&h), doc(&h));
-    let to = arrow_drag_to(&mut h, a, 0.3);
+    let to = arrow_drag_to(&mut h, a, 0.3, VTrack::PERCENT);
     assert_eq!(preview(&h), Some(PreviewValue::Opacity(30.0)));
     key(&mut h, Key::Escape);
     press(&mut h, to, false);
@@ -211,7 +211,7 @@ fn drag_alpha(h: &mut H, sw: Id, pct: f32, mut each: impl FnMut(&H)) -> Pos2 {
     let p = cp::open_rect(&h.ctx, sw).expect("colour pop-up open");
     click(h, p.min + egui::vec2(54.0, 224.5));
     let sr = cp::slider_rect(p.min, h.ctx.content_rect());
-    let (top, height) = (sr.top() + 8.0, sr.height() - 16.0);
+    let (top, height) = cp::alpha_track(sr);
     let at = |v: f32| Pos2::new(sr.center().x, top + height * (1.0 - v / 100.0));
     let (a, b) = (at(90.0), at(pct));
     ev(h, Event::PointerMoved(a));
@@ -297,7 +297,7 @@ fn rectangle_roundness_slider_previews_live_and_applies_once() {
     let (mut h, r) = harness();
     let a = rect_of(&h, Id::new("pi-round").with("arrow")).expect("roundness arrow drawn").center();
     let (n0, d0) = (undo_count(&h), doc(&h));
-    let to = arrow_drag_to(&mut h, a, 0.41);
+    let to = arrow_drag_to(&mut h, a, 0.41, VTrack::DEFAULT);
     assert_eq!(preview(&h), Some(PreviewValue::Roundness { value: 41.0, pixels: false }), "live preview while dragging");
     assert_ne!(shown_preview_key(&h), 0, "canvas image rendered from the preview");
     assert!(Arc::ptr_eq(&doc(&h), &d0), "document untouched while dragging");
@@ -336,7 +336,8 @@ fn tools_panel_fill_well_alpha_previews_live() {
     };
     click(&mut h, p.min + egui::vec2(54.0, 224.5));
     let sr = cp::slider_rect(p.min, h.ctx.content_rect());
-    let b = Pos2::new(sr.center().x, sr.top() + 8.0 + (sr.height() - 16.0) * 0.5);
+    let (top, height) = cp::alpha_track(sr);
+    let b = Pos2::new(sr.center().x, top + height * 0.5);
     click(&mut h, b);
     assert_eq!(preview(&h), Some(PreviewValue::FillColor(Argb(0x80ff_0000))), "pending alpha previewed");
     assert_eq!(undo_count(&h), n0, "nothing applied yet");
@@ -396,7 +397,8 @@ fn arrow_alpha_drag(h: &mut H, sw: Id, pct: f32) -> Pos2 {
         ev(h, Event::PointerMoved(a + egui::vec2(0.0, 4.0 * i as f32)));
     }
     let sr = cp::slider_rect(p.min, h.ctx.content_rect());
-    let b = Pos2::new(sr.center().x, sr.top() + 8.0 + (sr.height() - 16.0) * (1.0 - pct / 100.0));
+    let (top, height) = cp::alpha_track(sr);
+    let b = Pos2::new(sr.center().x, top + height * (1.0 - pct / 100.0));
     let from = a + egui::vec2(0.0, 12.0);
     for i in 1..=8 {
         ev(h, Event::PointerMoved(from + (b - from) * (i as f32 / 8.0)));
@@ -484,4 +486,82 @@ fn layers_opacity_and_blend_blank_on_mixed_selection() {
     h.state_mut().state.session.execute("select.set", json!({"ids": [r1, r2]})).expect("select both");
     h.run_steps(3);
     assert_eq!(field(&h), "50", "equal values: shown");
+}
+
+// ------------------------------------------- R-32: opacity pop-ups give whole per cents, 2 px each
+
+/// Press on the opacity arrow `arrow`, start the drag and move to `dy` px below the thumb of 100 %
+/// of the opened pop-up (pointer still held). Returns the pointer position and the slider rect.
+fn opacity_drag_below_100(h: &mut H, arrow: Pos2, dy: f32) -> (Pos2, Rect) {
+    ev(h, Event::PointerMoved(arrow));
+    press(h, arrow, true);
+    for i in 1..=4 {
+        ev(h, Event::PointerMoved(arrow + egui::vec2(0.0, 4.0 * i as f32)));
+    }
+    let sr = *sliders(h).first().expect("pop-up slider open");
+    let from = arrow + egui::vec2(0.0, 16.0);
+    let to = Pos2::new(arrow.x, sr.top() + VTrack::PERCENT.pad + dy);
+    for i in 1..=8 {
+        ev(h, Event::PointerMoved(from + (to - from) * (i as f32 / 8.0)));
+    }
+    h.run_steps(1);
+    (to, sr)
+}
+
+/// R-32 (RE spec 61 §4.1, RE spec 60 §2.3): the opacity pop-ups of the Layers panel and the
+/// Properties inspector run 2 px per per cent (the reference: a 41 px drag from 100 gives 80;
+/// Firepixel's 212 px track gave 81, stored as 207/255 = 81.18). A drag that ends between two steps
+/// shows and commits a whole per cent; the History step carries it.
+#[test]
+fn opacity_sliders_two_px_per_percent_commit_whole_percent_r32() {
+    fp_i18n::set_language("de");
+    for layers in [true, false] {
+        let (mut h, r) = harness();
+        let a = if layers {
+            layers_arrow(&mut h).center()
+        } else {
+            rect_of(&h, Id::new("pi-opacity").with("arrow")).expect("Properties opacity arrow drawn").center()
+        };
+        let n0 = undo_count(&h);
+        // 40.6 px below the thumb of 100 %: 100 − 40.6 / 2 = 79.7 → 80
+        let (to, sr) = opacity_drag_below_100(&mut h, a, 40.6);
+        assert!((sr.height() - (fp_ui::inspector::fields::VSLIDER_TRACK + 2.0 * fp_ui::inspector::fields::VSLIDER_PAD)).abs() < 0.5, "pop-up size unchanged");
+        if layers {
+            let thumb100 = sr.top() + VTrack::PERCENT.pad;
+            assert!((thumb100 - a.y).abs() <= 1.0, "thumb of 100 % under the press point: {thumb100} / {}", a.y);
+        }
+        assert_eq!(preview(&h), Some(PreviewValue::Opacity(80.0)), "live preview shows the whole per cent (layers {layers})");
+        press(&mut h, to, false);
+        h.run_steps(2);
+        assert_eq!(undo_count(&h), n0 + 1, "one step (layers {layers})");
+        assert_eq!(element(&h, r).common.opacity.0, 204, "stored 80 % = 204/255 (layers {layers})");
+        assert_eq!(element(&h, r).common.opacity.to_percent(), 80.0, "read back 80, not 81.18");
+        let d = st(&h).session.active().expect("doc");
+        let step = d.history.steps().last().copied().expect("history step");
+        assert_eq!(step.command, "element.setOpacity");
+        assert_eq!(step.params["opacity"].as_f64(), Some(80.0), "History step carries 80: {}", step.params);
+        assert!(step.label.contains("Deckkraft"), "row text {}", step.label);
+    }
+}
+
+/// R-32: the colour pop-up's alpha slider (same 24 × 222 pop-up) also runs 2 px per per cent with
+/// 100 % 10 px below its top edge; a drag that ends between two steps applies a whole per cent
+/// (52 % → alpha 0x85 like the reference's `#ff000085`).
+#[test]
+fn alpha_slider_two_px_per_percent_commits_whole_percent_r32() {
+    fp_i18n::set_language("de");
+    let (mut h, r) = harness();
+    let sw = swatch(("pi-fill", false));
+    let n0 = undo_count(&h);
+    // 51.65 % lies between two steps (0.7 px below the step of 52)
+    let to = arrow_alpha_drag(&mut h, sw, 51.65);
+    let p = cp::open_rect(&h.ctx, sw).expect("pop-up open");
+    let sr = cp::slider_rect(p.min, h.ctx.content_rect());
+    let (top, len) = cp::alpha_track(sr);
+    assert_eq!((top - sr.top(), len), (10.0, 200.0), "track: 100 % 10 px below the top, 2 px per per cent");
+    assert_eq!(preview(&h), Some(PreviewValue::FillColor(Argb(0x85ff_0000))), "live preview with 52 %");
+    press(&mut h, to, false);
+    h.run_steps(2);
+    assert_eq!(undo_count(&h), n0 + 1, "one step");
+    assert_eq!(attrs(&h, r).fill_color, Argb(0x85ff_0000), "52 % applied");
 }

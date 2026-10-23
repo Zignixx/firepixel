@@ -795,7 +795,58 @@ pub fn number_unit(
     enabled: bool,
     unit: &str,
 ) -> Option<f64> {
-    let id = Id::new(id);
+    number_on(
+        ui,
+        Id::new(id),
+        edit,
+        arrow,
+        value,
+        range,
+        decimals,
+        enabled,
+        unit,
+        VTrack::DEFAULT,
+    )
+}
+
+/// Opacity field 0…100 % with the pop-up slider of the reference's opacity arrows (Properties,
+/// tool options, Layers panel): 2 px per per cent ([`VTrack::PERCENT`], RE spec 60 §2.3, RE spec 61
+/// §4.1). Slider and field give whole per cents.
+pub fn opacity_number(
+    ui: &mut Ui,
+    id: impl Hash + std::fmt::Debug,
+    edit: Rect,
+    arrow: Rect,
+    value: Option<f64>,
+    enabled: bool,
+) -> Option<f64> {
+    number_on(
+        ui,
+        Id::new(id),
+        edit,
+        Some(arrow),
+        value,
+        (0.0, 100.0),
+        0,
+        enabled,
+        "",
+        VTrack::PERCENT,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn number_on(
+    ui: &mut Ui,
+    id: Id,
+    edit: Rect,
+    arrow: Option<Rect>,
+    value: Option<f64>,
+    range: (f64, f64),
+    decimals: usize,
+    enabled: bool,
+    unit: &str,
+    track: VTrack,
+) -> Option<f64> {
     // beim Ziehen im Popup-Schieber zeigt das Feld den Wert schon mit (übernommen wird beim Loslassen)
     let live = arrow.and_then(|_| ui.data(|d| d.get_temp::<f64>(id.with("arrow").with("val"))));
     let cur = live
@@ -816,13 +867,14 @@ pub fn number_unit(
         })
         .map(|v| clamp_range(v, range));
     if let Some(a) = arrow
-        && let Some(v) = slider_arrow(
+        && let Some(v) = slider_arrow_vertical_on(
             ui,
             id.with("arrow"),
             a,
             value.unwrap_or(range.0),
             range,
-            decimals,
+            crate::inspector::scale::Scale::linear(decimals),
+            track,
             enabled,
         )
     {
@@ -864,6 +916,34 @@ pub const VSLIDER_PAD: f32 = 3.0;
 // Schieber 20 × (212 + 2 × 3) + Innenrand 1 + Rahmen 1 je Seite (GT-0k: vorher 22/4 → 26 × 224).
 const VSLIDER_MARGIN: f32 = 1.0;
 
+/// Track inside the slider area of the vertical pop-up slider (the pop-up stays 24 × 222):
+/// distance of the top end (thumb of the largest value) from the top of the slider area, and the
+/// length of the track.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VTrack {
+    pub pad: f32,
+    pub len: f32,
+}
+
+impl VTrack {
+    /// [`VSLIDER_PAD`] and [`VSLIDER_TRACK`] (re 29 §8: 212 px).
+    pub const DEFAULT: VTrack = VTrack {
+        pad: VSLIDER_PAD,
+        len: VSLIDER_TRACK,
+    };
+    /// Opacity 0…100 (R-32): 2 px per per cent, the thumb of 100 % 10 px below the pop-up's top
+    /// edge (RE spec 60 §2.3: thumb = top + 10 + 2 · (100 − value), value = 100 − (y − thumb₁₀₀) / 2;
+    /// RE spec 61 §4.1: a drag of 41 px gives 80). Measured on the opacity pop-ups only.
+    pub const PERCENT: VTrack = VTrack {
+        pad: VSLIDER_PERCENT_PAD,
+        len: VSLIDER_PERCENT_TRACK,
+    };
+}
+
+/// [`VTrack::PERCENT`]: top end below the slider area's top (+ border + margin = 10 px) and length.
+pub const VSLIDER_PERCENT_PAD: f32 = 8.0;
+pub const VSLIDER_PERCENT_TRACK: f32 = 200.0;
+
 /// Pfeilknopf ▾ mit **senkrechtem** Popup-Schieber über dem Feld (Inspektor, PARITAET_A T4): oben
 /// der größte, unten der kleinste Wert; the pop-up is flush left with the arrow and the thumb of
 /// the current value lies under the press point (moved at the window edge, [`vslider_popup_pos`]).
@@ -880,6 +960,21 @@ pub fn slider_arrow_vertical(
     value: f64,
     range: (f64, f64),
     scale: crate::inspector::scale::Scale,
+    enabled: bool,
+) -> Option<f64> {
+    slider_arrow_vertical_on(ui, id, r, value, range, scale, VTrack::DEFAULT, enabled)
+}
+
+/// [`slider_arrow_vertical`] with the track `track`.
+#[allow(clippy::too_many_arguments)]
+pub fn slider_arrow_vertical_on(
+    ui: &mut Ui,
+    id: Id,
+    r: Rect,
+    value: f64,
+    range: (f64, f64),
+    scale: crate::inspector::scale::Scale,
+    track: VTrack,
     enabled: bool,
 ) -> Option<f64> {
     let t = Theme::current(ui.ctx());
@@ -939,7 +1034,7 @@ pub fn slider_arrow_vertical(
         .data(|d| d.get_temp::<f32>(press_key))
         .filter(|y| (r.top()..=r.bottom()).contains(y))
         .unwrap_or(r.center().y);
-    let pos = vslider_popup_pos(ui.ctx(), r, press_y, frac_of(value));
+    let pos = vslider_popup_pos_on(ui.ctx(), r, press_y, frac_of(value), track);
     let frame = egui::Frame::NONE
         .fill(c.frame_bg)
         .stroke(Stroke::new(1.0, c.menu_border))
@@ -969,9 +1064,9 @@ pub fn slider_arrow_vertical(
                 vec2(VSLIDER_W, VSLIDER_TRACK + 2.0 * VSLIDER_PAD),
                 Sense::click_and_drag(),
             );
-            let track_top = sr.top() + VSLIDER_PAD;
+            let track_top = sr.top() + track.pad;
             let value_at = |p: Pos2| {
-                let f = (1.0 - (p.y - track_top) / VSLIDER_TRACK).clamp(0.0, 1.0) as f64;
+                let f = (1.0 - (p.y - track_top) / track.len).clamp(0.0, 1.0) as f64;
                 scale.to_value((f * max_pos).round(), min, max)
             };
             // egui's first frame of a pop-up is an invisible sizing pass at a provisional place:
@@ -993,15 +1088,15 @@ pub fn slider_arrow_vertical(
             let cx = sr.center().x.floor() + 0.5;
             ui.painter().vline(
                 cx - 0.5,
-                track_top..=track_top + VSLIDER_TRACK,
+                track_top..=track_top + track.len,
                 Stroke::new(1.0, c.line_mid),
             );
             ui.painter().vline(
                 cx + 0.5,
-                track_top..=track_top + VSLIDER_TRACK,
+                track_top..=track_top + track.len,
                 Stroke::new(1.0, c.line_light),
             );
-            let y = track_top + (1.0 - frac_of(v)) * VSLIDER_TRACK;
+            let y = track_top + (1.0 - frac_of(v)) * track.len;
             let col = if sresp.hovered() || sresp.dragged() || (drag_mode && arrow_drag) {
                 c.focus
             } else {
@@ -1054,9 +1149,20 @@ pub const VSLIDER_POPUP: Vec2 = vec2(
 /// the application window, so here it is moved (never flipped) just enough to lie inside the
 /// window. The size is a constant, so the place is final before the first frame is painted.
 pub fn vslider_popup_pos(ctx: &egui::Context, arrow: Rect, press_y: f32, frac: f32) -> Pos2 {
+    vslider_popup_pos_on(ctx, arrow, press_y, frac, VTrack::DEFAULT)
+}
+
+/// [`vslider_popup_pos`] for the track `track`.
+pub fn vslider_popup_pos_on(
+    ctx: &egui::Context,
+    arrow: Rect,
+    press_y: f32,
+    frac: f32,
+    track: VTrack,
+) -> Pos2 {
     let border = 1.0;
-    let top = press_y
-        - (border + VSLIDER_MARGIN + VSLIDER_PAD + (1.0 - frac.clamp(0.0, 1.0)) * VSLIDER_TRACK);
+    let top =
+        press_y - (border + VSLIDER_MARGIN + track.pad + (1.0 - frac.clamp(0.0, 1.0)) * track.len);
     let left = arrow.left();
     let screen = ctx.content_rect();
     let max = (screen.max - VSLIDER_POPUP).max(screen.min);

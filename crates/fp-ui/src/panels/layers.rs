@@ -52,7 +52,12 @@ enum Drag {
     },
 }
 
-const COLLAPSED: &str = "layers-collapsed";
+/// Rows of master-page layers (and sublayers inside shared or master-page layers) whose disclosure
+/// the user flipped, per document (document id, row key). Own and shared layers and the sublayers of
+/// own layers keep their disclosure in the document (`DISb`, `layer.setExpanded`); the others are
+/// not reachable for that command on this page, so their triangle only flips the view of this
+/// document.
+const FLIPPED: &str = "layers-disclosure-flipped";
 const DRAG: &str = "layers-drag";
 const RENAME: &str = "layers-rename";
 const ANCHOR: &str = "layers-anchor";
@@ -263,14 +268,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let op = first_sel
         .as_ref()
         .map(|e| e.common.opacity.to_percent().round());
-    if let Some(v) = fields::number(
+    // whole per cents at 2 px each like the reference's opacity pop-up (R-32, RE spec 61 §4.1)
+    if let Some(v) = fields::opacity_number(
         ui,
         "layers-opacity",
         dl.r(120.0, 2.0, 21.0, 12.0),
-        Some(dl.r(142.0, 2.0, 9.0, 12.0)),
+        dl.r(142.0, 2.0, 9.0, 12.0),
         if mixed_op { None } else { op.or(Some(100.0)) },
-        (0.0, 100.0),
-        0,
         en,
     ) {
         st.run("element.setOpacity", json!({"opacity": v}));
@@ -283,10 +287,12 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             crate::inspector::preview::PreviewValue::Opacity(v),
         );
     }
-    let collapsed: BTreeSet<u64> = ui
-        .data(|dd| dd.get_temp(Id::new(COLLAPSED)))
+    // R-32: the disclosure triangle shows the document's flag (`DISb`), it is not panel state that
+    // would carry over to another document whose layers have the same ids
+    let flipped: BTreeSet<(u64, u64)> = ui
+        .data(|dd| dd.get_temp(Id::new(FLIPPED)))
         .unwrap_or_default();
-    let mut toggle_collapse: Option<u64> = None;
+    let mut toggle_flip: Option<u64> = None;
     let mut actions: Vec<Action> = Vec::new();
     let mut rows: Vec<RowInfo> = Vec::new();
     let mut start_drag: Option<Drag> = None;
@@ -373,8 +379,11 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
             let tri =
                 Rect::from_center_size(pos2(rect.left() + 50.0, rect.center().y), vec2(10.0, 10.0));
-            let is_collapsed = collapsed.contains(&l.id.0);
-            paint_triangle(ui, tri, !is_collapsed, c.icon_fg);
+            // own and shared layers: the flag of the document; master-page layers: flipped per document
+            let model_disclosure = matches!(rl.origin, LayerOrigin::Own | LayerOrigin::Shared);
+            let is_open = l.expanded != (!model_disclosure && flipped.contains(&(doc_id.0, l.id.0)));
+            let is_collapsed = !is_open;
+            paint_triangle(ui, tri, is_open, c.icon_fg);
             glyphs::paint(
                 ui.painter(),
                 Rect::from_center_size(pos2(rect.left() + 66.0, rect.center().y), vec2(16.0, 14.0)),
@@ -472,7 +481,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         json!({"layer": l.id.0, "locked": !locked}),
                     ));
                 } else if tri.expand(3.0).contains(p) {
-                    toggle_collapse = Some(l.id.0);
+                    if model_disclosure {
+                        actions.push(Action::Run(
+                            "layer.setExpanded".into(),
+                            json!({"layer": l.id.0, "expanded": !is_open}),
+                        ));
+                    } else {
+                        toggle_flip = Some(l.id.0);
+                    }
                 } else if editable {
                     // wie im Original: Klick auf die Ebenenzeile wählt die eigenen Objekte der Ebene aus,
                     // nicht die ihrer Unterebenen (re 28 S3)
@@ -570,7 +586,12 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             if let Some(cel) = l.cel(frame) {
                 // Unterebenen wie im Original als Ordner mit Aufklapper, ihre Objekte eingerückt darunter
                 let mut flat = Vec::new();
-                flatten(&cel.elements, frame, 0, &collapsed, &mut flat);
+                // sublayers of own layers: the document's flag; inside shared or master-page layers
+                // (`layer.setExpanded` reaches only the page's own tree): flipped per document
+                let sub_open = |e: &Element, sl: &fp_model::Layer| {
+                    sl.expanded != (!editable && flipped.contains(&(doc_id.0, sub_key(e.id))))
+                };
+                flatten(&cel.elements, frame, 0, &sub_open, &mut flat);
                 for (depth, idx, e) in flat {
                     let e = &e;
                     let sel = selected_set.contains(&e.id);
@@ -613,7 +634,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             pos2(x0 + 50.0, r2.center().y),
                             vec2(10.0, 10.0),
                         );
-                        let open = !collapsed.contains(&sub_key(e.id));
+                        let open = sub_open(e, sl);
                         paint_triangle(ui, tri2, open, c.icon_fg);
                         glyphs::paint(
                             ui.painter(),
@@ -708,7 +729,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                     json!({"ids": [e.id.0], "locked": !e.common.locked}),
                                 ));
                             } else if tri2.expand(3.0).contains(p) {
-                                toggle_collapse = Some(sub_key(e.id));
+                                if editable {
+                                    actions.push(Action::Run(
+                                        "layer.setExpanded".into(),
+                                        json!({"layer": sl.id.0, "expanded": !open}),
+                                    ));
+                                } else {
+                                    toggle_flip = Some(sub_key(e.id));
+                                }
                             } else if editable {
                                 // wie eine Ebenenzeile: Unterebene wird aktiv (neue Objekte landen
                                 // darin), ihre Objekte werden ausgewählt (B-9)
@@ -1079,12 +1107,12 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     for r in &menu_rows {
         common::resource_context_menu(r, st, "6923");
     }
-    if let Some(id) = toggle_collapse {
-        let mut s = collapsed.clone();
-        if !s.remove(&id) {
-            s.insert(id);
+    if let Some(key) = toggle_flip {
+        let mut s = flipped.clone();
+        if !s.remove(&(doc_id.0, key)) {
+            s.insert((doc_id.0, key));
         }
-        ui.data_mut(|dd| dd.insert_temp(Id::new(COLLAPSED), s));
+        ui.data_mut(|dd| dd.insert_temp(Id::new(FLIPPED), s));
     }
     if let Some(k) = rename_start {
         ui.data_mut(|dd| dd.insert_temp(Id::new(RENAME), k));
@@ -1184,27 +1212,27 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
 const SUB_INDENT: f32 = 28.0;
 const THUMB_INDENT: f32 = 16.0;
 
-/// Schlüssel einer Unterebene in der Menge der zugeklappten Zeilen (getrennt von Ebenen-IDs).
+/// Key of a sublayer row in the set of flipped rows (apart from layer ids).
 fn sub_key(id: fp_model::ElementId) -> u64 {
     id.0 | (1 << 62)
 }
 
-/// Objekte einer Ebene mit ihren aufgeklappten Unterebenen der Reihe nach: (Tiefe, Index in der
-/// eigenen Liste, Objekt).
+/// Objects of a layer with its open sublayers in order: (depth, index in its own list, object).
+/// `open` tells whether a sublayer (element, layer) shows its children.
 fn flatten(
     els: &[Arc<Element>],
     frame: usize,
     depth: usize,
-    collapsed: &BTreeSet<u64>,
+    open: &dyn Fn(&Element, &fp_model::Layer) -> bool,
     out: &mut Vec<(usize, usize, Arc<Element>)>,
 ) {
     for (i, e) in els.iter().enumerate() {
         out.push((depth, i, Arc::clone(e)));
         if let ElementKind::SubLayer(l) = &e.kind
-            && !collapsed.contains(&sub_key(e.id))
+            && open(e, l)
             && let Some(cel) = l.cel(frame)
         {
-            flatten(&cel.elements, frame, depth + 1, collapsed, out);
+            flatten(&cel.elements, frame, depth + 1, open, out);
         }
     }
 }
@@ -1575,16 +1603,14 @@ mod tests {
         let b = sub(&mut ids, "Unterebene", Vec::new());
         let els = vec![Arc::clone(&a), Arc::clone(&b)];
         let mut out = Vec::new();
-        flatten(&els, 0, 0, &BTreeSet::new(), &mut out);
+        flatten(&els, 0, 0, &|_, l| l.expanded, &mut out);
         let got: Vec<(usize, usize, u64)> = out.iter().map(|(d, i, e)| (*d, *i, e.id.0)).collect();
         assert_eq!(
             got,
             vec![(0, 0, a.id.0), (1, 0, inner.id.0), (0, 1, b.id.0)]
         );
-        let mut closed = BTreeSet::new();
-        closed.insert(sub_key(a.id));
         let mut out = Vec::new();
-        flatten(&els, 0, 0, &closed, &mut out);
+        flatten(&els, 0, 0, &|e, l| l.expanded && e.id != a.id, &mut out);
         assert_eq!(
             out.iter().map(|(d, _, e)| (*d, e.id.0)).collect::<Vec<_>>(),
             vec![(0, a.id.0), (0, b.id.0)]

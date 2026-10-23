@@ -200,8 +200,8 @@ fn t4_popup_slider_is_vertical_and_commits_on_release() {
     assert!(r.height() > 5.0 * r.width(), "senkrecht: {r:?}");
     assert!(r.left() < a.x + 8.0 && r.right() > a.x - 8.0, "über dem Pfeil: {r:?} / {a:?}");
     assert!(r.bottom() <= HH + 0.5 && r.top() >= 0.0, "im Fenster: {r:?}");
-    let track_top = r.top() + fp_ui::inspector::fields::VSLIDER_PAD;
-    let track = fp_ui::inspector::fields::VSLIDER_TRACK;
+    let track_top = r.top() + fp_ui::inspector::fields::VSLIDER_PERCENT_PAD;
+    let track = fp_ui::inspector::fields::VSLIDER_PERCENT_TRACK;
     // Knopf bei 100 steht oben; in die Mitte ziehen → 50
     let n0 = undo_count(&h);
     let knob = Pos2::new(r.center().x, track_top + 1.0);
@@ -231,7 +231,7 @@ fn t4_popup_slider_is_vertical_and_commits_on_release() {
         let f = inputs(&h).into_iter().find(|(rr, _)| (rr.center().y - f.center().y).abs() < 1.0 && (rr.left() - f.left()).abs() < 1.0).expect("Feld").0;
         click(&mut h, arrow_of(f));
         let r = sliders(&h)[0];
-        let tt = r.top() + fp_ui::inspector::fields::VSLIDER_PAD;
+        let tt = r.top() + fp_ui::inspector::fields::VSLIDER_PERCENT_PAD;
         let want = 10.0 * (k + 1) as f32;
         let y = tt + track * (1.0 - want / 100.0);
         drag(&mut h, Pos2::new(r.center().x, y + 15.0), Pos2::new(r.center().x, y), 8);

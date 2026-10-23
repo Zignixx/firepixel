@@ -15,7 +15,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use fp_ui::FirepixelApp;
 use fp_ui::app_state::{AppState, UiSettings};
-use fp_ui::inspector::fields::{VSLIDER_PAD, VSLIDER_POPUP, VSLIDER_TRACK};
+use fp_ui::inspector::fields::{VSLIDER_PERCENT_PAD, VSLIDER_PERCENT_TRACK, VSLIDER_POPUP, VTrack};
 use fp_ui::inspector::preview::PreviewValue;
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -367,13 +367,13 @@ fn slider_popup_is_anchored_to_its_arrow() {
         assert_eq!(sliders(&h).len(), 1, "{opacity}: one pop-up slider");
         // the place computed for the arrow (the arrow rect is 9 DLU = 13.5 px wide)
         let arrow_rect = egui::Rect::from_center_size(a, egui::vec2(13.5, 19.5));
-        let expected = fp_ui::inspector::fields::vslider_popup_pos(&h.ctx, arrow_rect, a.y, opacity as f32 / 100.0);
+        let expected = fp_ui::inspector::fields::vslider_popup_pos_on(&h.ctx, arrow_rect, a.y, opacity as f32 / 100.0, VTrack::PERCENT);
         assert!((first.min - expected).length() <= 1.0, "{opacity}: at the computed place {first:?} / {expected:?}");
         assert!((first.size() - VSLIDER_POPUP).length() < 0.5, "{opacity}: size {:?}", first.size());
         let screen = h.ctx.content_rect();
         assert!(screen.contains_rect(first), "{opacity}: inside the window {first:?}");
         assert!((first.left() - arrow_rect.left()).abs() <= 1.0, "{opacity}: flush left with the arrow {first:?} / {arrow_rect:?}");
-        let thumb = first.top() + 2.0 + VSLIDER_PAD + (1.0 - opacity as f32 / 100.0) * VSLIDER_TRACK;
+        let thumb = first.top() + 2.0 + VSLIDER_PERCENT_PAD + (1.0 - opacity as f32 / 100.0) * VSLIDER_PERCENT_TRACK;
         if opacity == 100.0 {
             // the thumb would be level with the arrow, the pop-up would leave the window at the
             // bottom: it is moved up just enough (before: flipped entirely above the arrow)

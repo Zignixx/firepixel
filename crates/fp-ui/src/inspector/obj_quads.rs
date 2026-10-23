@@ -1837,14 +1837,12 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
         &theme,
         en,
     );
-    if let Some(v) = fields::number(
+    if let Some(v) = fields::opacity_number(
         ui,
         "pi-opacity",
         d.r(11.0, 0.0, 19.0, 13.0),
-        Some(d.r(31.0, 0.0, 9.0, 13.0)),
+        d.r(31.0, 0.0, 9.0, 13.0),
         (en && !mixed_op).then_some(op),
-        (0.0, 100.0),
-        0,
         en,
     ) {
         st.run("element.setOpacity", json!({"opacity": v}));
@@ -1893,14 +1891,12 @@ pub fn tool_opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl, with_blend: boo
         true,
     );
     let op = st.session.tools.options.opacity as f64;
-    if let Some(v) = fields::number(
+    if let Some(v) = fields::opacity_number(
         ui,
         "pi-tool-opacity",
         d.r(10.0, 0.0, 19.0, 13.0),
-        Some(d.r(30.0, 0.0, 9.0, 13.0)),
+        d.r(30.0, 0.0, 9.0, 13.0),
         Some(op),
-        (0.0, 100.0),
-        0,
         true,
     ) {
         st.session.tools.options.opacity = v.round().clamp(0.0, 100.0) as u8;

@@ -165,13 +165,13 @@ fn opacity_press_drag_release_applies_once_with_live_preview() {
     let (n0, d0, dirty0) = (undo_count(&h), doc(&h), dirty(&h));
     ev(&mut h, Event::PointerMoved(a));
     press(&mut h, a, true);
-    let track = fp_ui::inspector::fields::VSLIDER_TRACK;
+    let track = fp_ui::inspector::fields::VSLIDER_PERCENT_TRACK;
     // start the drag, then find the pop-up (moved up at the window edge) and go to 41
     for i in 1..=4 {
         ev(&mut h, Event::PointerMoved(a + egui::vec2(0.0, 4.0 * i as f32)));
     }
     let sr = sliders(&h)[0];
-    let tt = sr.top() + fp_ui::inspector::fields::VSLIDER_PAD;
+    let tt = sr.top() + fp_ui::inspector::fields::VSLIDER_PERCENT_PAD;
     let from = a + egui::vec2(0.0, 16.0);
     let to = Pos2::new(a.x, tt + track * 0.59);
     for i in 1..=12 {
@@ -210,8 +210,8 @@ fn opacity_click_mode_applies_on_close_and_esc_discards() {
     let s = sliders(&h);
     assert_eq!(s.len(), 1, "pop-up stays open after a click");
     let sr = s[0];
-    let tt = sr.top() + fp_ui::inspector::fields::VSLIDER_PAD;
-    let track = fp_ui::inspector::fields::VSLIDER_TRACK;
+    let tt = sr.top() + fp_ui::inspector::fields::VSLIDER_PERCENT_PAD;
+    let track = fp_ui::inspector::fields::VSLIDER_PERCENT_TRACK;
     let knob = Pos2::new(sr.center().x, tt + 1.0);
     let to = Pos2::new(sr.center().x, tt + track * 0.14);
     ev(&mut h, Event::PointerMoved(knob));
@@ -237,7 +237,7 @@ fn opacity_click_mode_applies_on_close_and_esc_discards() {
     let f = input_with(&h, "86");
     click(&mut h, arrow_of(f));
     let sr = sliders(&h)[0];
-    let tt = sr.top() + fp_ui::inspector::fields::VSLIDER_PAD;
+    let tt = sr.top() + fp_ui::inspector::fields::VSLIDER_PERCENT_PAD;
     let knob = Pos2::new(sr.center().x, tt + track * 0.14);
     let to = Pos2::new(sr.center().x, tt + track * 0.70);
     ev(&mut h, Event::PointerMoved(knob));
@@ -260,7 +260,7 @@ fn opacity_click_mode_applies_on_close_and_esc_discards() {
     let f = input_with(&h, "86");
     click(&mut h, arrow_of(f));
     let sr = sliders(&h)[0];
-    let tt = sr.top() + fp_ui::inspector::fields::VSLIDER_PAD;
+    let tt = sr.top() + fp_ui::inspector::fields::VSLIDER_PERCENT_PAD;
     let knob = Pos2::new(sr.center().x, tt + track * 0.14);
     let to = Pos2::new(sr.center().x, tt + track * 0.5);
     ev(&mut h, Event::PointerMoved(knob));

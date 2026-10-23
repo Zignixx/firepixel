@@ -329,7 +329,10 @@ Layoutformat des Originals austauschbar.
 Wichtige Bedienfelder:
 
 - **Ebenen:** Sichtbarkeit (Auge), Sperre (Schloss), Unterebenen; Ziehen ordnet um. Unterebenen
-  stehen eingerückt als Ordnerzeile mit Aufklapper; Doppelklick auf die Zeile benennt sie um. Ein
+  stehen eingerückt als Ordnerzeile mit Aufklapper; Doppelklick auf die Zeile benennt sie um. Das
+  Dreieck einer Ebene oder Unterebene klappt sie auf oder zu; dieser Zustand gehört zum Dokument (ein
+  Schritt im Verlauf, in der Datei gespeichert), daher zeigt jedes Dokument und jede wieder geöffnete
+  Datei ihre Ebenen so, wie sie gespeichert wurden. Ein
   Klick auf eine Objektzeile wählt nur dieses Objekt und setzt den Anker; Umschalt+Klick wählt alle
   Objektzeilen vom Anker bis zur angeklickten Zeile (über Ebenen und Unterebenen hinweg, die Auswahl
   wird ersetzt); Strg+Klick (unter macOS Befehl+Klick) nimmt eine Zeile hinzu oder heraus und lässt
@@ -372,6 +375,8 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Jedes Übernehmen ist ein Schritt im Verlauf; ein unveränderter Wert erzeugt keinen. Der Schieber öffnet sich links
   bündig mit dem Pfeil, der Regler beim aktuellen Wert unter der Stelle, an der Sie gedrückt haben; am Fensterrand
   wird er gerade so weit verschoben, dass er hineinpasst (die erste Bewegung setzt dann den Wert unter dem Zeiger).
+  Die Deckkraft-Schieber (Inspektor, Werkzeugoptionen, Ebenen-Bedienfeld und die Deckkraft im Farb-Popup) ändern
+  den Wert um 1 % je 2 px und liefern immer ganze Prozent, wie das Original.
 - **Deckkraft im Farb-Popup:** Ändern Sie die Deckkraft eines Farb-Popups (sein Schieber neben dem Feld „100“ oder
   ein getippter Wert) für Füllung oder Strich der Auswahl – im Inspektor, in der Werkzeugleiste oder im
   Farbmischer –, zeigt die Arbeitsfläche die Farbe mit dieser Deckkraft als Vorschau, solange das Popup offen ist.

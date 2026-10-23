@@ -1239,9 +1239,10 @@ fn body(
                     Stroke::new(1.0, c.menu_border),
                     StrokeKind::Inside,
                 );
+                let (tt, tl) = alpha_track(r);
                 let track = Rect::from_min_max(
-                    pos2(r.center().x - 2.0, r.top() + 8.0),
-                    pos2(r.center().x + 2.0, r.bottom() - 8.0),
+                    pos2(r.center().x - 2.0, tt),
+                    pos2(r.center().x + 2.0, tt + tl),
                 );
                 ui.painter().rect_filled(track, 1.0, c.field_bg);
                 ui.painter().rect_stroke(
@@ -1327,6 +1328,15 @@ fn body(
     }
     let _ = ui;
     (None, false)
+}
+
+/// Top end (thumb of 100 %) and length of the track of the alpha slider `r` (from
+/// [`slider_rect`]): like the opacity pop-ups, 2 px per per cent with 100 % 10 px below the top edge
+/// (R-32, [`crate::inspector::fields::VTrack::PERCENT`], RE spec 60 §2.3 / 61 §4.1); the slider gives
+/// whole per cents.
+pub fn alpha_track(r: Rect) -> (f32, f32) {
+    use crate::inspector::fields::{VSLIDER_PERCENT_PAD, VSLIDER_PERCENT_TRACK};
+    (r.top() + 2.0 + VSLIDER_PERCENT_PAD, VSLIDER_PERCENT_TRACK)
 }
 
 /// Klappschieber der Deckkraft (24 × 222) unter seinem Knopf; reicht das Fenster nach unten nicht,

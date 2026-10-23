@@ -124,8 +124,8 @@ fn open_and_drag(h: &mut H) -> egui::Rect {
     let s = sliders(h);
     assert_eq!(s.len(), 1, "Popup-Schieber offen");
     let r = s[0];
-    let top = r.top() + fp_ui::inspector::fields::VSLIDER_PAD;
-    let track = fp_ui::inspector::fields::VSLIDER_TRACK;
+    let top = r.top() + fp_ui::inspector::fields::VSLIDER_PERCENT_PAD;
+    let track = fp_ui::inspector::fields::VSLIDER_PERCENT_TRACK;
     drag(h, Pos2::new(r.center().x, top + 1.0), Pos2::new(r.center().x, top + track * 0.7), 12);
     r
 }
@@ -179,7 +179,7 @@ fn tw52_press_on_arrow_and_drag_commits_on_release() {
     }
     let s = sliders(&h);
     assert_eq!(s.len(), 1, "Drücken und Ziehen am Pfeil öffnet den Schieber");
-    let to = Pos2::new(a.x, s[0].top() + fp_ui::inspector::fields::VSLIDER_PAD + fp_ui::inspector::fields::VSLIDER_TRACK * 0.5);
+    let to = Pos2::new(a.x, s[0].top() + fp_ui::inspector::fields::VSLIDER_PERCENT_PAD + fp_ui::inspector::fields::VSLIDER_PERCENT_TRACK * 0.5);
     let from = a - egui::vec2(0.0, 12.0);
     for i in 1..=12 {
         ev(&mut h, Event::PointerMoved(from + (to - from) * (i as f32 / 12.0)));
