@@ -409,6 +409,30 @@ fn detached_text(
     n
 }
 
+/// Anchor of a fixed-width horizontal text that becomes point text (`text.setProperties
+/// {frameType: "auto"}`, script `autoExpand = true`, Properties panel auto-expand). Measured in the
+/// reference (re 09 section 8a, file data of T2/T7/T8; R-32 run 37 `inspector-text/25`): the layout
+/// frame keeps its top (`TOPf` = the old frame top) and the stored anchor becomes the first
+/// baseline (`TOAf` = top + first-line ascent: Arial 30 pt +26, Arial 13 pt +12, Myriad Pro 20 pt
+/// +17), with `RIAf = BOAf = 0`; the left edge stays. The offset is taken from Firepixel's own
+/// point-text layout (frame top = anchor - first-line ascent), so the frame top is kept exactly.
+fn point_anchor_from_frame(
+    doc: &fp_model::Document,
+    t: &TextElem,
+    r: Option<&dyn crate::render::PageRenderer>,
+) -> fp_geom::Rect {
+    let frame = t.anchor_rect.unwrap_or(t.bounds);
+    let top = frame.top;
+    let mut n = t.clone();
+    n.frame_type = Some(0);
+    n.anchor_rect = Some(fp_geom::Rect::new(frame.left, top, 0.0, 0.0));
+    let ascent = r
+        .and_then(|r| r.text_frame(doc, &n))
+        .map(|f| top - f.top)
+        .unwrap_or_else(|| first_size(t));
+    fp_geom::Rect::new(frame.left, top + ascent, 0.0, 0.0)
+}
+
 /// Namen der Glättung (JS `antiAliasMode` bzw. „none“ = keine Kantenglättung).
 pub(super) fn antialias_names() -> Vec<String> {
     ["none", "crisp", "strong", "smooth", "custom", "system"]
@@ -1063,8 +1087,35 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let auto_kern = p.opt_bool("autoKern")?;
                 let kerning = p.opt_f64("kerning")?.map(|v| v as f32);
                 let ori = p.opt_str("orientation")?.map(|n| orientation_code(&n));
+                let renderer = s.renderer().cloned();
                 with_doc(s, |d| {
                     let (page, ids) = (d.page, target_ids(d, p)?);
+                    // fixed width -> point text keeps the frame top (R-32, see point_anchor_from_frame)
+                    let point_anchors: Vec<(fp_model::ElementId, fp_geom::Rect)> = if frame
+                        .as_deref()
+                        == Some("auto")
+                    {
+                        ids.iter()
+                            .filter_map(|id| {
+                                let e = docops::element_on_page(&d.doc, page, *id)?;
+                                match &e.kind {
+                                    ElementKind::Text(t)
+                                        if t.frame_type == Some(1)
+                                            && t.on_path.is_none()
+                                            && matches!(t.orientation, 0 | 2) =>
+                                    {
+                                        Some((
+                                            *id,
+                                            point_anchor_from_frame(&d.doc, t, renderer.as_deref()),
+                                        ))
+                                    }
+                                    _ => None,
+                                }
+                            })
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
                     let doc = Arc::make_mut(&mut d.doc);
                     let mut n = 0;
                     for id in ids {
@@ -1072,7 +1123,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             if let ElementKind::Text(t) = &mut e.kind {
                                 n += 1;
                                 match frame.as_deref() {
-                                    Some("auto") => t.frame_type = Some(0),
+                                    Some("auto") => {
+                                        if let Some((_, a)) =
+                                            point_anchors.iter().find(|(i, _)| *i == id)
+                                        {
+                                            t.anchor_rect = Some(*a);
+                                        }
+                                        t.frame_type = Some(0);
+                                    }
                                     Some("fixed") => {
                                         t.frame_type = Some(1);
                                         let w = width
