@@ -156,6 +156,7 @@
     "modify.transform.freeTransform": "Modifizieren > Transformieren > Frei transformieren",
     "modify.transform.numericTransform": "Modifizieren > Transformieren > Numerisch transformieren",
     "modify.transform.removeTransformations": "Modifizieren > Transformieren > Transformationen entfernen",
+    "modify.transform.scale": "Modifizieren > Transformieren > Skalieren",
     "modify.transform.rotate90DegreeCw": "Modifizieren > Transformieren > 90° im UZS drehen",
     "select.borderMarquee": "Auswählen > Auswahlrahmen begrenzen",
     "select.convertMarqueeToPath": "Auswählen > Auswahlrahmen in Pfad konvertieren",

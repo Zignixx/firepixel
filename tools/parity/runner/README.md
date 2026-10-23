@@ -1420,3 +1420,48 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   selection stayed `1: L1obj`. With the lookup in the panel the Ctrl-click hits the row ([1461, 622]) and Firepixel
   reads `0: ` like the reference (preview 2026-10-23_15-30, Firepixel side alone). The panel's Ctrl mapping was not
   involved: the bridge sets `ctrl` and `command` on the click, the panel toggles on either.
+
+## R-35 additions (23 Oct 2026)
+
+- **Text scaling steps (TW-212, F86, RE spec 66):** `tool-text/26_text_scale_numeric_150_result`,
+  `26_text_scale_fresh90_normal`, `27_text_scale_tool_frame_open`, `27_text_scale_tool_corner_result`,
+  `28_text_scale_numeric_150_100_result`. Each makes the point text TS "Ag" ArialMT 60 pt at 100,100 in T01 by script on
+  both sides (all text attributes set explicitly), logs its state (`initialAttrs` size / horizontalScale, each run's
+  `changedAttrs`, `fontsize`, matrix, raw rect, bounds, pixelRect) before and after, the last four History rows
+  (`getStepsAsJavaScript`, History tab shown first), takes a canvas shot and undoes in `after` (state logged again).
+  26: Modify > Transform > Numeric Transform, 150 % proportional, Enter; 26_fresh90: a fresh 90 pt text at raw 82,82 for
+  the pixel comparison; 27: Modify > Transform > Scale (`command modify.transform.scale`, new `commands` entry), bottom-right
+  corner dragged by +39/+38 from each side's own handle (reference 184,182 as measured by RE-34, Firepixel 176,174: its
+  frame lies on the object's bounds), Enter; 28: `scaleSelection(1.5, 1, "autoTrimImages transformAttributes")` by script on
+  both sides (the runner cannot put the dialog's 'Constrain proportions' check box into a known state).
+- **No scripts inside a transform session:** a script run in the reference ends a Scale / Free Transform session (first
+  probe: the drag after the drag's tool-state script scaled nothing, "no selection" after Enter). New options:
+  `drag` / `canvas_drag` `no_state: true` (no tool-state scripts around the drag) and step key `no_zoom_log: true` (no zoom
+  script before a canvas shot).
+- **Popup slider retry (runs 38/39 `color-popup/23_alpha_slider_drag_canvas_pressed`, run 39
+  `fx-bevel-emboss-fill/09_live_pressed`: "no popup slider open"):** the reference side remembers the step's last `open`
+  (point, Win32 handle of the arrow) and the chain of consecutive `open`s. When no slider window appears within
+  `orig.popup_slider_wait_s` (default 2.5 s, was 2 s), an arrow that is still a child of an open popup / dialog (or is no
+  Win32 control) is clicked once more; when the popup holding the arrow is gone, the `open` chain (opener, then arrow) is
+  replayed once. Then the slider is waited for again. Value `popup_slider_retry` {arrow, target, how, opened, after_s,
+  popup_gone, tops, under}, log line `orig popup slider: none open ...`. The second R-35 probe showed case (b):
+  `23_alpha_slider_drag_result` failed with no window of the program left but the main window (the view under the arrow) -
+  the colour well's `open` takes 3.4-3.9 s in every run, i.e. its first click never opens the popup within 2.4 s and the
+  retry click follows, so the popup is possibly opened late and closed again (not proven). The main window handle is asked
+  for on every call, so a restart leaves nothing stale.
+- **Probes** (preview 2026-10-23_19-26, `run_r35_probe_tool-text` = whole unit, `run_r35_probe_popup-sliders_first`,
+  `_second`, `run_r35_probe_popup-sliders` = the slider steps of color-popup 23, fx-bevel-emboss-fill 08/09,
+  inspector-fields 14): all new tool-text steps `ok` on both sides; the old failures of the unit unchanged (12 fp,
+  15 and 19_cursor_frame_handle both, 17 unmapped both). Values, reference | Firepixel: 26 `90pt`, hs 1, identity, raw
+  82,82 111 x 108 | the same; History `scaleSelection(1.5, 1.5, "autoTrimImages transformAttributes")` |
+  `numericTransform {scaleX 150, scaleY 150, constrain true, scaleAttributes true}`; the scaled text is pixel-equal to the
+  fresh 90 pt text in both programs (0 pixels), reference against Firepixel 13 grey pixels plus Firepixel's selection frame.
+  27 `83.739998pt`, hs 1, matrix `[0.993,0,0,1.005]` t 5.085/23.883, raw 100,80 104 x 100, History
+  `setQuadrangle(..., "autoTrimImages transformAttributes rememberQuad")` (RE-34's values exactly) | `90pt`, hs 1, identity,
+  raw 102,101 111 x 108, History `transform.matrix {matrix [1.5,0,0,1.5,-49,-49], rememberQuad true}` - the fold works, the
+  factor differs because Firepixel's transform frame of a text is the bounds (78 px wide: 117/78 = 1.5) while the reference's
+  is a larger square (96 px: factor 1.3957). 28 `60pt`, hs `1.5`, identity, raw 82,100 111 x 72 | the same. Undo gives
+  60 pt, raw 100,100 on both sides. Slider steps: first probe `color-popup/23_alpha_slider_drag_pressed` failed once on the
+  reference after a foreground take-back (the runner's step repeat made it `ok`), second probe `23_..._result` failed with
+  the popup gone (case b, before the chain replay existed), third probe all seven steps `ok` on both sides without a retry.
+  The retry paths themselves were not triggered in a probe.

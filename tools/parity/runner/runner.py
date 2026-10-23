@@ -5461,15 +5461,82 @@ class OrigSide(Side):
             pass
 
     def popup_slider_rect(self):
-        main = self.h.call("main")["hwnd"]
-        for _ in range(10):
-            ws = [w for w in self.h.list("windows") if w["hwnd"] != main and w["class"] not in ("tooltips_class32", "#32768", "#32770")]
-            ws = [w for w in ws if (w["rect"][2] - w["rect"][0]) * (w["rect"][3] - w["rect"][1]) < 120000]
-            if ws:
-                break
-            time.sleep(0.2)
+        # R-35 (runs 38/39 color-popup/23_alpha_slider_drag_canvas_pressed, run 39 fx-bevel-emboss-fill/09_live_pressed,
+        # R-35 probes: "no popup slider open"). Two cases were seen: (a) the arrow is still there but no slider window
+        # appears within 2 s (both run failures follow a step that left a popup slider held / an angle dial dragged);
+        # (b) the whole popup holding the arrow is gone after the arrow click (R-35 probe color-popup/23_..._result: no
+        # window but the main window, the view under the arrow) - its opener (the fill colour well) always needs the
+        # `open` retry click after 2.4 s, so the popup is possibly opened late by the first click and closed again.
+        # The main window is asked for on every call (no handle is kept across a restart). Retry, logged as
+        # `popup_slider_retry`: when no slider window appears within `orig.popup_slider_wait_s` (default 2.5 s), an arrow
+        # still in an open popup is clicked once more; a popup that is gone is opened again by replaying the step's
+        # `open` chain (opener(s), then the arrow) once. Then the slider is waited for again.
+        def find(wait_s):
+            end = time.time() + wait_s
+            while True:
+                main = self.h.call("main")["hwnd"]
+                ws = [w for w in self.h.list("windows") if w["hwnd"] != main and w["class"] not in ("tooltips_class32", "#32768", "#32770")]
+                ws = [w for w in ws if (w["rect"][2] - w["rect"][0]) * (w["rect"][3] - w["rect"][1]) < 120000]
+                if ws or time.time() >= end:
+                    return ws
+                time.sleep(0.2)
+
+        def arrow_alive(last):
+            tops = []
+            try:
+                main = self.h.call("main")["hwnd"]
+                for w in self.h.list("windows"):
+                    if w["hwnd"] == main:
+                        continue
+                    tops.append(f"{w['class']} {rect4(w['rect'])}")
+                    if any(k.get("hwnd") == last["hwnd"] for k in self.h.list("kids", hwnd=w["hwnd"])):
+                        return True, tops
+            except OrigError:
+                pass
+            return False, tops
+
+        wait_s = float(self.r.cfg["orig"].get("popup_slider_wait_s", 2.5))
+        ws = find(wait_s)
+        last = getattr(self, "last_open", None)
+        if ws or not last:
+            if not ws:
+                raise OrigError("no popup slider open")
+            return min(ws, key=lambda w: (w["rect"][2] - w["rect"][0]) * (w["rect"][3] - w["rect"][1]))["rect"]
+        chain = list(getattr(self, "open_chain", None) or [])
+        t0 = time.time()
+        rec = {"arrow": list(last["pt"]), "target": last.get("target"), "waited_s": wait_s}
+        alive, tops = arrow_alive(last) if last.get("hwnd") else (True, [])
+        if alive:
+            # the arrow is still there (or is not a Win32 control, e.g. the Properties panel's opacity arrow)
+            rec["how"] = "arrow clicked again"
+            self.o.focus()
+            self.click_at(last["pt"], "left", 1, last.get("mods") or [])
+        else:
+            try:
+                w_at = self.h.call("at", x=int(last["pt"][0]), y=int(last["pt"][1])) or {}
+            except OrigError:
+                w_at = {}
+            rec.update(popup_gone=True, tops=tops, under=f"{w_at.get('class')} '{str(w_at.get('title') or '')[:30]}'")
+            if len(chain) < 2:
+                rec["how"] = "not retried (no opener of the popup in this step)"
+            else:
+                rec["how"] = "open chain replayed: " + " > ".join(str(c.get("target")) for c in chain)
+                self.h.call("close_menus")
+                time.sleep(0.3)
+                for c in chain:
+                    self.pointer("open", c["arg"], c["act"])
+                    time.sleep(0.3)
+                self.open_chain = chain
+        if not rec["how"].startswith("not retried"):
+            ws = find(wait_s)
+        rec.update(opened=bool(ws), after_s=round(time.time() - t0, 2))
+        self.values.append({"popup_slider_retry": rec})
+        self.r.log(f"  orig popup slider: none open {wait_s:.1f} s after the arrow click at {list(last['pt'])} "
+                   f"({last.get('target')})" + (f", popup gone (top windows {rec.get('tops')}, under the arrow "
+                                                f"{rec.get('under')})" if rec.get("popup_gone") else "")
+                   + f" - {rec['how']}: " + (f"slider open after {rec['after_s']} s" if ws else "still none"))
         if not ws:
-            raise OrigError("no popup slider open")
+            raise OrigError("no popup slider open (" + rec["how"] + ")")
         return min(ws, key=lambda w: (w["rect"][2] - w["rect"][0]) * (w["rect"][3] - w["rect"][1]))["rect"]
 
     def label_point(self, label):
@@ -5937,6 +6004,11 @@ class OrigSide(Side):
             self.last_canvas = (verb, arg, dict(act or {}))
         elif verb not in TEXT_ENTRY_KEEP:
             self.last_canvas = None
+        # R-35: the arrow of the step's last `open` and the chain of consecutive `open`s leading to it (popup_slider_rect
+        # clicks the arrow once more, or replays the chain when the popup is gone)
+        if verb not in ("open", "drag_popup_slider", "slider_drag", "wait"):
+            self.last_open = None
+            self.open_chain = []
         if verb in ("open", "click", "set_field", "set") and not self.text_field_guard(
                 arg.get("target") if isinstance(arg, dict) else arg, verb):
             return
@@ -6139,7 +6211,10 @@ class OrigSide(Side):
             dmods = norm_mods(a.get("mods") or a.get("hold_key"))
             drec = self.drag_record(fr, to, dmods)
             canvas = verb == "canvas_drag" or isinstance(a.get("from"), list)
-            if canvas:
+            # R-35 (TW-212): `no_state: true` - no tool-state script around the drag (a script run in the reference
+            # ends a Scale/Free Transform session: the frame disappeared and the drag after it did nothing)
+            no_state = bool(a.get("no_state"))
+            if canvas and not no_state:
                 drec["state_before"] = self.tool_state()  # R-9 (TW-107/109, Q-50): tool, fill, stroke before the drag
             self.values.append({"drag": drec})
             # R-7 (M9): `press_ms` / `release_ms` = pauses after the press (with two small moves) and before the release
@@ -6153,7 +6228,7 @@ class OrigSide(Side):
                 drec["keys"] = res["keys"]
                 if dmods and not (res["keys"].get("at_press") and res["keys"].get("before_release")):
                     self.r.log(f"drag {fr} -> {to}: held keys {dmods} not down in the reference: {res['keys']}")
-            if canvas:
+            if canvas and not no_state:
                 drec["state_after"] = self.tool_state()
             # R-5: the host waits for the program after every drag input; a long wait is logged (large bitmap)
             if isinstance(res, dict) and int(res.get("busy_ms") or 0) >= 300:
@@ -6342,6 +6417,11 @@ class OrigSide(Side):
                     return
                 self.h.call("close_menus")
             raise OrigError(f"flyout did not open at {pt} (tools anchor {getattr(self, 'tools_anchor', None)})")
+        if verb == "open":
+            self.last_open = {"pt": pt, "mods": list(mods), "hwnd": info.get("hwnd") if isinstance(info, dict) else None,
+                              "target": arg if isinstance(arg, str) else str(arg)[:80]}
+            self.open_chain = (getattr(self, "open_chain", None) or []) + [
+                {"arg": arg, "act": dict(act or {}), "target": self.last_open["target"]}]
         if verb in ("hover", "hover_text", "canvas_hover", "canvas_move"):
             self.o.focus()
             self.h.call("move", x=pt[0], y=pt[1])
@@ -9525,8 +9605,9 @@ class Runner:
                                 pass
             else:
                 self.run_actions(side, actions, rec)
-            if side.name == "orig" and '"canvas' in json.dumps(step):
-                # R-7 (TW-98, RE-9): zoom of the reference per canvas step
+            if side.name == "orig" and '"canvas' in json.dumps(step) and not step.get("no_zoom_log"):
+                # R-7 (TW-98, RE-9): zoom of the reference per canvas step; R-35: step key `no_zoom_log` skips it (the
+                # zoom script would end an open transform session before the shot)
                 side.log_zoom()
             if step.get("log_menu_items"):
                 side.values.append({"menu_items": side.menu_items()})

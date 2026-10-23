@@ -1122,6 +1122,265 @@
      "record_ui": "document.summary"
     }
    ]
+  },
+  {
+   "id": "26_text_scale_numeric_150_result",
+   "check": "text scale numeric 150 % (TW-212)",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM();d.selectNone();d.addNewText({left:100,top:100,right:300,bottom:240},true);var o=fw.selection[0];o.textChars=\"Ag\";var R=o.textRuns;var a=R.initialAttrs;a.face=\"ArialMT\";a.size=\"60pt\";a.fillColor=\"#000000\";a.alignment=\"left\";a.bold=false;a.italic=false;a.underline=false;a.paragraphIndent=0;a.horizontalScale=1;a.leading=1;a.leadingMode=\"percentage\";a.baselineShift=0;a.rangeKerning=0;for(var i=0;i<R.textRuns.length;i++)R.textRuns[i].changedAttrs={};o.textRuns=R;try{d.setTextAutoExpand(true);}catch(e){fw.selection[0].autoExpand=true;}try{fw.selection[0].antiAliasMode=\"smooth\";}catch(e){}d.setElementName(\"TS\");"
+    },
+    {
+     "select": "TS"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "per_side": {
+      "orig": [
+       {
+        "menu": "Modifizieren > Transformieren > Numerisch transformieren..."
+       }
+      ],
+      "fp": [
+       {
+        "command": "modify.transform.numericTransform"
+       }
+      ]
+     }
+    },
+    {
+     "set_field": {
+      "target": "dialog.field.0",
+      "value": "150"
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),r=[];for(var i=Math.max(0,n-4);i<n;i++){var q;try{q=String(h.getStepsAsJavaScript([i]));}catch(e){q=\"ERR \"+e;}r.push(i+\": \"+q.replace(/[\\r\\n]+/g,\" \").substring(0,260));}return n+\" | \"+r.join(\" | \");})()"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
+    }
+   ],
+   "note": "R-35 (TW-212, F86, RE spec 66 section 2.1): point text TS 'Ag' ArialMT 60 pt left black at 100,100 (auto width, made by script on both sides like the RE generator), Modify > Transform > Numeric Transform, scale 150 % (proportional; the dialog's last state is Scale 100/100 with 'Scale attributes' and 'Constrain proportions' on), Enter. Reference (RE-34): size 90pt, horizontalScale 1, matrix identity, raw 82,82 111 x 108, bounds 80,80,115,112, History row scaleSelection(1.5, 1.5, \"autoTrimImages transformAttributes\"). Values: text state before/after (initialAttrs size and horizontalScale, each run's changedAttrs size/hs, fontsize, matrix, raw, bounds, pixelRect), the last 4 History rows (History tab shown first: the reference reads them only with the tab visible, RE-33); canvas shot at 100 % (pixel-equal in the reference to a fresh 90 pt text, compare 26_text_scale_fresh90_normal); after the shot Ctrl+Z and the state again (60pt, raw 100,100)."
+  },
+  {
+   "id": "26_text_scale_fresh90_normal",
+   "check": "text scale numeric 150 % (TW-212)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM();d.selectNone();d.addNewText({left:82,top:82,right:282,bottom:252},true);var o=fw.selection[0];o.textChars=\"Ag\";var R=o.textRuns;var a=R.initialAttrs;a.face=\"ArialMT\";a.size=\"90pt\";a.fillColor=\"#000000\";a.alignment=\"left\";a.bold=false;a.italic=false;a.underline=false;a.paragraphIndent=0;a.horizontalScale=1;a.leading=1;a.leadingMode=\"percentage\";a.baselineShift=0;a.rangeKerning=0;for(var i=0;i<R.textRuns.length;i++)R.textRuns[i].changedAttrs={};o.textRuns=R;try{d.setTextAutoExpand(true);}catch(e){fw.selection[0].autoExpand=true;}try{fw.selection[0].antiAliasMode=\"smooth\";}catch(e){}d.setElementName(\"TF\");"
+    },
+    {
+     "select": "TF"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "note": "R-35 (TW-212): fresh point text 'Ag' ArialMT 90 pt at raw 82,82 - the reference's text after 26_text_scale_numeric_150_result is pixel-equal to this one (RE spec 66 section 2.11, 0 of 240000 pixels)."
+  },
+  {
+   "id": "27_text_scale_tool_frame_open",
+   "check": "text scale tool (TW-212)",
+   "method": {
+    "orig": "B",
+    "fp": "B"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM();d.selectNone();d.addNewText({left:100,top:100,right:300,bottom:240},true);var o=fw.selection[0];o.textChars=\"Ag\";var R=o.textRuns;var a=R.initialAttrs;a.face=\"ArialMT\";a.size=\"60pt\";a.fillColor=\"#000000\";a.alignment=\"left\";a.bold=false;a.italic=false;a.underline=false;a.paragraphIndent=0;a.horizontalScale=1;a.leading=1;a.leadingMode=\"percentage\";a.baselineShift=0;a.rangeKerning=0;for(var i=0;i<R.textRuns.length;i++)R.textRuns[i].changedAttrs={};o.textRuns=R;try{d.setTextAutoExpand(true);}catch(e){fw.selection[0].autoExpand=true;}try{fw.selection[0].antiAliasMode=\"smooth\";}catch(e){}d.setElementName(\"TS\");"
+    },
+    {
+     "select": "TS"
+    },
+    {
+     "command": "modify.transform.scale"
+    },
+    {
+     "wait": 300
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "key": "Escape"
+    }
+   ],
+   "note": "R-35 (TW-212): the transform frame of TS after Modify > Transform > Scale. Reference (RE spec 66 section 2.2): handles at document 88/136/184 x 88/135/182, a square around the centre larger than the object's bounds 98,98-176,174; the reference's shot shows no frame (no selection outline either: the runs set View > Edges off, view default ShowEdges false). Firepixel (R-35 probe, preview 2026-10-23_19-26): frame on the bounds 98,98-176,174 (handles 98/137/176 x 98/136/174). No script runs between the menu command and the shot on the reference side (`no_zoom_log`): a script there ends the transform session (R-35 probe of 27_text_scale_tool_corner_result: with the drag's tool-state script before it, the drag scaled nothing).",
+   "no_zoom_log": true
+  },
+  {
+   "id": "27_text_scale_tool_corner_result",
+   "check": "text scale tool (TW-212)",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM();d.selectNone();d.addNewText({left:100,top:100,right:300,bottom:240},true);var o=fw.selection[0];o.textChars=\"Ag\";var R=o.textRuns;var a=R.initialAttrs;a.face=\"ArialMT\";a.size=\"60pt\";a.fillColor=\"#000000\";a.alignment=\"left\";a.bold=false;a.italic=false;a.underline=false;a.paragraphIndent=0;a.horizontalScale=1;a.leading=1;a.leadingMode=\"percentage\";a.baselineShift=0;a.rangeKerning=0;for(var i=0;i<R.textRuns.length;i++)R.textRuns[i].changedAttrs={};o.textRuns=R;try{d.setTextAutoExpand(true);}catch(e){fw.selection[0].autoExpand=true;}try{fw.selection[0].antiAliasMode=\"smooth\";}catch(e){}d.setElementName(\"TS\");"
+    },
+    {
+     "select": "TS"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "command": "modify.transform.scale"
+    },
+    {
+     "wait": 300
+    },
+    {
+     "per_side": {
+      "orig": [
+       {
+        "canvas_drag": {
+         "from": [
+          184,
+          182
+         ],
+         "by": [
+          39,
+          38
+         ],
+         "no_state": true
+        }
+       }
+      ],
+      "fp": [
+       {
+        "canvas_drag": {
+         "from": [
+          176,
+          174
+         ],
+         "by": [
+          39,
+          38
+         ],
+         "no_state": true
+        }
+       }
+      ]
+     }
+    },
+    {
+     "key": "Enter"
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),r=[];for(var i=Math.max(0,n-4);i<n;i++){var q;try{q=String(h.getStepsAsJavaScript([i]));}catch(e){q=\"ERR \"+e;}r.push(i+\": \"+q.replace(/[\\r\\n]+/g,\" \").substring(0,260));}return n+\" | \"+r.join(\" | \");})()"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
+    }
+   ],
+   "note": "R-35 (TW-212, F86, RE spec 66 section 2.2): TS 'Ag' 60 pt, Modify > Transform > Scale (= Scale tool session), bottom-right corner handle dragged by +39/+38 from each side's own handle (reference document 184,182 as measured by RE-34; Firepixel 176,174 = its frame on the object's bounds, R-35 probe - the same mouse motion therefore gives a larger factor there); the drag runs without the tool-state scripts (`no_state`), which end the reference's transform session, Enter. Reference: size 83.739998pt, horizontalScale 1, matrix [0.993,0,0,1.005] t 5.085/23.883, History row setQuadrangle(..., \"autoTrimImages transformAttributes rememberQuad\") named 'Transformieren' (the corner scales proportionally, also without Shift). Values as in 26; after the shot Ctrl+Z and the state again."
+  },
+  {
+   "id": "28_text_scale_numeric_150_100_result",
+   "check": "text scale non-uniform (TW-212)",
+   "method": {
+    "orig": "E",
+    "fp": "E"
+   },
+   "both": [
+    {
+     "open_testfile": "T01"
+    },
+    {
+     "jsf": "var d=fw.getDocumentDOM();d.selectNone();d.addNewText({left:100,top:100,right:300,bottom:240},true);var o=fw.selection[0];o.textChars=\"Ag\";var R=o.textRuns;var a=R.initialAttrs;a.face=\"ArialMT\";a.size=\"60pt\";a.fillColor=\"#000000\";a.alignment=\"left\";a.bold=false;a.italic=false;a.underline=false;a.paragraphIndent=0;a.horizontalScale=1;a.leading=1;a.leadingMode=\"percentage\";a.baselineShift=0;a.rangeKerning=0;for(var i=0;i<R.textRuns.length;i++)R.textRuns[i].changedAttrs={};o.textRuns=R;try{d.setTextAutoExpand(true);}catch(e){fw.selection[0].autoExpand=true;}try{fw.selection[0].antiAliasMode=\"smooth\";}catch(e){}d.setElementName(\"TS\");"
+    },
+    {
+     "select": "TS"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
+    },
+    {
+     "panel": "window.history"
+    },
+    {
+     "jsf": "fw.getDocumentDOM().scaleSelection(1.5, 1, \"autoTrimImages transformAttributes\");"
+    },
+    {
+     "log_value": "(function(){var h=fw.historyPalette,n=h.getStepCount(),r=[];for(var i=Math.max(0,n-4);i<n;i++){var q;try{q=String(h.getStepsAsJavaScript([i]));}catch(e){q=\"ERR \"+e;}r.push(i+\": \"+q.replace(/[\\r\\n]+/g,\" \").substring(0,260));}return n+\" | \"+r.join(\" | \");})()"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
+    }
+   ],
+   "shot": {
+    "area": "canvas"
+   },
+   "after": [
+    {
+     "key": "Ctrl+Z"
+    },
+    {
+     "log_value": "(function(){var s=fw.selection[0];if(!s)return \"no selection\";function r(v){return Math.round(v*1000)/1000;}var T=s.textRuns,a=T.initialAttrs,R=T.textRuns,rs=[];for(var i=0;i<R.length;i++){var c=R[i].changedAttrs;rs.push((c.size===undefined?\"-\":c.size)+\"/\"+(c.horizontalScale===undefined?\"-\":c.horizontalScale));}var m=\"none\";try{if(s.transform){var q=s.transform.matrix,t=[];for(var j=0;j<q.length;j++)t.push(r(q[j]));m=\"[\"+t.join(\",\")+\"]\";}}catch(e){m=\"ERR\";}var p=s.pixelRect;return [\"size=\"+a.size,\"hs=\"+a.horizontalScale,\"runs=\"+rs.join(\";\"),\"fontsize=\"+s.fontsize,\"matrix=\"+m,\"raw=\"+[r(s.rawLeft),r(s.rawTop),r(s.rawWidth),r(s.rawHeight)].join(\",\"),\"bounds=\"+[r(s.left),r(s.top),r(s.width),r(s.height)].join(\",\"),\"px=\"+[p.left,p.top,p.right,p.bottom].join(\",\"),\"ae=\"+s.autoExpand].join(\" | \");})()"
+    }
+   ],
+   "note": "R-35 (TW-212, F86, RE spec 66 section 2.1): non-uniform numeric scale 150/100 of TS by the script the dialog records (scaleSelection(1.5, 1, \"autoTrimImages transformAttributes\"), same row as the dialog without 'Constrain proportions'; the runner cannot set that check box to a known state). Reference: size 60pt, horizontalScale 1.5, matrix identity, raw 82,100 111 x 72, bounds 80,98,115,76. Values as in 26; after the shot Ctrl+Z and the state again."
   }
  ]
 }
