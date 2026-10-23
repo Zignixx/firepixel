@@ -1372,3 +1372,39 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   result with Enter, fields read), `inspector-fields/25_pattern_move_*` (TW-207: pattern by the fill category's
   pattern button, moved by 37/23 with the X/Y fields).
 - `--dry-run` prints `R-32 self check: ok` (inspector group pick and tab point, slider in an image, colour fields).
+
+## R-33 additions (23 Oct 2026)
+
+- **Same Layers preparation on both sides (TW-216 a):** new verb `layers_disclosure {name: expanded, ...}`. Both sides run
+  `setLayerDisclosure` for the named layers by script (`LAYER_DISCLOSURE_JS`, RE spec 42 §2; Firepixel's binding runs
+  `layer.setExpanded`) and log every layer's `disclosure` afterwards. Firepixel's panel is then checked row by row
+  (`layer_panel_expanded`: indented rows right below the layer's row; a layer without rows cannot be told): a layer it
+  still shows the other way gets a click on its triangle (builds before F79 keep the panel's own disclosure per layer
+  id). Layers to expand first. Value `layers_disclosure` {want, document, panel}. `panel-layers/09_drag_reorder_*`,
+  `12` and `15` use `{"Ebene 1": true, "Ebene 3": true, "Gemeinsam": false, "Unterebene": false, "Ebene 2": false}` in
+  `both` (until run 37 only the reference collapsed three layers, by an `orig` script).
+- **Layer drags log the list:** reference `layer_drag_points`: the start row is taken again without scrolling after the
+  drop row's lookup (each lookup sets the list's top index); when it is out of view the list is scrolled to it and the
+  drop row taken without scrolling. Firepixel: after both rows are in view, a row cut by the list's top or bottom edge
+  (list = below the "Deckkraft" row, above the footer) is wheeled fully into view line by line while the other row
+  stays in view (run 37: "Ebene 3" was cut at the top, the drop at its text's centre landed in the row's lower part).
+  Both log the list's position (reference top index; Firepixel first visible row, list y range, both rows' rects),
+  value `layer_drag_rows`.
+- **Selection dot target `{selection_dot: "<layer>"}` (TW-216 b):** reference: the ring in the row's image (right 45 px
+  of the list box's client area, `dot_column_x`: partial-height dark columns grouped, full-height separator lines left
+  out), else 8 px left of the client edge (`lb_info` now returns `client`); Firepixel: the dot in the row band of the
+  window image (it is painted on the active layer only), else the mark column of another visible list row (active
+  layer's dot or shared-layer mark), else 18 px left of the panel's edge. Value `selection_dot`.
+- **`log_selection` (TW-216 c):** count and names of `fw.selection` (`"2: (no name)|L1obj"`) on both sides; Firepixel
+  also from the bridge (active document's selection ids, names from `get_document`), key `bridge`.
+  `panel-layers/08_shift_ctrl_result` logs it after each count.
+- **Probe** (preview 2026-10-23_11-02, without F79/F81; `run_r33_probe_panel-layers`): the disclosure read back
+  `Ebene 1=1|Ebene 2=0|Ebene 3=1|Unterebene=0|Gemeinsam=0|Webebene=1` in both documents; Firepixel's panel showed the
+  three layers expanded and was collapsed by triangle; both lists then show the same eight rows (Webebene … L1obj).
+  `09_drag_reorder_pressed` is `ok` on both sides (was `unmapped` on Firepixel's), `09_drag_reorder_result` and `15`
+  leave the order unchanged in both, with both rows fully in view (reference top index 0). `12` is `ok` on both sides:
+  reference dot found at 1473 (client edge 1481), Firepixel's not painted on "Ebene 1" (its dot stays on the active
+  layer "Ebene 3" after the click on L1obj), x from the shared mark of "Gemeinsam" (1582.5); currentLayerNum after the
+  drag 0 in the reference, 2 in Firepixel. `08`: reference `1: L1obj`, then `0: `; Firepixel `2: (no name)|L1obj`, then
+  `1: (no name)` (script and bridge agree; F79/F81 not in the build).
+- `--dry-run` prints `R-33 self check: ok` (dot search on a synthetic row, the two scripts).

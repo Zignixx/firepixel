@@ -673,7 +673,7 @@ function Handle($c) {
       $sel = @(); $hs = @()
       for ($i = 0; $i -lt $n; $i++) { if ((I32 ([PR.N]::SendMessage($h, 0x187, [IntPtr]$i, [IntPtr]::Zero))) -gt 0) { $sel += $i }
         $hs += (I32 ([PR.N]::SendMessage($h, 0x1A1, [IntPtr]$i, [IntPtr]::Zero))) }
-      return @{ count = $n; top = (I32 ([PR.N]::SendMessage($h, 0x18E, [IntPtr]::Zero, [IntPtr]::Zero))); cursel = (I32 ([PR.N]::SendMessage($h, 0x188, [IntPtr]::Zero, [IntPtr]::Zero))); selected = $sel; heights = $hs } }
+      return @{ count = $n; client = (CRect $h); top = (I32 ([PR.N]::SendMessage($h, 0x18E, [IntPtr]::Zero, [IntPtr]::Zero))); cursel = (I32 ([PR.N]::SendMessage($h, 0x188, [IntPtr]::Zero, [IntPtr]::Zero))); selected = $sel; heights = $hs } }
     'combo_items' { $h = [IntPtr][int64]$c.hwnd; $n = [int][PR.N]::SendMessage($h, 0x146, [IntPtr]::Zero, [IntPtr]::Zero); $l = @()
       for ($i = 0; $i -lt $n; $i++) { $sb = New-Object Text.StringBuilder 512; [PR.N]::SendMessageSB($h, 0x148, [IntPtr]$i, $sb) | Out-Null; $l += $sb.ToString() }
       return @{ items = $l; selected = (I32 ([PR.N]::SendMessage($h, 0x147, [IntPtr]::Zero, [IntPtr]::Zero))) } }

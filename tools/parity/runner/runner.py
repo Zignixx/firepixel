@@ -1408,6 +1408,72 @@ def r32_selfcheck() -> str:
     return "ok" if not bad else "FAILED: " + "; ".join(bad)
 
 
+# R-33 (TW-216): the layers' disclosure set by script on both sides (`layers_disclosure` verb): `w` maps layer name ->
+# expanded; every layer of that name gets `setLayerDisclosure` (the reference's call, RE spec 42 §2; Firepixel's
+# binding runs `layer.setExpanded`). Returns "name=0|1" of all layers (bottom first) after the change
+LAYER_DISCLOSURE_JS = ("(function(){var d=fw.getDocumentDOM(),w=%s,o=[],i,n;"
+                       "for(i=0;i<d.layers.length;i++){n=d.layers[i].name;if(typeof w[n]=='boolean')d.setLayerDisclosure(i,w[n]);}"
+                       "for(i=0;i<d.layers.length;i++)o.push(d.layers[i].name+'='+(d.layers[i].disclosure?1:0));"
+                       "return o.join('|');})()")
+
+# R-33 (TW-216 c): count and names of the selection (an element without a name reads "(no name)")
+SELECTION_NAMES_JS = ("(function(){var s=fw.selection||[],o=[],i;for(i=0;i<s.length;i++)"
+                      "o.push(s[i].name?String(s[i].name):'(no name)');return s.length+': '+o.join('|');})()")
+
+
+def dot_column_x(img: Image.Image, band, x0: int, x1: int, thr: int = 175, line_frac: float = 0.85):
+    """R-33 (TW-216 b): x (image coordinates) of the selection dot in a row of a layers list: within the row band
+    `band` = (y0, y1) and the columns x0..x1-1, columns holding dark pixels (luminance < thr) on part of the band
+    (full-height columns are the list's separator lines / scroll bar and are left out) are grouped (gaps <= 2 px);
+    the rightmost group 5..14 px wide is the dot (a ring, hollow or filled). None when there is none."""
+    y0, y1 = max(0, int(band[0])), min(img.height, int(band[1]))
+    x0, x1 = max(0, int(x0)), min(img.width, int(x1))
+    h = y1 - y0
+    if h <= 2 or x1 <= x0:
+        return None
+    px = img.convert("RGB").load()
+    dark = []
+    for x in range(x0, x1):
+        n = sum(1 for y in range(y0, y1) if sum(px[x, y]) / 3 < thr)
+        if 0 < n < line_frac * h:
+            dark.append(x)
+    groups: list = []
+    for x in dark:
+        if groups and x - groups[-1][-1] <= 2:
+            groups[-1].append(x)
+        else:
+            groups.append([x])
+    groups = [g for g in groups if 5 <= g[-1] - g[0] + 1 <= 14]
+    return (groups[-1][0] + groups[-1][-1]) / 2 if groups else None
+
+
+def r33_selfcheck() -> str:
+    """R-33: offline check of the selection-dot search (a ring between separator lines, a shared-layer glyph left of
+    it, a row without a dot) and of the two scripts' shape."""
+    bad = []
+    img = Image.new("RGB", (60, 24), (230, 230, 230))
+    for y in range(24):
+        img.putpixel((20, y), (105, 105, 105))   # separator lines (full height): not the dot
+        img.putpixel((50, y), (136, 136, 136))
+    for x in range(30, 34):                      # shared-layer glyph left of the dot (4 px wide: no dot)
+        for y in range(8, 16):
+            img.putpixel((x, y), (60, 60, 60))
+    import math
+    for a in range(0, 360, 5):                   # ring of radius 5 around (42, 12)
+        img.putpixel((int(round(42 + 5 * math.cos(math.radians(a)))), int(round(12 + 5 * math.sin(math.radians(a))))), (90, 90, 90))
+    x = dot_column_x(img, (5, 20), 0, 60)
+    if x is None or abs(x - 42) > 1:
+        bad.append(f"ring at {x}")
+    if dot_column_x(Image.new("RGB", (60, 24), (230, 230, 230)), (5, 20), 0, 60) is not None:
+        bad.append("dot in an empty row")
+    js = LAYER_DISCLOSURE_JS % json.dumps({"Ebene 2": False})
+    if js.count("(") != js.count(")") or js.count("{") != js.count("}") or "setLayerDisclosure(i,w[n])" not in js:
+        bad.append("disclosure script")
+    if SELECTION_NAMES_JS.count("(") != SELECTION_NAMES_JS.count(")"):
+        bad.append("selection script")
+    return "ok" if not bad else "FAILED: " + "; ".join(bad)
+
+
 def r29_selfcheck() -> str:
     """R-29: offline check of the docked group heights (window rects of the R-29 probe: expanded dock with five
     groups, collapsed dock without groups), the per-unit dock mode and the flyout size table of ui_map."""
@@ -5015,7 +5081,7 @@ class OrigSide(Side):
                         if pt:
                             return pt, None
                     raise Unmapped(f"{k} '{target[k]}' not found as list/tree item in orig")
-            for k in ("layer_row", "object_row", "layer_eye", "layer_lock", "layer_expand", "layer_name"):
+            for k in ("layer_row", "object_row", "layer_eye", "layer_lock", "layer_expand", "layer_name", "selection_dot"):
                 if k in target:
                     return self.layers_point(k, target[k], target.get("layer")), None
             if "popup_swatch" in target:
@@ -5058,7 +5124,11 @@ class OrigSide(Side):
     # name; the triangle of a sub layer is indented by one level (16 px)
     LAYER_COLS = {"layer_eye": 11, "layer_lock": 32, "layer_expand": 51, "layer_name": 110, "layer_row": 150, "object_row": 150}
 
-    def layers_point(self, kind, name, layer=None):
+    # R-33 (TW-216 b): the selection dot's centre left of the list's client right edge when it is not found in the
+    # image (R-33 probe: found 8 px left of the client edge, 1473 / 1481; run 37's shot: ring 221..231 of the panel)
+    ORIG_DOT_DX = 8
+
+    def layers_point(self, kind, name, layer=None, scroll=True):
         """Row of the layers panel, an owner-drawn Win32 list box without item texts (setting the current layer by
         JSF does not move its selection). The row list is rebuilt from the document (JSF `Layer.elems` holds sub
         layers and objects in display order, `disclosure` = expanded) and checked against the list box: same row
@@ -5091,9 +5161,12 @@ class OrigSide(Side):
         if not cand:
             raise OrigError(f"layers panel: {kind} {name!r} not found")
         idx = cand[0]
-        self.h.call("lb_info", hwnd=lb["hwnd"], top=int(idx))
-        time.sleep(0.2)
-        top = self.h.call("lb_info", hwnd=lb["hwnd"])["top"]
+        if scroll:
+            self.h.call("lb_info", hwnd=lb["hwnd"], top=int(idx))
+            time.sleep(0.2)
+        li = self.h.call("lb_info", hwnd=lb["hwnd"])
+        top = li["top"]
+        self.layers_top = top  # R-33 (TW-216): logged by layer drags
         r = lb["rect"]
         y = r[1] + sum(hs[top:idx]) + hs[idx] // 2
         if not (top <= idx) or y > r[3]:
@@ -5101,7 +5174,57 @@ class OrigSide(Side):
         x = r[0] + self.LAYER_COLS.get(kind, 150)
         if kind == "layer_expand" and rows[idx][2]:
             x += 16  # sub layer: triangle indented
+        if kind == "selection_dot":
+            # R-33 (TW-216 b): the selection dot column at the right end of a layer row (a ring, filled when the layer
+            # holds the selection), found in the list's image inside the row band; else ORIG_DOT_DX left of the
+            # client area's right edge (a vertical scroll bar narrows the client area)
+            cr = li.get("client") or r
+            band = (y - hs[idx] // 2 + 3, y + hs[idx] // 2 - 3)
+            tmp = Path(self.r.cfg["tmp_dir"]) / "orig_layers_dot.png"
+            try:
+                self.grab([cr[2] - 45, band[0], cr[2], band[1]], tmp)
+                with Image.open(tmp) as im:
+                    dx = dot_column_x(im, (0, im.height), 0, im.width)
+            except (OrigError, OSError) as e:
+                dx = None
+                self.r.log(f"  orig layers panel: selection dot image of {name!r}: {e}")
+            x = (cr[2] - 45 + dx) if dx is not None else cr[2] - self.ORIG_DOT_DX
+            self.r.log(f"  orig layers panel: selection dot of {name!r} at x {round(x)} ("
+                       f"{'found in the row image' if dx is not None else 'not found in the row image - client right - ' + str(self.ORIG_DOT_DX)}"
+                       f"; client {cr}, row {idx}, y {y}, top index {top})")
+            self.values.append({"selection_dot": {"layer": str(name), "x": round(x), "y": int(y),
+                                                  "from_client_right": round(cr[2] - x), "found": dx is not None}})
         return x, y
+
+    def layer_drag_points(self, a_from, a_to, fr, to):
+        """R-33 (TW-216): both ends of a drag between rows of the reference's Layers list. Each lookup scrolls its row
+        into view (LB_SETTOPINDEX), so the start row taken first may have left the view when the drop row was looked
+        up: the start point is taken again without scrolling; when it is out of view, the list is scrolled to the
+        start row and the drop row taken without scrolling. The list's top index and both points are logged (value
+        `layer_drag_rows`); unchanged when an end is no Layers row."""
+        def key(t):
+            if not isinstance(t, dict):
+                return None
+            k = next((k for k in ("layer_row", "layer_name", "layer_eye", "layer_lock", "layer_expand", "selection_dot",
+                                  "object_row") if k in t), None)
+            return (k, t[k], t.get("layer")) if k else None
+        kf, kt = key(a_from), key(a_to)
+        if not kf or not kt:
+            return fr, to
+        how = "both rows in view"
+        try:
+            fr = self.layers_point(*kf, scroll=False)
+        except OrigError:
+            try:
+                fr = self.layers_point(*kf)
+                to = self.layers_point(*kt, scroll=False)
+                how = "list scrolled to the start row, the drop row in view"
+            except OrigError as e:
+                how = f"both rows do not fit into the list ({e})"
+        info = {"top_index": getattr(self, "layers_top", None), "from": [int(v) for v in fr], "to": [int(v) for v in to], "how": how}
+        self.r.log(f"  orig layer drag: list top index {info['top_index']}, from {info['from']} to {info['to']} ({how})")
+        self.values.append({"layer_drag_rows": info})
+        return fr, to
 
     def dialog_label_point(self, loc):
         """R-7 (xs-preferences): control of the open dialog found by its text - `{"dialog_label": text, "class":
@@ -5942,6 +6065,15 @@ class OrigSide(Side):
             code = arg if isinstance(arg, str) else arg.get("code")
             lines = self.o.jsf(code if "fp_log" in code else f"var __v = (function(){{ {code} }})(); if (__v !== undefined) fp_log('RET ' + __v);")
             self.values.append({"jsf": code[:200], "out": lines[-5:]})
+        elif verb == "layers_disclosure":
+            # R-33 (TW-216 a): the same disclosure on both sides before the Layers drag steps (name -> expanded)
+            val = self.jsf_value(LAYER_DISCLOSURE_JS % json.dumps(arg, ensure_ascii=True), why="layers_disclosure")
+            time.sleep(0.3)
+            self.r.log(f"  orig layers disclosure {arg}: document {val}")
+            self.values.append({"layers_disclosure": {"want": arg, "document": val}})
+        elif verb == "log_selection":
+            # R-33 (TW-216 c): count and names of the selection
+            self.values.append({"selection": self.jsf_value(SELECTION_NAMES_JS, why="log_selection")})
         elif verb == "history_rows":
             self.history_rows(arg)
         elif verb in ("log_value", "log"):
@@ -5997,6 +6129,8 @@ class OrigSide(Side):
                 to = (fr[0] + a["by"][0], fr[1] + a["by"][1])
             else:
                 raise Unsupported("drag without to/by")
+            if verb == "drag" and "to" in a:
+                fr, to = self.layer_drag_points(a.get("from"), a.get("to"), fr, to)
             if verb == "canvas_drag" or isinstance(a.get("from"), list):
                 self.check_drag_points([fr] if a.get("allow_outside_end") else [fr, to])
                 if a.get("allow_outside_end"):
@@ -7089,6 +7223,8 @@ class FpSide(Side):
                 if not pt:
                     raise BridgeError(f"popup swatch {target['popup_swatch']} not found")
                 return [pt[0], pt[1]]
+            if "selection_dot" in target:
+                return self.layers_dot_point(target["selection_dot"])
             for k in ("layer_eye", "layer_lock", "layer_expand"):
                 if k in target:
                     # columns of the layers panel row (measured 14.10.): eye and lock at fixed x, the triangle left of the name
@@ -7183,7 +7319,144 @@ class FpSide(Side):
             raise Unmapped(f"ui key not in ui_map.json: {target}")
         return self.find_in_popup(str(target))["center"]
 
-    LAYER_TARGETS = ("layer_eye", "layer_lock", "layer_expand", "layer_row", "layer_name")
+    LAYER_TARGETS = ("layer_eye", "layer_lock", "layer_expand", "layer_row", "layer_name", "selection_dot", "object_row")
+
+    # R-33 (TW-216 b): the selection dot's centre left of the Layers panel's right edge when no mark is painted in any
+    # visible layer row (the dot is drawn on the active layer only, 11 px left of the row's right edge; R-33 probe:
+    # 18 px left of the panel's edge without a scroll bar - with one the rows end about 10 px further left)
+    FP_DOT_DX = 18
+
+    def layers_dot_point(self, name):
+        """R-33 (TW-216 b): the selection dot column of the layer row `name` in Firepixel's Layers panel (the row looked
+        up like `layer_row`): the dot found in the window image inside the row band (right 60 px of the panel without
+        the scroll bar), else FP_DOT_DX left of the panel's right edge. Logged, value `selection_dot`."""
+        c = self.resolve({"layer_row": name})
+        hit = self.layers_row_scan(name, wheel=False)
+        cy = hit["center"][1] if hit else c[1]
+        pr = self.area_rect("panel:layers")
+        img, _ = self.window_image()
+        st = self.state()
+        sc = img.width / float(st["window"]["width"] or img.width)
+        dx = dot_column_x(img, ((cy - 8) * sc, (cy + 8) * sc), (pr[2] - 60) * sc, (pr[2] - 9) * sc)
+        how = "found in the row"
+        if dx is None:
+            # not painted on this row (not the active layer): the mark column of another visible row (the active
+            # layer's dot or a shared layer's mark sits in the same column)
+            how = "not painted on the row - panel right - " + str(self.FP_DOT_DX)
+            top, bottom = self.layers_list_bounds()  # rows of the list only (the footer's buttons are no mark)
+            others = [h for h in (self.call("ui_find", {"region": [pr[0], top, pr[2], bottom], "role": "text", "limit": 100})
+                                  or {}).get("hits") or []
+                      if h.get("text") and abs(h["center"][1] - cy) > 8 and top + 6 <= h["center"][1] <= bottom - 6]
+            for h in others:
+                ox = dot_column_x(img, ((h["center"][1] - 8) * sc, (h["center"][1] + 8) * sc), (pr[2] - 60) * sc, (pr[2] - 9) * sc)
+                if ox is not None:
+                    dx = ox
+                    how = f"not painted on the row - mark column of the row {h.get('text')!r}"
+                    break
+        x = dx / sc if dx is not None else pr[2] - self.FP_DOT_DX
+        self.r.log(f"  fp layers panel: selection dot of {name!r} at x {round(x, 1)} ({how}"
+                   f"; panel {[round(v) for v in pr]}, row y {round(cy, 1)})")
+        self.values.append({"selection_dot": {"layer": str(name), "x": round(x, 1), "y": round(cy, 1),
+                                              "from_panel_right": round(pr[2] - x, 1), "how": how}})
+        return [x, cy]
+
+    def layers_child_rows(self, lay):
+        """R-33: the row of layer `lay` (ui_find hit, inside the Layers panel, not wheeled) and the visible rows of the
+        first indentation level right below it (texts further right than its name, up to the next row that is not)."""
+        pr = self.area_rect("panel:layers")
+        h = self.layers_row_scan(lay, wheel=False)
+        if not h:
+            return h, []
+        texts = sorted([x for x in (self.call("ui_find", {"region": [pr[0], h["rect"][3] - 2, pr[2], pr[3]], "limit": 200})
+                                    or {}).get("hits") or [] if x.get("role") == "text" and x["center"][1] > h["center"][1] + 4],
+                       key=lambda x: x["center"][1])
+        kids = []
+        for x in texts:
+            if x["rect"][0] <= h["rect"][0] + 4:
+                break
+            kids.append(x)
+        if kids:
+            lvl = min(x["rect"][0] for x in kids)
+            kids = [x for x in kids if abs(x["rect"][0] - lvl) <= 4]
+        return h, kids
+
+    # R-33: number of rows a layer has below it when expanded (objects of its frame + its sub layers)
+    LAYER_CONTENT_JS = ("(function(){var d=fw.getDocumentDOM(),f=d.currentFrameNum,n=%s,c=0,i,p;"
+                        "for(i=0;i<d.layers.length;i++){var L=d.layers[i];if(L.name==n){c+=L.frames[f].elements.length;continue;}"
+                        "p=d.getParentLayerNum(i);if(p>=0&&d.layers[p].name==n)c++;}return c;})()")
+
+    def layer_panel_expanded(self, lay):
+        """R-33: whether Firepixel's Layers panel shows layer `lay` expanded - True / False, None when it cannot tell
+        (the row is not found, or the layer has no rows below it). A collapsed-looking row near the list's bottom is
+        checked once more after wheeling the list down."""
+        try:
+            n = int(float(self.script_value(self.LAYER_CONTENT_JS % json.dumps(str(lay)))))
+        except (BridgeError, TypeError, ValueError):
+            n = -1
+        h, kids = self.layers_child_rows(lay)
+        if not h:
+            h = self.layers_row_scan(lay) or self.layers_expand_to(lay, is_layer=True)
+            if not h:
+                return None
+            h, kids = self.layers_child_rows(lay)
+        if kids:
+            return True
+        if n == 0:
+            return None
+        pr = self.area_rect("panel:layers")
+        if h and h["center"][1] > pr[3] - 70:
+            self.inp([{"type": "wheel", "pos": [(pr[0] + pr[2]) / 2, (pr[1] + pr[3]) / 2], "delta": [0, -3], "unit": "line"}])
+            time.sleep(0.15)
+            h, kids = self.layers_child_rows(lay)
+            if kids:
+                return True
+        return False
+
+    def layers_disclosure(self, want):
+        """R-33 (TW-216 a): the layers named in `want` (name -> expanded) are expanded/collapsed by script like in the
+        reference (`setLayerDisclosure`, which runs `layer.setExpanded`; since F79 the panel follows the document), then
+        the panel is checked row by row: a layer the panel still shows the other way gets a click on its triangle
+        (builds before F79 keep the panel's own disclosure per layer id across documents). Layers to expand first.
+        Logged, value `layers_disclosure` {want, document, panel}."""
+        doc = self.script_value(LAYER_DISCLOSURE_JS % json.dumps(want, ensure_ascii=True))
+        notes = []
+        for name, exp in sorted(want.items(), key=lambda kv: not kv[1]):
+            shown = self.layer_panel_expanded(name)
+            if shown is None:
+                notes.append(f"'{name}': not to tell (no rows below it or not found)")
+                continue
+            if shown == bool(exp):
+                notes.append(f"'{name}': {'expanded' if exp else 'collapsed'}")
+                continue
+            hit = self.layers_row_scan(name)
+            if not hit:
+                notes.append(f"'{name}': row not found for its triangle")
+                continue
+            pt = [hit["rect"][0] - 28, hit["center"][1]]
+            self.inp([{"type": "click", "pos": pt}, {"type": "wait", "ms": 250}])
+            now = self.layer_panel_expanded(name)
+            notes.append(f"'{name}': panel showed it {'expanded' if shown else 'collapsed'} - triangle at "
+                         f"{[round(v) for v in pt]} -> {'expanded' if now else 'collapsed' if now is False else '?'}")
+        self.r.log(f"  fp layers disclosure {want}: document {doc}; panel: {'; '.join(notes)}")
+        self.values.append({"layers_disclosure": {"want": want, "document": doc, "panel": notes}})
+
+    def layers_list_bounds(self):
+        """R-33 (TW-216): top and bottom of the row list inside Firepixel's Layers panel: below the opacity row
+        ("Deckkraft") and above the footer (the state name at the bottom left); fallbacks 52 / 26 px from the
+        panel's edges (run 37 shots)."""
+        pr = self.area_rect("panel:layers")
+        top, bottom = pr[1] + 52, pr[3] - 26
+        try:
+            hs = (self.call("ui_find", {"text": "Deckkraft", "exact": False, "region": list(pr)}) or {}).get("hits") or []
+            if hs:
+                top = max(h["rect"][3] for h in hs) + 4
+            fs = [h for h in (self.call("ui_find", {"region": [pr[0], pr[3] - 30, pr[2], pr[3]], "role": "text", "limit": 20})
+                              or {}).get("hits") or [] if h["rect"][0] < pr[0] + 40]
+            if fs:
+                bottom = min(h["rect"][1] for h in fs) - 3
+        except BridgeError:
+            pass
+        return top, bottom
 
     def layers_row_scan(self, name, wheel=True):
         """R-32: the row `name` in Firepixel's Layers panel (ui_find, exact, inside the panel): looked up as it is,
@@ -7329,6 +7602,9 @@ class FpSide(Side):
         def both():
             return visible(nf[1]) is not None and visible(nt[1]) is not None
 
+        if nf[0] == "object_row" or nt[0] == "object_row":
+            # an object row's name may be a number or shared by several rows ("Pfad"): left as resolved
+            return fr, to
         if not both():
             # the second end is in view: scroll towards the first one (up when it lies above, else down)
             above = visible(nt[1]) is not None and fr[1] <= to[1]
@@ -7340,6 +7616,59 @@ class FpSide(Side):
             else:
                 self.r.log("layer drag: both rows do not fit into the layers list")
                 return fr, to
+        # R-33 (TW-216 a, run 37 `09_drag_reorder_result`: the drop row "Ebene 3" was cut by the list's top edge, its
+        # text's centre lay in the row's lower half and the drop went below it): a row cut by the list's top or bottom
+        # edge is scrolled fully into view (line by line, as long as the other row stays in view); the list's scroll
+        # position (first visible row) and both rows are logged
+        top, bottom = self.layers_list_bounds()
+
+        def rows():
+            out = {}
+            for nm in (nf[1], nt[1]):
+                hits = [h for h in (self.call("ui_find", {"text": clean_label(str(nm)), "exact": True}) or {}).get("hits") or []
+                        if pr[0] <= h["center"][0] <= pr[2] and pr[1] <= h["center"][1] <= pr[3]]
+                out[nm] = hits[0] if hits else None
+            return out
+
+        rs = rows()
+        hts = [h["rect"][3] - h["rect"][1] for h in rs.values() if h]
+        full_h = max(hts) if hts else 0
+        moved = 0
+        for _ in range(6):
+            cut = None
+            for h in rs.values():
+                if not h:
+                    continue
+                short = full_h and h["rect"][3] - h["rect"][1] < full_h - 2
+                if h["rect"][1] < top or h["center"][1] - top < 10 or (short and h["center"][1] < (top + bottom) / 2):
+                    cut = 1   # cut at the top: scroll the list up
+                elif h["rect"][3] > bottom or bottom - h["center"][1] < 10 or short:
+                    cut = -1  # cut at the bottom: scroll down
+            if cut is None:
+                break
+            self.inp([{"type": "wheel", "pos": pos, "delta": [0, cut], "unit": "line"}])
+            time.sleep(0.12)
+            moved += cut
+            rs2 = rows()
+            if not all(rs2.values()):
+                self.inp([{"type": "wheel", "pos": pos, "delta": [0, -cut], "unit": "line"}])
+                time.sleep(0.12)
+                moved -= cut
+                rs = rows()
+                self.r.log("  fp layer drag: a row cut by the list's edge cannot be shown whole with the other row in view")
+                break
+            rs = rs2
+        try:
+            first = sorted([h for h in (self.call("ui_find", {"region": [pr[0], top, pr[2], bottom], "role": "text", "limit": 100})
+                                        or {}).get("hits") or [] if h.get("text")], key=lambda h: h["center"][1])[:1]
+        except BridgeError:
+            first = []
+        info = {"list": [round(top), round(bottom)], "first_visible_row": first[0].get("text") if first else None,
+                "scrolled_lines": moved,
+                "rows": {str(k): [round(v) for v in h["rect"]] if h else None for k, h in rs.items()}}
+        self.r.log(f"  fp layer drag: list y {info['list']}, first visible row {info['first_visible_row']!r}, "
+                   f"rows {info['rows']}{', scrolled ' + str(moved) + ' line(s) to show a cut row' if moved else ''}")
+        self.values.append({"layer_drag_rows": info})
         return self.resolve(a_from), self.resolve(a_to)
 
     def tight_popup(self, before, img, bb):
@@ -7761,6 +8090,37 @@ class FpSide(Side):
         elif verb in ("jsf", "run_script"):
             code = arg if isinstance(arg, str) else arg.get("code")
             self.values.append({"jsf": code[:200], "out": self.script_value(code)})
+        elif verb == "layers_disclosure":
+            # R-33 (TW-216 a): the same disclosure on both sides before the Layers drag steps (name -> expanded)
+            self.layers_disclosure(arg)
+        elif verb == "log_selection":
+            # R-33 (TW-216 c): count and names of the selection by script, and the bridge's selection (element ids of
+            # the active document) with the names `get_document` gives them
+            val = self.script_value(SELECTION_NAMES_JS)
+            rec = {"selection": val}
+            try:
+                doc = next((d for d in self.state().get("documents", []) if d.get("active")), None) or {}
+                ids = list(doc.get("selection") or [])
+                names = {}
+
+                def walk(els):
+                    for e in els or []:
+                        if e.get("id") in ids:
+                            names[e["id"]] = e.get("name") or "(no name)"
+                        walk(e.get("children"))
+
+                def walk_layer(ly):
+                    walk(ly.get("elements"))
+                    for sub in ly.get("sublayers") or []:
+                        walk_layer(sub)
+                gd = self.call("get_document", {"depth": 6}) or {}
+                for pg in gd.get("pages") or [gd]:
+                    for ly in pg.get("layers") or []:
+                        walk_layer(ly)
+                rec["bridge"] = f"{len(ids)}: " + "|".join(str(names.get(i, f"id {i}")) for i in ids)
+            except BridgeError as e:
+                rec["bridge"] = f"? ({str(e)[:80]})"
+            self.values.append(rec)
         elif verb == "history_rows":
             self.history_rows(arg)
         elif verb in ("log_value", "log"):
@@ -9550,6 +9910,7 @@ def main(argv=None):
         print(f"R-30 self check: {r30_selfcheck()}")
         print(f"R-31 self check: {r31_selfcheck()}")
         print(f"R-32 self check: {r32_selfcheck()}")
+        print(f"R-33 self check: {r33_selfcheck()}")
     if a.gallery_only:
         print(gallery.build(Path(cfg["out_dir"])))
         return 0

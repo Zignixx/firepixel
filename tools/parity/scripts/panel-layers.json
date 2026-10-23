@@ -329,6 +329,9 @@
      "log_value": "fw.selection.length"
     },
     {
+     "log_selection": true
+    },
+    {
      "click": {
       "target": {
        "object_row": 0,
@@ -341,10 +344,13 @@
     },
     {
      "log_value": "fw.selection.length"
+    },
+    {
+     "log_selection": true
     }
    ],
    "shot": null,
-   "note": "needs objects on layers; add via JSF if T07 layers are empty"
+   "note": "needs objects on layers; add via JSF if T07 layers are empty; R-33 (TW-216 c): log_selection after each count - the selected objects' names (an object without a name reads '(no name)'), Firepixel also from the bridge's selection"
   },
   {
    "id": "09_drag_reorder_pressed",
@@ -359,6 +365,15 @@
     },
     {
      "panel": "window.layers"
+    },
+    {
+     "layers_disclosure": {
+      "Ebene 1": true,
+      "Ebene 3": true,
+      "Gemeinsam": false,
+      "Unterebene": false,
+      "Ebene 2": false
+     }
     },
     {
      "mouse_down": {
@@ -384,7 +399,7 @@
      }
     }
    ],
-   "note": "insertion marker while dragging; Escape before release to cancel"
+   "note": "R-33 (TW-216): both sides get the same disclosure first (layers_disclosure: Ebene 1 and Ebene 3 expanded, Gemeinsam, Unterebene and Ebene 2 collapsed - setLayerDisclosure by script, RE spec 42 section 2; Firepixel's panel is checked row by row and a triangle clicked where it still shows the other way), so that Ebene 3 and Ebene 1 are visible together in both lists and the drop lands on the same row. insertion marker while dragging; Escape before release to cancel"
   },
   {
    "id": "09_drag_reorder_result",
@@ -399,43 +414,32 @@
     },
     {
      "panel": "window.layers"
+    },
+    {
+     "layers_disclosure": {
+      "Ebene 1": true,
+      "Ebene 3": true,
+      "Gemeinsam": false,
+      "Unterebene": false,
+      "Ebene 2": false
+     }
+    },
+    {
+     "drag": {
+      "from": {
+       "layer_row": "Ebene 1"
+      },
+      "to": {
+       "layer_row": "Ebene 3"
+      }
+     }
+    },
+    {
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,
-   "orig": [
-    {
-     "jsf": "(function(){var d=fw.getDocumentDOM(),n=['Gemeinsam','Unterebene','Ebene 2'];for(var i=0;i<d.layers.length;i++){for(var k=0;k<n.length;k++){if(d.layers[i].name==n[k]){d.setLayerDisclosure(i,false);}}}})()"
-    },
-    {
-     "drag": {
-      "from": {
-       "layer_row": "Ebene 1"
-      },
-      "to": {
-       "layer_row": "Ebene 3"
-      }
-     }
-    },
-    {
-     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name})(__a[__i]));return __o.join('|');})()"
-    }
-   ],
-   "fp": [
-    {
-     "drag": {
-      "from": {
-       "layer_row": "Ebene 1"
-      },
-      "to": {
-       "layer_row": "Ebene 3"
-      }
-     }
-    },
-    {
-     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name})(__a[__i]));return __o.join('|');})()"
-    }
-   ],
-   "note": "R-7 (M9 re 42 §2): the reference collapses Gemeinsam, Unterebene and Ebene 2 first (setLayerDisclosure), otherwise Ebene 3 and Ebene 1 are not visible together; Ebene 3 is locked - expected for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)"
+   "note": "R-33 (TW-216): both sides get the same disclosure first (layers_disclosure: Ebene 1 and Ebene 3 expanded, Gemeinsam, Unterebene and Ebene 2 collapsed - setLayerDisclosure by script, RE spec 42 section 2; Firepixel's panel is checked row by row and a triangle clicked where it still shows the other way), so that Ebene 3 and Ebene 1 are visible together in both lists and the drop lands on the same row. Ebene 3 is locked - expected for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)"
   },
   {
    "id": "10_drag_into_layer_result",
@@ -513,6 +517,15 @@
      "panel": "window.layers"
     },
     {
+     "layers_disclosure": {
+      "Ebene 1": true,
+      "Ebene 3": true,
+      "Gemeinsam": false,
+      "Unterebene": false,
+      "Ebene 2": false
+     }
+    },
+    {
      "click": {
       "object_row": 0,
       "layer": "Ebene 1"
@@ -532,7 +545,8 @@
      "log_value": "fw.selection[0] ? fw.getDocumentDOM().currentLayerNum : null"
     }
    ],
-   "shot": null
+   "shot": null,
+   "note": "R-33 (TW-216 b): selection_dot = the dot column at the right end of the layer row (reference: the ring found in the list's row image, else 8 px left of the list's client edge (R-33 probe: found 8 px left); Firepixel: the dot painted on the active layer, else the mark column of another visible layer row, else 18 px left of the panel's edge), logged as value selection_dot. Same disclosure as 09 first, so that Ebene 1 and Gemeinsam are visible together."
   },
   {
    "id": "13_thumbnails_normal",
@@ -615,43 +629,32 @@
     },
     {
      "panel": "window.layers"
+    },
+    {
+     "layers_disclosure": {
+      "Ebene 1": true,
+      "Ebene 3": true,
+      "Gemeinsam": false,
+      "Unterebene": false,
+      "Ebene 2": false
+     }
+    },
+    {
+     "drag": {
+      "from": {
+       "layer_row": "Webebene"
+      },
+      "to": {
+       "layer_row": "Ebene 1"
+      }
+     }
+    },
+    {
+     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name})(__a[__i]));return __o.join('|');})()"
     }
    ],
    "shot": null,
-   "note": "web layer name in original: 'Webebene' (unsure) R-7 (M9 re 42 §2): the reference collapses Gemeinsam, Unterebene and Ebene 2 first (setLayerDisclosure), otherwise Ebene 3 and Ebene 1 are not visible together; Ebene 3 is locked - expected for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)",
-   "orig": [
-    {
-     "jsf": "(function(){var d=fw.getDocumentDOM(),n=['Gemeinsam','Unterebene','Ebene 2'];for(var i=0;i<d.layers.length;i++){for(var k=0;k<n.length;k++){if(d.layers[i].name==n[k]){d.setLayerDisclosure(i,false);}}}})()"
-    },
-    {
-     "drag": {
-      "from": {
-       "layer_row": "Webebene"
-      },
-      "to": {
-       "layer_row": "Ebene 1"
-      }
-     }
-    },
-    {
-     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name})(__a[__i]));return __o.join('|');})()"
-    }
-   ],
-   "fp": [
-    {
-     "drag": {
-      "from": {
-       "layer_row": "Webebene"
-      },
-      "to": {
-       "layer_row": "Ebene 1"
-      }
-     }
-    },
-    {
-     "log_value": "(function(){var __a=fw.getDocumentDOM().layers,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(l){return l.name})(__a[__i]));return __o.join('|');})()"
-    }
-   ]
+   "note": "web layer name in original: 'Webebene' (unsure) R-33 (TW-216): both sides get the same disclosure first (layers_disclosure: Ebene 1 and Ebene 3 expanded, Gemeinsam, Unterebene and Ebene 2 collapsed - setLayerDisclosure by script, RE spec 42 section 2; Firepixel's panel is checked row by row and a triangle clicked where it still shows the other way), so that Ebene 3 and Ebene 1 are visible together in both lists and the drop lands on the same row. Ebene 3 is locked - expected for 09 'no change' (into a locked layer is refused), 15 'no change' (web layer does not move)"
   },
   {
    "id": "16_shared_layer_normal",

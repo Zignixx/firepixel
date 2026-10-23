@@ -110,9 +110,10 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
   collapsed in the reopened test file (the reference reopens the stored state); since R-32 the runner expands such
   parent layers with their triangles before giving up on a row and logs it (TW-210, until run 36 the cause of the
   `unmapped` rows `panel-layers/07, 08, 10, 12`; run 37 expanded three times). F79 `7337428e` (after run 37's build)
-  makes the panel show the document's stored disclosure, so from run 38 on both programs open T07 as stored; the
-  reference's drag steps `09` and `15` collapse three layers by script first, Firepixel's do not yet (runner item
-  TW-216).
+  makes the panel show the document's stored disclosure, so from run 38 on both programs open T07 as stored. Since
+  R-33 (TW-216) the drag steps `09`, `12` and `15` set the same disclosure on both sides first (`layers_disclosure`:
+  script, then Firepixel's panel checked row by row and corrected with the triangles), layer drags log the list's
+  position and keep both rows fully in view, and the selection dot is a target on both sides.
 - **Focus:** other applications taking the foreground make reference steps fail; such steps are repeated or
   counted as errors, never as `ok`.
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images
