@@ -642,7 +642,9 @@ impl<'a> Builder<'a> {
             let last_of_para = lines[li].last_of_paragraph;
             let chars = lines[li].chars.clone();
             let items = &mut lines[li].items;
-            let indent = if para_start && fixed {
+            // Paragraph indent (TW-204, re 60 section 3): the first line of every paragraph moves
+            // by the indent, on point text as on fixed-width text (text on a path ignores it)
+            let indent = if para_start && !on_path {
                 items
                     .first()
                     .map(|it| self.attrs(it.run).indent)
@@ -677,11 +679,12 @@ impl<'a> Builder<'a> {
                     _ => left,
                 }
             } else {
-                match align {
-                    Alignment::Center => x_anchor - wa / 2.0,
-                    Alignment::Right => x_anchor - wa,
-                    _ => x_anchor,
-                }
+                indent
+                    + match align {
+                        Alignment::Center => x_anchor - wa / 2.0,
+                        Alignment::Right => x_anchor - wa,
+                        _ => x_anchor,
+                    }
             };
             let g0 = glyphs.len();
             let mut carets = vec![x0 + w; chars.len() + 1];
@@ -747,8 +750,9 @@ impl<'a> Builder<'a> {
                     carets[k] = carets[k + 1];
                 }
             }
-            // Rahmen horizontal: Vorschubbox ∪ Tinte
-            let (mut lo, mut hi) = (x0, x0 + w);
+            // Rahmen horizontal: Vorschubbox ∪ Tinte; an indented line of point text keeps the
+            // unindented start, so the object keeps its position (re 60 section 3)
+            let (mut lo, mut hi) = (x0.min(x0 - indent), x0 + w);
             for g in &glyphs[g0..] {
                 if g.is_tab {
                     continue;
