@@ -388,6 +388,26 @@ fn char_patch(a: &fp_model::TextAttrs, header: bool) -> fp_text::CharAttrsPatch 
     }
 }
 
+/// Fill edge of a text object (TW-203): edge 0 Hard, 1 Anti-Alias (the text's anti-aliasing level
+/// applies), 2 Feather and 3 Dither (Firepixel extension) with the width in `feather`, like the
+/// fill edge of a path. Unlike [`fv::FillEdge::from_tags`], edge 1 stays anti-aliased whatever
+/// `feather` holds (the anti-aliasing level menu sets edge 1 and keeps the width); feather width
+/// 0 is anti-aliased and dither width 0 is Hard, as for paths. A text without fill counts as
+/// anti-aliased.
+pub fn text_fill_edge(t: &TextElem) -> fv::FillEdge {
+    let Some(f) = t.attrs.fill.as_ref() else {
+        return fv::FillEdge::AntiAliased;
+    };
+    let w = f.feather.clamp(0, fv::feather::MAX_FEATHER as i32) as u32;
+    match f.edge {
+        fp_model::Fill::EDGE_HARD => fv::FillEdge::Hard,
+        fp_model::Fill::EDGE_FEATHER if w > 0 => fv::FillEdge::Feather(w),
+        fp_model::Fill::EDGE_DITHER if w > 0 => fv::FillEdge::Dither(w),
+        fp_model::Fill::EDGE_DITHER => fv::FillEdge::Hard,
+        _ => fv::FillEdge::AntiAliased,
+    }
+}
+
 /// Text (`TXTv`) → [`fp_text::TextBlock`] (ohne `MTXv`; die Abbildung wendet der Renderer auf das
 /// Layout an).
 pub fn text_block(_doc: &Document, t: &TextElem) -> fp_text::TextBlock {
@@ -418,7 +438,13 @@ pub fn text_block(_doc: &Document, t: &TextElem) -> fp_text::TextBlock {
             reversed: false,
         })
     });
-    let feti = t.attrs.fill.as_ref().map(|f| f.edge as i64);
+    // anti-aliasing (tone curve, oversampling) is on for every edge kind except Hard; feather and
+    // dither post-process that coverage in the renderer (TW-203)
+    let feti = t
+        .attrs
+        .fill
+        .as_ref()
+        .map(|_| i64::from(text_fill_edge(t) != fv::FillEdge::Hard));
     fp_text::TextBlock {
         kind: fp_text::FrameKind::from_tfti(t.frame_type.unwrap_or(0) as i64),
         bounds: Rect::new(r.left, r.top, r.right, r.bottom),

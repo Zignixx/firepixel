@@ -339,7 +339,10 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   is anchored to the document pixels (it does not shimmer when you scroll, zoom or move an object by whole pixels).
   Width 0 is a hard edge; the fill's own opacity still applies. Dither is a Firepixel extension; the reference's
   Hard, Anti-Alias and Feather edges stay as they are. In a `.fw.png` file a dither edge is stored as a feather of
-  the same width plus a Firepixel marker, so other programs show a feathered edge.
+  the same width plus a Firepixel marker, so other programs show a feathered edge. Text objects honour Feather and
+  Dither too (the transition starts from the text's anti-aliased glyphs); the text inspector itself offers only
+  the *Anti-aliasing level* list (its *No Anti-Alias* entry is the hard edge), so give a text a Feather or Dither
+  edge from a script or the command `pi.fill {edge, feather}`.
 
 - **Live Filters (+):** the “+” menu groups the effects as in the original, e.g. *Bevel and Emboss* ▸
   *Inner Bevel*, *Outer Bevel*, *Inset Emboss*, *Raised Emboss*. The kind is part of the menu item;

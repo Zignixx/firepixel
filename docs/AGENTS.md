@@ -152,7 +152,8 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     (Firepixel-Erweiterung: der Verlauf der weichen Kante der Breite `feather` als geordnetes 8 × 8-Dither auf den
     Dokumentpixeln, nur ganz an/aus; Breite 0 = hart). Skripte: `pathAttributes.fill.edgeType` liest `"dither"`
     (Breite in `feather`), `dom.setFillEdgeMode("dither", breite)` (auch `"hard"`, `"antialias"`, `"feather"`) und
-    `setFill` mit `edgeType: "dither"` setzen ihn an der Auswahl
+    `setFill` mit `edgeType: "dither"` setzen ihn an der Auswahl; auch Textobjekte zeigen weiche Kante (2) und
+    Dither (3) (der Text-Inspektor hat nur die Liste der Glättungsstufe, sie setzt Kante 1, bzw. 0 für „keine“)
   * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Farbeimer),
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Verlauf-Werkzeug; `fillSelection`
     Vorgabe `true` = Pixelauswahl bzw. ganze Bitmap füllen, `false` = zusammenhängender Farbbereich am

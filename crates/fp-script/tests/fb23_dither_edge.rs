@@ -95,3 +95,43 @@ fn set_fill_with_dither_edge_type() {
     );
     assert_eq!(run(&mut s, EDGE), "dither|5");
 }
+
+/// TW-203 rest: the dither edge also reaches text objects, which have no fill Edge combo in the
+/// inspector, through `setFill {edgeType: "dither"}` and `setFillEdgeMode`.
+#[test]
+fn text_takes_the_dither_edge_from_scripts() {
+    let mut s = fp_engine::Session::default();
+    s.execute(
+        "file.new",
+        json!({"width": 300, "height": 200, "background": "#ffffff"}),
+    )
+    .expect("document");
+    s.execute(
+        "draw.text",
+        json!({"text": "Ag", "anchor": [40, 120], "size": 60, "color": "#336699"}),
+    )
+    .expect("text");
+    {
+        let d = s.active().expect("doc");
+        let id = d.selection.elements[0];
+        let e = fp_engine::docops::element_on_page(&d.doc, d.page, id).expect("element");
+        assert!(matches!(e.kind, fp_model::ElementKind::Text(_)));
+    }
+    run(
+        &mut s,
+        "var f = fw.selection[0].pathAttributes.fill; f.edgeType = 'dither'; f.feather = 4; \
+         fw.getDocumentDOM().setFill(f); 0",
+    );
+    assert_eq!(model_edge(&s), (fp_model::Fill::EDGE_DITHER, 4));
+    assert_eq!(run(&mut s, EDGE), "dither|4");
+    run(
+        &mut s,
+        "fw.getDocumentDOM().setFillEdgeMode('feather', 3); 0",
+    );
+    assert_eq!(model_edge(&s), (fp_model::Fill::EDGE_FEATHER, 3));
+    run(
+        &mut s,
+        "fw.getDocumentDOM().setFillEdgeMode('dither', 5); 0",
+    );
+    assert_eq!(run(&mut s, EDGE), "dither|5");
+}

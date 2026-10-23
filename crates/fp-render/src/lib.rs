@@ -13,6 +13,7 @@
 //! | [`compose`] | [`Renderer`]: Seiten, Ausschnitte mit Zoom, Symbole, einzelne Elemente; Ebenen, Gruppen, Masken, Instanzen, Effekte |
 //! | [`nine`] | Punktabbildungen ([`PointMap`]): Matrizen und 9-Slice je Achse |
 //! | [`convert`] | Adapter Modell → `fp-vector`/`fp-text`/`fp-effects`/`fp-raster` |
+//! | [`text_edge`] | Feather and Dither fill edges of text objects (the path edge filters on the text coverage) |
 //! | [`cache`] | Element-Cache mit Invalidierung über `Arc`-Zeiger und Änderungs-Generation |
 //! | [`hit`] | Treffertest (oberstes Element an einem Punkt) |
 //! | [`options`] | [`RenderOptions`], [`CachePolicy`], [`BackgroundMode`], [`RenderReport`] |
@@ -58,6 +59,7 @@ pub mod flatten;
 pub mod hit;
 pub mod nine;
 pub mod options;
+pub mod text_edge;
 pub mod tiles;
 
 pub use cache::{CacheStats, Look, RenderCache};

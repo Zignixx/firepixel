@@ -214,6 +214,39 @@ fn coverage_in(layout: &TextLayout, b: IRect) -> Mask {
     Mask::from_raw(b, data).unwrap_or_else(|_| Mask::empty_at(b.left, b.top))
 }
 
+/// Run colours of the visible ink (glyphs first, then decorations) in first-seen order: the
+/// colours [`render`] mixes per pixel.
+pub fn ink_colors(layout: &TextLayout) -> Vec<Rgba8> {
+    let mut colors: Vec<Rgba8> = Vec::new();
+    for g in layout.visible_glyphs() {
+        if !colors.contains(&g.color) {
+            colors.push(g.color);
+        }
+    }
+    for d in &layout.decorations {
+        if !colors.contains(&d.color) {
+            colors.push(d.color);
+        }
+    }
+    colors
+}
+
+/// Coverage (alpha after the tone curve) in `bounds` of the ink drawn in `color` only: glyphs of
+/// that run colour and decorations of that colour. Used by renderers that post-process the fill
+/// edge (feather, dither) and need the colour weights of every pixel.
+pub fn color_coverage(layout: &TextLayout, bounds: IRect, color: Rgba8) -> Mask {
+    let Some(b) = checked(bounds) else {
+        return Mask::empty_at(bounds.left, bounds.top);
+    };
+    let (n, lut) = antialias::sampling(&layout.antialias);
+    let counts = counts_for(layout, b, n, &|g| g.color == color, Some(color));
+    let data: Vec<u8> = counts
+        .iter()
+        .map(|&c| lut[(c as usize).min(lut.len() - 1)])
+        .collect();
+    Mask::from_raw(b, data).unwrap_or_else(|_| Mask::empty_at(b.left, b.top))
+}
+
 /// Trefferzahlen (0…N²) und N der Glättungseinstellung, z. B. für Vergleiche mit Render-Caches.
 pub fn sample_layout(layout: &TextLayout, bounds: IRect) -> (Vec<u16>, u32) {
     let (n, _) = antialias::sampling(&layout.antialias);
@@ -256,17 +289,7 @@ fn render_in(layout: &TextLayout, b: IRect) -> RgbaImage {
         return RgbaImage::empty_at(b.left, b.top);
     };
     let (n, lut) = antialias::sampling(&layout.antialias);
-    let mut colors: Vec<Rgba8> = Vec::new();
-    for g in layout.visible_glyphs() {
-        if !colors.contains(&g.color) {
-            colors.push(g.color);
-        }
-    }
-    for d in &layout.decorations {
-        if !colors.contains(&d.color) {
-            colors.push(d.color);
-        }
-    }
+    let colors = ink_colors(layout);
     let total = counts_for(layout, b, n, &|_| true, None);
     let per: Vec<Vec<u16>> = if colors.len() > 1 {
         colors

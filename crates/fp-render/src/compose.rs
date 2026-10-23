@@ -1255,6 +1255,11 @@ impl Renderer {
             }
         }
         rep.rasterized_texts += 1;
+        // Feather and Dither fill edges like paths (TW-203); Hard and Anti-Alias stay with the text
+        // rasteriser (anti-aliasing level, `FETi` 0 = one sample per pixel)
+        if let Some(img) = crate::text_edge::render_with_edge(&lay, convert::text_fill_edge(t)) {
+            return Some(img);
+        }
         Some(fp_text::render::render(&lay, None))
     }
 

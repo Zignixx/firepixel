@@ -362,7 +362,10 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Bildlauf, Zoomen oder Verschieben um ganze Pixel). Breite 0 ist ein harter Rand; die eigene Deckkraft der Füllung
   gilt weiterhin. Dither ist eine Firepixel-Erweiterung; die Ränder Hart, Anti-Alias und Weiche Kante des Originals
   bleiben unverändert. In einer `.fw.png`-Datei wird ein Dither-Rand als weiche Kante gleicher Breite mit einer
-  Firepixel-Markierung gespeichert, andere Programme zeigen also eine weiche Kante.
+  Firepixel-Markierung gespeichert, andere Programme zeigen also eine weiche Kante. Auch Textobjekte zeigen Weiche
+  Kante und Dither (der Übergang beginnt bei den geglätteten Glyphen); der Text-Inspektor selbst bietet nur die
+  Liste *Anti-Aliasing-Stufe* (ihr Eintrag *Kein Anti-Alias* ist der harte Rand), einem Text gibt man eine weiche oder
+  Dither-Kante daher per Skript oder mit dem Befehl `pi.fill {edge, feather}`.
 
 - **Filter (+):** Das Menü „+“ gliedert die Effekte wie im Original, z. B. *Abgeflachte Kante und
   Relief* ▸ *Abgeflachte Kante innen*, *Abgeflachte Kante außen*, *Relief vertieft*, *Relief erhaben*.
