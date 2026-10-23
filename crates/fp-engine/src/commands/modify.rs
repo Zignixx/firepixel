@@ -2386,18 +2386,50 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 })
             })
             .run(|s, _| {
+                let renderer = s.renderer().cloned();
                 with_doc(s, |d| {
                     let (page, ids) = (d.page, d.selection.elements.clone());
+                    let snapshot = Arc::clone(&d.doc);
+                    let fit = |t: &fp_model::TextElem| {
+                        renderer
+                            .as_ref()
+                            .and_then(|r| r.text_fit_boxes(&snapshot, t))
+                    };
                     let doc = Arc::make_mut(&mut d.doc);
                     for id in ids {
-                        docops::edit_by_id(doc, page, id, |e| match &mut e.kind {
-                            ElementKind::Instance(i) => {
-                                i.transform =
-                                    Matrix3::translation(i.transform.m[2][0], i.transform.m[2][1]);
-                                i.alt_transform = Some(i.transform);
+                        docops::edit_by_id(doc, page, id, |e| {
+                            let mut shift = None;
+                            match &mut e.kind {
+                                ElementKind::Instance(i) => {
+                                    i.transform = Matrix3::translation(
+                                        i.transform.m[2][0],
+                                        i.transform.m[2][1],
+                                    );
+                                    i.alt_transform = Some(i.transform);
+                                }
+                                ElementKind::Text(t) => {
+                                    // derived (A, RE spec 67 §2.12, from six cases of RE spec 66
+                                    // §2.9): the object's left/top lands on the rounded left/top of
+                                    // the axis-aligned outline of its transform frame
+                                    if t.transform.is_some_and(|m| !m.is_identity())
+                                        && let Some(o) = Rect::from_points(
+                                            docops::text_transform_frame(t, Some(&fit)).quad(),
+                                        )
+                                    {
+                                        let o = o.normalized();
+                                        let vis = docops::text_visible_frame(&t.bounds);
+                                        shift = Some((
+                                            (o.left + 0.5).floor() - vis.left,
+                                            (o.top + 0.5).floor() - vis.top,
+                                        ));
+                                    }
+                                    t.transform = None;
+                                }
+                                _ => {}
                             }
-                            ElementKind::Text(t) => t.transform = None,
-                            _ => {}
+                            if let Some((dx, dy)) = shift {
+                                docops::translate_element(e, dx, dy);
+                            }
                         });
                     }
                     Ok(CommandOutput::doc())

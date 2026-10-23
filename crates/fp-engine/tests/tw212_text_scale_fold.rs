@@ -272,13 +272,15 @@ fn scale_tool_folds_a_single_text_only() {
     if !arial() {
         return;
     }
-    // the tool's row carries rememberQuad; a corner drag to 1.5 about the top-left corner
+    // the tool's row carries rememberQuad; a corner drag to 1.5 about the top-left corner of the
+    // text's transform frame (its set box scaled by 1.3, RE spec 67)
     let mut s = doc_session(600.0, 400.0);
     let id = point_text(&mut s);
     let b0 = visible_bounds(&s, id);
+    let f = fp_engine::docops::text_transform_frame(&text(&s, id), None).rect;
     s.set_tool(fp_engine::ToolId::Scale).expect("Scale tool");
-    let (x, y) = (b0.right, b0.bottom);
-    let (x1, y1) = (b0.left + 1.5 * b0.width(), b0.top + 1.5 * b0.height());
+    let (x, y) = (f.right, f.bottom);
+    let (x1, y1) = (f.left + 1.5 * f.width(), f.top + 1.5 * f.height());
     events(
         &mut s,
         &[
@@ -289,8 +291,14 @@ fn scale_tool_folds_a_single_text_only() {
             fp_engine::ToolEvent::key(fp_engine::ToolKey::Enter),
         ],
     );
+    // (the drop point goes through the snapping, hence about 90 pt)
     let t = text(&s, id);
-    assert_eq!(size(&t), 90.0, "{:?}", t.transform);
+    assert!(
+        (size(&t) - 90.0).abs() < 0.1,
+        "{} {:?}",
+        size(&t),
+        t.transform
+    );
     let last = s
         .active()
         .expect("document")

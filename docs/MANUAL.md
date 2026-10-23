@@ -216,6 +216,17 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   four points relative to a unit square (the square of side max(width, height) about the centre of the
   selection bounds, so a 100 × 60 rectangle is x 0…1, y 0.2…0.8) and folds a single text only with the
   option `rememberQuad`.
+- **The transform frame of a text.** With exactly one text selected, the Scale, Skew and Distort
+  tools, Free Transform and *Modify ▸ Transform ▸ Scale* show a frame 1.3 times the text's set box
+  (15 % of its width added left and right, 15 % of its height above and below), turned with the text;
+  for a point text the set box is its layout frame (a 60 pt "Ag" 74 × 72 at 100,100 gets the handles
+  at 89/137/185 × 89/136/183), for a fixed-width text the box around the set lines. Paths, groups (also
+  with a text inside) and several objects keep their bounds. The corners are shown on whole pixels, the
+  frame line and handles one screen pixel left of and above the frame, as in the original. A corner
+  drag scales by the pointer's position projected onto the frame's diagonal (+39/+38 at the corner of
+  that "Ag" gives 83.74 pt); the next drag starts from the frame of the new state. *Remove
+  Transformations* puts a text's left/top on the rounded left/top of the outline of its frame (derived from
+  measurements, not every case is known).
 - *Modify ▸ Mask ▸ Reveal All / Hide All* puts an empty mask over the selected object. The Layers
   panel and the inspector still show the object itself (e.g. the bitmap) with the mask as a second
   thumbnail.

@@ -117,8 +117,10 @@ pub fn scale_by_handle(
 
 /// Skalieren-Werkzeug am Eckgriff wie im Original (PAR 08/10, 08/16 gemessen): proportional mit der
 /// **Projektion** des Zeigers auf die Diagonale (R1 50,50–150,120, Ecke → 200,140 ergibt 193,150;
-/// B1 → 603,415), Alt von der Mitte aus; Seitengriffe ändern nur ihre Richtung.
-pub fn scale_projected(b: Rect, handle: usize, cur: Point, from_center: bool) -> Rect {
+/// B1 → 603,415), Alt von der Mitte aus; Seitengriffe ändern nur ihre Richtung. `round`: the
+/// dragged corner lands on whole pixels (objects); the transform frame of a text keeps the exact
+/// projection (RE spec 67 §2.8: 1.604642 → 223.162).
+pub fn scale_projected(b: Rect, handle: usize, cur: Point, from_center: bool, round: bool) -> Rect {
     if !matches!(handle, 0 | 2 | 4 | 6) || b.width() == 0.0 || b.height() == 0.0 {
         return scale_by_handle(b, handle, cur, false, from_center);
     }
@@ -133,9 +135,10 @@ pub fn scale_projected(b: Rect, handle: usize, cur: Point, from_center: bool) ->
     let (vx, vy) = ((cur.x - anchor.x) as f64, (cur.y - anchor.y) as f64);
     let s = (vx * dx + vy * dy) / (dx * dx + dy * dy).max(1e-12);
     // die gezogene Ecke landet auf ganzen Pixeln (192.95,150.07 → 193,150; B1 603,415)
+    let r = |v: f64| if round { v.round() } else { v };
     let p = Point::new(
-        (anchor.x as f64 + s * dx).round() as f32,
-        (anchor.y as f64 + s * dy).round() as f32,
+        r(anchor.x as f64 + s * dx) as f32,
+        r(anchor.y as f64 + s * dy) as f32,
     );
     let o = if from_center {
         Point::new(2.0 * anchor.x - p.x, 2.0 * anchor.y - p.y)
@@ -1874,6 +1877,11 @@ pub struct TransformTool {
     /// Escape kam bei gehaltener Maus: die Vorschau bleibt stehen, beim Loslassen wird der Zug
     /// verworfen und die Sitzung abgebrochen (re 62 §1.2 b9).
     esc_held: bool,
+    /// Frame space → document of the session's frame (a turned text, RE spec 67 §2.5); `None` =
+    /// `bounds`, the pending source rect and the drags are in document coordinates.
+    fm: Option<Matrix3>,
+    /// The session's frame is the transform frame of one text (corner drags are not rounded).
+    text_frame: bool,
 }
 
 impl TransformTool {
@@ -1891,6 +1899,8 @@ impl TransformTool {
             px: 1.0,
             rotated: false,
             esc_held: false,
+            fm: None,
+            text_frame: false,
         }
     }
 
@@ -1913,8 +1923,60 @@ impl TransformTool {
         }
     }
 
+    /// Pivot in frame space (the user's pivot, else the centre of the frame).
     fn pivot_of(&self, b: &Rect) -> Point {
-        self.pivot.unwrap_or_else(|| b.center())
+        self.pivot
+            .map(|p| self.to_frame(p))
+            .unwrap_or_else(|| b.center())
+    }
+
+    /// Pivot in document coordinates.
+    fn pivot_doc(&self, b: &Rect) -> Point {
+        self.pivot.unwrap_or_else(|| self.to_doc(b.center()))
+    }
+
+    /// Document → frame space.
+    fn to_frame(&self, p: Point) -> Point {
+        match self.fm.and_then(|m| m.inverse()) {
+            Some(i) => i.apply(p),
+            None => p,
+        }
+    }
+
+    /// Frame space → document.
+    fn to_doc(&self, p: Point) -> Point {
+        match self.fm {
+            Some(m) => m.apply(p),
+            None => p,
+        }
+    }
+
+    /// A matrix in frame space as a matrix in document coordinates.
+    fn matrix_to_doc(&self, m: Matrix3) -> Matrix3 {
+        match self.fm {
+            Some(f) => match f.inverse() {
+                Some(i) => i.then(&m).then(&f),
+                None => m,
+            },
+            None => m,
+        }
+    }
+
+    /// The source rect of a preview (frame space) and the target quad (document) as a document
+    /// rect and the quad its corners go to: the same transformation for a turned frame
+    /// ([`Overlay::Ghost`], `transform.distort`).
+    fn doc_rect_quad(&self, orig: Rect, q: [Point; 4]) -> (Rect, [Point; 4]) {
+        if self.fm.is_none() {
+            return (orig, q);
+        }
+        let Some(mf) = Matrix3::rect_to_quad(&orig, &q.map(|p| self.to_frame(p))) else {
+            return (orig, q);
+        };
+        let m = self.matrix_to_doc(mf);
+        let r = Rect::from_points(orig.corners().map(|p| self.to_doc(p)))
+            .unwrap_or(orig)
+            .normalized();
+        (r, r.corners().map(|p| m.apply(p)))
     }
 
     fn nine(&self) -> bool {
@@ -2101,7 +2163,7 @@ impl TransformTool {
                 // Skalieren wie im Original (PAR 08/10, 08/16 gemessen): der Griff folgt dem
                 // (eingerasteten) Zeiger, Ecken skalieren proportional mit der Projektion auf die
                 // Diagonale, Umschalt ändert nichts, Alt skaliert von der Mitte aus
-                docops::rect_to_rect(b, scale_projected(b, h, cur, ev.mods.alt))
+                docops::rect_to_rect(b, scale_projected(b, h, cur, ev.mods.alt, !self.text_frame))
             }
             TDrag::Corner(h) | TDrag::Edge(h) => {
                 let hp = handles(&b)[h];
@@ -2111,7 +2173,7 @@ impl TransformTool {
         }
     }
 
-    fn idle_overlay(&self, b: &Rect) -> Vec<Overlay> {
+    fn idle_overlay(&self, b: &Rect, fm: Option<Matrix3>) -> Vec<Overlay> {
         if self.nine() {
             let g = self.guide_lines(b);
             return vec![
@@ -2140,19 +2202,45 @@ impl TransformTool {
                 },
             ];
         }
+        let to_doc = |p: Point| fm.map(|m| m.apply(p)).unwrap_or(p);
+        let (quad, points) = shown_frame(b.corners().map(to_doc));
+        let at = self
+            .pivot
+            .unwrap_or_else(|| round_point(to_doc(b.center())));
         vec![
-            Overlay::TransformBox {
-                quad: b.corners(),
-                center: self.pivot_of(b),
-            },
+            Overlay::TransformBox { quad, center: at },
             Overlay::Handles {
-                points: handles(b).to_vec(),
+                points: points.to_vec(),
             },
-            Overlay::Pivot {
-                at: self.pivot_of(b),
-            },
+            Overlay::Pivot { at },
         ]
     }
+}
+
+/// A point on whole document pixels (half up).
+fn round_point(p: Point) -> Point {
+    Point::new((p.x + 0.5).floor(), (p.y + 0.5).floor())
+}
+
+/// How the transform frame is shown (RE spec 67 §2.10): the corners on whole document pixels
+/// (half up), the middle handles halfway between the rounded corners (handle order of
+/// [`handles`]). Hit tests and drags use the unrounded frame.
+fn shown_frame(quad: [Point; 4]) -> ([Point; 4], [Point; 8]) {
+    let q = quad.map(round_point);
+    let mid = |a: Point, b: Point| Point::new((a.x + b.x) / 2.0, (a.y + b.y) / 2.0);
+    (
+        q,
+        [
+            q[0],
+            mid(q[0], q[1]),
+            q[1],
+            mid(q[1], q[2]),
+            q[2],
+            mid(q[2], q[3]),
+            q[3],
+            mid(q[3], q[0]),
+        ],
+    )
 }
 
 /// Is the selection exactly one text (not inside a group)?
@@ -2185,7 +2273,24 @@ impl TransformTool {
                 json!({"rect": rect_json(orig), "to": rect_json(to), "insets": ins}),
             ));
         }
-        match Matrix3::rect_to_quad(&orig, &q) {
+        // a turned frame: the drag's matrix in frame space, turned into document coordinates
+        let m = match self.fm {
+            None => Matrix3::rect_to_quad(&orig, &q),
+            Some(_) => Matrix3::rect_to_quad(&orig, &q.map(|p| self.to_frame(p))).map(|mf| {
+                let a = &mf.m;
+                let affine =
+                    a[0][2].abs() < 1e-7 && a[1][2].abs() < 1e-7 && (a[2][2] - 1.0).abs() < 1e-6;
+                let mf = if affine {
+                    let v = mf.to_affine();
+                    Matrix3::from_affine(v[0], v[1], v[2], v[3], v[4], v[5])
+                } else {
+                    mf
+                };
+                self.matrix_to_doc(mf)
+            }),
+        };
+        let (orig, q) = self.doc_rect_quad(orig, q);
+        match m {
             Some(m) if m.is_affine() => {
                 if m.is_identity() {
                     return None;
@@ -2209,35 +2314,72 @@ impl TransformTool {
         }
     }
 
-    /// Rahmen und Viereck der laufenden Vorschau (bzw. der Auswahl ohne Vorschau).
-    fn current(&self, ctx: &ToolContext) -> Option<(Rect, [Point; 4])> {
+    /// Rahmen und Viereck der laufenden Vorschau (bzw. der Auswahl ohne Vorschau): the frame rect
+    /// (frame space), its quad in document coordinates, the frame matrix and whether it is the
+    /// frame of one text.
+    fn current(&self, ctx: &ToolContext) -> Option<(Rect, [Point; 4], Option<Matrix3>, bool)> {
         match &self.pending {
-            Some((_, q, _)) => Some((Rect::from_points(*q)?.normalized(), *q)),
-            // re 28 L5: Griffe und Mittelpunkt am gespeicherten Objektrechteck (bei Bitmaps nicht am
-            // Rechteck der deckenden Pixel; gemessen 0/400 × 0/300 bei Pixeln 100–200)
-            None => docops::ids_bounds(ctx.doc, ctx.page, &ctx.selection.elements)
-                .map(|b| (b, b.corners())),
+            Some((_, q, _)) => Some((
+                Rect::from_points(q.map(|p| self.to_frame(p)))?.normalized(),
+                *q,
+                self.fm,
+                self.text_frame,
+            )),
+            None => {
+                let f = self.frame(ctx)?;
+                Some((f.rect, f.quad(), f.matrix, f.text))
+            }
         }
+    }
+
+    /// Transform frame of the selection (RE spec 67): one text → its set box × 1.3 through its
+    /// matrix, otherwise the object bounds. re 28 L5: Griffe und Mittelpunkt am gespeicherten
+    /// Objektrechteck (bei Bitmaps nicht am Rechteck der deckenden Pixel; gemessen 0/400 × 0/300
+    /// bei Pixeln 100–200). 9-slice scaling keeps the bounds.
+    fn frame(&self, ctx: &ToolContext) -> Option<docops::TransformFrame> {
+        let ids = &ctx.selection.elements;
+        if self.nine() {
+            return docops::ids_bounds(ctx.doc, ctx.page, ids).map(|rect| docops::TransformFrame {
+                rect,
+                matrix: None,
+                text: false,
+            });
+        }
+        let fit = |t: &fp_model::TextElem| ctx.renderer.and_then(|r| r.text_fit_boxes(ctx.doc, t));
+        docops::transform_frame(ctx.doc, ctx.page, ids, Some(&fit))
     }
 
     fn pending_overlay(&self, ctx: &ToolContext, q: [Point; 4]) -> Vec<Overlay> {
         let mut v = Vec::new();
         if let Some((orig, _, _)) = &self.pending {
-            v.push(ghost(ctx, *orig, q, false));
+            let (r, dq) = self.doc_rect_quad(*orig, q);
+            v.push(ghost(ctx, r, dq, false));
         }
-        let b = Rect::from_points(q).unwrap_or_default().normalized();
+        let b = Rect::from_points(q.map(|p| self.to_frame(p)))
+            .unwrap_or_default()
+            .normalized();
+        if self.nine() {
+            v.push(Overlay::TransformBox {
+                quad: q,
+                center: self.pivot_of(&b),
+            });
+            v.push(Overlay::Handles {
+                points: handles(&b).to_vec(),
+            });
+            return v;
+        }
+        let (_, points) = shown_frame(b.corners().map(|p| self.to_doc(p)));
+        let at = self
+            .pivot
+            .unwrap_or_else(|| round_point(self.to_doc(b.center())));
         v.push(Overlay::TransformBox {
-            quad: q,
-            center: self.pivot_of(&b),
+            quad: q.map(round_point),
+            center: at,
         });
         v.push(Overlay::Handles {
-            points: handles(&b).to_vec(),
+            points: points.to_vec(),
         });
-        if !self.nine() {
-            v.push(Overlay::Pivot {
-                at: self.pivot_of(&b),
-            });
-        }
+        v.push(Overlay::Pivot { at });
         v
     }
 }
@@ -2261,7 +2403,12 @@ impl ToolMachine for TransformTool {
             self.bounds = None;
         }
         if self.bounds.is_none() || self.drag.is_none() {
-            self.bounds = self.current(ctx).map(|c| c.0);
+            let c = self.current(ctx);
+            if self.pending.is_none() {
+                // a new session takes the frame of the selection (RE spec 67)
+                (self.fm, self.text_frame) = c.map(|c| (c.2, c.3)).unwrap_or((None, false));
+            }
+            self.bounds = c.map(|c| c.0);
         }
         let Some(b) = self.bounds else {
             return ToolResponse {
@@ -2273,7 +2420,9 @@ impl ToolMachine for TransformTool {
         let q_cur = self
             .current(ctx)
             .map(|c| c.1)
-            .unwrap_or_else(|| b.corners());
+            .unwrap_or_else(|| b.corners().map(|p| self.to_doc(p)));
+        // the drags work in frame space (a turned text frame, RE spec 67 §2.5)
+        let q_cur_f = q_cur.map(|p| self.to_frame(p));
         let orig = self.pending.as_ref().map(|p| p.0).unwrap_or(b);
         let tol = ctx.pick_tolerance() as f32;
         match &ev.input {
@@ -2283,7 +2432,7 @@ impl ToolMachine for TransformTool {
             } => {
                 let p = *pos;
                 self.esc_held = false;
-                let kind = self.kind_at(&b, p, tol);
+                let kind = self.kind_at(&b, self.to_frame(p), tol);
                 self.drag = Some((kind, p, p));
                 self.cursor = self.cursor_for(kind);
                 ToolResponse {
@@ -2314,7 +2463,7 @@ impl ToolMachine for TransformTool {
                             _ => ins[3] = (b.bottom - cur.y).clamp(0.0, h - ins[1]),
                         }
                         self.insets = Some((ins, b));
-                        self.overlay = self.idle_overlay(&b);
+                        self.overlay = self.idle_overlay(&b, None);
                         self.overlay.push(Overlay::Label {
                             at: cur,
                             text: format!("{} px", fmt_num(ins[i])),
@@ -2350,11 +2499,15 @@ impl ToolMachine for TransformTool {
                         self.overlay = self.pending_overlay(ctx, q_cur);
                         self.overlay.extend(sp.guides);
                     } else {
-                        let q = self.drag_quad(b, q_cur, k, s, cur, ev);
-                        let m = self.matrix_for(b, k, s, cur, ev);
-                        let piv = m.apply(self.pivot_of(&b));
+                        let (sf, cf) = (self.to_frame(s), self.to_frame(cur));
+                        let q = self
+                            .drag_quad(b, q_cur_f, k, sf, cf, ev)
+                            .map(|p| self.to_doc(p));
+                        let m = self.matrix_to_doc(self.matrix_for(b, k, sf, cf, ev));
+                        let piv = m.apply(self.pivot_doc(&b));
+                        let (gr, gq) = self.doc_rect_quad(orig, q);
                         self.overlay = vec![
-                            ghost(ctx, orig, q, false),
+                            ghost(ctx, gr, gq, false),
                             Overlay::TransformBox {
                                 quad: q,
                                 center: piv,
@@ -2364,7 +2517,7 @@ impl ToolMachine for TransformTool {
                         match k {
                             TDrag::Rotate => self.overlay.push(Overlay::Label {
                                 at: cur,
-                                text: format!("{}°", fmt_num(self.angle(&b, s, cur, ev) as f32)),
+                                text: format!("{}°", fmt_num(self.angle(&b, sf, cf, ev) as f32)),
                             }),
                             TDrag::Corner(_) | TDrag::Edge(_) if self.id == ToolId::Scale => {
                                 let r = Rect::from_points(q).unwrap_or(b);
@@ -2374,11 +2527,11 @@ impl ToolMachine for TransformTool {
                         }
                     }
                 } else {
-                    self.cursor = self.cursor_for(self.kind_at(&b, *pos, tol));
+                    self.cursor = self.cursor_for(self.kind_at(&b, self.to_frame(*pos), tol));
                     self.overlay = if self.pending.is_some() {
                         self.pending_overlay(ctx, q_cur)
                     } else {
-                        self.idle_overlay(&b)
+                        self.idle_overlay(&b, self.fm)
                     };
                 }
                 ToolResponse::with_overlay(self.overlay.clone(), self.cursor)
@@ -2417,7 +2570,7 @@ impl ToolMachine for TransformTool {
                     self.overlay = if self.pending.is_some() {
                         self.pending_overlay(ctx, q_cur)
                     } else {
-                        self.idle_overlay(&b)
+                        self.idle_overlay(&b, self.fm)
                     };
                     return ToolResponse::with_overlay(self.overlay.clone(), self.cursor);
                 }
@@ -2428,7 +2581,8 @@ impl ToolMachine for TransformTool {
                         .normalized()
                         .corners()
                 } else {
-                    let m = self.matrix_for(b, k, s, cur, ev);
+                    let (sf, cf) = (self.to_frame(s), self.to_frame(cur));
+                    let m = self.matrix_to_doc(self.matrix_for(b, k, sf, cf, ev));
                     if let Some(pv) = self.pivot
                         && !(self.id == ToolId::Distort
                             && matches!(k, TDrag::Corner(_) | TDrag::Edge(_)))
@@ -2436,13 +2590,15 @@ impl ToolMachine for TransformTool {
                     {
                         self.pivot = Some(m.apply(pv));
                     }
-                    self.drag_quad(b, q_cur, k, s, cur, ev)
+                    self.drag_quad(b, q_cur_f, k, sf, cf, ev)
+                        .map(|p| self.to_doc(p))
                 };
                 if k == TDrag::Rotate && !self.nine() {
                     self.rotated = true;
                 }
                 self.pending = Some((orig, q, ctx.selection.elements.clone()));
-                self.bounds = Rect::from_points(q).map(|r| r.normalized());
+                self.bounds =
+                    Rect::from_points(q.map(|p| self.to_frame(p))).map(|r| r.normalized());
                 self.overlay = self.pending_overlay(ctx, q);
                 ToolResponse::with_overlay(self.overlay.clone(), self.cursor)
             }
@@ -2482,11 +2638,8 @@ impl ToolMachine for TransformTool {
                 }
                 self.bounds = None;
                 self.overlay = match self.current(ctx) {
-                    Some((b, q)) if self.pending.is_some() => {
-                        let _ = b;
-                        self.pending_overlay(ctx, q)
-                    }
-                    Some((b, _)) => self.idle_overlay(&b),
+                    Some((_, q, _, _)) if self.pending.is_some() => self.pending_overlay(ctx, q),
+                    Some((b, _, fm, _)) => self.idle_overlay(&b, fm),
                     None => Vec::new(),
                 };
                 ToolResponse::with_overlay(self.overlay.clone(), self.cursor)
@@ -2514,8 +2667,8 @@ impl ToolMachine for TransformTool {
             return self.overlay.clone();
         }
         match self.current(ctx) {
-            Some((_, q)) if self.pending.is_some() => self.pending_overlay(ctx, q),
-            Some((b, _)) => self.idle_overlay(&b),
+            Some((_, q, _, _)) if self.pending.is_some() => self.pending_overlay(ctx, q),
+            Some((b, _, fm, _)) => self.idle_overlay(&b, fm),
             None => Vec::new(),
         }
     }

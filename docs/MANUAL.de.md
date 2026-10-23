@@ -232,6 +232,18 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Einheitsquadrat (Quadrat der Seitenlänge max(Breite, Höhe) um die Mitte der Auswahlgrenzen, ein
   Rechteck 100 × 60 ist also x 0…1, y 0,2…0,8) und rechnet einen einzelnen Text nur mit der Option
   `rememberQuad` um.
+- **Der Transformationsrahmen eines Texts.** Ist genau ein Text gewählt, zeigen die Werkzeuge
+  Skalieren, Neigen und Verzerren, Frei transformieren und *Modifizieren ▸ Transformieren ▸ Skalieren*
+  einen Rahmen 1,3-mal so groß wie die Satzbox des Texts (links und rechts je 15 % der Breite, oben und
+  unten je 15 % der Höhe dazu), mit dem Text gedreht; beim Punkttext ist die Satzbox sein Satzrahmen
+  (ein „Ag“ mit 60 pt, 74 × 72 bei 100,100, bekommt die Griffe bei 89/137/185 × 89/136/183), beim Text
+  mit fester Breite die Box um die gesetzten Zeilen. Pfade, Gruppen (auch mit Text darin) und mehrere
+  Objekte behalten ihre Grenzen. Die Ecken stehen auf ganzen Pixeln, Rahmenlinie und Griffe einen
+  Bildschirmpixel links oberhalb des Rahmens, wie im Original. Ein Eckzug skaliert mit der Lage des
+  Zeigers projiziert auf die Diagonale des Rahmens (+39/+38 an der Ecke dieses „Ag“ ergibt 83,74 pt); der
+  nächste Zug beginnt am Rahmen des neuen Zustands. *Transformationen entfernen* legt links/oben eines
+  Texts auf die gerundete linke/obere Kante des Umrisses seines Rahmens (aus Messungen abgeleitet, nicht
+  jeder Fall ist bekannt).
 - *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
   gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
   mit der Maske als zweiter Miniatur.

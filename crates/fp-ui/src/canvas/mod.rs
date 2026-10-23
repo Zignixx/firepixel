@@ -2863,6 +2863,16 @@ fn overlays(
         .map(|r| r.intersect(area))
         .unwrap_or(area);
     let page_painter = painter.with_clip_rect(page_clip);
+    // the transform tools draw the frame line and its handles 1 screen pixel left of and above the
+    // frame, at every zoom (RE spec 67 §1.1); other handles sit on their points
+    let xform_shift = if matches!(
+        st.session.tools.active,
+        fp_engine::ToolId::Scale | fp_engine::ToolId::Skew | fp_engine::ToolId::Distort
+    ) {
+        vec2(-1.0, -1.0)
+    } else {
+        vec2(0.0, 0.0)
+    };
     // Subselection tool: point display per re 54 (Some(ShowSolidPoints))
     let subsel_points = (st.session.tools.active == fp_engine::ToolId::Subselection)
         .then(|| st.session.prefs.get_bool("ShowSolidPoints", false));
@@ -2940,7 +2950,7 @@ fn overlays(
             }
             Overlay::Handles { points } => {
                 for p in points {
-                    let h = Rect::from_center_size(spp(p), vec2(5.0, 5.0));
+                    let h = Rect::from_center_size(spp(p) + xform_shift, vec2(5.0, 5.0));
                     painter.rect_filled(h, 0.0, c.handle_fill);
                     painter.rect_stroke(
                         h,
@@ -2951,7 +2961,7 @@ fn overlays(
                 }
             }
             Overlay::TransformBox { quad, center } => {
-                let v: Vec<Pos2> = quad.iter().map(|p| spp(*p)).collect();
+                let v: Vec<Pos2> = quad.iter().map(|p| spp(*p) + xform_shift).collect();
                 painter.add(egui::Shape::closed_line(
                     v.clone(),
                     Stroke::new(1.0, c.selection),

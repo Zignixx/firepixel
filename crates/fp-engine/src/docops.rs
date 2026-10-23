@@ -1138,6 +1138,111 @@ pub fn ids_bounds(doc: &Document, page: usize, ids: &[ElementId]) -> Option<Rect
         .fold(None, |acc, e| union_opt(acc, element_bounds(doc, e)))
 }
 
+/// Transform frame of the Scale, Skew and Distort tools (also Free Transform and Modify ▸
+/// Transform ▸ Scale), RE spec 67 §3.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TransformFrame {
+    /// The frame, unrounded: in document coordinates, or in the text's own space when
+    /// [`TransformFrame::matrix`] is set.
+    pub rect: Rect,
+    /// Text space → document for a turned, sheared or distorted text (the frame is then a
+    /// four-cornered shape); `None` = `rect` is in document coordinates.
+    pub matrix: Option<Matrix3>,
+    /// The frame of exactly one text (its set box scaled by 1.3).
+    pub text: bool,
+}
+
+impl TransformFrame {
+    /// The four corners in document coordinates (order of [`Rect::corners`]).
+    pub fn quad(&self) -> [Point; 4] {
+        match self.matrix {
+            Some(m) => m.transform_quad(&self.rect),
+            None => self.rect.corners(),
+        }
+    }
+}
+
+/// Transform frame of a selection (RE spec 67 §3): exactly one text → its set box
+/// ([`text_transform_box`]) scaled by 1.3 about its centre (0.15 × width added left and right,
+/// 0.15 × height top and bottom; an empty box grows by 2 instead), unrounded, mapped through the
+/// text's matrix; paths, bitmaps, groups (also with a text inside) and several objects → the
+/// (united) object bounds without a margin.
+pub fn transform_frame(
+    doc: &Document,
+    page: usize,
+    ids: &[ElementId],
+    fit: Option<TextFitFn>,
+) -> Option<TransformFrame> {
+    if let [id] = ids
+        && let Some(e) = element_on_page(doc, page, *id)
+        && let ElementKind::Text(t) = &e.kind
+    {
+        return Some(text_transform_frame(t, fit));
+    }
+    ids_bounds(doc, page, ids).map(|rect| TransformFrame {
+        rect,
+        matrix: None,
+        text: false,
+    })
+}
+
+/// Set box of a text for its transform frame (RE spec 67 §2.1–2.4, before the matrix): point
+/// text = the layout frame (`raw` rect); fixed-width text = the box around the set content from
+/// [`crate::render::TextFitBoxes::transform_box`] (without a layout: the frame).
+pub fn text_transform_box(t: &fp_model::TextElem, fit: Option<TextFitFn>) -> [f64; 4] {
+    let r = t.bounds;
+    let frame = [r.left as f64, r.top as f64, r.right as f64, r.bottom as f64];
+    if matches!(t.frame_type, None | Some(0)) {
+        return frame;
+    }
+    fit.and_then(|f| f(t))
+        .map(|b| b.transform_box)
+        .unwrap_or(frame)
+}
+
+/// Transform frame of one text, see [`transform_frame`]. A text matrix that only scales and moves
+/// along the axes gives a frame in document coordinates.
+pub fn text_transform_frame(t: &fp_model::TextElem, fit: Option<TextFitFn>) -> TransformFrame {
+    let b = text_transform_box(t, fit);
+    let (w, h) = (b[2] - b[0], b[3] - b[1]);
+    let (dx, dy) = if w <= 0.0 || h <= 0.0 {
+        (2.0, 2.0) // the reference's code (§2.11), not measured
+    } else {
+        (0.15 * w, 0.15 * h)
+    };
+    let f = [b[0] - dx, b[1] - dy, b[2] + dx, b[3] + dy];
+    let rect = Rect::new(f[0] as f32, f[1] as f32, f[2] as f32, f[3] as f32);
+    match t.transform {
+        Some(m) if !m.is_identity() => {
+            if m.is_affine() && m.m[0][1] == 0.0 && m.m[1][0] == 0.0 {
+                let p = |x: f64, y: f64| m.apply_vec2(fp_geom::Vec2::new(x, y));
+                let (a, c) = (p(f[0], f[1]), p(f[2], f[3]));
+                TransformFrame {
+                    rect: Rect::new(
+                        a.x.min(c.x) as f32,
+                        a.y.min(c.y) as f32,
+                        a.x.max(c.x) as f32,
+                        a.y.max(c.y) as f32,
+                    ),
+                    matrix: None,
+                    text: true,
+                }
+            } else {
+                TransformFrame {
+                    rect,
+                    matrix: Some(m),
+                    text: true,
+                }
+            }
+        }
+        _ => TransformFrame {
+            rect,
+            matrix: None,
+            text: true,
+        },
+    }
+}
+
 /// Grenzen, die der Inspektor in B/H/X/Y zeigt: bei einem maskierten Einzelbild
 /// ([`Element::masked_single`]) die des **Inhalts** (Bildgrenzen, nicht der Maskenbereich; re 29b
 /// §2, BA-006), sonst [`element_bounds`].
@@ -1652,8 +1757,9 @@ pub fn transform_element_folding_text(
 ///   sy (percentage leading unchanged), range kerning × sx/sy, indent × sx, space before/after ×
 ///   sy; baseline shift, frame width and auto-expand stay;
 /// - the text is laid out again and a leftover scale maps the new set box exactly onto the scaled
-///   old one (point text: the widest line, i.e. the sum of the rounded advances, + 1 px; fixed-width
-///   text: the widest line, which only approximates the reference's target, §2.5/§5); the rotation
+///   old one (point text: the layout frame `raw`, i.e. the sum of the rounded advances + 1 px wide
+///   and the rounded set height; fixed-width text: the widest line, which only approximates the
+///   reference's target, §2.5/§5); the rotation
 ///   and reflection of the old matrix stay. A leftover of about 1 on an unrotated text becomes no
 ///   matrix at all, the move goes into a whole-pixel origin.
 ///
@@ -1707,14 +1813,24 @@ pub fn fold_text_scale(t: &mut fp_model::TextElem, m: &Matrix3, fit: TextFitFn) 
     let Some(new) = fit(&n) else {
         return false;
     };
-    // set boxes (point text: the reference's raw width = sum of the rounded advances + 1)
-    let extra = if point { 1.0 } else { 0.0 };
-    let wh = |b: &[f64; 4]| ((b[2] - b[0] + extra).max(1e-6), (b[3] - b[1]).max(1e-6));
-    let ((ow, oh), (nw, nh)) = (wh(&old.lines), wh(&new.lines));
+    // set boxes: point text = the layout frame (`raw`, width = sum of the rounded advances + 1,
+    // height from the set; RE spec 66 §3.3, run 40: tool 1.3957 → [0.993, 1.005], t 5.085/23.883),
+    // fixed-width text = the widest line
+    let set_box = |b: &crate::render::TextFitBoxes| {
+        if point {
+            let f = b.frame;
+            [f.left as f64, f.top as f64, f.right as f64, f.bottom as f64]
+        } else {
+            b.lines
+        }
+    };
+    let (ob, nb) = (set_box(&old), set_box(&new));
+    let wh = |b: &[f64; 4]| ((b[2] - b[0]).max(1e-6), (b[3] - b[1]).max(1e-6));
+    let ((ow, oh), (nw, nh)) = (wh(&ob), wh(&nb));
     let (tw, th) = (ow * dx * s00, oh * dy * s11);
     let (fx, fy) = (tw / nw, th / nh);
     // corner of the old set box after the old matrix and the scale
-    let p0 = m.apply_vec2(old_m.apply_vec2(fp_geom::Vec2::new(old.lines[0], old.lines[1])));
+    let p0 = m.apply_vec2(old_m.apply_vec2(fp_geom::Vec2::new(ob[0], ob[1])));
     let unturned = (u0.0 - 1.0).abs() < 1e-6
         && u0.1.abs() < 1e-6
         && u1.0.abs() < 1e-6
@@ -1724,8 +1840,8 @@ pub fn fold_text_scale(t: &mut fp_model::TextElem, m: &Matrix3, fit: TextFitFn) 
     n.bounds = new.frame;
     if identity {
         // whole-pixel origin (81.5 → 82 measured; 75.5 → 75 in a group is open, §5)
-        let ddx = ((p0.x - new.lines[0]) + 0.5 + 1e-6).floor() as f32;
-        let ddy = ((p0.y - new.lines[1]) + 0.5 + 1e-6).floor() as f32;
+        let ddx = ((p0.x - nb[0]) + 0.5 + 1e-6).floor() as f32;
+        let ddy = ((p0.y - nb[1]) + 0.5 + 1e-6).floor() as f32;
         n.bounds = n.bounds.translate(ddx, ddy);
         if let Some(r) = &mut n.anchor_rect {
             r.left += ddx;
@@ -1738,7 +1854,7 @@ pub fn fold_text_scale(t: &mut fp_model::TextElem, m: &Matrix3, fit: TextFitFn) 
         n.transform = None;
     } else {
         let (a, b, c, d) = (fx * u0.0, fx * u0.1, fy * u1.0, fy * u1.1);
-        let (nx, ny) = (new.lines[0], new.lines[1]);
+        let (nx, ny) = (nb[0], nb[1]);
         let tx = p0.x - (nx * a + ny * c);
         let ty = p0.y - (nx * b + ny * d);
         n.transform = Some(Matrix3::from_affine(

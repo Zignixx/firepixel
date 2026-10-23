@@ -215,9 +215,18 @@ fn scale_tool_and_free_transform_leave_text_handles() {
     assert!(visible_bounds(&s, t).width() > b0.width() * 1.3, "scaled");
     assert_eq!(hv(handles(&s, t)), h0, "transform.matrix");
     ex(&mut s, "edit.undo", json!({}));
-    // the Scale tool itself: drag the bottom-right corner by +39/+38 and confirm
+    // the Scale tool itself: drag the bottom-right corner of the text's transform frame (RE spec
+    // 67) by +39/+38 and confirm
+    let f = {
+        let d = s.active().expect("document");
+        let r = s.renderer().cloned().expect("renderer");
+        let fit = |x: &fp_model::TextElem| r.text_fit_boxes(&d.doc, x);
+        fp_engine::docops::transform_frame(&d.doc, d.page, &[t], Some(&fit))
+            .expect("frame")
+            .rect
+    };
     s.set_tool(fp_engine::ToolId::Scale).expect("Scale tool");
-    let (x, y) = (b0.right, b0.bottom);
+    let (x, y) = (f.right, f.bottom);
     events(
         &mut s,
         &[
