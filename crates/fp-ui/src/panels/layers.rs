@@ -519,6 +519,19 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     // built, over the page's whole object order (collapsed layers included)
     let mut pending_click: Option<(RowKey, ClickMods)> = None;
     let alt = ui.input(|i| i.modifiers.alt);
+    // Firepixel extension (FB-59 to FB-61): group rows expand to their objects, masked objects to
+    // the objects of their mask; off = the rows of the reference only
+    let tree_on = fp_engine::session::layers_group_tree(&st.session.prefs);
+    let tree_open: BTreeSet<(u64, u64)> = if tree_on {
+        ui.data(|dd| dd.get_temp(Id::new(TREE_OPEN)))
+            .unwrap_or_default()
+    } else {
+        BTreeSet::new()
+    };
+    let is_tree_open = |k: u64| tree_open.contains(&(doc_id.0, k));
+    let mut tree_toggles: Vec<u64> = Vec::new();
+    let mut tree_click: Option<TreeClick> = None;
+    let yellow_bg = group_child_selected_bg(&theme);
     // Miniaturoptionen (0 = keine; Vorgabe 32 → 24 px wie im Original „mittel“)
     let tpx = (st
         .session
@@ -997,8 +1010,40 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     let renaming_row = rename
                         .as_ref()
                         .is_some_and(|k| matches!(k, RowKind::Element { id, .. } if *id == e.id));
+                    // the open group and mask toggles of this row and the rows below it
+                    let mut tree: Vec<TreeItem> = Vec::new();
+                    if tree_on {
+                        tree_items(e, 0, None, &is_tree_open, &mut tree);
+                    }
+                    let tc = TreeCtx {
+                        st,
+                        theme: &theme,
+                        doc: &doc,
+                        doc_id,
+                        doc_gen,
+                        tpx,
+                        row_h: erow_h,
+                        selected: &selected_set,
+                        rename: &rename,
+                        open: &tree_open,
+                        editable,
+                        layer: l.id,
+                        top: e.id,
+                        thumb_x: next.left() + 78.0 + THUMB_INDENT * depth as f32,
+                        mods,
+                    };
                     if !ui.is_rect_visible(next) && !renaming_row {
                         ui.advance_cursor_after_rect(next);
+                        if !tree.is_empty() {
+                            let mut out = TreeOut {
+                                actions: &mut actions,
+                                toggles: &mut tree_toggles,
+                                click: &mut tree_click,
+                                rename_start: &mut rename_start,
+                                menu_rows: &mut menu_rows,
+                            };
+                            tree_rows(ui, &tc, &mut out, &tree);
+                        }
                         if depth == 0 {
                             rows.push(RowInfo {
                                 kind: RowKind::Element {
@@ -1013,7 +1058,22 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         }
                         continue;
                     }
-                    let (r2, resp2) = common::row(ui, erow_h, sel);
+                    // RE spec 70 section 4.3: a selected object frames its own thumbnail blue;
+                    // while its mask is being edited (mask thumbnail, Edit Mask) the row is
+                    // highlighted as well, the mask thumbnail framed green
+                    let obj_sel = sel;
+                    let sel = sel
+                        || e.element_mask()
+                            .is_some_and(|m| mask_selected(&selected_set, m.element));
+                    // FB-60: a group whose object is subselected gets a pale yellow row
+                    let yellow = tree_on
+                        && !sel
+                        && !selected_set.is_empty()
+                        && fp_engine::docops::has_selected_descendant(e, &|id| {
+                            selected_set.contains(&id)
+                        });
+                    let (r2, resp2) =
+                        common::row_fill(ui, erow_h, sel, yellow.then_some(yellow_bg));
                     let eye2 = Rect::from_min_size(r2.min, vec2(20.0, r2.height()));
                     let lock2 = Rect::from_min_size(
                         pos2(r2.left() + 21.0, r2.top()),
@@ -1092,7 +1152,11 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         ui.painter().rect_stroke(
                             thumb,
                             0.0,
-                            Stroke::new(1.0, c.list_border),
+                            if obj_sel {
+                                Stroke::new(2.0, c.focus)
+                            } else {
+                                Stroke::new(1.0, c.list_border)
+                            },
                             StrokeKind::Inside,
                         );
                     }
@@ -1185,6 +1249,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     let renaming = rename
                         .as_ref()
                         .is_some_and(|k| matches!(k, RowKind::Element { id, .. } if *id == e.id));
+                    let mut hits = (None, None);
                     if renaming {
                         if let Some(res) =
                             common::inline_rename(ui, Id::new(("el-rename", e.id.0)), nr, &own_name)
@@ -1203,14 +1268,24 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         } else {
                             theme.ui_font()
                         };
-                        crate::widgets::text_clipped(
-                            ui.painter(),
-                            pos2(nr.left(), r2.center().y),
-                            Align2::LEFT_CENTER,
+                        let toggles = if tree_on {
+                            RowToggles {
+                                group: fp_engine::docops::tree_children(e)
+                                    .map(|_| is_tree_open(e.id.0)),
+                                mask: e.element_mask().map(|_| is_tree_open(mask_key(e.id))),
+                            }
+                        } else {
+                            RowToggles::default()
+                        };
+                        hits = name_with_toggles(
+                            ui,
+                            nr,
+                            r2.center().y,
                             &name,
                             font,
                             if editable { c.text } else { c.text_weak },
-                            nr.width(),
+                            c.icon_fg,
+                            toggles,
                         );
                     }
                     let kind = RowKind::Element {
@@ -1222,7 +1297,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     if resp2.clicked()
                         && let Some(p) = resp2.interact_pointer_pos()
                     {
-                        if let Some((mt, chain, mid)) = mask_hit.filter(|(mt, chain, _)| {
+                        if let Some(k) = toggle_at(hits, e.id, p) {
+                            // FB-60/61: the group or mask toggle after the name
+                            tree_toggles.push(k);
+                        } else if let Some((mt, chain, mid)) = mask_hit.filter(|(mt, chain, _)| {
                             editable && (mt.contains(p) || chain.contains(p))
                         }) {
                             // the mask thumbnail works like Edit Mask (RE spec 68 section 7):
@@ -1269,7 +1347,12 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         actions.push(Action::Run("select.set".into(), json!({"ids": [e.id.0]})));
                         new_anchor = Some(RowKey::Element(e.id));
                     }
-                    if (resp2.double_clicked() || resp2.triple_clicked()) && editable {
+                    if (resp2.double_clicked() || resp2.triple_clicked())
+                        && editable
+                        && resp2
+                            .interact_pointer_pos()
+                            .is_none_or(|p| toggle_at(hits, e.id, p).is_none())
+                    {
                         rename_start = Some(kind.clone());
                     }
                     if resp2.drag_started() && editable && depth == 0 {
@@ -1283,6 +1366,17 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             rect: r2,
                             locked: false,
                         });
+                    }
+                    // FB-59 to FB-61: the objects of the open group and mask toggles below
+                    if !tree.is_empty() {
+                        let mut out = TreeOut {
+                            actions: &mut actions,
+                            toggles: &mut tree_toggles,
+                            click: &mut tree_click,
+                            rename_start: &mut rename_start,
+                            menu_rows: &mut menu_rows,
+                        };
+                        tree_rows(ui, &tc, &mut out, &tree);
                     }
                 }
             }
@@ -1312,6 +1406,25 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     }
     if let Some(k) = new_anchor {
         ui.data_mut(|dd| dd.insert_temp(Id::new(ANCHOR), (doc_id.0, k)));
+    }
+    // FB-60/61: a click on a row of the group tree; rows below a locked object or layer ignore it
+    if let Some(tcl) = tree_click
+        && !ObjSeq::build(&layers, frame).row_locked(RowKey::Element(tcl.top))
+    {
+        let owner = match tcl.role {
+            TreeRole::Mask { owner, .. } => fp_engine::docops::element_on_page(&doc, page, owner),
+            TreeRole::Child => None,
+        };
+        actions.extend(tree_click_actions(&tcl, &selected, owner.as_deref()));
+    }
+    if !tree_toggles.is_empty() {
+        let mut open = tree_open.clone();
+        for k in tree_toggles {
+            if !open.remove(&(doc_id.0, k)) {
+                open.insert((doc_id.0, k));
+            }
+        }
+        ui.data_mut(|dd| dd.insert_temp(Id::new(TREE_OPEN), open));
     }
     ui.data_mut(|dd| match eye_drag {
         Some(mut v) => {
@@ -1690,6 +1803,502 @@ fn footer_with_state(
             }
         });
     out
+}
+
+// ------------------------------------------------------------- group and mask tree (FB-59 to FB-61)
+
+/// Expanded group and mask rows of the group tree (Firepixel extension, FB-59 to FB-61), per
+/// document: (document id, key) with key = element id (group contents) or [`mask_key`] (mask
+/// objects). Panel state only: kept while the program runs, never in the file or in History.
+const TREE_OPEN: &str = "layers-tree-open";
+
+/// Indentation of the rows of the group tree per level (thumbnail and name move right).
+pub const TREE_INDENT: f32 = 16.0;
+
+/// Background of a group row while one of its objects is subselected (FB-60, Firepixel colour):
+/// pale yellow in the light themes.
+pub const GROUP_CHILD_SELECTED_LIGHT: Color32 = Color32::from_rgb(0xFF, 0xF4, 0xB8);
+/// The same in the dark themes: a dark olive, so the light row text stays readable.
+pub const GROUP_CHILD_SELECTED_DARK: Color32 = Color32::from_rgb(0x5C, 0x52, 0x1E);
+
+/// Background of a group row whose object is subselected in the theme `theme`.
+pub fn group_child_selected_bg(theme: &Theme) -> Color32 {
+    let t = theme.colors.text;
+    let light_text = u32::from(t.r()) + u32::from(t.g()) + u32::from(t.b()) > 3 * 128;
+    if light_text {
+        GROUP_CHILD_SELECTED_DARK
+    } else {
+        GROUP_CHILD_SELECTED_LIGHT
+    }
+}
+
+/// Key of the mask toggle of an object in [`TREE_OPEN`] (apart from the group toggle's key).
+fn mask_key(id: fp_model::ElementId) -> u64 {
+    id.0 | (1 << 61)
+}
+
+/// What a row of the group tree stands for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TreeRole {
+    /// An object listed under a group row (FB-60): a click selects it like the Subselection tool.
+    Child,
+    /// An object of the mask of `owner` (FB-61): a click selects the mask for editing like a click
+    /// on the mask thumbnail; `in_group`: one of the objects of a mask group (then subselected);
+    /// `bitmap`: the row "Bitmap mask".
+    Mask {
+        owner: fp_model::ElementId,
+        in_group: bool,
+        bitmap: bool,
+    },
+}
+
+/// A row of the group tree below an object row.
+#[derive(Clone, Debug)]
+struct TreeItem {
+    /// 1 = directly below the object row.
+    level: usize,
+    el: Arc<Element>,
+    role: TreeRole,
+    /// The masked object of a "Bitmap mask" row (its mask thumbnail).
+    owner: Option<Arc<Element>>,
+}
+
+/// The rows of the group tree below the row of `e` (at `level`) in display order: the contents
+/// of an open group toggle, then the objects of an open mask toggle, each nested level below its
+/// row. `inherit`: the role of the row of `e` (objects inside a mask group stay mask objects).
+fn tree_items(
+    e: &Arc<Element>,
+    level: usize,
+    inherit: Option<TreeRole>,
+    open: &dyn Fn(u64) -> bool,
+    out: &mut Vec<TreeItem>,
+) {
+    if open(e.id.0)
+        && let Some(cs) = fp_engine::docops::tree_children(e)
+    {
+        let role = match inherit {
+            Some(TreeRole::Mask { owner, .. }) => TreeRole::Mask {
+                owner,
+                in_group: true,
+                bitmap: false,
+            },
+            _ => TreeRole::Child,
+        };
+        for c in cs {
+            out.push(TreeItem {
+                level: level + 1,
+                el: Arc::clone(c),
+                role,
+                owner: None,
+            });
+            tree_items(c, level + 1, Some(role), open, out);
+        }
+    }
+    if open(mask_key(e.id))
+        && let Some(m) = fp_engine::docops::mask_members(e)
+    {
+        let mask = |in_group, bitmap| TreeRole::Mask {
+            owner: e.id,
+            in_group,
+            bitmap,
+        };
+        match m {
+            fp_engine::docops::MaskMembers::Bitmap(x) => out.push(TreeItem {
+                level: level + 1,
+                el: Arc::clone(x),
+                role: mask(false, true),
+                owner: Some(Arc::clone(e)),
+            }),
+            fp_engine::docops::MaskMembers::Single(x) => out.push(TreeItem {
+                level: level + 1,
+                el: Arc::clone(x),
+                role: mask(false, false),
+                owner: None,
+            }),
+            fp_engine::docops::MaskMembers::Group(cs) => {
+                for c in cs {
+                    out.push(TreeItem {
+                        level: level + 1,
+                        el: Arc::clone(c),
+                        role: mask(true, false),
+                        owner: None,
+                    });
+                    tree_items(c, level + 1, Some(mask(true, false)), open, out);
+                }
+            }
+        }
+    }
+}
+
+/// A click on the name part of a row of the group tree, resolved after the list is built.
+#[derive(Clone, Copy, Debug)]
+struct TreeClick {
+    id: fp_model::ElementId,
+    /// The object row the tree hangs from (its lock decides whether the click counts).
+    top: fp_model::ElementId,
+    role: TreeRole,
+    /// Shift (or Ctrl/Cmd): add or remove the object like Shift+click with the Subselection.
+    toggle: bool,
+}
+
+/// Selection commands of a click on a row of the group tree (FB-60, FB-61). `selected`: the
+/// current selection; `owner`: the masked object of a mask row.
+fn tree_click_actions(
+    click: &TreeClick,
+    selected: &[fp_model::ElementId],
+    owner: Option<&Element>,
+) -> Vec<Action> {
+    let pick = |id: u64, toggle: bool| {
+        Action::Run(
+            "tool.pick".into(),
+            json!({"command": "select.set", "params": {
+                "ids": [id],
+                "mode": if toggle { "toggle" } else { "replace" },
+            }}),
+        )
+    };
+    match click.role {
+        // like a Subselection click on the object: Shift adds or removes it, a plain click
+        // selects only it (no History row, like clicks on the canvas)
+        TreeRole::Child => {
+            if click.toggle {
+                vec![pick(click.id.0, true)]
+            } else if selected == [click.id] {
+                Vec::new()
+            } else {
+                vec![pick(click.id.0, false)]
+            }
+        }
+        TreeRole::Mask {
+            owner: oid,
+            in_group,
+            ..
+        } => {
+            let editing = owner.is_some_and(|o| {
+                fp_engine::docops::mask_has_selected(o, &|id| selected.contains(&id))
+            });
+            let mut out = Vec::new();
+            // the mask thumbnail's way (RE spec 68 section 7): the masked object, then Edit Mask
+            if !editing {
+                out.push(Action::Run("select.set".into(), json!({"ids": [oid.0]})));
+                out.push(Action::Run("panel.layers.editMask".into(), json!({})));
+            }
+            // an object of a mask group: subselected like on the canvas (E-1)
+            if in_group && !(editing && !click.toggle && selected == [click.id]) {
+                out.push(pick(click.id.0, click.toggle && editing));
+            }
+            out
+        }
+    }
+}
+
+/// Paints a chevron "›" (closed) or "⌄" (open) centred at `c` with half size `s`.
+fn paint_chevron(p: &egui::Painter, c: Pos2, open: bool, s: f32, stroke: Stroke) {
+    let pts = if open {
+        [
+            c + vec2(-s, -s * 0.5),
+            c + vec2(0.0, s * 0.5),
+            c + vec2(s, -s * 0.5),
+        ]
+    } else {
+        [
+            c + vec2(-s * 0.5, -s),
+            c + vec2(s * 0.5, 0.0),
+            c + vec2(-s * 0.5, s),
+        ]
+    };
+    p.line_segment([pts[0], pts[1]], stroke);
+    p.line_segment([pts[1], pts[2]], stroke);
+}
+
+/// Toggles of an object row of the group tree: `Some(open)` where the row has one.
+#[derive(Clone, Copy, Debug, Default)]
+struct RowToggles {
+    group: Option<bool>,
+    mask: Option<bool>,
+}
+
+/// Width the toggles take after the name.
+fn toggles_width(t: RowToggles) -> f32 {
+    t.group.map_or(0.0, |_| 14.0) + t.mask.map_or(0.0, |_| 16.0)
+}
+
+/// Paints the name of an object row at the left of `nr` and, with the group tree on, its
+/// toggles right after the name: "›"/"⌄" for the group contents, a circled arrow for the
+/// objects of the mask (FB-60, FB-61). Returns the hit rects of the group and the mask toggle.
+#[allow(clippy::too_many_arguments)]
+fn name_with_toggles(
+    ui: &Ui,
+    nr: Rect,
+    cy: f32,
+    name: &str,
+    font: egui::FontId,
+    col: Color32,
+    icon: Color32,
+    t: RowToggles,
+) -> (Option<Rect>, Option<Rect>) {
+    let tw = toggles_width(t);
+    let text = crate::widgets::text_clipped(
+        ui.painter(),
+        pos2(nr.left(), cy),
+        Align2::LEFT_CENTER,
+        name,
+        font,
+        col,
+        (nr.width() - tw).max(8.0),
+    );
+    if tw == 0.0 {
+        return (None, None);
+    }
+    let mut x = text.right() + 4.0;
+    let group = t.group.map(|open| {
+        let r = Rect::from_center_size(pos2(x + 5.0, cy), vec2(12.0, 16.0));
+        paint_chevron(ui.painter(), r.center(), open, 3.5, Stroke::new(1.5, icon));
+        x += 14.0;
+        r
+    });
+    let mask = t.mask.map(|open| {
+        let r = Rect::from_center_size(pos2(x + 7.0, cy), vec2(14.0, 16.0));
+        ui.painter()
+            .circle_stroke(r.center(), 5.5, Stroke::new(1.0, icon));
+        paint_chevron(ui.painter(), r.center(), open, 2.2, Stroke::new(1.2, icon));
+        r
+    });
+    (group, mask)
+}
+
+/// Which toggle of `hits` (group, mask) lies under `p`: its key in [`TREE_OPEN`].
+fn toggle_at(hits: (Option<Rect>, Option<Rect>), id: fp_model::ElementId, p: Pos2) -> Option<u64> {
+    let on = |r: Option<Rect>| r.is_some_and(|r| r.expand(2.0).contains(p));
+    if on(hits.0) {
+        Some(id.0)
+    } else if on(hits.1) {
+        Some(mask_key(id))
+    } else {
+        None
+    }
+}
+
+/// What the rows of the group tree need from the panel.
+struct TreeCtx<'a> {
+    st: &'a AppState,
+    theme: &'a Theme,
+    doc: &'a Arc<fp_model::Document>,
+    doc_id: fp_engine::DocId,
+    doc_gen: u64,
+    tpx: f32,
+    row_h: f32,
+    selected: &'a std::collections::HashSet<fp_model::ElementId>,
+    rename: &'a Option<RowKind>,
+    open: &'a BTreeSet<(u64, u64)>,
+    editable: bool,
+    layer: LayerId,
+    /// The object row the tree hangs from and the left edge of its thumbnail.
+    top: fp_model::ElementId,
+    thumb_x: f32,
+    mods: ClickMods,
+}
+
+/// What the rows of the group tree hand back to the panel.
+struct TreeOut<'a> {
+    actions: &'a mut Vec<Action>,
+    toggles: &'a mut Vec<u64>,
+    click: &'a mut Option<TreeClick>,
+    rename_start: &'a mut Option<RowKind>,
+    menu_rows: &'a mut Vec<egui::Response>,
+}
+
+/// Paints the rows of the group tree `items` below an object row (FB-59 to FB-61): indented one
+/// step per level with a thin line at the left, eye and lock (objects of groups), thumbnail,
+/// name and the row's own toggles. Rows outside the visible part only take their place
+/// (BA-099). The rows are no drag sources and no drop targets.
+fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[TreeItem]) {
+    let c = &tc.theme.colors;
+    let is_open = |k: u64| tc.open.contains(&(tc.doc_id.0, k));
+    for it in items {
+        let e = &it.el;
+        let next = Rect::from_min_size(ui.cursor().min, vec2(ui.available_width(), tc.row_h));
+        let renaming = tc
+            .rename
+            .as_ref()
+            .is_some_and(|k| matches!(k, RowKind::Element { id, .. } if *id == e.id));
+        if !ui.is_rect_visible(next) && !renaming {
+            ui.advance_cursor_after_rect(next);
+            continue;
+        }
+        let sel = tc.selected.contains(&e.id);
+        let yellow = !sel
+            && !tc.selected.is_empty()
+            && fp_engine::docops::has_selected_descendant(e, &|id| tc.selected.contains(&id));
+        let (r, resp) = common::row_fill(
+            ui,
+            tc.row_h,
+            sel,
+            yellow.then(|| group_child_selected_bg(tc.theme)),
+        );
+        let eye = Rect::from_min_size(r.min, vec2(20.0, r.height()));
+        let lock = Rect::from_min_size(pos2(r.left() + 21.0, r.top()), vec2(19.0, r.height()));
+        for x in [20.5, 40.5] {
+            ui.painter()
+                .vline(r.left() + x, r.y_range(), Stroke::new(1.0, c.list_row_line));
+        }
+        let child = it.role == TreeRole::Child;
+        if child && e.common.visible {
+            glyphs::paint(
+                ui.painter(),
+                eye.shrink2(vec2(3.0, 8.0)),
+                Glyph::Eye,
+                tc.theme,
+                true,
+            );
+        }
+        if child && e.common.locked {
+            glyphs::paint(
+                ui.painter(),
+                lock.shrink2(vec2(4.0, 8.0)),
+                Glyph::Lock,
+                tc.theme,
+                true,
+            );
+        }
+        // the tree line: one thin vertical line per level at the left of the indented part
+        for j in 0..it.level {
+            ui.painter().vline(
+                tc.thumb_x + TREE_INDENT * j as f32 + 6.5,
+                r.y_range(),
+                Stroke::new(1.0, c.list_border),
+            );
+        }
+        let thumb = Rect::from_min_size(
+            pos2(tc.thumb_x + TREE_INDENT * it.level as f32, r.top() + 3.0),
+            vec2(tc.tpx, tc.tpx),
+        );
+        let bitmap_mask = matches!(it.role, TreeRole::Mask { bitmap: true, .. });
+        if tc.tpx > 0.0 && ui.is_rect_visible(thumb) {
+            let size = (tc.tpx as u32 * 2).max(16);
+            let tex = match (&it.owner, bitmap_mask) {
+                (Some(o), true) => {
+                    ui.painter().rect_filled(thumb, 0.0, Color32::BLACK);
+                    thumbs::mask_thumb(ui.ctx(), tc.st, tc.doc_id, tc.doc, o, e, size)
+                }
+                _ => {
+                    crate::widgets::checker(ui.painter(), thumb, 4.0, tc.theme);
+                    thumbs::element_thumb(ui.ctx(), tc.st, tc.doc_id, tc.doc_gen, tc.doc, e, size)
+                }
+            };
+            if let Some(tex) = tex {
+                let ts = tex.size_vec2();
+                let s = (thumb.width() / ts.x).min(thumb.height() / ts.y);
+                ui.painter().image(
+                    tex.id(),
+                    Rect::from_center_size(thumb.center(), ts * s),
+                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            }
+            ui.painter().rect_stroke(
+                thumb,
+                0.0,
+                if sel {
+                    Stroke::new(2.0, c.focus)
+                } else {
+                    Stroke::new(1.0, c.list_border)
+                },
+                StrokeKind::Inside,
+            );
+        }
+        let nr = Rect::from_min_max(
+            pos2(thumb.right() + 6.0, r.top() + 5.0),
+            pos2(r.right() - 4.0, r.bottom() - 5.0),
+        );
+        let toggles = RowToggles {
+            group: fp_engine::docops::tree_children(e).map(|_| is_open(e.id.0)),
+            mask: e.element_mask().map(|_| is_open(mask_key(e.id))),
+        };
+        let mut hits = (None, None);
+        if renaming {
+            let own = e.common.name.clone().unwrap_or_default();
+            if let Some(res) = common::inline_rename(ui, Id::new(("tree-rename", e.id.0)), nr, &own)
+            {
+                if let Some(n) = res {
+                    out.actions.push(Action::Run(
+                        "element.setName".into(),
+                        json!({"ids": [e.id.0], "name": n}),
+                    ));
+                }
+                ui.data_mut(|dd| dd.remove::<RowKind>(Id::new(RENAME)));
+            }
+        } else {
+            let name = if bitmap_mask && e.common.name.as_deref().is_none_or(str::is_empty) {
+                common::t("panel-layers-kind-bitmap-mask")
+            } else {
+                element_label(e)
+            };
+            let font = if sel {
+                tc.theme.bold(tc.theme.fonts.ui)
+            } else {
+                tc.theme.ui_font()
+            };
+            hits = name_with_toggles(
+                ui,
+                nr,
+                r.center().y,
+                &name,
+                font,
+                if tc.editable { c.text } else { c.text_weak },
+                c.icon_fg,
+                toggles,
+            );
+        }
+        if resp.clicked()
+            && let Some(p) = resp.interact_pointer_pos()
+        {
+            if let Some(k) = toggle_at(hits, e.id, p) {
+                out.toggles.push(k);
+            } else if child && eye.contains(p) && tc.editable {
+                out.actions.push(Action::Run(
+                    "element.setVisible".into(),
+                    json!({"ids": [e.id.0], "visible": !e.common.visible}),
+                ));
+            } else if child && lock.contains(p) && tc.editable {
+                out.actions.push(Action::Run(
+                    "element.setLocked".into(),
+                    json!({"ids": [e.id.0], "locked": !e.common.locked}),
+                ));
+            } else if tc.editable && p.x > lock.right() && !(child && e.common.locked) {
+                *out.click = Some(TreeClick {
+                    id: e.id,
+                    top: tc.top,
+                    role: it.role,
+                    toggle: tc.mods.range || tc.mods.toggle,
+                });
+            }
+        }
+        // a right-click on an object of a group selects it like a plain click before the
+        // context menu forms its states (Q-59 for object rows)
+        if resp.secondary_clicked() && tc.editable && child && !sel && !e.common.locked {
+            *out.click = Some(TreeClick {
+                id: e.id,
+                top: tc.top,
+                role: it.role,
+                toggle: false,
+            });
+        }
+        if (resp.double_clicked() || resp.triple_clicked())
+            && tc.editable
+            && resp
+                .interact_pointer_pos()
+                .is_none_or(|p| toggle_at(hits, e.id, p).is_none() && p.x > lock.right())
+        {
+            *out.rename_start = Some(RowKind::Element {
+                id: e.id,
+                layer: tc.layer,
+                index: 0,
+                editable: tc.editable,
+            });
+        }
+        out.menu_rows.push(resp);
+    }
 }
 
 /// Objekte, die ein Klick auf eine (Unter-)Ebenenzeile wählt: wie im Original nur die eigenen,

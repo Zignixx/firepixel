@@ -289,8 +289,10 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   ebenso ein Klick mit dem *Zeiger* bei gedrückter Alt-Taste (auf einer normalen Gruppe wählt Zeiger +
   Alt-Klick das getroffene Kind; Alt-Ziehen dupliziert weiterhin); *Hintere auswählen* wählt nie eine
   Maske. Ein Klick auf die Maskenminiatur im Ebenen-Bedienfeld wirkt wie *Maske bearbeiten* im
-  Kontextmenü: Die Maske wird gewählt, ihre Miniatur bekommt einen hellgrünen Rahmen und die Zeile ein
-  Maskensymbol in der zweiten Spalte; eine Bitmapmaske geht in die Bitmap-Bearbeitung. Die Ankerpunkte
+  Kontextmenü: Die Maske wird gewählt, ihre Miniatur bekommt einen hellgrünen Rahmen, die Zeile bleibt
+  hervorgehoben und zeigt ein Maskensymbol in der zweiten Spalte; eine Bitmapmaske geht in die
+  Bitmap-Bearbeitung. Ein Klick auf den Namen der Zeile wählt wieder das Objekt und rahmt dessen eigene
+  Miniatur blau (die Miniatur eines gewählten Objekts ist immer blau gerahmt). Die Ankerpunkte
   einer Maske aus einem einzelnen Pfad lassen sich mit der Teilauswahl ziehen, der Inhalt bleibt stehen.
   *Maske deaktivieren* schaltet die Maske ab; der Menüeintrag heißt dann *Maske aktivieren*, und die
   Maskenminiatur zeigt ein rotes X. *Maske löschen* fragt zuerst: *Anwenden* (Vorgabe) backt die Maske in
@@ -482,6 +484,24 @@ Wichtige Bedienfelder:
   Ebenenzeile macht sie zur aktuellen Ebene und lässt die Auswahl stehen; auf der Webebene sind die
   Einträge zum Freigeben für Seiten grau. *Maske hinzufügen* legt eine leere, verknüpfte Bitmapmaske an,
   die alles zeigt, und wählt die Maske.
+  **Gruppeninhalte (Firepixel-Erweiterung):** Eine Gruppenzeile zeigt direkt nach dem Namen ein kleines
+  „›“; ein Klick darauf listet die Objekte der Gruppe eingerückt unter der Zeile, mit einer dünnen
+  Linie links davon (jeweils mit Auge, Schloss, Miniatur und Namen; verschachtelte Gruppen haben ihr
+  eigenes „›“, offen wird das Zeichen zu „⌄“). Ein Klick auf eine solche Zeile wählt das Objekt genau
+  wie ein Klick mit dem Unterauswahl-Werkzeug (kein Schritt im Verlauf, der Eigenschafteninspektor
+  zeigt das Objekt); Umschalt+Klick nimmt es hinzu oder heraus. Doppelklick benennt es um, das Auge
+  blendet nur dieses Objekt aus. Solange ein Objekt in einer Gruppe gewählt ist (im Bedienfeld oder
+  mit der Unterauswahl auf der Leinwand), ist die Zeile der Gruppe blassgelb getönt, auch wenn die
+  Gruppe zugeklappt ist; bei aufgeklappter Gruppe ist die Zeile des Objekts selbst hervorgehoben.
+  Ein maskiertes Objekt zeigt nach dem Namen zusätzlich einen Pfeil im Kreis: er listet die Objekte,
+  aus denen die Maske besteht (den Maskenpfad, die Objekte einer Gruppenmaske oder eine Zeile
+  *Bitmap-Maske*). Ein Klick auf eine solche Zeile wählt die Maske zum Bearbeiten wie ein Klick auf
+  die Maskenminiatur; bei einem Objekt einer Gruppenmaske wird danach dieses Objekt gewählt
+  (Umschalt+Klick nimmt es hinzu oder heraus). Auf- oder Zugeklappt gehört zu jedem Objekt, gilt,
+  solange Firepixel läuft, und wird weder gespeichert noch im Verlauf geführt. Zeilen innerhalb
+  einer Gruppe lassen sich nicht ziehen (die Gruppe selbst umordnen oder *Ändern ▸ Anordnen*
+  verwenden). Der Eintrag *Gruppeninhalte anzeigen* im Bedienfeldmenü (Vorgabe: ein) schaltet all
+  das ab; das Bedienfeld sieht dann aus und arbeitet wie im Original.
 - **Seiten / Status:** Seiten und Animationsbilder, Masterseite, Zwiebelschicht. Ist eine
   Animationsinstanz gewählt, zeigt die Leinwand ihren Bewegungspfad (grüner Start, rotes Ende), und der
   Auswahlrahmen umschließt nur das aktuelle Bild.

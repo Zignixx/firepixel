@@ -957,6 +957,24 @@ pub fn build_panel_menu(st: &AppState, panel: PanelId) -> Vec<Node> {
             .map(grey),
         ),
         PanelId::AutoShapes => nodes.push(grey(("pmenu-autoshapes-more", "panel.autoShapes.more"))),
+        // Firepixel's own switch "Show Group Contents" after Thumbnail Options (FB-59 to FB-61)
+        PanelId::Layers
+            if st
+                .session
+                .registry()
+                .get("panel.layers.groupTree")
+                .is_some() =>
+        {
+            let (en, ck, sc) = command_state(st, "panel.layers.groupTree", None);
+            nodes.push(Node::Separator);
+            nodes.push(Node::Item {
+                label: clean_label(&t(&fp_i18n::command_key("panel.layers.groupTree"))).0,
+                shortcut: sc,
+                action: ItemAction::Command("panel.layers.groupTree".into()),
+                enabled: en,
+                checked: ck,
+            });
+        }
         // TW-131: URL library entries of the original (actions in the UI, model in fp-engine)
         PanelId::Url => nodes.extend(crate::panels::url_lib::menu_entries(st).into_iter().map(
             |e| match e {

@@ -139,6 +139,9 @@ class Firepixel:
     VIEW_SWITCHES = (
         ("view.coordinateTag", "View > Coordinate Tag", "coordinate_tag", False),
         ("view.tooltips", "View > Tooltips", "view_tooltips", True),
+        # FB-59 to FB-61: Firepixel's expandable group and mask rows in the Layers panel (default on) are off
+        # during the runs, so the panel lists the rows of the reference (config `fp.layers_group_tree`)
+        ("panel.layers.groupTree", "Layers options > Show Group Contents", "layers_group_tree", False),
     )
 
     def view_switch_state(self, cmd: str) -> bool | None:

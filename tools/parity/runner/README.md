@@ -1192,7 +1192,11 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   View ▸ Coordinate Tag (`view.coordinateTag`, default on) and View ▸ Tooltips switches Firepixel's widget tooltips
   (FB-37): the runner now sets `view.coordinateTag` to config `fp.coordinate_tag` (default false) and `view.tooltips`
   to `fp.view_tooltips` (default true, the reference shows its widget tooltips regardless of its switch), one log
-  line per switch (`fp View > Coordinate Tag: switched on -> off (view.coordinateTag, wanted off)`).
+  line per switch (`fp View > Coordinate Tag: switched on -> off (view.coordinateTag, wanted off)`). Since FB-59 to
+  FB-61 the same start step also sets Firepixel's Layers panel switch Show Group Contents (`panel.layers.groupTree`,
+  expandable group and mask rows, default on) to config `fp.layers_group_tree` (default false), so the Layers panel
+  lists the rows of the reference (log line `fp Layers options > Show Group Contents: switched on -> off …`). The
+  panel menu itself still carries the extra entry.
 - **No hover tooltip in flyout shots (TW-190, `toolbox/02_flyouts_*`):** after the press-and-hold that opens a tool
   flyout (`open` of a target with `hold_ms`) the pointer rested on the tool button, and the description tooltip
   (0.6 s delay) lay over the flyout in the shot (+1.2 to +25.7 points). The Firepixel side now sends `pointer_gone`

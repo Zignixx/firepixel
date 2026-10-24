@@ -177,7 +177,7 @@ fn pages_with_one_page() {
 
 #[test]
 fn layers_edit_mask_needs_a_mask() {
-    // Original (S2): 27 Einträge, Maske bearbeiten/deaktivieren/löschen grau ohne Maske
+    // Original (S2): 27 Einträge, Maske bearbeiten/deaktivieren/löschen grau ohne Maske (plus the Firepixel switch)
     let s2 = [
         "Neues Bild",
         "---",
@@ -208,6 +208,9 @@ fn layers_edit_mask_needs_a_mask() {
         "Maske löschen (grau)",
         "---",
         "Miniaturoptionen...",
+        // Firepixel extension (FB-59 to FB-61): Show Group Contents, on by default
+        "---",
+        "Gruppeninhalte anzeigen (✓)",
         "---",
         "Hilfe",
     ];

@@ -4,7 +4,7 @@
 use crate::app_state::Action;
 use crate::inspector::glyphs::{self, Glyph};
 use crate::theme::Theme;
-use egui::{Align2, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
+use egui::{Align2, Color32, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 
 /// Höhe der Fußleiste (Knöpfe 13 × 11 DLU).
 pub const FOOTER_H: f32 = 22.0;
@@ -140,6 +140,31 @@ pub fn row_tinted(ui: &mut Ui, height: f32, selected: bool, tint: bool) -> (Rect
         Stroke::new(1.0, c.list_row_line),
     );
     (rect, resp)
+}
+
+/// Like [`row`], with an own background `fill` for a row that is not selected itself (Layers
+/// panel: a group row while one of its objects is subselected, FB-60).
+pub fn row_fill(
+    ui: &mut Ui,
+    height: f32,
+    selected: bool,
+    fill: Option<Color32>,
+) -> (Rect, egui::Response) {
+    match fill {
+        Some(col) if !selected => {
+            let theme = Theme::current(ui.ctx());
+            let (rect, resp) =
+                ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::click_and_drag());
+            ui.painter().rect_filled(rect, 0.0, col);
+            ui.painter().hline(
+                rect.x_range(),
+                rect.bottom() - 0.5,
+                Stroke::new(1.0, theme.colors.list_row_line),
+            );
+            (rect, resp)
+        }
+        _ => row(ui, height, selected),
+    }
 }
 
 /// Ein Knopf der Fußleiste.

@@ -90,6 +90,7 @@ panel-states-delete = Status löschen
 panel-layers-opacity = Deckkraft
 panel-layers-web-layer = Webebene
 panel-layers-kind-bitmap = Bitmap
+panel-layers-kind-bitmap-mask = Bitmap-Maske
 panel-layers-kind-rectangle = Rechteck
 panel-layers-kind-path = Pfad
 panel-layers-kind-text = Text

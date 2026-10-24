@@ -269,8 +269,9 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   *Pointer* click with Alt held (on a normal group, Pointer + Alt-click selects the clicked child;
   Alt-drag still duplicates); *Select Behind* never picks a mask. A click on the mask thumbnail in the
   Layers panel works like the context menu's *Edit Mask*: the mask is selected, its thumbnail gets a
-  bright green frame and the row shows a mask icon in its second column; a bitmap mask goes into
-  bitmap editing. The anchors of a single-path mask move with the Subselection while the content stays.
+  bright green frame, the row stays highlighted and shows a mask icon in its second column; a bitmap
+  mask goes into bitmap editing. A click on the row's name selects the object again and frames its own
+  thumbnail blue (a selected object's thumbnail is always framed blue). The anchors of a single-path mask move with the Subselection while the content stays.
   *Disable Mask* turns the mask off; the menu entry then reads *Enable Mask* and the mask thumbnail
   shows a red X. *Delete Mask* asks first: *Apply* (the default) bakes the mask into the object, which
   becomes one bitmap; *Discard* removes the mask and keeps the object; *Cancel* does nothing.
@@ -446,6 +447,22 @@ Important panels:
   (*Merge Down* only when the object lies directly above a bitmap). A right-click on a layer row makes
   it the current layer and keeps the selection; on the web layer the share-to-pages entries are grey.
   *Add Mask* adds an empty, linked bitmap mask that shows everything and selects the mask.
+  **Group contents (Firepixel extension):** a group row shows a small "›" right after its name; a click
+  on it lists the group's objects indented below the row, with a thin line at their left (each with
+  eye, lock, thumbnail and name; nested groups have their own "›", and the marker turns into "⌄"
+  while open). A click on such a row selects that object exactly like a click with the Subselection
+  tool (no History step, the inspector shows the object); Shift+click adds or removes it.
+  Double-click renames it, the eye hides only that object. While an object inside a group is
+  selected (from the panel or with the Subselection on the canvas), the group's row is tinted pale
+  yellow, also while the group is collapsed; an open group shows the object's own row highlighted.
+  A masked object additionally shows a circled arrow after its name: it lists the objects that make
+  up the mask (the mask path, the objects of a group mask, or one row *Bitmap mask*). A click on
+  such a row selects the mask for editing like a click on the mask thumbnail; on an object of a
+  group mask it then selects that object (Shift+click adds or removes it). The open/closed state
+  belongs to each object, lasts while Firepixel runs and is neither saved nor part of History. Rows
+  inside a group cannot be dragged (reorder the group itself, or use *Modify ▸ Arrange*). The
+  panel menu entry *Show Group Contents* (on by default) switches all of this off; the panel then
+  looks and works like the original.
 - **Pages / States:** pages and animation frames, master page, onion skinning. When an animation
   instance is selected, the canvas shows its motion path (green start, red end), and the selection
   frame encloses only the current frame.

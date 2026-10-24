@@ -7168,6 +7168,23 @@ fn register_layer_menu(r: &mut CommandRegistry) {
                 Ok(CommandOutput::session())
             }),
     );
+    // Firepixel extension (FB-59 to FB-61): expandable group and mask rows in the Layers panel;
+    // a view preference, no History step
+    r.add(
+        cmd("panel.layers.groupTree")
+            .label("Gruppeninhalte anzeigen")
+            .describe("Gruppen- und Maskenzeilen im Ebenen-Bedienfeld aufklappbar: die Objekte einer Gruppe bzw. Maske stehen eingerückt darunter, ein Klick wählt sie wie das Unterauswahl-Werkzeug")
+            .checked(|s| crate::session::layers_group_tree(&s.prefs))
+            .run(|s, _| {
+                let on = crate::session::layers_group_tree(&s.prefs);
+                s.prefs.set(
+                    crate::session::LAYERS_GROUP_TREE_PREF,
+                    PrefValue::Bool(!on),
+                );
+                s.prefs_changed();
+                Ok(CommandOutput::session())
+            }),
+    );
 }
 
 // ---------------------------------------------------------------------- Status (6924)

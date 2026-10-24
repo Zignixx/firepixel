@@ -503,6 +503,18 @@ pub fn coordinate_tag(prefs: &crate::prefs::Preferences) -> bool {
     prefs.get_bool(COORDINATE_TAG_PREF, true)
 }
 
+/// Preference of Layers panel options ▸ Show Group Contents (Firepixel extension, FB-59 to
+/// FB-61): group rows get a toggle that lists their objects (and masked objects one that lists
+/// the objects of the mask) indented below; a click on such a row selects the object like the
+/// Subselection tool. Off: the panel lists top-level objects only, like the reference. On by
+/// default.
+pub const LAYERS_GROUP_TREE_PREF: &str = "Firepixel_LayersGroupTree";
+
+/// Whether Show Group Contents is on ([`LAYERS_GROUP_TREE_PREF`], default on).
+pub fn layers_group_tree(prefs: &crate::prefs::Preferences) -> bool {
+    prefs.get_bool(LAYERS_GROUP_TREE_PREF, true)
+}
+
 /// UI-Zustand, den Befehle schalten (Bedienfelder, Bildschirmmodus).
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct UiState {

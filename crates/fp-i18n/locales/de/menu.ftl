@@ -736,6 +736,8 @@ cmd-panel-layers-disableMask = Maske deaktivieren
 cmd-panel-layers-deleteMask = Maske löschen
     .description = Bedienfeldmenü: wie „modify.mask.deleteMask“
 cmd-panel-layers-thumbnailOptions = Miniaturoptionen...
+cmd-panel-layers-groupTree = &Gruppeninhalte anzeigen
+    .description = Macht Gruppen- und Maskenzeilen im Ebenen-Bedienfeld aufklappbar: die Objekte einer Gruppe bzw. Maske stehen eingerückt darunter, ein Klick wählt sie wie das Unterauswahl-Werkzeug
 
 ## Bedienfeldmenü 6924 (states)
 

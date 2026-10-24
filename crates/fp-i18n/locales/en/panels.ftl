@@ -90,6 +90,7 @@ panel-states-delete = Delete State
 panel-layers-opacity = Opacity
 panel-layers-web-layer = Web Layer
 panel-layers-kind-bitmap = Bitmap
+panel-layers-kind-bitmap-mask = Bitmap mask
 panel-layers-kind-rectangle = Rectangle
 panel-layers-kind-path = Path
 panel-layers-kind-text = Text

@@ -736,6 +736,8 @@ cmd-panel-layers-disableMask = Disable Mask
 cmd-panel-layers-deleteMask = Delete Mask
     .description = Panel menu: like “modify.mask.deleteMask”
 cmd-panel-layers-thumbnailOptions = Thumbnail Options...
+cmd-panel-layers-groupTree = Show &Group Contents
+    .description = Makes group and mask rows in the Layers panel expandable: the objects of a group or mask are listed indented below, a click selects them like the Subselection tool
 
 ## Bedienfeldmenü 6924 (states)
 

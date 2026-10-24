@@ -2581,3 +2581,86 @@ pub fn moved_index(i: usize, from: usize, to: usize) -> usize {
         i
     }
 }
+
+// ------------------------------------------------------------------ Layers panel tree (FB-59 to FB-61)
+
+/// Firepixel extension (FB-59, FB-60): the objects the Layers panel lists under the row of `e`
+/// when its group toggle is open. A plain group lists its children; a mask group with several
+/// objects lists its contents (without the mask); a masked single object whose content is a
+/// plain group lists that group's children. Smart shapes, symbols and leaf objects list nothing,
+/// and neither does a group without children (`None`).
+pub fn tree_children(e: &Element) -> Option<&[Arc<Element>]> {
+    fn group(x: &Element) -> Option<&[Arc<Element>]> {
+        match &x.kind {
+            ElementKind::Group(g) if g.smart_shape.is_none() && !g.children.is_empty() => {
+                Some(g.children.as_slice())
+            }
+            _ => None,
+        }
+    }
+    match e.masked_single() {
+        Some((content, _)) => match &content.kind {
+            ElementKind::Group(g) if !g.kind.is_mask() => group(content),
+            _ => None,
+        },
+        None => group(e),
+    }
+}
+
+/// What the mask toggle of a masked object lists in the Layers panel (FB-61).
+#[derive(Clone, Copy, Debug)]
+pub enum MaskMembers<'a> {
+    /// A bitmap mask: one row "Bitmap mask".
+    Bitmap(&'a Arc<Element>),
+    /// A vector mask made of one object (path, text …): one row with that object.
+    Single(&'a Arc<Element>),
+    /// A vector mask that is a group: one row per object of the group (nested groups expand
+    /// further through [`tree_children`]).
+    Group(&'a [Arc<Element>]),
+}
+
+/// The members of the mask of `e` (`None`: `e` is not masked).
+pub fn mask_members(e: &Element) -> Option<MaskMembers<'_>> {
+    let m = e.element_mask()?.element;
+    Some(match &m.kind {
+        ElementKind::Bitmap(_) => MaskMembers::Bitmap(m),
+        ElementKind::Group(g)
+            if !g.kind.is_mask() && g.smart_shape.is_none() && !g.children.is_empty() =>
+        {
+            MaskMembers::Group(g.children.as_slice())
+        }
+        _ => MaskMembers::Single(m),
+    })
+}
+
+/// Is `id` the mask of `e` or an object inside that mask?
+pub fn mask_contains(e: &Element, id: ElementId) -> bool {
+    mask_has_selected(e, &|x| x == id)
+}
+
+/// Firepixel extension (FB-60): is an object listed under the row of `e` selected — a child of
+/// [`tree_children`] at any depth, or the mask (or a mask member) of such a child? The Layers
+/// panel tints the row of `e` pale yellow then (a child subselected, `e` itself not selected).
+/// The mask of `e` itself does not count (mask editing has its own marks on the row).
+pub fn has_selected_descendant(e: &Element, selected: &dyn Fn(ElementId) -> bool) -> bool {
+    tree_children(e).is_some_and(|cs| {
+        cs.iter().any(|c| {
+            selected(c.id) || mask_has_selected(c, selected) || has_selected_descendant(c, selected)
+        })
+    })
+}
+
+/// Is the mask of `e` or an object inside it selected (`false`: `e` is not masked)?
+pub fn mask_has_selected(e: &Element, selected: &dyn Fn(ElementId) -> bool) -> bool {
+    fn deep(x: &Element, selected: &dyn Fn(ElementId) -> bool) -> bool {
+        selected(x.id)
+            || match &x.kind {
+                ElementKind::Group(g) => {
+                    g.children.iter().any(|c| deep(c, selected))
+                        || g.mask.as_ref().is_some_and(|m| deep(m, selected))
+                }
+                _ => false,
+            }
+    }
+    e.element_mask().is_some_and(|m| deep(m.element, selected))
+}
