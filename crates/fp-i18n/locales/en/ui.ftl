@@ -65,6 +65,9 @@ ui-preview-failed = Preview not possible: { $error }
 
 ## Footer: selection info, magnification, state controls
 ui-sel-bitmap-mode = Bitmap mode
+# FB-31 (Firepixel extension): pausing a running bitmap stroke with P
+ui-stroke-pause-hint = Press P on the keyboard to pause the current brush stroke.
+ui-stroke-paused = Stroke paused. It is safe to let go of mouse button or lift stylus. Click anywhere on the screen to resume current stroke. Hit Enter to apply paused stroke.
 ui-sel-document = { $format } (Document)
 ui-sel-objects = { $n } objects
 ui-sel-object = Object

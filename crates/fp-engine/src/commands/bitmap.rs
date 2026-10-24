@@ -234,6 +234,15 @@ pub(crate) fn dab_points(pts: &[Point], step: f32) -> Vec<Point> {
     stamps
 }
 
+/// FB-31: dab positions of a stroke whose points are split into segments at `breaks` (a resumed
+/// stroke): every segment starts with a dab at its first point, the segments are not joined.
+pub(crate) fn dab_points_segments(pts: &[Point], breaks: &[usize], step: f32) -> Vec<Point> {
+    crate::paint::split_segments(pts, breaks)
+        .into_iter()
+        .flat_map(|seg| dab_points(seg, step))
+        .collect()
+}
+
 /// Abstand der Radiergummi-Abdrücke: das Original setzt je Pixel einen Abdruck (gemessen: Strich
 /// 13 / Rand 2 löscht bei 6 px Abstand 81 %, bei 7 px 13 %).
 pub(crate) const ERASER_STEP: f32 = 1.0;
@@ -567,6 +576,10 @@ fn points_size(p: &Params, s: &Session) -> Result<(Vec<Point>, f32)> {
     ))
 }
 
+/// German source text of the `breaks` parameter of `bitmap.paint`, `bitmap.erase` and
+/// `bitmap.retouch` (FB-31, Firepixel extension).
+pub(crate) const BREAKS_PARAM_TEXT: &str = "Fortsetzungen eines angehaltenen Strichs: Indizes in `points`, an denen ein neues, nicht verbundenes Stück desselben Strichs beginnt (Firepixel-Erweiterung)";
+
 pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("bitmap.paint")
@@ -587,6 +600,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("newBitmap", ParamKind::Bool, "in ein neues Bitmap malen, auch wenn eine Bitmap ausgewählt ist (Zug außerhalb der Bitmap)")
             .opt("tool", ParamKind::Enum { values: vec!["brush".into(), "pencil".into()] }, "Werkzeug (Vorgabe: Pinsel)")
             .opt("draw", ParamKind::Json, "älterer Aufruf: Strich als Zeichenbefehl {command: tool.shape, params} – der Pinsel wird daraus gebildet")
+            .opt("breaks", ParamKind::Json, BREAKS_PARAM_TEXT)
             .run(|s, p| {
                 let (_pts, _size) = points_size(p, s)?;
                 let mut v = if p.value.is_object() { p.value.clone() } else { json!({}) };
@@ -610,6 +624,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 "Durchmesser",
             )
             .opt_default("round", ParamKind::Bool, json!(true), "runde Spitze")
+            .opt("breaks", ParamKind::Json, BREAKS_PARAM_TEXT)
             .opt_default(
                 "opacity",
                 ParamKind::Number {

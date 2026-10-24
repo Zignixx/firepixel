@@ -557,6 +557,22 @@ pub trait ScriptHost: Send + Sync {
     }
 }
 
+/// FB-31: commands that keep a paused bitmap stroke paused (view only: zoom, scroll, screen mode);
+/// every other command applies the stroke first.
+const PAUSE_KEEPING_COMMANDS: &[&str] = &[
+    "view.zoomIn",
+    "view.zoomOut",
+    "view.setZoom",
+    "view.zoomToRect",
+    "view.pan",
+    "view.setViewport",
+    "view.fitAll",
+    "view.fitSelection",
+    "view.toggleScreenMode",
+    "view.exitFullScreen",
+    "view.tooltips",
+];
+
 /// Werkzeugzustand der Sitzung.
 pub struct ToolState {
     /// Aktives Werkzeug.
@@ -969,6 +985,11 @@ impl Session {
     /// Führt einen Befehl aus (siehe Moduldoku).
     pub fn execute(&mut self, name: &str, params: Value) -> Result<CommandOutput> {
         self.end_live_text_view();
+        // FB-31: a menu command applies a paused bitmap stroke first; zooming and scrolling keep
+        // the pause
+        if !PAUSE_KEEPING_COMMANDS.contains(&name) {
+            self.apply_paused_stroke()?;
+        }
         let reg = Arc::clone(&self.registry);
         let cmd = reg
             .get(name)
@@ -1404,9 +1425,26 @@ impl Session {
         })
     }
 
+    /// FB-31 (Firepixel extension): state of a pausable bitmap stroke of the active tool (Brush,
+    /// Pencil, Eraser, the retouch tools): the user interface sends [`tools::ToolKey::Pause`] for
+    /// the P key only while it is [`tools::StrokePause::Painting`] and shows the status text.
+    pub fn tool_stroke_pause(&self) -> tools::StrokePause {
+        self.tools.machine.stroke_pause()
+    }
+
+    /// FB-31: applies a paused bitmap stroke (one history row, as on release); no-op otherwise.
+    pub fn apply_paused_stroke(&mut self) -> Result<()> {
+        if self.tools.machine.stroke_pause() == tools::StrokePause::Paused {
+            self.finish_tool()?;
+        }
+        Ok(())
+    }
+
     /// Rückgängig im aktiven Dokument.
     pub fn undo(&mut self) -> Result<()> {
         self.end_live_text_view();
+        // FB-31: a paused stroke is applied first, then undone like any stroke
+        self.apply_paused_stroke()?;
         // a Vector Path stroke with the mouse button held ignores Ctrl+Z (FB-07)
         if self.tools.machine.blocks_history() {
             return Ok(());
@@ -1587,6 +1625,7 @@ impl Session {
     /// Wiederholen im aktiven Dokument.
     pub fn redo(&mut self) -> Result<()> {
         self.end_live_text_view();
+        self.apply_paused_stroke()?;
         if self.tools.machine.blocks_history() {
             return Ok(());
         }
@@ -1601,6 +1640,7 @@ impl Session {
 
     /// Springt im Verlauf (Klick im Verlauf-Bedienfeld).
     pub fn history_go_to(&mut self, position: usize) -> Result<()> {
+        self.apply_paused_stroke()?;
         let d = self.doc_mut()?;
         if let Some(snap) = d.history.go_to(position) {
             self.apply_history_snapshot(snap);

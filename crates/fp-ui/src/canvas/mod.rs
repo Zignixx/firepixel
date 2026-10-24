@@ -3995,21 +3995,40 @@ fn selection_info(st: &AppState) -> String {
     })
 }
 
-fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
-    let theme = Theme::current(ui.ctx());
-    let c = &theme.colors;
-    ui.painter().rect_filled(rect, 0.0, c.frame_bg);
-    let now = ui.input(|i| i.time);
+/// FB-31 (Firepixel extension): status text of a pausable bitmap stroke – the hint "press P"
+/// while a stroke is painted, the instructions while it is paused; `None` without a stroke.
+pub fn stroke_pause_status(st: &AppState) -> Option<String> {
+    match st.session.tool_stroke_pause() {
+        fp_engine::StrokePause::Painting => Some(fp_i18n::t("ui-stroke-pause-hint")),
+        fp_engine::StrokePause::Paused => Some(fp_i18n::t("ui-stroke-paused")),
+        fp_engine::StrokePause::Idle => None,
+    }
+}
+
+/// Text on the left of the status line at time `now`: the stroke pause text (FB-31), otherwise a
+/// recent message, the canvas info or the selection info.
+pub fn footer_status(st: &AppState, now: f64) -> String {
+    if let Some(s) = stroke_pause_status(st) {
+        return s;
+    }
     let info = st
         .session
         .active_id()
         .and_then(|id| st.canvases.get(&id))
         .and_then(|c| c.info.clone());
-    let status = match (&st.status, info) {
+    match (&st.status, info) {
         (Some((s, t)), _) if now - t < AppState::STATUS_SECONDS => s.clone(),
         (_, Some(i)) => i,
         _ => selection_info(st),
-    };
+    }
+}
+
+fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
+    let theme = Theme::current(ui.ctx());
+    let c = &theme.colors;
+    ui.painter().rect_filled(rect, 0.0, c.frame_bg);
+    let now = ui.input(|i| i.time);
+    let status = footer_status(st, now);
     let Some(d) = st.session.active() else { return };
     let (frames, frame) = (d.frame_count(), d.frame);
     let (w, h) = d

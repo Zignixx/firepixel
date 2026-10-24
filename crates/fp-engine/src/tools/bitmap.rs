@@ -3,9 +3,9 @@
 
 use super::snap::Snapper;
 use super::{
-    Cursor, EdgeMode, Invocation, MarqueeStyle, Overlay, PointerKind, ToolContext, ToolEvent,
-    ToolId, ToolInput, ToolKey, ToolMachine, ToolResponse, constrain_angle, constrain_rect, dist,
-    pt_json, rect_json, size_label,
+    Cursor, EdgeMode, Invocation, MarqueeStyle, Overlay, PointerKind, StrokePause, ToolContext,
+    ToolEvent, ToolId, ToolInput, ToolKey, ToolMachine, ToolResponse, constrain_angle,
+    constrain_rect, dist, pt_json, rect_json, size_label,
 };
 use crate::docops::{self, HitOptions};
 use crate::selection::SelectMode;
@@ -612,6 +612,11 @@ pub struct BrushTool {
     escaped: bool,
     /// Eingefrorene Vorschau seit dem Escape.
     frozen: Option<Overlay>,
+    /// FB-31 (Firepixel extension): the stroke is paused (P); the button may be released, the next
+    /// press resumes the same stroke as a new segment.
+    paused: bool,
+    /// FB-31: indices into `points` where the stroke was resumed after a pause.
+    breaks: Vec<usize>,
 }
 
 /// Abstand (px) des Zugbeginns von der gewählten Bitmap, ab dem der Pinsel ein neues Bitmap malt
@@ -674,6 +679,8 @@ impl BrushTool {
             painted: false,
             escaped: false,
             frozen: None,
+            paused: false,
+            breaks: Vec::new(),
         }
     }
 
@@ -879,15 +886,21 @@ impl BrushTool {
         };
         let pos = Point::new(pos.x + self.offset, pos.y + self.offset);
         if line {
-            let first = self.points[0];
+            // straight line from the first point of the running segment (FB-31: of the resumed part)
+            let seg = self.breaks.last().copied().unwrap_or(0);
+            let Some(&first) = self.points.get(seg) else {
+                return;
+            };
             let pos = if self.id == ToolId::Brush {
                 snap_brush_line(first, pos)
             } else {
                 pos
             };
-            self.points = vec![first, pos];
+            self.points.truncate(seg + 1);
+            self.points.push(pos);
             if let Some(v) = vel {
-                self.vels = vec![self.vels[0], v];
+                self.vels.truncate(seg + 1);
+                self.vels.push(v);
             }
             if let Some(l) = self.live.as_mut() {
                 if vel.is_some() {
@@ -903,6 +916,60 @@ impl BrushTool {
             if let Some(l) = self.live.as_mut() {
                 l.push_with_velocity(pos, vel);
             }
+        }
+    }
+
+    /// FB-31: resumes the paused stroke at `pos` – a new segment of the same stroke, not joined to
+    /// the last point by a line.
+    fn resume(&mut self, pos: Point, time_ms: u64) {
+        self.paused = false;
+        let p = Point::new(pos.x + self.offset, pos.y + self.offset);
+        // the speed starts at 0 like at a press (no jump from the last point)
+        let vel = (!self.vels.is_empty()).then_some(0.0);
+        self.raw = vec![pos];
+        self.times = vec![time_ms];
+        if let Some(v) = vel {
+            // one speed per point, so the new segment's speeds line up with its points
+            let fill = self.vels.last().copied().unwrap_or(0.0);
+            self.vels.resize(self.points.len(), fill);
+            self.vels.push(v);
+        }
+        self.breaks.push(self.points.len());
+        self.points.push(p);
+        if let Some(l) = self.live.as_mut() {
+            l.start_segment(p, vel);
+        }
+    }
+
+    /// Applies the running stroke: the command with all points (and the segments of a resumed
+    /// stroke, FB-31) as one history row.
+    fn commit(&mut self, ctx: &ToolContext) -> ToolResponse {
+        let mut params = std::mem::take(&mut self.params);
+        params["points"] = Value::Array(self.points.iter().map(|p| pt_json(*p)).collect());
+        if !self.vels.is_empty() {
+            params["velocities"] = json!(self.vels);
+        }
+        if !self.breaks.is_empty() {
+            params["breaks"] = json!(self.breaks);
+        }
+        let escaped = self.escaped;
+        self.cancel();
+        // Pinsel (01/14), Buntstift und Radiergummi (03/16): Esc danach → „Bitmapmodus beenden“
+        self.painted = true;
+        let mut commands = vec![Invocation::new(self.command(), params)];
+        if escaped && bitmap_target(ctx) {
+            // Esc im Zug: der Zeiger ist schon aktiv, der Bitmapmodus bleibt bis zum nächsten
+            // Esc offen (dann „Bitmapmodus beenden“, re 62 §1.4)
+            commands.push(Invocation::new(
+                "modify.editBitmap",
+                json!({"worked": true}),
+            ));
+        }
+        ToolResponse {
+            commands,
+            cursor: self.cursor(),
+            overlay: self.overlay_for(ctx),
+            ..ToolResponse::default()
         }
     }
 
@@ -957,6 +1024,21 @@ impl ToolMachine for BrushTool {
         if !ctx.has_document {
             return ToolResponse::default();
         }
+        // FB-31 (Firepixel extension): P pauses the running stroke; while paused, Enter applies
+        // it and so does Escape (safe default, nothing is lost)
+        match ev.input {
+            ToolInput::Key(ToolKey::Pause) => {
+                if self.stroke_pause() == StrokePause::Painting {
+                    self.paused = true;
+                    return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
+                }
+                return ToolResponse::default();
+            }
+            ToolInput::Key(ToolKey::Enter | ToolKey::Escape) if self.paused => {
+                return self.commit(ctx);
+            }
+            _ => {}
+        }
         if ev.input == ToolInput::Key(ToolKey::Escape) {
             if self.active && self.id == ToolId::Brush {
                 // Pinsel: Esc mitten im Zug bricht nicht ab (gemessen r14_esc_mid = ganzer Strich),
@@ -994,6 +1076,10 @@ impl ToolMachine for BrushTool {
         };
         self.hover = Some(*pos);
         match kind {
+            // FB-31: a paused stroke resumes with the next press; moves and the release only move
+            // the brush outline, nothing is painted (a press with Space held pans the view)
+            PointerKind::Down if self.paused && !ev.mods.space => self.resume(*pos, ev.time_ms),
+            _ if self.paused => {}
             PointerKind::Down if self.id == ToolId::Eraser && !bitmap_target(ctx) => {
                 // Radiergummi ohne Bitmap: das Original hebt nur die Auswahl auf (gemessen, R1 gewählt)
                 self.cancel();
@@ -1025,40 +1111,31 @@ impl ToolMachine for BrushTool {
             }
             PointerKind::Up if self.active => {
                 self.extend(*pos, ev.mods.shift, ev.time_ms);
-                let mut params = std::mem::take(&mut self.params);
-                params["points"] = Value::Array(self.points.iter().map(|p| pt_json(*p)).collect());
-                if !self.vels.is_empty() {
-                    params["velocities"] = json!(self.vels);
-                }
-                let escaped = self.escaped;
-                self.cancel();
-                // Pinsel (01/14), Buntstift und Radiergummi (03/16): Esc danach → „Bitmapmodus beenden“
-                self.painted = true;
-                let mut commands = vec![Invocation::new(self.command(), params)];
-                if escaped && bitmap_target(ctx) {
-                    // Esc im Zug: der Zeiger ist schon aktiv, der Bitmapmodus bleibt bis zum nächsten
-                    // Esc offen (dann „Bitmapmodus beenden“, re 62 §1.4)
-                    commands.push(Invocation::new(
-                        "modify.editBitmap",
-                        json!({"worked": true}),
-                    ));
-                }
-                return ToolResponse {
-                    commands,
-                    cursor: self.cursor(),
-                    overlay: self.overlay_for(ctx),
-                    ..ToolResponse::default()
-                };
+                return self.commit(ctx);
             }
             _ => {}
         }
         ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor())
     }
 
-    fn finish(&mut self, _ctx: &ToolContext) -> ToolResponse {
+    fn finish(&mut self, ctx: &ToolContext) -> ToolResponse {
+        // FB-31: a paused stroke is applied first (tool change, menu command, undo)
+        if self.paused {
+            return self.commit(ctx);
+        }
         // Werkzeugwechsel oder Menübefehl mitten im Zug: Zug verwerfen
         self.cancel();
         ToolResponse::default()
+    }
+
+    fn stroke_pause(&self) -> StrokePause {
+        if !self.active || self.deselect_only || self.escaped {
+            StrokePause::Idle
+        } else if self.paused {
+            StrokePause::Paused
+        } else {
+            StrokePause::Painting
+        }
     }
 
     fn overlay(&self) -> Vec<Overlay> {
@@ -1084,6 +1161,8 @@ impl BrushTool {
         self.deselect_only = false;
         self.escaped = false;
         self.frozen = None;
+        self.paused = false;
+        self.breaks.clear();
     }
 
     /// Laufender Malvorgang (Tests, Vorschau).

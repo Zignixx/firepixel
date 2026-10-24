@@ -11,8 +11,8 @@
 //! (`StampToolSource` = 0 ausgerichtet, 1 fest).
 
 use super::{
-    Cursor, Invocation, Overlay, PointerKind, ToolContext, ToolEvent, ToolId, ToolInput, ToolKey,
-    ToolMachine, ToolResponse, dist, pt_json,
+    Cursor, Invocation, Overlay, PointerKind, StrokePause, ToolContext, ToolEvent, ToolId,
+    ToolInput, ToolKey, ToolMachine, ToolResponse, dist, pt_json,
 };
 use fp_geom::Point;
 use serde_json::{Value, json};
@@ -109,6 +109,10 @@ pub struct RetouchTool {
     /// Live preview of the running stroke (target bitmap at the press, computed copy; stamp
     /// PAR 05/04, the other brush modes FB-14a).
     live: Option<RetouchLive>,
+    /// FB-31 (Firepixel extension): the stroke is paused (P); the next press resumes it.
+    paused: bool,
+    /// FB-31: indices into `points` where the stroke was resumed after a pause.
+    breaks: Vec<usize>,
 }
 
 /// Running retouch stroke: original image of the target bitmap and the last computed preview.
@@ -186,6 +190,60 @@ impl RetouchTool {
             painted: false,
             target_ok: false,
             live: None,
+            paused: false,
+            breaks: Vec::new(),
+        }
+    }
+
+    /// First point of the running segment (FB-31: of the part after the last resume).
+    fn segment_start(&self) -> usize {
+        self.breaks.last().copied().unwrap_or(0)
+    }
+
+    /// Ends the running stroke without applying it.
+    fn drop_stroke(&mut self) {
+        self.points.clear();
+        self.breaks.clear();
+        self.active = false;
+        self.paused = false;
+        self.live = None;
+    }
+
+    /// Applies the running stroke (`bitmap.retouch` with all points and, after a pause, the
+    /// segments; one history row). `end` = the release point (none: Enter/Escape/tool change
+    /// while paused).
+    fn commit(&mut self, ctx: &ToolContext, end: Option<(Point, bool)>) -> ToolResponse {
+        self.active = false;
+        self.paused = false;
+        self.live = None;
+        if !self.target_ok {
+            // no editable bitmap: no effect, no history step, no message (RE 57 §3.2)
+            self.drop_stroke();
+            if let Some((pos, _)) = end {
+                self.target_ok = retouch_target(ctx, pos).is_some();
+            }
+            return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
+        }
+        if let Some((pos, shift)) = end {
+            if shift {
+                self.points.truncate(self.segment_start() + 1);
+            }
+            if self.points.last().is_none_or(|l| dist(*l, pos) > 0.0) {
+                self.points.push(pos);
+            }
+        }
+        let p = self.stroke_params(ctx, &self.points);
+        self.points.clear();
+        self.breaks.clear();
+        self.painted = true;
+        if let Some((pos, _)) = end {
+            self.target_ok = retouch_target(ctx, pos).is_some();
+        }
+        ToolResponse {
+            commands: vec![Invocation::new("bitmap.retouch", p)],
+            overlay: self.overlay_for(ctx),
+            cursor: self.cursor(),
+            ..ToolResponse::default()
         }
     }
 
@@ -263,6 +321,9 @@ impl RetouchTool {
             "mode": prm.mode, "points": pts.iter().map(|q| pt_json(*q)).collect::<Vec<Value>>(), "size": prm.size,
             "round": prm.round, "soft": prm.soft, "strength": prm.strength, "range": prm.range, "spacing": prm.spacing,
         });
+        if !self.breaks.is_empty() {
+            p["breaks"] = json!(self.breaks);
+        }
         match self.id {
             ToolId::RubberStamp => {
                 let (dx, dy) = self.offset.unwrap_or((0.0, 0.0));
@@ -384,11 +445,24 @@ impl ToolMachine for RetouchTool {
         if !ctx.has_document {
             return ToolResponse::default();
         }
+        // FB-31 (Firepixel extension): P pauses the running stroke; while paused, Enter applies
+        // it and so does Escape (safe default, nothing is lost)
+        match ev.input {
+            ToolInput::Key(ToolKey::Pause) => {
+                if self.stroke_pause() == StrokePause::Painting {
+                    self.paused = true;
+                    return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
+                }
+                return ToolResponse::default();
+            }
+            ToolInput::Key(ToolKey::Enter | ToolKey::Escape) if self.paused => {
+                return self.commit(ctx, None);
+            }
+            _ => {}
+        }
         if ev.input == ToolInput::Key(ToolKey::Escape) {
             if self.active {
-                self.points.clear();
-                self.active = false;
-                self.live = None;
+                self.drop_stroke();
                 return ToolResponse::default();
             }
             // wie im Original: mit Bitmap als Ziel → Zeiger, Bitmap bleibt gewählt (PARITAET_A L39)
@@ -409,6 +483,15 @@ impl ToolMachine for RetouchTool {
                 self.id == ToolId::RedEyeRemoval || retouch_target(ctx, *pos).is_some();
         }
         match kind {
+            // FB-31: a paused stroke resumes with the next press (a new segment of the same
+            // stroke, not with Space held: that pans); moves and the release only move the outline
+            PointerKind::Down if self.paused && !ev.mods.space => {
+                self.paused = false;
+                self.breaks.push(self.points.len());
+                self.points.push(*pos);
+                self.update_live(ctx);
+            }
+            _ if self.paused => {}
             PointerKind::Down
                 if !ctx.selection.elements.is_empty()
                     && !super::bitmap::bitmap_target(ctx)
@@ -461,7 +544,7 @@ impl ToolMachine for RetouchTool {
             PointerKind::Move if self.active && self.id == ToolId::RedEyeRemoval => {}
             PointerKind::Move if self.active => {
                 if ev.mods.shift {
-                    self.points.truncate(1);
+                    self.points.truncate(self.segment_start() + 1);
                 }
                 if self.points.last().is_none_or(|l| dist(*l, *pos) >= 0.5) {
                     self.points.push(*pos);
@@ -492,30 +575,7 @@ impl ToolMachine for RetouchTool {
                 };
             }
             PointerKind::Up if self.active => {
-                self.active = false;
-                self.live = None;
-                if !self.target_ok {
-                    // no editable bitmap: no effect, no history step, no message (RE 57 §3.2)
-                    self.points.clear();
-                    self.target_ok = retouch_target(ctx, *pos).is_some();
-                    return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
-                }
-                if ev.mods.shift {
-                    self.points.truncate(1);
-                }
-                if self.points.last().is_none_or(|l| dist(*l, *pos) > 0.0) {
-                    self.points.push(*pos);
-                }
-                let pts = std::mem::take(&mut self.points);
-                self.painted = true;
-                let p = self.stroke_params(ctx, &pts);
-                self.target_ok = retouch_target(ctx, *pos).is_some();
-                return ToolResponse {
-                    commands: vec![Invocation::new("bitmap.retouch", p)],
-                    overlay: self.overlay_for(ctx),
-                    cursor: self.cursor(),
-                    ..ToolResponse::default()
-                };
+                return self.commit(ctx, Some((*pos, ev.mods.shift)));
             }
             _ => {}
         }
@@ -538,5 +598,23 @@ impl ToolMachine for RetouchTool {
 
     fn feedback(&self, ctx: &ToolContext) -> Vec<Overlay> {
         self.overlay_for(ctx)
+    }
+
+    fn finish(&mut self, ctx: &ToolContext) -> ToolResponse {
+        // FB-31: a paused stroke is applied first (tool change, menu command, undo)
+        if self.paused {
+            return self.commit(ctx, None);
+        }
+        ToolResponse::default()
+    }
+
+    fn stroke_pause(&self) -> StrokePause {
+        if !self.active || self.id == ToolId::RedEyeRemoval || !self.target_ok {
+            StrokePause::Idle
+        } else if self.paused {
+            StrokePause::Paused
+        } else {
+            StrokePause::Painting
+        }
     }
 }

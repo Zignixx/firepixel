@@ -116,6 +116,39 @@ pub struct PaintJob {
     /// Geschwindigkeit (`VELf`) je Punkt aus der Zeigerbewegung; fehlende Punkte nehmen den letzten
     /// Wert, leer = [`PAINT_VELOCITY`] (Skripte, Züge ohne Zeitstempel).
     pub velocities: Vec<f32>,
+    /// FB-31 (Firepixel extension): indices into `points` where a paused stroke was resumed. Each
+    /// index starts a new segment that is not joined to the previous one by a line, but all
+    /// segments form ONE stroke: they are rendered into one stroke layer and composited once, so
+    /// the overlap of a semi-transparent stroke does not get darker. Empty = one segment.
+    pub breaks: Vec<usize>,
+}
+
+/// FB-31: the segments of a stroke whose points are split at `breaks` (indices where a new segment
+/// starts; out-of-range, unsorted or repeated indices are ignored). Without breaks: one segment.
+pub fn split_segments<'a>(points: &'a [Point], breaks: &[usize]) -> Vec<&'a [Point]> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    for &b in breaks {
+        if b > start && b < points.len() {
+            out.push(&points[start..b]);
+            start = b;
+        }
+    }
+    if start < points.len() || out.is_empty() {
+        out.push(&points[start..]);
+    }
+    out
+}
+
+/// FB-31: `breaks` parameter of the paint commands (`[i, …]`, indices into `points`).
+pub fn parse_breaks(v: Option<&Value>) -> Vec<usize> {
+    let Some(Value::Array(a)) = v else {
+        return Vec::new();
+    };
+    a.iter()
+        .filter_map(|b| b.as_u64())
+        .map(|b| b as usize)
+        .collect()
 }
 
 /// Startwert aus den Punkten (Aufrufe ohne `seed`: gleiches Ergebnis bei gleichen Punkten).
@@ -223,6 +256,7 @@ impl PaintJob {
         default_size: f32,
     ) -> PaintJob {
         let points = parse_points(p.get("points"));
+        let breaks = parse_breaks(p.get("breaks"));
         let f = |k: &str| p.get(k).and_then(|v| v.as_f64());
         let size = f("size").unwrap_or(default_size as f64).clamp(0.5, 5000.0) as f32;
         let percent = |k: &str| f(k).unwrap_or(100.0).clamp(0.0, 100.0);
@@ -248,6 +282,7 @@ impl PaintJob {
                 trim_end: false,
                 seed: 1,
                 velocities: Vec::new(),
+                breaks,
             };
         }
         let mut brush = p
@@ -312,12 +347,31 @@ impl PaintJob {
                 _ => Vec::new(),
             },
             points,
+            breaks,
         }
     }
 
-    /// Punkte des Strichs: Einzelklick = ein Abdruck, beim Pinsel ohne den Endpunkt.
-    fn stroke_points(&self) -> Vec<Point> {
-        let mut pts = self.points.clone();
+    /// FB-31: the segments of the stroke (one without breaks).
+    pub fn segments(&self) -> Vec<&[Point]> {
+        split_segments(&self.points, &self.breaks)
+    }
+
+    /// Stroke points of every segment with the index of its first point in `points`.
+    fn stroke_segments(&self) -> Vec<(usize, Vec<Point>)> {
+        let mut start = 0;
+        self.segments()
+            .into_iter()
+            .map(|seg| {
+                let s = start;
+                start += seg.len();
+                (s, self.stroke_points_of(seg))
+            })
+            .collect()
+    }
+
+    /// Punkte eines Strichsegments: Einzelklick = ein Abdruck, beim Pinsel ohne den Endpunkt.
+    fn stroke_points_of(&self, seg: &[Point]) -> Vec<Point> {
+        let mut pts = seg.to_vec();
         if self.trim_end && pts.len() >= 2 {
             let n = pts.len();
             let (a, b) = (pts[n - 2], pts[n - 1]);
@@ -368,7 +422,10 @@ impl PaintJob {
 
     /// Bereich, den der Strich höchstens berührt.
     pub fn cover(&self) -> IRect {
-        points_cover(&self.points, self.margin())
+        let m = self.margin();
+        self.segments()
+            .into_iter()
+            .fold(IRect::default(), |r, seg| r.union(&points_cover(seg, m)))
     }
 
     /// Neues Bild für `region`: Ausgangspixel `base` (fehlt = transparent) mit dem Strich bzw. dem
@@ -384,13 +441,16 @@ impl PaintJob {
         }
         if let Some(e) = &self.erase {
             let dab = crate::commands::bitmap::Dab::stroke(e.size, e.round, e.edge);
-            let stamps: Vec<Point> = crate::commands::bitmap::dab_points(
-                &self.points,
-                crate::commands::bitmap::ERASER_STEP,
-            )
-            .into_iter()
-            .filter(|s| !dab.bounds(*s).intersect(&region).is_empty())
-            .collect();
+            // every segment of a resumed stroke starts with its own first dab (FB-31); all dabs
+            // form one stroke, so the opacity still applies once
+            let stamps: Vec<Point> = self
+                .segments()
+                .into_iter()
+                .flat_map(|seg| {
+                    crate::commands::bitmap::dab_points(seg, crate::commands::bitmap::ERASER_STEP)
+                })
+                .filter(|s| !dab.bounds(*s).intersect(&region).is_empty())
+                .collect();
             crate::commands::bitmap::erase_dabs(&mut dst, &dab, &stamps, e.opacity, sel);
             return dst;
         }
@@ -431,8 +491,6 @@ impl PaintJob {
     #[cfg(all(feature = "vector", feature = "render"))]
     fn stroke_layer(&self, region: IRect) -> RgbaImage {
         use fp_vector as fv;
-        let pts = self.stroke_points();
-        let mut contour = fv::PathContour::from_points(&pts, false);
         // Stiftdaten je Punkt wie ein echter Zug im Original: eigener Zufalls-Startwert je Punkt
         // (sonst wiederholt jedes Segment dieselbe Streuung), Druck 1, Geschwindigkeit wie bei
         // erzeugten Pfaden (`VELf` 0,125, 07 §6.3) bzw. aus der Zeigerbewegung (`velocities`)
@@ -443,14 +501,23 @@ impl PaintJob {
                 .copied()
                 .unwrap_or(PAINT_VELOCITY)
         };
-        contour.dynamics = (0..pts.len())
-            .map(|i| fv::PointDynamics {
-                pressure: 1.0,
-                velocity: vel(i),
-                seed: point_seed(self.seed, i),
+        // FB-31: one contour per segment of a resumed stroke, all in the one stroke layer
+        let contours = self
+            .stroke_segments()
+            .into_iter()
+            .map(|(start, pts)| {
+                let mut contour = fv::PathContour::from_points(&pts, false);
+                contour.dynamics = (0..pts.len())
+                    .map(|i| fv::PointDynamics {
+                        pressure: 1.0,
+                        velocity: vel(start + i),
+                        seed: point_seed(self.seed, start + i),
+                    })
+                    .collect();
+                contour
             })
             .collect();
-        let mut path = fv::VectorPath::new(vec![contour]);
+        let mut path = fv::VectorPath::new(contours);
         path.random_seed = self.seed;
         let mut stroke = fv::Stroke::new(fp_render::convert::brush_params(&self.brush), self.color);
         if self.brush.texture_blend > 0 || self.brush.texture_edge > 0 {
@@ -467,19 +534,24 @@ impl PaintJob {
     fn stroke_layer(&self, region: IRect) -> RgbaImage {
         let mut out =
             RgbaImage::new(region).unwrap_or_else(|_| RgbaImage::empty_at(region.left, region.top));
-        if let Some(m) = crate::commands::bitmap::stroke_mask(
-            &self.stroke_points(),
-            self.brush.diameter as f32,
-            self.brush.antialiased,
-            self.brush.shape != 0,
-        ) {
-            let c = self.color.to_rgba8();
+        // FB-31: the segments of a resumed stroke share one layer (the higher coverage wins)
+        let c = self.color.to_rgba8();
+        for (_, pts) in self.stroke_segments() {
+            let Some(m) = crate::commands::bitmap::stroke_mask(
+                &pts,
+                self.brush.diameter as f32,
+                self.brush.antialiased,
+                self.brush.shape != 0,
+            ) else {
+                continue;
+            };
             let (l, t) = out.origin();
             let w = out.width().max(1);
             for (k, px) in out.data_mut().iter_mut().enumerate() {
                 let v = m.get(l + (k % w) as i32, t + (k / w) as i32);
-                if v > 0 {
-                    *px = [c.r, c.g, c.b, ((v as u32 * c.a as u32 + 127) / 255) as u8];
+                let a = ((v as u32 * c.a as u32 + 127) / 255) as u8;
+                if v > 0 && a > px[3] {
+                    *px = [c.r, c.g, c.b, a];
                 }
             }
         }
@@ -726,8 +798,16 @@ impl LivePaint {
         self.job.points.push(p);
         let n = self.job.points.len();
         let margin = self.job.margin();
-        // das bisherige Endstück (ohne Endpunkt, Zählerstand der Stempel) und das neue Stück
-        let tail = points_cover(&self.job.points[n.saturating_sub(3)..], margin);
+        // das bisherige Endstück (ohne Endpunkt, Zählerstand der Stempel) und das neue Stück –
+        // nur im laufenden Segment (FB-31: ein fortgesetzter Strich ist nicht verbunden)
+        let seg = self
+            .job
+            .breaks
+            .last()
+            .copied()
+            .filter(|b| *b < n)
+            .unwrap_or(0);
+        let tail = points_cover(&self.job.points[n.saturating_sub(3).max(seg)..], margin);
         let mut rects = vec![tail];
         let new_cover = self.cover.union(&tail);
         // Wächst die Strichfläche, fallen am alten Rand evtl. abgeschnittene Randpixel weg (07 §6.6
@@ -770,6 +850,38 @@ impl LivePaint {
         }
         self.cover = new_cover;
         self.render_rects(&rects);
+    }
+
+    /// FB-31: resumes a paused stroke at `p`: a new segment of the same stroke starts there (not
+    /// joined to the previous point by a line) and everything painted so far is computed again
+    /// (the stroke area grows at once, see the edge rule in [`Self::push_with_velocity`]).
+    pub fn start_segment(&mut self, p: Point, velocity: Option<f32>) {
+        let n = self.job.points.len();
+        if n == 0 {
+            self.push_with_velocity(p, velocity);
+            return;
+        }
+        if let Some(v) = velocity {
+            let fill = self
+                .job
+                .velocities
+                .last()
+                .copied()
+                .unwrap_or(PAINT_VELOCITY);
+            self.job.velocities.resize(n, fill);
+            self.job.velocities.push(v);
+        }
+        self.job.breaks.push(n);
+        self.job.points.push(p);
+        let cover = self.job.cover();
+        let all = self.painted.union(&cover);
+        self.cover = cover;
+        self.render_rects(&[all]);
+    }
+
+    /// Indices where the segments of a resumed stroke start (FB-31; empty = one segment).
+    pub fn breaks(&self) -> &[usize] {
+        &self.job.breaks
     }
 
     /// Ersetzt die Punktfolge (Umschalt: gerade Linie) und rechnet alles neu.
@@ -1002,6 +1114,7 @@ mod tests {
             trim_end: true,
             seed: 7,
             velocities: Vec::new(),
+            breaks: Vec::new(),
         }
     }
 

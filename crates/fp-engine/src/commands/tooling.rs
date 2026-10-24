@@ -2,7 +2,7 @@
 //! Verlaufsgriffe und die Retusche-Werkzeuge (`bitmap.retouch`). Wie alle Befehle landen sie im
 //! Verlauf und sind für MCP/JSF aufrufbar.
 
-use super::bitmap::{Dab, dab_points};
+use super::bitmap::{BREAKS_PARAM_TEXT, Dab, dab_points, dab_points_segments};
 use super::select::bitmap_for;
 use super::{DOC, sel_err, take_ids, target_ids, with_doc};
 use crate::command::{CommandOutput, CommandRegistry, ParamKind, Params, cmd};
@@ -619,6 +619,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt_default("confineToBounds", ParamKind::Bool, json!(false), "Verwischen: Auf Grenzen beschränken (aus = das Bitmap wächst, wo der Strich über den Rand hinausläuft)")
             .opt("replaceStrength", ParamKind::Integer { min: Some(0), max: Some(255) }, "Farbe ersetzen: Stärke 0..255 (Vorgabe 200)")
             .opt("fromImage", ParamKind::Bool, "Farbe ersetzen: Von-Farbe aus der Grafik unter dem Startpunkt")
+            .opt("breaks", ParamKind::Json, BREAKS_PARAM_TEXT)
             .run(|s, p| {
                 let mode = p.str("mode")?;
                 let pts = p.points("points")?;
@@ -718,6 +719,7 @@ fn retouch_params(p: &Params, mode: &str, fill: Rgba8) -> Result<Retouch> {
         },
         confine: p.bool_or("confineToBounds", false)?,
         grow: false,
+        breaks: crate::paint::parse_breaks(p.get("breaks")),
     })
 }
 
@@ -731,24 +733,33 @@ fn retouch_dispatch(
     sel: Option<&fp_raster::Mask>,
     page: Option<&RgbaImage>,
 ) {
+    // FB-31: a resumed stroke has several segments. Dodge, burn, blur and sharpen take the
+    // coverage of the whole stroke (one pass, the overlap is not worked twice); smudge and the
+    // stamp carry pixels along the path, so each segment starts afresh at its press point
     match prm.mode.as_str() {
         "dodge" | "burn" => retouch_cover(img, pts, prm, sel),
         "blur" | "sharpen" => retouch_blur(img, pts, prm, sel),
         "smudge" => {
-            // FB-15 (RE spec 57 section 3): a smudge that starts on the bitmap runs past its edge
-            // and grows the bitmap; one that starts outside only acts where it reaches the bitmap
-            // (no new object), and "Confine to boundaries" keeps every smear inside the edge
-            let grow = !prm.confine
-                && pts
-                    .first()
-                    .is_some_and(|q| in_rect(&bitmap, q.x.floor() as i32, q.y.floor() as i32));
-            let prm = Retouch {
-                grow,
-                ..prm.clone()
-            };
-            smudge(img, pts, &prm, sel, page);
+            for seg in crate::paint::split_segments(pts, &prm.breaks) {
+                // FB-15 (RE spec 57 section 3): a smudge that starts on the bitmap runs past its
+                // edge and grows the bitmap; one that starts outside only acts where it reaches
+                // the bitmap (no new object), and "Confine to boundaries" keeps every smear inside
+                let grow = !prm.confine
+                    && seg
+                        .first()
+                        .is_some_and(|q| in_rect(&bitmap, q.x.floor() as i32, q.y.floor() as i32));
+                let prm = Retouch {
+                    grow,
+                    ..prm.clone()
+                };
+                smudge(img, seg, &prm, sel, page);
+            }
         }
-        _ => retouch(img, pts, prm, sel),
+        _ => {
+            for seg in crate::paint::split_segments(pts, &prm.breaks) {
+                retouch(img, seg, prm, sel);
+            }
+        }
     }
 }
 
@@ -827,7 +838,10 @@ pub(crate) fn retouch_preview(
             if from_image {
                 replace_from_image(&mut prm, img, start);
             }
-            super::retouch_px::replace_color(img, pts, &prm, sel);
+            let breaks = crate::paint::parse_breaks(p.get("breaks"));
+            for seg in crate::paint::split_segments(pts, &breaks) {
+                super::retouch_px::replace_color(img, seg, &prm, sel);
+            }
             true
         }
         _ => {
@@ -865,6 +879,7 @@ fn replace_or_red_eye(
         Some(replace_params(p)?)
     };
     let prefs = s.prefs.clone();
+    let breaks = crate::paint::parse_breaks(p.get("breaks"));
     let mut changed = false;
     with_doc(s, |d| {
         let (path, _) = bitmap_for(d, pts.first().copied(), &BasicGeometry)
@@ -902,7 +917,12 @@ fn replace_or_red_eye(
                     if *from_image {
                         replace_from_image(&mut prm, &img, pts[0]);
                     }
-                    replace_color(&mut img, pts, &prm, sel.as_ref())
+                    // FB-31: each segment of a resumed stroke in turn, one history step
+                    let mut any = false;
+                    for seg in crate::paint::split_segments(pts, &breaks) {
+                        any |= replace_color(&mut img, seg, &prm, sel.as_ref());
+                    }
+                    any
                 } else {
                     false
                 };
@@ -1012,6 +1032,8 @@ struct Retouch {
     confine: bool,
     /// Smudge: the stroke may grow the bitmap past its edge (set by [`retouch_dispatch`]).
     grow: bool,
+    /// FB-31: indices into the points where a paused stroke was resumed (`breaks`).
+    breaks: Vec<usize>,
 }
 
 fn rgb_to_hsv(p: [u8; 4]) -> (f32, f32, f32) {
@@ -1098,7 +1120,7 @@ fn stroke_cover(dab: &Dab, stamps: &[Point], work: fp_geom::IRect) -> Vec<f32> {
 /// ein zweiter Zug verstärkt.
 fn retouch_cover(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_raster::Mask>) {
     let dab = Dab::stroke(prm.size, prm.round, prm.soft * 100.0);
-    let stamps = dab_points(pts, 1.0);
+    let stamps = dab_points_segments(pts, &prm.breaks, 1.0);
     let reach = stamps
         .iter()
         .fold(fp_geom::IRect::default(), |r, s| r.union(&dab.bounds(*s)));
@@ -1138,7 +1160,7 @@ fn retouch_cover(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<
 /// 3×3-Mittel weicht dort weniger als eine halbe Stufe ab).
 fn retouch_blur(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_raster::Mask>) {
     let dab = Dab::stroke(prm.size, prm.round, prm.soft * 100.0);
-    let stamps = dab_points(pts, 1.0);
+    let stamps = dab_points_segments(pts, &prm.breaks, 1.0);
     let reach = stamps
         .iter()
         .fold(fp_geom::IRect::default(), |r, s| r.union(&dab.bounds(*s)));

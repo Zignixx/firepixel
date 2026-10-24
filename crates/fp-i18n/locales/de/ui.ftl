@@ -65,6 +65,9 @@ ui-preview-failed = Vorschau nicht möglich: { $error }
 
 ## Fußleiste: Auswahlinfo, Vergrößerung, Status-Steuerung
 ui-sel-bitmap-mode = Bitmapmodus
+# FB-31 (Firepixel extension): pausing a running bitmap stroke with P
+ui-stroke-pause-hint = P auf der Tastatur hält den aktuellen Pinselstrich an.
+ui-stroke-paused = Strich angehalten. Maustaste loslassen oder Stift abheben ist jetzt sicher. Klick auf die Leinwand setzt den Strich fort, Enter wendet ihn an.
 ui-sel-document = { $format } (Dokument)
 ui-sel-objects = { $n } Objekte
 ui-sel-object = Objekt

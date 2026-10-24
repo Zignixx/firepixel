@@ -689,3 +689,4 @@ cmdtext-klick-auf-eine-ebenenzeile-diese-objekte-b0f033 = click on a layer row: 
 cmdtext-ziel-ebenen-id-ebene-oder-unterebene = target layer ID (layer or sublayer)
 cmdtext-kopien-statt-verschieben-alt = copies instead of moving (Alt)
 cmdtext-wie-das-skalieren-werkzeug-eine-reine-ac-1789a5 = like the Scale tool: a pure axis scale of a single selected text is turned into font size and horizontal scale instead of being stored as a matrix
+cmdtext-fortsetzungen-eines-angehaltenen-strichs-0b4f66 = continuations of a paused stroke: indices in `points` where a new, unconnected piece of the same stroke begins (Firepixel extension)

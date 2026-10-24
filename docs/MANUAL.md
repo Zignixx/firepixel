@@ -135,6 +135,21 @@ is smeared in up to the end of the stroke). The Firepixel option **Confine to bo
 Smudge inspector keeps the smear inside the bitmap edge. **Blur** across the edge grows the bitmap by
 up to 2 px.
 
+**Pausing a stroke (Firepixel extension):** while you paint a stroke with Brush, Pencil, Eraser or one
+of the retouch tools (Blur, Sharpen, Dodge, Burn, Smudge, Rubber Stamp, Replace Color), the status line
+reads "Press P on the keyboard to pause the current brush stroke." Press **P** with the mouse button
+still down (or the stylus on the tablet): the stroke is paused, and you can release the button or lift
+the stylus, move freely (only the brush outline follows the pointer, nothing is painted) and zoom or
+scroll. The next press on the canvas continues the **same** stroke from that point (the parts are not
+joined by a line); **P** pauses again. Because it stays one stroke, a semi-transparent brush does not
+get darker where the parts overlap, unlike two separate strokes (the eraser removes the overlap once,
+Dodge/Burn/Blur/Sharpen work it once; Smudge and Rubber Stamp start afresh at each press). **Enter**
+applies the paused stroke as one History row named after the tool. **Esc**, a tool change, a menu
+command, Undo or Redo also apply the paused stroke first, so nothing is lost; Undo then takes the whole
+stroke back. Without a running stroke, P keeps its toolbox shortcut. Scripts and MCP send the key
+`pause` to `tool_event`; the commands `bitmap.paint`, `bitmap.erase` and `bitmap.retouch` take the
+resumed parts as `breaks` (indices into `points`).
+
 **Pen:** while you draw a path, a click on its last anchor retracts that point's outgoing handle, so the next
 segment leaves it straight; dragging on it pulls the point out again as a symmetric curve point (Alt moves only the
 outgoing handle, Ctrl moves the point, Shift snaps to 45°). A click on an interior curve point turns it into a

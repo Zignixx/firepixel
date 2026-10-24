@@ -82,6 +82,22 @@ pub enum ToolKey {
     Home,
     /// Ende.
     End,
+    /// FB-31 (Firepixel extension): pause the running bitmap stroke (the user interface sends it for
+    /// the P key only while [`ToolMachine::stroke_pause`] reports [`StrokePause::Painting`]).
+    Pause,
+}
+
+/// FB-31 (Firepixel extension): state of a bitmap stroke that can be paused with P.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum StrokePause {
+    /// No pausable stroke is running.
+    #[default]
+    Idle,
+    /// A stroke is being painted (button or stylus down); P pauses it.
+    Painting,
+    /// The stroke is paused: the button may be released, the next press on the canvas resumes the
+    /// same stroke, Enter (or Escape, a tool change, a menu command, undo) applies it.
+    Paused,
 }
 
 /// Bearbeiten-Befehle, die ein laufender Werkzeugvorgang selbst behandelt (Text-Editor).
@@ -560,6 +576,10 @@ pub trait ToolMachine: Send {
     /// (Vector Path, FB-07)?
     fn blocks_history(&self) -> bool {
         false
+    }
+    /// FB-31: state of a pausable bitmap stroke (Brush, Pencil, Eraser, the retouch tools).
+    fn stroke_pause(&self) -> StrokePause {
+        StrokePause::Idle
     }
 }
 

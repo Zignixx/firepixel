@@ -344,7 +344,7 @@ pub fn tool_defs() -> Vec<ToolDef> {
                     "events": {"type": "array", "items": {"type": "object", "properties": {
                         "type": {"type": "string", "enum": ["down", "move", "up", "double", "key", "text"]},
                         "x": {"type": "number"}, "y": {"type": "number"},
-                        "key": {"type": "string", "enum": ["escape", "enter", "up", "down", "left", "right", "backspace", "delete", "tab"]},
+                        "key": {"type": "string", "enum": ["escape", "enter", "up", "down", "left", "right", "backspace", "delete", "tab", "pause"]},
                         "text": {"type": "string"},
                         "shift": {"type": "boolean"}, "alt": {"type": "boolean"}, "ctrl": {"type": "boolean"}, "space": {"type": "boolean"},
                         "pressure": {"type": "number", "minimum": 0, "maximum": 1}
@@ -1485,6 +1485,7 @@ fn parse_event(e: &Value) -> Result<ToolEvent, String> {
                 "backspace" => ToolKey::Backspace,
                 "delete" | "del" => ToolKey::Delete,
                 "tab" => ToolKey::Tab,
+                "pause" => ToolKey::Pause,
                 other => return Err(fp_i18n::tr!("err-mcp-unknown-key", key = other)),
             };
             ToolInput::Key(k)

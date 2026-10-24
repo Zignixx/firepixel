@@ -689,3 +689,4 @@ cmdtext-klick-auf-eine-ebenenzeile-diese-objekte-b0f033 = Klick auf eine Ebenenz
 cmdtext-ziel-ebenen-id-ebene-oder-unterebene = Ziel-Ebenen-ID (Ebene oder Unterebene)
 cmdtext-kopien-statt-verschieben-alt = Kopien statt Verschieben (Alt)
 cmdtext-wie-das-skalieren-werkzeug-eine-reine-ac-1789a5 = wie das Skalieren-Werkzeug: eine reine Achsenskalierung eines einzeln gewählten Texts wird in Schriftgröße und horizontale Skalierung umgerechnet statt als Matrix gespeichert
+cmdtext-fortsetzungen-eines-angehaltenen-strichs-0b4f66 = Fortsetzungen eines angehaltenen Strichs: Indizes in `points`, an denen ein neues, nicht verbundenes Stück desselben Strichs beginnt (Firepixel-Erweiterung)

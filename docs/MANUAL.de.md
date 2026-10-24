@@ -142,6 +142,24 @@ zum Strichende hineingeschmiert). Die Firepixel-Option **Auf Grenzen beschränke
 Verwischen hält das Verwischen innerhalb des Bitmaprands. **Weichzeichner** über den Rand vergrößert
 die Bitmap um bis zu 2 px.
 
+**Strich anhalten (Firepixel-Erweiterung):** Während Sie mit Pinsel, Bleistift, Radiergummi oder einem
+der Retusche-Werkzeuge (Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel,
+Farbe ersetzen) einen Strich malen, steht in der Statuszeile „P auf der Tastatur hält den aktuellen
+Pinselstrich an.“ Drücken Sie **P**, solange die Maustaste noch gedrückt ist (bzw. der Stift aufliegt):
+Der Strich ist angehalten, Sie können die Maustaste loslassen oder den Stift abheben, frei bewegen (nur
+der Pinselumriss folgt dem Zeiger, gemalt wird nichts) und zoomen oder scrollen. Der nächste Klick auf
+die Leinwand setzt **denselben** Strich an dieser Stelle fort (die Teile werden nicht durch eine Linie
+verbunden); **P** hält erneut an. Weil es ein Strich bleibt, wird ein halbtransparenter Pinsel dort, wo
+sich die Teile überlappen, nicht dunkler – anders als bei zwei getrennten Strichen (der Radiergummi
+radiert die Überlappung einmal, Abwedler/Nachbelichter/Weich- und Scharfzeichner bearbeiten sie
+einmal; Verwischen und Stempel beginnen bei jedem Klick neu). **Enter** wendet den angehaltenen Strich
+als eine Verlaufszeile mit dem Namen des Werkzeugs an. Auch **Esc**, ein Werkzeugwechsel, ein
+Menübefehl, Rückgängig oder Wiederholen wenden den angehaltenen Strich zuerst an, es geht also nichts
+verloren; Rückgängig nimmt danach den ganzen Strich zurück. Ohne laufenden Strich bleibt P das
+Werkzeugkürzel. Skripte und MCP senden die Taste `pause` an `tool_event`; die Befehle `bitmap.paint`,
+`bitmap.erase` und `bitmap.retouch` erhalten die fortgesetzten Teile als `breaks` (Indizes in
+`points`).
+
 **Stift:** Beim Zeichnen eines Pfads zieht ein Klick auf seinen letzten Ankerpunkt die ausgehende Tangente dieses
 Punkts ein, sodass das nächste Segment ihn gerade verlässt; Ziehen auf dem Punkt zieht ihn wieder als symmetrischen
 Kurvenpunkt auf (Alt bewegt nur die ausgehende Tangente, Strg verschiebt den Punkt, Umschalt rastet auf 45° ein).

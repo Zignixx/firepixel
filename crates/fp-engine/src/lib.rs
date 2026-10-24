@@ -74,6 +74,6 @@ pub use selection::{Clipboard, PointRef, SelectMode, Selection, SelectionHistory
 pub use session::{DocId, DocumentState, PageKey, ScriptHost, Session, SessionEvent};
 pub use shortcuts::{Shortcut, ShortcutSet};
 pub use tool_follow::ToolStyle;
-pub use tools::{Modifiers, Overlay, ToolEvent, ToolId, ToolKey, ToolResponse};
+pub use tools::{Modifiers, Overlay, StrokePause, ToolEvent, ToolId, ToolKey, ToolResponse};
 pub use view::ViewState;
 pub use warnings::{TargetWarning, WarningChoice};

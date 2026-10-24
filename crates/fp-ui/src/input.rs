@@ -466,6 +466,26 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
                         continue;
                     }
                 }
+                // FB-31 (Firepixel extension): P pauses a running bitmap stroke (Brush, Pencil,
+                // Eraser, retouch tools); while paused, P does nothing. Without a running stroke P
+                // keeps its toolbox shortcut.
+                if key == Key::P && !ctrl && !modifiers.alt {
+                    match st.session.tool_stroke_pause() {
+                        fp_engine::StrokePause::Painting => {
+                            if !repeat {
+                                send(
+                                    ctx,
+                                    st,
+                                    ToolInput::Key(ToolKey::Pause),
+                                    tool_mods(modifiers),
+                                );
+                            }
+                            continue;
+                        }
+                        fp_engine::StrokePause::Paused => continue,
+                        fp_engine::StrokePause::Idle => {}
+                    }
+                }
                 // Werkzeugtasten (Pfeile, Entf, Esc, Eingabe) zuerst an das Werkzeug; nur wenn es
                 // nichts tut, an die Menükürzel (z. B. Pfeil = Verschieben ohne Auswahl)
                 if let Some(tk) = tool_key(key)
