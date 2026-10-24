@@ -3,9 +3,9 @@
 Firepixel aims to behave like the reference application button by button. This page explains how that is
 measured, what the figures mean, where the method stops, and gives the current per-unit result.
 
-**Current state (full run 43 over all 49 units, 24 Oct 2026, on top of runs 42 … 33):**
-**48 equal except for design**, 0 real deviations, **1 unclear** (`xs-context-menus`, TW-231), 0 under-measured.
-**Proven 1:1: 98.0 %** (48 / 49; all 49 units are sufficiently measured). Measurement quota over all 49 units:
+**Current state (full run 43 over all 49 units, 24 Oct 2026, on top of runs 42 … 33; TW-231 settled by the hand check CHK-1):**
+**49 equal except for design**, 0 real deviations, 0 unclear, 0 under-measured.
+**Proven 1:1: 100.0 %** (49 / 49; all 49 units are sufficiently measured). Measurement quota over all 49 units:
 **88.0 %** (1095 / 1244 steps). Canvas image pairs within 1 %: **195 / 224**. Run 43 played all 49 units (1310 steps)
 with runner R-36 and the new F90 runner settings (Firepixel's View ▸ Coordinate Tag off, View ▸ Tooltips on) on preview
 `2026-10-24_08-38` (`main` at `22355408`: v0.2.11 plus tester feedback batch 7, F88 to F97). No Firepixel-side step
@@ -13,14 +13,15 @@ status changed; every value the runner compares reads as in each unit's newest e
 runs 33 to 42 (TW-204 to TW-208, TW-212, TW-214 to TW-216, TW-219, Q-65) read as before. The batch 7 changes show where
 expected: the dither density field in the fill row (F95), the Marquee list in the Pointer inspector (F94), the Screentone
 entry (F95), the Path and Image Editing panels with a scroll bar and the docked panels' lists 2 px shorter (F92), the
-mask thumbnail as luma (F88a) and View ▸ Coordinate Tag in the View menu (F90). One Firepixel-only value changed without
-an explained cause: the context menu's Delete on the line L1 left it in place (`xs-context-menus/15_effect_delete_result`
-7 objects, 6 in every earlier run; the reference side is `unmapped`), so `xs-context-menus` is unclear (TW-231, to
-reproduce by hand). Four reference-side steps of `filters-adjust-color` became `unsupported` (the live-filter "+" menu
+mask thumbnail as luma (F88a) and View ▸ Coordinate Tag in the View menu (F90). One Firepixel-only value changed:
+`xs-context-menus/15_effect_delete_result` read 7 objects (6 in every earlier run; the reference side is `unmapped`).
+The hand check CHK-1 (24 Oct 2026) showed a runner artefact, not a regression: the canvas context menu has no Delete
+entry, and the runner's label click "Löschen" fell back to a window-wide search and hit another "… löschen" button
+(TW-231, runner item R-37), so `xs-context-menus` stays equal except for design. Four reference-side steps of `filters-adjust-color` became `unsupported` (the live-filter "+" menu
 did not open; runner row TW-232) and `tool-autoshapes/10` is `ok` on the reference side again.
 
 **Units: 49.** Over the 48 units classified before run 24 (without the measurement unit `xs-select-behind`, added on
-19 Oct 2026): 47 / 0 / 1 / 0, proven 1:1 97.9 %, quota 87.9 % (1086 / 1235; run 17 alone: 86.3 %), canvas pairs
+19 Oct 2026): 48 / 0 / 0 / 0, proven 1:1 100.0 %, quota 87.9 % (1086 / 1235; run 17 alone: 86.3 %), canvas pairs
 186 / 215.
 
 ## Method: scripted comparison runs
@@ -143,7 +144,7 @@ after the planned restart).
 
 **Measurement quota** = steps with both sides `ok` / steps without an `unsupported` or `skipped` side (repeated
 steps count with their second attempt). **Proven 1:1** = units "equal except for design" / sufficiently
-measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 to 29, 32, 34 to 36, 39 and 42, 98.0 % after runs 30, 33, 38, 40, 41 and 43, 95.9 % after runs 31 and 37); since
+measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 to 29, 32, 34 to 36, 39, 42 and 43 (after the hand check CHK-1), 98.0 % after runs 30, 33, 38, 40 and 41, 95.9 % after runs 31 and 37); since
 run 15 no unit is under-measured, so both figures are the same.
 
 ## Limits
@@ -183,6 +184,12 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
   R-35 had taken Firepixel's handle from the bounds, so in run 41 its press landed inside the F87 frame and moved the
   text. The frame's drawing (line and handle colour) is seen only in Firepixel's shot and in the click-test A4-66
   (TW-220).
+- **Text clicks into context menus:** after a `right_click` the runner sets no `popup_rect`, so a label click such as
+  "Löschen" falls back to a window-wide `find(text)` with non-exact matching and can hit any "… löschen" control in the
+  window (TW-231: in run 43 the Properties inspector's "Stil löschen", in earlier builds the dock's "Auswahl löschen",
+  which deleted the selection and made `xs-context-menus/15_effect_delete_result` read 6 since run 3; the canvas context
+  menu has no Delete entry). Until runner item R-37 limits such clicks to the open menu and reports a missing entry as
+  `unmapped`, a Firepixel-only value after a context-menu label click is no evidence.
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images
   cannot be captured.
 
@@ -273,7 +280,7 @@ its History read-backs (`panel-layers/22`, `inspector-fields/25`, `color-popup/2
 | `tool-autoshapes` | tools | equal except for design | run 43: 100.0 % (40 / 40), was 97.5 % (39 / 40): `10_scale_result` is `ok` on the reference side again (run 34: another application's window took the foreground); 27 / 27 canvas pairs within 1 % at the run 34 values. The reference's inspector is expanded again (TW-197; `07_inspector_head_normal` 65.5 → 30.2 %, the overview 26.6 → 19.4 %, its drags and page 34 px higher). Firepixel's shots pixel-identical to run 34 except the overview and the dither density field in `07` |
 | `export-results` | preview / export | equal except for design | run 43: 81.8 % (9 / 11), unchanged; 4 / 4 canvas pairs within 1 %. The reference needed the documented double-click to open its export-area preview in `13` (value `if_no_dialog` fallback, run 33: Enter sufficed); Firepixel's shots pixel-identical to run 33 except the overview |
 | `color-popup` | colour | equal except for design | run 43: 77.4 % (24 / 31), unchanged since run 40; 1 / 4 canvas pairs within 1 % as in run 40. **TW-206 still confirmed** (#80808080 after Enter); the reference's History read-back of `23_*` reads 0 (run 40: 1; Firepixel 0 in both). **F89 / F97:** the pop-up slider steps `23` read every value of run 40 (no Undo inside them, no click outside an open slider), the slider shots pixel-identical apart from the dither density field (`23_alpha_slider_drag_pressed`, `17_drag_red_result`); overview and `01` as above. `15_click_out_result` and `21_undo` (reference side) as before |
-| `xs-context-menus` | cross-cutting | unclear | run 43: 70.4 % (19 / 27), unchanged; was equal except for design. **New TW-231:** in `15_effect_delete_result` (T04, L1 selected by script, right-click on L1 at 175,330, the context menu's Delete) Firepixel's element count reads 7 after the click (runs 3 to 33: 6, i.e. L1 deleted); the reference side is `unmapped` as always, so the value is not compared, but the same step deleted L1 in every earlier run; cause not determined (a changed right-click selection or the menu click under the runner's new tooltips setting), to reproduce by hand. Every other value as in run 33 (`15_effect_duplicate_result` 7 in all runs). Firepixel's shot of the marquee context menu `05_bitmap_marquee_open` starts 18 px further right (the check-mark column cut off; entries and states unchanged; pair 35.5 → 38.2 %), `03_path_open` differs in one column, `04_text_open` behind the menu |
+| `xs-context-menus` | cross-cutting | equal except for design | run 43: 70.4 % (19 / 27), unchanged; first read as unclear by TW-231, equal except for design again after the hand check CHK-1 (24 Oct 2026). **TW-231 is a runner artefact (runner item R-37):** in `15_effect_delete_result` (T04, L1 selected by script, right-click at 175,330, then the label click "Löschen") Firepixel's element count reads 7 (runs 3 to 33: 6); the canvas context menu has the same 28 entries and no Delete entry in both previews `2026-10-24_08-38` and `2026-10-23_22-35` (none in its Bearbeiten submenu either), and without a `popup_rect` the runner's window-wide non-exact fallback clicked the Properties "Stil löschen" button (907,973; nothing happens) in run 43 and the dock's "Auswahl löschen" (1572,641; deletes the selection, 6) in the earlier builds; the reference side is `unmapped` ("label not found") as always. Every other value as in run 33 (`15_effect_duplicate_result` 7 in all runs; Duplicate sits in the Bearbeiten submenu, which the step never opens). Firepixel's shot of the marquee context menu `05_bitmap_marquee_open` starts 18 px further right (the check-mark column cut off; entries and states unchanged; pair 35.5 → 38.2 %), `03_path_open` differs in one column, `04_text_open` behind the menu |
 | `xs-preferences` | cross-cutting | equal except for design | run 43: 85.0 % (17 / 20), unchanged since run 32; 2 / 3 canvas pairs within 1 % at the run 33 values (`06` 3.10 %); Firepixel's pen preview `07_edit_pen_preview_result` differs in one anchor (11 px), the rest pixel-identical; `03`, `04`, `10`, `18` as before |
 | `xs-windows-tabs` | cross-cutting | equal except for design | run 43: 73.7 % (14 / 19), unchanged since run 34. Firepixel's start screen reads "Version 0.2.11" (`16`, `19`; run 34: 0.2.6), its window shots carry the Marquee list (F94) and `12_workspace_switch_open` its menu 2 164 px; values as in run 34. The reference's Properties inspector was found collapsed at the run end (56 px, after this unit's panel steps) and expanded again |
 | `xs-file-formats` | cross-cutting | equal except for design | run 43: 85.7 % (18 / 21), unchanged; 4 / 4 canvas pairs within 1 %. Firepixel's opened JPEG `02` reads "Hintergrund" as current layer (`activeLayer` 1, run 33: "Ebene 1"; F83's bottom-most unlocked layer; not compared); start screen "Version 0.2.11"; the opened files' window shots carry the Marquee list. The reference was restarted as planned before the unit, and the unit-start tool stroke logged "not set" on both sides; no step status changed. `05` and `15` fail on both sides as before |
@@ -283,7 +290,7 @@ its History read-backs (`panel-layers/22`, `inspector-fields/25`, `color-popup/2
 | `xs-canvas` | cross-cutting | equal except for design | run 43: 91.7 % (22 / 24), unchanged since run 34; 1 / 8 canvas pairs within 1 % at the run 34 values (BA-098: the zoom shots pixel-identical). Firepixel's window shots carry the Marquee list (F94), `17_drag_clip_pressed` the Layers rows (F83, F92), `11_grid_show_normal`, `05` and `20` the painted Pointer at another place (the pointer's last position) |
 | `xs-select-behind` | cross-cutting | equal except for design | run 43: 100.0 % (9 / 9), unchanged; 9 / 9 canvas pairs within 1 % at their run 39 values; both programs' shots pixel-identical to run 39 and every compared value as before |
 
-Totals over all 49 units (full run 43): **48 / 0 / 1 / 0** (proven 1:1 **98.0 %**). Step level: 1095 of 1244
+Totals over all 49 units (full run 43, after the hand check CHK-1): **49 / 0 / 0 / 0** (proven 1:1 **100.0 %**, 49 / 49). Step level: 1095 of 1244
 measurable steps `ok` on both sides (**88.0 %**; counted as before, with the Firepixel-only step
 `toolbox/17_ai_tools_normal` as `ok`); over the 48 units before run 24: 1086 of 1235 (87.9 %). The 1310 steps: 1094 `ok`
 on both sides, 79 `unmapped` and 37 `unsupported` on both sides, 10 `error` on both sides, 20 reference-side `error`
@@ -298,8 +305,10 @@ Firepixel-side** (run 42: 34 and 21; the 21 Firepixel-side errors are the same s
 `menu-modify-a/05_rotate_canvas_result` is back at its run 33 value (1.69 → 3.53 %, the reference's page place), the
 four `inspector-stroke/04, 05` pairs fall by 0.07–0.09 points (Firepixel's path display of F65), `tool-text/02` rises
 to 0.41 % (the reference's text entry), and every other canvas pair reads its baseline value; over the 48 old units 186
-of 215. One class changed: `xs-context-menus` equal except for design → unclear (TW-231). Compared values: none changed
-on Firepixel's side; Firepixel-only values changed in `xs-context-menus/15_effect_delete_result` (7, was 6; TW-231), in
+of 215. No class changed: `xs-context-menus` first read as unclear (TW-231), and the hand check CHK-1 showed a runner
+artefact (runner item R-37), so it stays equal except for design. Compared values: none changed on Firepixel's side;
+Firepixel-only values changed in `xs-context-menus/15_effect_delete_result` (7, was 6; TW-231, the runner's label click
+hit another button), in
 the text bounds of F82 (`dialogs-d21-d30/06`, `menu-text/02, 03, 16`), the current layer of F83 after opening a JPEG
 (`xs-file-formats/02`), the `ui_state` tool colours (R-31 and the follow rules) and the runner's Layers row geometry
 (F92). 9 `runner error` lines, all reference-side text entry and selection in `tool-text` (TW-146 rest; run 42: 8).
@@ -690,10 +699,12 @@ View ▸ Tooltips is checked (TW-226). Not reached: the pause key (TW-222), the 
 paints with them), F96's padlock and h1 drag (no step shows or drags a pattern fill's handles) and F97's line rotate
 (TW-229), the slider undo of F89 and F97's click outside an open pop-up (TW-230; the pop-up slider steps read as before),
 the cursor badges and marquee modifiers of F94 (no marquee drag with a modifier). **New: TW-231** (`xs-context-menus`,
-unclear): after the right-click on the line L1 with L1 selected, the context menu's Delete left L1 in place (7 objects;
-6 in runs 3 to 33); the reference side is `unmapped`, the cause is not determined, and a hand check decides whether
-it is a regression of batch 7 (candidates: the Pointer's press handling of F94 / F97, or the runner's click into the menu
-with tooltips on). **New: TW-232** (runner): the reference's live-filter "+" button opened no menu in four
+first read as unclear, now a runner row): after the right-click with L1 selected, the label click "Löschen" left L1 in
+place (7 objects; 6 in runs 3 to 33); the reference side is `unmapped`. The hand check CHK-1 (24 Oct 2026, both
+previews in a real window) found no Delete entry in the canvas context menu of either build; the runner's window-wide
+fallback clicked the Properties "Stil löschen" button in `2026-10-24_08-38` and the dock's "Auswahl löschen" in the
+earlier builds (batch 7 only reordered the accessibility nodes), so it is no regression (runner item R-37), and run 43
+reads 49 / 0 / 0 / 0, proven 1:1 100.0 %. **New: TW-232** (runner): the reference's live-filter "+" button opened no menu in four
 `filters-adjust-color` steps. The rest is reference-side: `tool-autoshapes/10` measured again, the inspector and page
 place of run 33 back in the units of run 34, six restarts without lost steps and 9 `runner error` lines in `tool-text`
 (TW-146 rest).
@@ -1221,9 +1232,9 @@ TW-179, fixed in runner R-27); this bug was already in the host's first version.
 | 40 (4 units) | 23 Oct 2026 | 48 of 49 (0 under-measured; 1 real deviation, 0 unclear) | **98.0 %** (48 / 49); 97.9 % over the 48 old units; step level 87.9 % (87.8 % over the 48 old units); canvas pairs 196 / 225 |
 | 41 (1 unit) | 23 Oct 2026 | 48 of 49 (0 under-measured; 1 real deviation, 0 unclear) | **98.0 %** (48 / 49); 97.9 % over the 48 old units; step level 87.9 % (87.8 % over the 48 old units); canvas pairs 196 / 225 |
 | 42 (1 unit) | 23 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.9 % (87.8 % over the 48 old units); canvas pairs 196 / 225 |
-| 43 (full, 49 units) | 24 Oct 2026 | 48 of 49 (0 under-measured; 0 real deviations, 1 unclear) | **98.0 %** (48 / 49); 97.9 % over the 48 old units; step level 88.0 % (87.9 % over the 48 old units); canvas pairs 195 / 224 |
+| 43 (full, 49 units) | 24 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear; TW-231 closed as a runner artefact by the hand check CHK-1) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 88.0 % (87.9 % over the 48 old units); canvas pairs 195 / 224 |
 
-The next steps are in [ROADMAP.md](../ROADMAP.md): the hand check of TW-231 (the context menu's Delete on a selected line, `xs-context-menus/15`, run 43) and the runner row TW-232; the human click-test, including the batch 7 items A4-67 to A4-75, including the macOS re-test by the tester;
+The next steps are in [ROADMAP.md](../ROADMAP.md): release v0.2.12 (in progress); the runner items R-37 (TW-231, closed as a runner artefact by the hand check CHK-1: text clicks after a right-click only inside the open context menu, no non-exact fallback for menu entries, `xs-context-menus/15` re-specified) and TW-232; the human click-test, including the batch 7 items A4-67 to A4-75, including the macOS re-test by the tester;
 the text selection and size of TW-146 rest and the text tool reset of TW-165 (moved to the click-test A1-19 on
 20 Oct 2026 as runner measurement gaps, not deviations; TW-167 was closed by run 29); the text tool reset of RE spec 56
 (TW-138 R5 to R7, F52, click-test A4-29; known difference: for a new text the reference writes two History rows,
