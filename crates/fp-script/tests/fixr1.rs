@@ -56,3 +56,16 @@ fn mask_hide_all_reports_empty_pixel_rect() {
         "[object Image],mask to image,-2147483648,-2147483648,2147483648,2147483648"
     );
 }
+
+/// TW-225 rest (RE spec 68 §8): after Reveal All the new mask is edited; scripts see the masked
+/// element in `fw.selection` and the mask in `fw.selectedMask` (null without mask editing).
+#[test]
+fn mask_editing_reports_selected_mask() {
+    let mut s = session_with_bitmap();
+    let q = "[fw.selection.length, String(fw.selection[0]), fw.selectedMask ? String(fw.selectedMask) : 'null'].join(',')";
+    assert_eq!(result(&mut s, q), "1,[object Image],null");
+    s.execute("modify.mask.revealAll", json!({}))
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(result(&mut s, q), "1,[object Image],[object Image]");
+    assert_eq!(result(&mut s, "fw.selection[0].mask.mode"), "mask to image");
+}

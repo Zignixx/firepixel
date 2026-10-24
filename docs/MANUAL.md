@@ -285,9 +285,13 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   that "Ag" gives 83.74 pt); the next drag starts from the frame of the new state. *Remove
   Transformations* puts a text's left/top on the rounded left/top of the outline of its frame (derived from
   measurements, not every case is known).
-- *Modify ▸ Mask ▸ Reveal All / Hide All* puts an empty mask over the selected object. The Layers
-  panel and the inspector still show the object itself (e.g. the bitmap) with the mask as a second
-  thumbnail. The History row is *Add Mask*.
+- *Modify ▸ Mask ▸ Reveal All / Hide All* (and *Add Mask* in the Layers panel) puts an empty
+  grayscale bitmap mask of the canvas size over the selected object (larger when the object reaches
+  beyond the canvas) and, as in the original, goes straight into editing the new mask, as a click on
+  its thumbnail does: the mask is selected and in bitmap editing, its thumbnail gets the bright green
+  frame, the object's row stays highlighted, and the inspector shows *Bitmap mask* with *Alpha
+  channel* / *Grayscale*. The History row is *Add Mask*. Scripts see the masked object in
+  `fw.selection` and the mask in `fw.selectedMask` while a mask is edited.
 - **Working with masks:** a *Subselection* click on a masked object selects its mask, and so does a
   *Pointer* click with Alt held (on a normal group, Pointer + Alt-click selects the clicked child;
   Alt-drag still duplicates); *Select Behind* never picks a mask. A click on the mask thumbnail in the

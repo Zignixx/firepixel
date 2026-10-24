@@ -44,11 +44,7 @@ pub(super) fn get(name: &str, ctx: &mut Context) -> FwResult<JsValue> {
             conv::array(v, ctx)
         }
         "selection" => {
-            let r = with_state(|s| {
-                s.session
-                    .active()
-                    .map(|d| (d.id, d.selection.elements.clone()))
-            })?;
+            let r = with_state(|s| s.session.active().map(|d| (d.id, script_selection(d).0)))?;
             match r {
                 Some((d, ids)) => wrap_ids(ctx, d, &ids)?,
                 None => conv::array(Vec::new(), ctx),
@@ -167,7 +163,20 @@ pub(super) fn get(name: &str, ctx: &mut Context) -> FwResult<JsValue> {
             .collect();
             conv::array(files, ctx)
         }
-        "selectedMask" => JsValue::null(),
+        "selectedMask" => {
+            let r = with_state(|s| {
+                s.session
+                    .active()
+                    .and_then(|d| script_selection(d).1.map(|m| (d.id, m)))
+            })?;
+            match r {
+                Some((d, m)) => match super::element(d, m) {
+                    Ok(e) => super::wrap_element(ctx, d, &e)?,
+                    Err(_) => JsValue::null(),
+                },
+                None => JsValue::null(),
+            }
+        }
         _ => return ni(CLS, name),
     })
 }
@@ -1198,4 +1207,28 @@ pub(super) fn dollar_method(name: &str, args: &[Arg], ctx: &mut Context) -> FwRe
         "gc" => Ok(JsValue::undefined()),
         _ => ni("$", name),
     }
+}
+
+/// The selection as scripts see it: while a mask is edited (the mask element selected, as after a
+/// click on its Layers thumbnail or after Modify ▸ Mask ▸ Reveal All), `fw.selection` holds the
+/// masked element and `fw.selectedMask` the mask, like the reference (fixg5: after Reveal All
+/// `fw.selection[0]` is the masked image with `mask.mode == "mask to image"`; RE spec 68 §8).
+fn script_selection(
+    d: &fp_engine::session::DocumentState,
+) -> (Vec<fp_model::ElementId>, Option<fp_model::ElementId>) {
+    let mut out = Vec::with_capacity(d.selection.elements.len());
+    let mut mask = None;
+    for &id in &d.selection.elements {
+        let id = match fp_engine::docops::mask_owner(&d.doc, d.page, id) {
+            Some(owner) => {
+                mask.get_or_insert(id);
+                owner.id
+            }
+            None => id,
+        };
+        if !out.contains(&id) {
+            out.push(id);
+        }
+    }
+    (out, mask)
 }

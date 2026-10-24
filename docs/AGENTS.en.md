@@ -206,7 +206,8 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     selected text, which the Scale tool and Free Transform pass, like `setQuadrangle(…, "rememberQuad")`;
     `setQuadrangle` takes its points relative to the unit square of the selection bounds, side
     max(width, height) about their centre),
-    `modify.mask.revealAll` / `modify.mask.hideAll` (empty mask over the selected object),
+    `modify.mask.revealAll` / `modify.mask.hideAll` (empty canvas-size grayscale mask over the selected
+    object; the new mask is then selected in bitmap editing, output `{id, mask}`),
     `modify.mask.disableMask` (toggles; History row "Disable Mask" / "Enable Mask"),
     `modify.mask.deleteMask {apply?}` (`apply: true` bakes the mask into the object, which becomes one
     bitmap; without it the mask is discarded and the object kept; the user interface asks Discard / Cancel /

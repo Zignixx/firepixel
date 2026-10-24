@@ -467,8 +467,8 @@ fn masks() {
     ex(&mut s, "modify.mask.deleteMask", json!({}));
     assert_eq!(top_elements(&s).iter().map(|e| e.id).collect::<Vec<_>>(), vec![a]);
     select(&mut s, &[a]);
-    ex(&mut s, "modify.mask.revealAll", json!({}));
-    let g = s.active().map(|d| d.selection.elements[0]).unwrap_or_default();
+    // Reveal All selects the new mask (mask editing, RE spec 68 §8); the output names the group
+    let g = ElementId(ex(&mut s, "modify.mask.revealAll", json!({}))["id"].as_u64().unwrap_or(0));
     assert!(matches!(&el(&s, g).kind, ElementKind::Group(gr) if gr.kind == fp_model::GroupKind::BitmapMask));
     let c = rect(&mut s, 100.0, 100.0, 150.0, 150.0);
     ex(&mut s, "modify.mask.hideAll", json!({}));

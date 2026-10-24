@@ -941,9 +941,18 @@ pub(crate) fn mask_from_selection(
             .ok_or_else(|| sel_err("err-sel-no-object"))?;
         let e = docops::element_on_page(&d.doc, d.page, target)
             .ok_or(EngineError::ElementNotFound(target.0))?;
-        let b = docops::element_bounds(&d.doc, &e)
-            .ok_or_else(|| sel_err("err-sel-no-bounds-short"))?
-            .round_out();
+        let eb =
+            docops::element_bounds(&d.doc, &e).ok_or_else(|| sel_err("err-sel-no-bounds-short"))?;
+        // the new mask covers the canvas (RE spec 68 §8: an empty grayscale bitmap mask of the
+        // canvas size; run 44 `inspector-bitmap/08`: 800 × 600 at 0, 0 for a 480 × 320 bitmap);
+        // an object beyond the canvas widens it so Reveal All never cuts it
+        let b = match d.doc.pages.get(d.page).map(|p| p.canvas) {
+            Some(cv) if cv.width >= 1.0 && cv.height >= 1.0 => {
+                Rect::from_xywh(cv.origin.x, cv.origin.y, cv.width, cv.height).union(&eb)
+            }
+            _ => eb,
+        }
+        .round_out();
         // grayscale mask in display form (white = visible); the file stores the inverted grey
         // (07 §7.5), converted at file I/O (RE spec 68 M-6)
         let img = match reveal_all {
@@ -958,8 +967,20 @@ pub(crate) fn mask_from_selection(
             None => return Err(EngineError::Failed(fp_i18n::t("err-internal"))),
         };
         let id = mask_bitmap(d, img, target)?;
-        // History row "Add Mask" like the original's `addElementMask` (RE spec 68 §8)
-        Ok(CommandOutput::doc_with(json!({"id": id.0})).labeled(fp_i18n::t("msg-step-mask-add")))
+        // afterwards the new mask is edited like after a click on its Layers thumbnail
+        // (`panel.layers.editMask`): the mask selected, bitmap editing on (RE spec 68 §8, §7;
+        // run 44 `inspector-bitmap/08`: green mask frame, inspector "Bitmap mask")
+        let mask = docops::element_on_page(&d.doc, d.page, id)
+            .and_then(|g| g.element_mask().map(|m| m.element.id));
+        if let Some(m) = mask {
+            d.selection.set(vec![m]);
+            d.bitmap_mode = true;
+        }
+        // one History row "Add Mask" like the original's `addElementMask` (RE spec 68 §8)
+        Ok(
+            CommandOutput::doc_with(json!({"id": id.0, "mask": mask.map(|m| m.0)}))
+                .labeled(fp_i18n::t("msg-step-mask-add")),
+        )
     })
 }
 

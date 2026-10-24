@@ -307,9 +307,14 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   nächste Zug beginnt am Rahmen des neuen Zustands. *Transformationen entfernen* legt links/oben eines
   Texts auf die gerundete linke/obere Kante des Umrisses seines Rahmens (aus Messungen abgeleitet, nicht
   jeder Fall ist bekannt).
-- *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
-  gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
-  mit der Maske als zweiter Miniatur. Die Verlaufszeile heißt *Maske hinzufügen*.
+- *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* (und *Maske hinzufügen* im
+  Ebenen-Bedienfeld) legt eine leere Graustufen-Bitmapmaske in Leinwandgröße über das gewählte Objekt
+  (größer, wenn das Objekt über die Leinwand hinausreicht) und geht wie im Original sofort in die
+  Bearbeitung der neuen Maske, wie ein Klick auf ihre Miniatur: Die Maske ist gewählt und in der
+  Bitmap-Bearbeitung, ihre Miniatur bekommt den hellgrünen Rahmen, die Zeile des Objekts bleibt
+  hervorgehoben, und der Inspektor zeigt *Bitmap-Maske* mit *Alphakanal* / *Graustufen*. Die
+  Verlaufszeile heißt *Maske hinzufügen*. Skripte sehen während der Maskenbearbeitung das maskierte
+  Objekt in `fw.selection` und die Maske in `fw.selectedMask`.
 - **Arbeiten mit Masken:** Ein Klick mit der *Teilauswahl* auf ein maskiertes Objekt wählt dessen Maske,
   ebenso ein Klick mit dem *Zeiger* bei gedrückter Alt-Taste (auf einer normalen Gruppe wählt Zeiger +
   Alt-Klick das getroffene Kind; Alt-Ziehen dupliziert weiterhin); *Hintere auswählen* wählt nie eine

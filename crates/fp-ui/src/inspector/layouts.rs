@@ -701,8 +701,10 @@ mod tests {
         assert!(matches!(l, Some(58) | Some(26) | Some(30)), "{l:?}");
     }
 
-    /// FIX-R1 (fixg5 Q-02): nach Maske ▸ Alles einblenden/ausblenden zeigt der Inspektor das Bild
-    /// (Bitmap-Inspektor 27, Typ „Bitmap“) wie im Original, nicht die Gruppe (26).
+    /// FIX-R1 (fixg5 Q-02): a bitmap masked by Modify ▸ Mask ▸ Reveal All / Hide All shows the
+    /// image (bitmap inspector 27, type "Bitmap") like the original, not the group (26). Right
+    /// after the command the new mask is edited (bitmap mask inspector 21, RE spec 68 §8, parity
+    /// run 44 `inspector-bitmap/08`); selecting the masked object again shows the bitmap inspector.
     #[test]
     fn masked_bitmap_shows_bitmap_inspector() {
         for cmd in ["modify.mask.revealAll", "modify.mask.hideAll"] {
@@ -717,7 +719,21 @@ mod tests {
             s.clipboard.pixels = img;
             assert!(s.execute("edit.paste", serde_json::json!({})).is_ok());
             assert_eq!(select_layout(&s).map(|l| l.number), Some(27));
-            assert!(s.execute(cmd, serde_json::json!({})).is_ok(), "{cmd}");
+            let g = s
+                .execute(cmd, serde_json::json!({}))
+                .ok()
+                .and_then(|o| o.value["id"].as_u64())
+                .unwrap_or_else(|| panic!("{cmd}"));
+            assert_eq!(
+                select_layout(&s).map(|l| l.number),
+                Some(21),
+                "{cmd}: mask editing"
+            );
+            let _ = s.execute("modify.exitBitmapMode", serde_json::json!({}));
+            assert!(
+                s.execute("select.set", serde_json::json!({"ids": [g]}))
+                    .is_ok()
+            );
             assert_eq!(select_layout(&s).map(|l| l.number), Some(27), "{cmd}");
             let d = s.active().map(|d| {
                 (

@@ -211,7 +211,8 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     das nur mit `rememberQuad: true` und genau einem gewählten Text, was Skalieren-Werkzeug und Frei
     transformieren übergeben, wie `setQuadrangle(…, "rememberQuad")`; `setQuadrangle` nimmt seine Punkte
     relativ zum Einheitsquadrat der Auswahlgrenzen, Seitenlänge max(Breite, Höhe) um deren Mitte),
-    `modify.mask.revealAll` / `modify.mask.hideAll` (leere Maske über dem gewählten Objekt),
+    `modify.mask.revealAll` / `modify.mask.hideAll` (leere Graustufenmaske in Leinwandgröße über dem
+    gewählten Objekt; danach ist die neue Maske in der Bitmap-Bearbeitung gewählt, Ausgabe `{id, mask}`),
     `modify.mask.disableMask` (schaltet um; Verlaufszeile „Maske deaktivieren“ / „Maske aktivieren“),
     `modify.mask.deleteMask {apply?}` (`apply: true` backt die Maske in das Objekt, das zu einer Bitmap wird;
     ohne wird die Maske verworfen und das Objekt bleibt; die Oberfläche fragt vorher Verwerfen / Abbrechen /

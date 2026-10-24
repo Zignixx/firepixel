@@ -176,9 +176,10 @@ fn subselection_on_a_bitmap_mask_starts_editing_the_mask() {
     let mut s = doc_session(400.0, 300.0);
     let bmp = bitmap(&mut s, 100, 100, 100, 100, [255, 0, 0, 255]);
     select(&mut s, &[bmp]);
-    ex(&mut s, "modify.mask.revealAll", json!({}));
-    let g = sel(&s)[0];
+    let out = ex(&mut s, "modify.mask.revealAll", json!({}));
+    let g = ElementId(out["id"].as_u64().expect("masked object"));
     let mask = el(&s, g).element_mask().map(|m| m.element.id).expect("mask");
+    assert_eq!(sel(&s), vec![mask], "Reveal All edits the new mask (RE spec 68 §8)");
     let _ = s.execute("modify.exitBitmapMode", json!({}));
     ex(&mut s, "select.none", json!({}));
     tool(&mut s, ToolId::Subselection);

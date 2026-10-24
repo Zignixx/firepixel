@@ -7067,7 +7067,8 @@ fn register_layer_menu(r: &mut CommandRegistry) {
             .run(move |s, _| edit_all_layers(s, set_lock(false))),
     );
     // RE spec 58 §3.3 (Q-59): an empty, linked bitmap mask that shows everything (as Modify ▸
-    // Mask ▸ Reveal All), one history step "Add Mask"; afterwards the mask itself is selected
+    // Mask ▸ Reveal All), one history step "Add Mask"; afterwards the mask itself is selected and
+    // in bitmap editing (RE spec 68 §8)
     add_fw(
         r,
         35441,
@@ -7076,23 +7077,7 @@ fn register_layer_menu(r: &mut CommandRegistry) {
             .requires(&[Requirement::Document, Requirement::Selection])
             .available(|s| s.active().is_some_and(|d| d.selection.elements.len() == 1))
             .menu_when(super::not_only_web)
-            .run(|s, _| {
-                let out = super::modify::mask_from_selection(s, Some(true))?;
-                super::with_doc(s, |d| {
-                    let page = d.page;
-                    let group = d.selection.elements.first().copied();
-                    let mask = group
-                        .and_then(|g| docops::element_on_page(&d.doc, page, g))
-                        .and_then(|e| e.element_mask().map(|m| m.element.id));
-                    if let Some(m) = mask {
-                        d.selection.set(vec![m]);
-                    }
-                    Ok(CommandOutput::doc_with(json!({
-                        "id": out.value["id"].clone(),
-                        "mask": mask.map(|m| m.0),
-                    })))
-                })
-            }),
+            .run(|s, _| super::modify::mask_from_selection(s, Some(true))),
     );
     add_fw(
         r,
