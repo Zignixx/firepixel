@@ -119,6 +119,43 @@ pub fn dither_on(c: u8, x: i32, y: i32) -> bool {
     (c as u32) * 128 > b * 510 + 255
 }
 
+/// Uniform dither density (Firepixel extension, FB-38): is document pixel (x, y) on at `density`
+/// per cent? On when `density / 100 > (B + 0.5) / 64` with the Bayer 8 × 8 value B, so a density
+/// d turns on round(d · 64 / 100) of the 64 pixels of every 8 × 8 block (50 = checkerboard);
+/// 0 is always off, 100 and more always on.
+#[inline]
+pub fn density_on(density: u8, x: i32, y: i32) -> bool {
+    if density >= 100 {
+        return true;
+    }
+    let b = BAYER8[y.rem_euclid(8) as usize][x.rem_euclid(8) as usize] as u32;
+    (density as u32) * 128 > (2 * b + 1) * 100
+}
+
+/// Does `density` change a fill at all (1..99)?
+#[inline]
+pub fn density_active(density: u8) -> bool {
+    density > 0 && density < 100
+}
+
+/// Applies the uniform dither density (FB-38) to a coverage mask: pixels that are off at
+/// `density` become 0, the others keep their coverage. Densities 0 and ≥ 100 change nothing.
+pub fn apply_density(cov: &mut Coverage, density: u8) {
+    let w = cov.width();
+    if w == 0 || !density_active(density) {
+        return;
+    }
+    let (left, top) = (cov.rect.left, cov.rect.top);
+    for (j, row) in cov.data.chunks_mut(w).enumerate() {
+        let y = top + j as i32;
+        for (i, c) in row.iter_mut().enumerate() {
+            if *c != 0 && !density_on(density, left + i as i32, y) {
+                *c = 0;
+            }
+        }
+    }
+}
+
 /// Dither edge (Firepixel extension, FB-23): quantises every coverage value to 0 or 255 with an
 /// ordered 8 × 8 (Bayer) threshold on **document** pixel coordinates, so the pattern is fixed to
 /// the document grid (stable under scrolling, zoom and whole-pixel moves of the window).

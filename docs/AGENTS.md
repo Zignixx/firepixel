@@ -167,6 +167,17 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     runden Mittelgriff h1 beginnt, verschiebt alle drei Griffe um dasselbe Delta (Kachel- bzw. Verlaufsvektoren
     bleiben, RE-Spezifikation 61 §1.2); ein Zug an h2 oder h3 bewegt nur diesen Griff; je ein Schritt
     `element.setFillHandles`
+  * Dither-Dichte (Firepixel-Erweiterung): `pi.fill {ditherDensity}` 0..100 % rastert die ganze Füllung (jede Füllart)
+    zu einem geordneten 8 × 8-Halbton aus ganz an/aus auf den Dokumentpixeln (50 = Schachbrett, 0 = aus,
+    100 = deckend), vor dem Rand angewendet; ein Protokollschritt *Füllen*, bleibt beim Wechsel der Füllart.
+    Skripte: `pathAttributes.fill.ditherDensity`, `setFill` mit `ditherDensity`. FW-PNG: nur in der
+    Firepixel-Markierung `fpDi` (wenn nicht 0)
+  * Live-Filter Rasterfolie (Firepixel-Erweiterung): `element.addEffect {effect: "screentone", params?}` (EffectMoaID
+    `{firepixel-screentone}`) mit den Textparametern `screentone_type` 0 Punkte / 1 Linien / 2 Kreuzschraffur,
+    `screentone_size` 2..32 (Vorgabe 8), `screentone_angle` 0..180 (45), `screentone_density` 0..100 (50, gilt bei
+    `screentone_from_luminance` = `false`), `screentone_from_luminance` (`true`), `screentone_color` (`#000000`),
+    `screentone_keep_color` (`false`); bearbeiten mit `pi.effect.set {index, params}`, Skripte über `effectList` wie
+    die anderen Live-Filter. FW-PNG: ein Eintrag `fpLv` der Effektliste statt eines `EPSv`
   * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Farbeimer),
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Verlauf-Werkzeug; `fillSelection`
     Vorgabe `true` = Pixelauswahl bzw. ganze Bitmap füllen, `false` = zusammenhängender Farbbereich am

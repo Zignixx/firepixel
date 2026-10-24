@@ -500,6 +500,16 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Liste *Anti-Aliasing-Stufe* (ihr Eintrag *Kein Anti-Alias* ist der harte Rand), einem Text gibt man eine weiche oder
   Dither-Kante daher per Skript oder mit dem Befehl `pi.fill {edge, feather}`.
 
+- **Dither (Dichte der Füllung):** Das Prozentfeld mit dem kleinen Schachbrett-Symbol unter dem Namen der
+  Fülltextur macht aus der ganzen Füllung ein gleichmäßiges Raster aus ganz deckenden und leeren Pixeln: 50 % ist
+  ein schachbrettartiger Halbton der Füllfarbe, 25 % behält jedes vierte Pixel, 0 % schaltet es aus, 100 % ist die
+  volle Füllung. Es wirkt bei jeder Füllart (Vollfarbe, Verlauf, Muster) und nutzt dasselbe feste 8 × 8-Raster wie
+  der Dither-Rand, verankert an den Dokumentpixeln. Zusammen mit einem Dither-Rand bleibt ein Pixel nur an, wo
+  beide es behalten; der Rand läuft also von der gewählten Dichte nach außen aus. Eine Änderung ist ein Schritt
+  *Füllen* im Protokoll; ein Wechsel der Füllart behält die Dichte. Die Dither-Dichte ist eine
+  Firepixel-Erweiterung; eine `.fw.png`-Datei speichert sie nur in einer Firepixel-Markierung (geschrieben, wenn
+  der Wert nicht 0 ist), andere Programme zeigen die normale Füllung.
+
 - **Verlauf und Muster in Text:** Ein Text nimmt Verlaufs- und Musterfüllungen wie ein Pfad an (`pi.fill`,
   `setFill`); die Glyphen zeigen die Füllung genau so, wie ein Pfad mit denselben Füllgriffen sie bekäme. Die Griffe
   liegen in Dokumentkoordinaten: Ein neuer linearer Verlauf läuft von der Mitte der Oberkante zur Mitte der
@@ -518,8 +528,9 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Protokollschritt.
 
 - **Muster im Dokument festhalten (Firepixel-Erweiterung):** Normalerweise wandert ein Muster oder Verlauf mit
-  seinem Objekt, wie im Original. Mit dem Häkchen **Fest** im Füllungsteil des Eigenschaften-Inspektors (unter der
-  Beschriftung „Textur“; sichtbar, wenn das gewählte Objekt eine Muster- oder Verlaufsfüllung hat) bleibt die
+  seinem Objekt, wie im Original. Mit dem Vorhängeschloss-Knopf im Füllungsteil des Eigenschaften-Inspektors (rechts
+  von „Transparent“, neben dem Dither-Knopf des Verlaufs; sichtbar, wenn das gewählte Objekt eine Muster- oder
+  Verlaufsfüllung hat) bleibt die
   Füllung stattdessen im Dokument stehen: Verschieben (Ziehen, Pfeiltasten, Felder X/Y, *Ausrichten*,
   `moveSelectionBy`/`moveSelectionTo`) und Transformieren (Numerisch transformieren, Skalieren-, Neigen- und
   Verzerren-Werkzeug, Frei transformieren, Spiegeln und Drehen, mit und ohne „Attribute skalieren“) lassen die
@@ -535,6 +546,16 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Relief* ▸ *Abgeflachte Kante innen*, *Abgeflachte Kante außen*, *Relief vertieft*, *Relief erhaben*.
   Die Art steht im Menüeintrag; der Dialog hat dafür kein eigenes Feld. Doppelklick auf einen Eintrag
   der Filterliste öffnet seine Einstellungen.
+
+- **Rasterfolie (Live-Filter, Firepixel-Erweiterung):** *Andere* ▸ *Rasterfolie* wandelt die Pixel des Objekts in
+  ein Halbtonraster wie die gedruckten Rasterfolien in Schwarzweiß-Illustrationen und Manga-Seiten. Einstellungen:
+  *Muster* (Punkte, Linien, Kreuzschraffur), *Rasterweite* (Zellenabstand 2–32 px), *Winkel* (0–180°, Vorgabe das
+  klassische 45°-Raster), *Dichte aus der Helligkeit* (an: dunkle Stellen bekommen große Punkte, helle kleine, Weiß
+  keine; aus: überall die feste *Dichte* 0–100 %), *Farbe* der Tinte (Vorgabe Schwarz) und *Objektfarbe beibehalten*
+  (Tinte in der eigenen Farbe des Objekts). Getroffene Pixel sind ganz deckend, alle anderen werden transparent; das
+  Raster ist am Dokumentraster verankert. Eine `.fw.png`-Datei speichert den Filter nur als Firepixel-Eintrag der
+  Effektliste; das Format des Originals behält also nur seine eigenen Effekte (andere Programme zeigen das Objekt
+  ohne Raster).
 
 - **Textvorgaben:** Attribute, die bei offenem Texteditor gesetzt werden, ändern nur den markierten Text;
   mit dem Zeiger ausgewählter Text oder keine Auswahl macht sie zur Vorgabe für neue Texte.

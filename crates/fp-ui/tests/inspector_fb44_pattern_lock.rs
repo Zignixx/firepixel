@@ -1,6 +1,7 @@
-//! FB-44 (Firepixel extension): the Properties inspector shows the checkbox "Lock pattern to
-//! document" (short label "Fest" / "Lock") in the fill section only for a selected pattern or
-//! gradient; a click sets the flag in one History row "Füllen" and a second click clears it.
+//! FB-44 (Firepixel extension): the Properties inspector shows the padlock toggle "Lock pattern to
+//! document" in the fill section only for a selected pattern or gradient (next to the gradient
+//! dither toggle; the corner below the texture label holds the FB-38 dither density field); a click
+//! sets the flag in one History row "Füllen" and a second click clears it.
 
 use egui::accesskit::Role;
 use egui::{Event, Modifiers, PointerButton, Pos2};
@@ -67,7 +68,8 @@ fn click(h: &mut H, p: Pos2) {
 }
 
 fn lock_box(h: &H) -> Option<egui::Rect> {
-    h.query_all(By::new().role(Role::CheckBox).label("Fest"))
+    let tip = fp_i18n::t("pi-fill-lock-tip");
+    h.query_all(By::new().role(Role::Button).label(&tip))
         .next()
         .map(|n| n.rect())
 }
@@ -87,16 +89,16 @@ fn undo_count(h: &H) -> usize {
 }
 
 #[test]
-fn lock_checkbox_toggles_the_flag_of_a_pattern() {
+fn lock_toggle_sets_the_flag_of_a_pattern() {
     let mut h = harness(|s| {
         s.execute("pi.fill", json!({"category": "pattern"}))
             .expect("pattern");
     });
-    let b = lock_box(&h).expect("checkbox for a pattern fill");
+    let b = lock_box(&h).expect("lock toggle for a pattern fill");
     assert!(!locked(&h));
     let n0 = undo_count(&h);
     click(&mut h, b.center());
-    assert!(locked(&h), "checked: locked to the document");
+    assert!(locked(&h), "pressed: locked to the document");
     assert_eq!(undo_count(&h), n0 + 1, "one History row");
     let label = st(&h)
         .session
@@ -104,18 +106,18 @@ fn lock_checkbox_toggles_the_flag_of_a_pattern() {
         .and_then(|d| d.history.undo_label().map(|s| s.to_string()))
         .unwrap_or_default();
     assert_eq!(label, "Füllen");
-    let b = lock_box(&h).expect("checkbox");
+    let b = lock_box(&h).expect("lock toggle");
     click(&mut h, b.center());
-    assert!(!locked(&h), "unchecked again");
+    assert!(!locked(&h), "released again");
 }
 
 #[test]
-fn lock_checkbox_only_for_patterns_and_gradients() {
+fn lock_toggle_only_for_patterns_and_gradients() {
     let h = harness(|_| {});
-    assert!(lock_box(&h).is_none(), "solid fill: no checkbox");
+    assert!(lock_box(&h).is_none(), "solid fill: no lock toggle");
     let h = harness(|s| {
         s.execute("pi.fill", json!({"category": "gradient"}))
             .expect("gradient");
     });
-    assert!(lock_box(&h).is_some(), "gradient: checkbox");
+    assert!(lock_box(&h).is_some(), "gradient: lock toggle");
 }

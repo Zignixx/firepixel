@@ -986,6 +986,16 @@ pub const FILL_EDGE_EXT: TagKey = k!(b"fpEi");
 /// lower-case letter, so other readers ignore it and show the plain mask.
 pub const MASK_INVERT_EXT: TagKey = k!(b"fpIb");
 
+/// Firepixel-own dither density marker in a fill `FPLv` (FB-38): `fpDi` = 1..100 per cent, written
+/// only when the density is not 0. Other readers keep / drop it and show the plain fill.
+pub const FILL_DENSITY_EXT: TagKey = k!(b"fpDi");
+
+/// Firepixel-own live effect in an effect list `EFLv` (FB-38): a Firepixel live filter (EffectMoaID
+/// with [`fp_model::effects::FIREPIXEL_MOA_PREFIX`], e.g. the Screentone filter) is written as
+/// `fpLv` with the same dictionary as an `EPSv` instead of an `EPSv`, at its place in the list, so
+/// the reference format sees only its own effects and readers that do not know the tag skip it.
+pub const EFFECT_EXT: TagKey = k!(b"fpLv");
+
 /// Füllung `FPLv` (Kinder).
 pub fn write_fill(f: &Fill, ctx: &mut WriteCtx) -> Vec<RawNode> {
     let mut w = Wr::new(&f.extra);
@@ -1025,6 +1035,9 @@ pub fn write_fill(f: &Fill, ctx: &mut WriteCtx) -> Vec<RawNode> {
         };
     if ext != 0 {
         w.i32(FILL_EDGE_EXT, ext);
+    }
+    if f.dither_density > 0 {
+        w.i32(FILL_DENSITY_EXT, f.dither_density.min(100));
     }
     if let Some(g) = &f.gradient {
         w.list(k!(b"FGLv"), write_gradient(g));
@@ -1135,6 +1148,8 @@ pub fn write_effect_list(e: &EffectList) -> Vec<RawNode> {
     w.opt_str(k!(b"UNMs"), e.user_name.as_deref());
     for x in &e.effects {
         let key = match x.tag {
+            // Firepixel live filters (FB-38) in their own marker tag, see `EFFECT_EXT`
+            _ if x.is_firepixel() => EFFECT_EXT,
             EffectTag::Eps => k!(b"EPSv"),
             EffectTag::Epd => k!(b"EPDv"),
         };

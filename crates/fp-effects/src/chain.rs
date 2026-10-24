@@ -13,6 +13,7 @@ use crate::color_fill::{ColorFillParams, color_fill};
 use crate::inner_glow::{InnerGlowParams, inner_glow};
 use crate::params::{EffectParams, Params};
 use crate::photoshop::{self, PsEffects};
+use crate::screentone::{ScreentoneParams, screentone};
 use crate::shadow::{ShadowParams, drop_shadow, inner_shadow};
 use crate::solid::{SolidShadowParams, solid_shadow};
 
@@ -25,6 +26,8 @@ pub mod moa {
     pub const SOLID_SHADOW: &str = "{b90c950e-64df-11d8-aaf2000a9582f7d4}";
     pub const COLOR_FILL: &str = "{dd54adc0-a279-11d3-b92a000502f3fdbe}";
     pub const PHOTOSHOP: &str = "{8eeadf50-9efe-11da-a7460800200c9a66}";
+    /// Screentone (Firepixel extension, FB-38; not an effect of the reference).
+    pub const SCREENTONE: &str = "{firepixel-screentone}";
 }
 
 /// Ein Live-Effekt mit gelesenen Parametern.
@@ -44,6 +47,8 @@ pub enum LiveEffect {
     ColorFill(ColorFillParams),
     /// Photoshop-Live-Effekte.
     Photoshop(PsEffects),
+    /// Screentone / halftone screen (Firepixel extension, FB-38).
+    Screentone(ScreentoneParams),
     /// Bitmap-Filter als Live-Effekt.
     Filter(Filter),
     /// Nicht darstellbar (Wolken, Photoshop-Plugins, unbekannte IDs): das Objekt bleibt unverändert.
@@ -75,6 +80,7 @@ impl LiveEffect {
             moa::SOLID_SHADOW => LiveEffect::SolidShadow(SolidShadowParams::read(p)),
             moa::COLOR_FILL => LiveEffect::ColorFill(ColorFillParams::read(p)),
             moa::PHOTOSHOP => LiveEffect::Photoshop(PsEffects::read(params)),
+            moa::SCREENTONE => LiveEffect::Screentone(ScreentoneParams::read(p)),
             _ => match Filter::from_effect(&id, params) {
                 Some(f) => LiveEffect::Filter(f),
                 None => LiveEffect::Unsupported {
@@ -100,6 +106,7 @@ impl LiveEffect {
             LiveEffect::SolidShadow(_) => "solid_shadow",
             LiveEffect::ColorFill(_) => "color_fill",
             LiveEffect::Photoshop(_) => "photoshop",
+            LiveEffect::Screentone(_) => "screentone",
             LiveEffect::Filter(_) => "filter",
             LiveEffect::Unsupported { .. } => "unsupported",
         }
@@ -122,6 +129,7 @@ impl LiveEffect {
                     .collect();
                 (photoshop::render(obj, p), issues)
             }
+            LiveEffect::Screentone(p) => (screentone(obj, p), Vec::new()),
             LiveEffect::Filter(f) => (f.apply(obj, None), Vec::new()),
             LiveEffect::Unsupported { moa_id } => {
                 (obj.clone(), vec![format!("unsupported:{moa_id}")])
@@ -136,7 +144,10 @@ impl LiveEffect {
             LiveEffect::DropShadow(p) => {
                 p.blur.min(1024) as i32 + 1 + (p.distance.abs().min(1.0e6).ceil() as i32)
             }
-            LiveEffect::InnerShadow(_) | LiveEffect::InnerGlow(_) | LiveEffect::ColorFill(_) => 0,
+            LiveEffect::InnerShadow(_)
+            | LiveEffect::InnerGlow(_)
+            | LiveEffect::ColorFill(_)
+            | LiveEffect::Screentone(_) => 0,
             LiveEffect::Bevel(b) => b.extent() as i32 + 2,
             LiveEffect::SolidShadow(s) => s.distance.abs().min(1.0e6).ceil() as i32 + 2,
             LiveEffect::Photoshop(p) => p

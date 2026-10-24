@@ -1220,6 +1220,11 @@ pub fn read_fill(v: &[RawNode], ctx: &mut ReadCtx) -> Fill {
         edge
     };
     let lock_to_document = ext & Fill::EXT_LOCK_TO_DOCUMENT != 0;
+    // Firepixel-own dither density marker (see `write::FILL_DENSITY_EXT`, FB-38)
+    let dither_density = r
+        .i32(crate::write::FILL_DENSITY_EXT)
+        .unwrap_or(0)
+        .clamp(0, 100);
     let gradient = r.list(k!(b"FGLv")).map(|g| read_gradient(g, ctx));
     let pattern = r.list(k!(b"FPTv")).map(|p| {
         let mut s = Rd::new(p);
@@ -1251,6 +1256,7 @@ pub fn read_fill(v: &[RawNode], ctx: &mut ReadCtx) -> Fill {
         gradient,
         pattern,
         lock_to_document,
+        dither_density,
         extra: ctx.finish(r),
     }
 }
@@ -1418,6 +1424,8 @@ pub fn read_effect_list(v: &[RawNode], ctx: &mut ReadCtx) -> EffectList {
         let tag = match &n.key.0 {
             b"EPSv" => EffectTag::Eps,
             b"EPDv" => EffectTag::Epd,
+            // Firepixel live filter (FB-38, see `write::EFFECT_EXT`)
+            k if *k == crate::write::EFFECT_EXT.0 => EffectTag::Eps,
             _ => continue,
         };
         r.mark(i);

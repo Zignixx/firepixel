@@ -462,6 +462,15 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   the *Anti-aliasing level* list (its *No Anti-Alias* entry is the hard edge), so give a text a Feather or Dither
   edge from a script or the command `pi.fill {edge, feather}`.
 
+- **Dither (fill density):** the per-cent field with the small checkerboard icon below the fill texture name turns
+  the whole fill into an even pattern of fully opaque and empty pixels: 50 % is a checkerboard half tone of the
+  fill colour, 25 % keeps every fourth pixel, 0 % switches it off and 100 % is the solid fill. It works for every
+  fill category (solid, gradient, pattern) and uses the same fixed 8 × 8 pattern as the Dither edge, anchored to
+  the document pixels. Combined with a Dither edge a pixel stays on only where both keep it, so the band fades out
+  from the chosen density. A change is one *Fill* step in the History panel; changing the fill category keeps the
+  density. Dither density is a Firepixel extension; a `.fw.png` file stores it only in a Firepixel marker (written
+  when the value is not 0), other programs show the plain fill.
+
 - **Gradient and pattern fills on text:** a text takes a gradient or pattern fill like a path (`pi.fill`,
   `setFill`); the glyphs show the fill exactly as a path with the same fill handles would. The handles lie in
   document coordinates: a new linear gradient runs from the top centre to the bottom centre of the text's bounds, a
@@ -479,8 +488,9 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   the object; drag the object at a spot away from the handles. Each handle drag is one History step.
 
 - **Lock pattern to document (Firepixel extension):** normally a pattern or gradient moves with its object, as in
-  the reference. Tick **Lock** in the fill section of the Properties inspector (below the texture label; shown when
-  the selected object has a pattern or gradient fill) and the fill stays put in the document instead: moving the
+  the reference. Press the padlock button in the fill section of the Properties inspector (right of "Transparent",
+  next to the gradient's dither button; shown when the selected object has a pattern or gradient fill) and the fill
+  stays put in the document instead: moving the
   object (dragging, arrow keys, the X/Y fields, *Align*, `moveSelectionBy`/`moveSelectionTo`) and transforming it
   (Numeric Transform, the Scale, Skew and Distort tools, Free Transform, flips and rotations, with or without "Scale
   attributes") leave the fill handles where they are, so the object slides over a fixed pattern. Ticking or
@@ -494,6 +504,15 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
 - **Live Filters (+):** the “+” menu groups the effects as in the original, e.g. *Bevel and Emboss* ▸
   *Inner Bevel*, *Outer Bevel*, *Inset Emboss*, *Raised Emboss*. The kind is part of the menu item;
   the dialog has no separate field for it. Double-click an entry in the filter list to open its settings.
+
+- **Screentone (Live Filter, Firepixel extension):** *Other* ▸ *Screentone* turns the object's pixels into a
+  halftone screen like the printed tones of black and white illustrations and manga pages. Settings: *Pattern*
+  (Dots, Lines, Cross-hatch), *Size* (cell pitch 2–32 px), *Angle* (0–180°, default the classic 45° screen),
+  *Density from luminance* (on: dark areas get large dots, light areas small ones, white none; off: the constant
+  *Density* 0–100 % everywhere), *Color* of the ink (default black) and *Keep object color* (ink with the object's
+  own colour instead). Inked pixels are fully opaque, all others become transparent; the screen is anchored to the
+  document grid. A `.fw.png` file stores the filter only as a Firepixel entry of the effect list, so the reference
+  format keeps only its own effects (other programs show the object without the screen).
 
 - **Text tool defaults:** attributes set while the text editor is open change only the marked text;
   set with text selected by the pointer, or with nothing selected, they become the defaults for new texts.

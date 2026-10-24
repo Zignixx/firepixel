@@ -16,6 +16,8 @@
 //!   Pixelreferenz; die Python-Referenz nimmt hier eine andere Annahme).
 //! - **Transparenz-Dither** (`FDTb`): Deckung × Schachbrett {FF,00 / 00,FF}; Phase hier an
 //!   Dokumentkoordinaten (A: im Original an der 256er-Kachel).
+//! - **Dither density** (Firepixel extension, FB-38): coverage × the ordered 8 × 8 on/off pattern
+//!   of the density on document coordinates ([`crate::feather::density_on`]).
 
 use crate::attrs::{Fill, FillKind, GradientHandles, StampingMode, VectorPath};
 use crate::gradient::GradientPaint;
@@ -108,6 +110,8 @@ pub struct FillPainter<'a> {
     kind: Kind,
     tex: Option<Tex<'a>>,
     dither: bool,
+    /// Uniform dither density 1..99 (Firepixel extension, FB-38); 0 = off.
+    density: u8,
 }
 
 impl<'a> FillPainter<'a> {
@@ -149,6 +153,11 @@ impl<'a> FillPainter<'a> {
             kind,
             tex,
             dither: fill.transparency_dither,
+            density: if crate::feather::density_active(fill.dither_density) {
+                fill.dither_density
+            } else {
+                0
+            },
         })
     }
 
@@ -180,6 +189,10 @@ impl<'a> FillPainter<'a> {
         let mut argb = self.color(x, y);
         let mut m = m as u32;
         if self.dither && (x as i64 + y as i64).rem_euclid(2) == 1 {
+            m = 0;
+        }
+        // uniform dither density (Firepixel extension, FB-38): an on/off half tone of the fill
+        if self.density != 0 && !crate::feather::density_on(self.density, x, y) {
             m = 0;
         }
         if let Some(t) = &self.tex {

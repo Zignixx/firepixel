@@ -416,6 +416,15 @@ dlg-lbl-blend-mode = Blending mode:
 dlg-fx-edge-shape = Edge shape:
 dlg-fx-show-object = Show object
 dlg-fx-button-preset = Button preset:
+# Screentone (Firepixel extension, FB-38)
+dlg-fx-screentone-pattern = Pattern:
+dlg-fx-screentone-dots = Dots
+dlg-fx-screentone-lines = Lines
+dlg-fx-screentone-cross = Cross-hatch
+dlg-fx-screentone-size = Size:
+dlg-fx-screentone-density = Density:
+dlg-fx-screentone-from-luminance = Density from luminance
+dlg-fx-screentone-keep-color = Keep object color
 
 ## Form dialogs (form.rs)
 dlg-preview = Preview

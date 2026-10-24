@@ -284,7 +284,8 @@ pub(super) fn fill_edge_code(mode: &str) -> Option<i32> {
 /// Fill-Objekt → Füllfarbe/Verlauf auf der Auswahl; `edgeType: "dither"` (Firepixel extension,
 /// FB-23) also sets the dither edge with the object's `feather` as its width. A pattern fill
 /// (`category` "fc_Pattern" or `shape` "pattern" with `pattern.name`) sets that pattern instead of a
-/// solid fill; `lockToDocument` (Firepixel extension, FB-44) sets "Lock pattern to document".
+/// solid fill; `lockToDocument` (Firepixel extension, FB-44) sets "Lock pattern to document",
+/// `ditherDensity` (Firepixel extension, FB-38) the uniform dither density in % of the whole fill.
 fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
     let pattern = fill
         .get("pattern")
@@ -301,6 +302,7 @@ fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
         }
         _ => apply_fill_colors(doc, fill, color)?,
     }
+    let mut ext = serde_json::Map::new();
     if fill
         .get("edgeType")
         .and_then(|v| v.as_str())
@@ -308,11 +310,20 @@ fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
         == Some(fp_model::Fill::EDGE_DITHER)
     {
         let amount = fill.get("feather").and_then(|v| v.as_i64()).unwrap_or(0);
-        on_selection(
-            doc,
-            "pi.fill",
-            json!({"edge": fp_model::Fill::EDGE_DITHER, "feather": amount.clamp(0, 100)}),
-        )?;
+        ext.insert("edge".into(), json!(fp_model::Fill::EDGE_DITHER));
+        ext.insert("feather".into(), json!(amount.clamp(0, 100)));
+    }
+    if let Some(d) = fill.get("ditherDensity").and_then(|v| {
+        v.as_f64()
+            .or_else(|| v.as_str().and_then(|s| s.trim().parse().ok()))
+    }) {
+        ext.insert(
+            "ditherDensity".into(),
+            json!(d.round().clamp(0.0, 100.0) as i64),
+        );
+    }
+    if !ext.is_empty() {
+        on_selection(doc, "pi.fill", Value::Object(ext))?;
     }
     if let Some(lock) = fill.get("lockToDocument").and_then(|v| v.as_bool())
         && !selection(doc)?.is_empty()

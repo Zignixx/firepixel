@@ -136,6 +136,15 @@ pub const FX: &[Fx] = &[
         "filter-other-findEdges",
         FxKind::Simple("findEdges"),
     ),
+    // Firepixel extension (FB-38): halftone screen like printed manga tones
+    fx(
+        "effect-group-other",
+        "effect-screentone",
+        FxKind::Effect {
+            name: "screentone",
+            bevel: None,
+        },
+    ),
     fx(
         "effect-group-noise",
         "filter-noise-addNoise",
@@ -259,6 +268,7 @@ pub fn editable(e: &Effect) -> bool {
             | EffectKind::InnerGlow
             | EffectKind::SolidShadow
             | EffectKind::ColorFill
+            | EffectKind::Screentone
             | EffectKind::GaussianBlur
             | EffectKind::MotionBlur
             | EffectKind::RadialBlur
@@ -524,6 +534,7 @@ pub fn begin_edit(st: &mut AppState, index: usize, e: &Effect) {
             Some(effect_form("solidShadow", None, Some(e), Some(index), fill))
         }
         EffectKind::ColorFill => Some(effect_form("colorFill", None, Some(e), Some(index), fill)),
+        EffectKind::Screentone => Some(effect_form("screentone", None, Some(e), Some(index), fill)),
         _ => filter_effect_form(e, index),
     };
     if let Some(d) = d {
@@ -768,6 +779,33 @@ fn effect_params(d: &FormDialog) -> Value {
             let bl = v.get("blend").and_then(|x| x.as_i64()).unwrap_or(0);
             params.insert("Blendmode".into(), json!(bl.to_string()));
         }
+        "screentone" => {
+            // Firepixel extension (FB-38): all keys always written, values as text
+            let flag = |k: &str| {
+                if s(k).as_bool() == Some(true) {
+                    "true"
+                } else {
+                    "false"
+                }
+            };
+            let kind = v.get("pattern").and_then(|x| x.as_i64()).unwrap_or(0);
+            params.insert(
+                "screentone_type".into(),
+                json!(kind.clamp(0, 2).to_string()),
+            );
+            params.insert("screentone_size".into(), json!(n("size").to_string()));
+            params.insert("screentone_angle".into(), json!(n("angle").to_string()));
+            params.insert("screentone_density".into(), json!(n("density").to_string()));
+            params.insert(
+                "screentone_from_luminance".into(),
+                json!(flag("from_luminance")),
+            );
+            params.insert(
+                "screentone_color".into(),
+                json!(s("color").as_str().unwrap_or("#000000ff")),
+            );
+            params.insert("screentone_keep_color".into(), json!(flag("keep_color")));
+        }
         _ => {}
     }
     let mut out = match d.base.get("index").and_then(|x| x.as_u64()) {
@@ -994,6 +1032,65 @@ pub fn effect_form(
                         100.0,
                     )
                     .unit("%"),
+                ],
+            )
+        }
+        "screentone" => {
+            // Firepixel extension (FB-38): defaults and ranges like `fp_effects::ScreentoneParams`
+            // and `element.addEffect` "screentone" (dots, 8 px, 45°, tone from the luminance,
+            // black ink)
+            let flag = |k: &str, d: bool| e.and_then(|x| x.get_bool(k)).unwrap_or(d);
+            (
+                t("effect-screentone"),
+                vec![
+                    Field::choice(
+                        "pattern",
+                        t("dlg-fx-screentone-pattern").as_str(),
+                        &[
+                            t("dlg-fx-screentone-dots").as_str(),
+                            t("dlg-fx-screentone-lines").as_str(),
+                            t("dlg-fx-screentone-cross").as_str(),
+                        ],
+                        num(e, "screentone_type", 0.0).clamp(0.0, 2.0) as usize,
+                    ),
+                    Field::slider(
+                        "size",
+                        t("dlg-fx-screentone-size").as_str(),
+                        num(e, "screentone_size", 8.0),
+                        2.0,
+                        32.0,
+                    ),
+                    Field::slider(
+                        "angle",
+                        t("dlg-lbl-angle").as_str(),
+                        num(e, "screentone_angle", 45.0),
+                        0.0,
+                        180.0,
+                    )
+                    .unit("°"),
+                    Field::check(
+                        "from_luminance",
+                        t("dlg-fx-screentone-from-luminance").as_str(),
+                        flag("screentone_from_luminance", true),
+                    ),
+                    Field::slider(
+                        "density",
+                        t("dlg-fx-screentone-density").as_str(),
+                        num(e, "screentone_density", 50.0),
+                        0.0,
+                        100.0,
+                    )
+                    .unit("%"),
+                    Field::color(
+                        "color",
+                        t("dlg-lbl-color").as_str(),
+                        &txt(e, "screentone_color", "#000000ff"),
+                    ),
+                    Field::check(
+                        "keep_color",
+                        t("dlg-fx-screentone-keep-color").as_str(),
+                        flag("screentone_keep_color", false),
+                    ),
                 ],
             )
         }

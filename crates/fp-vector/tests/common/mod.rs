@@ -304,6 +304,7 @@ pub fn vector_path(pth: Tags, extra: &Extra, as_f32: bool) -> VectorPath {
             },
             stamping: StampingMode::from_u32(fpl.u("FSM", 2)),
             transparency_dither: fpl.b("FDT", false),
+            dither_density: 0,
         });
     }
     if let Some(bpl) = pat.child("BPL") {

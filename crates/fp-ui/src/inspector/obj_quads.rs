@@ -1059,10 +1059,14 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
         tgt == Target::Selection && en,
         PreviewValue::FillTextureAmount,
     );
+    // the padlock toggle of FB-44 (below) takes the right end of this row: the checkbox then ends
+    // in front of it (its text still fits; long translations are fitted)
+    let lock_shown = tgt == Target::Selection && (kind == 2 || kind == 3);
+    let tr_w = if lock_shown { 52.0 } else { 62.0 };
     if let Some(v) = fields::checkbox(
         ui,
         id.with("tr"),
-        d.r(33.0, 15.0, 62.0, 10.0),
+        d.r(33.0, 15.0, tr_w, 10.0),
         &t("pi-texture-transparent"),
         transparent,
         en && amount > 0,
@@ -1081,13 +1085,77 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
         st.run("pi.fill", json!({"dither": !dither}));
     }
     // "Lock pattern to document" (Firepixel extension, FB-44): only for a selected pattern or
-    // gradient, in the free corner below the texture label
-    if tgt == Target::Selection && (kind == 2 || kind == 3) {
-        let lr = d.r(0.0, 15.0, 32.0, 10.0);
-        if let Some(v) = fields::checkbox(ui, id.with("lock"), lr, &t("pi-fill-lock"), lock, en) {
-            st.run("pi.fill", json!({"lockPattern": v}));
+    // gradient; a padlock toggle in the free space between "Transparent" and the gradient dither
+    // toggle (same size, like the fill kind toggles above), since the free corner below the
+    // texture label holds the dither density field (FB-38) and has no room for a text checkbox
+    if lock_shown
+        && fields::toggle(
+            ui,
+            id.with("lock"),
+            d.r(86.0, 14.0, 16.0, 12.0),
+            Glyph::Lock,
+            lock,
+            en,
+            &t("pi-fill-lock-tip"),
+        )
+    {
+        st.run("pi.fill", json!({"lockPattern": !lock}));
+    }
+    // uniform dither density of the whole fill (Firepixel extension, FB-38), below the texture
+    // name in the space the reference leaves free; selection only (tool defaults keep 0)
+    if tgt == Target::Selection {
+        let density = attrs
+            .as_deref()
+            .and_then(|a| a.fill.as_ref())
+            .map(|f| f.dither_density)
+            .unwrap_or(0);
+        let den = enabled && kind != 0 && attrs.is_some();
+        // a small checkerboard icon instead of a text label (the free space holds no label
+        // next to a field wide enough for "100%"); the tooltip names the field
+        let lr = d.r(0.0, 15.0, 10.0, 13.0);
+        dither_icon(ui, lr, den);
+        let fr = d.r(11.0, 15.0, 21.0, 13.0);
+        if let Some(v) = fields::number_unit(
+            ui,
+            id.with("density"),
+            fr,
+            None,
+            Some(density as f64),
+            (0.0, 100.0),
+            0,
+            den,
+            "%",
+        ) {
+            apply_fill(ui, st, tgt, json!({"ditherDensity": v as i64}));
         }
-        tooltip_at(ui, id.with("lock-tip"), lr, &t("pi-fill-lock-tip"));
+        tooltip_at(
+            ui,
+            id.with("density-tip"),
+            lr.union(fr),
+            &t("pi-fill-dither-density-tip"),
+        );
+    }
+}
+
+/// Icon of the dither density field (FB-38): a 3 × 3 checkerboard of 3 px cells, centred in `r`.
+fn dither_icon(ui: &Ui, r: Rect, enabled: bool) {
+    let theme = Theme::current(ui.ctx());
+    let col = if enabled {
+        theme.colors.text
+    } else {
+        theme.colors.text_disabled
+    };
+    let cell = 3.0;
+    let o = r.center() - egui::vec2(1.5 * cell, 1.5 * cell);
+    let o = pos2(o.x.round(), o.y.round());
+    for j in 0..3 {
+        for i in 0..3 {
+            if (i + j) % 2 == 0 {
+                let p = o + egui::vec2(i as f32 * cell, j as f32 * cell);
+                ui.painter()
+                    .rect_filled(Rect::from_min_size(p, egui::vec2(cell, cell)), 0.0, col);
+            }
+        }
     }
 }
 

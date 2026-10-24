@@ -15,6 +15,7 @@
 //! | [`inner_glow`] | Inneres Glühen (Morphologie mit `SelectionAdjustTolerance`) | B |
 //! | [`solid`] | Massiver Schatten | B, Laufzeit T3 |
 //! | [`color_fill`] | Farbfüllung | B (Normal) |
+//! | [`screentone`] | Screentone / halftone screen (Firepixel extension, FB-38) | – |
 //! | [`photoshop`] | Photoshop-Live-Effekte: Parser aller Datensätze, Schlagschatten, Farbüberlagerung | B/A |
 //! | [`chain`] | [`LiveEffect`], Effektliste in Reihenfolge, Bitmap-Filter als Live-Filter | – |
 //! | [`params`] | Lesen der Datei-Parameter | – |
@@ -50,6 +51,7 @@ pub mod inner_glow;
 pub mod params;
 pub mod photoshop;
 mod ps_relief;
+pub mod screentone;
 pub mod shadow;
 pub mod solid;
 mod util;
@@ -60,6 +62,7 @@ pub use chain::{ChainResult, EffectEntry, LiveEffect, apply_chain, chain_growth}
 pub use color_fill::ColorFillParams;
 pub use inner_glow::InnerGlowParams;
 pub use photoshop::PsEffects;
+pub use screentone::{ScreentoneKind, ScreentoneParams};
 pub use shadow::ShadowParams;
 pub use solid::SolidShadowParams;
 

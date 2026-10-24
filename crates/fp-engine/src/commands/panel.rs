@@ -3207,6 +3207,14 @@ pub fn register(r: &mut CommandRegistry) {
                 },
                 "Breite der weichen Kante bzw. des Dither-Übergangs",
             )
+            .opt(
+                "ditherDensity",
+                ParamKind::Integer {
+                    min: Some(0),
+                    max: Some(100),
+                },
+                "Dither-Dichte der ganzen Füllung in % (0 = aus, 100 = deckend; Firepixel-Erweiterung)",
+            )
             .opt("texture", ParamKind::String, "Texturname (leer = keine)")
             .opt(
                 "textureAmount",
@@ -3280,6 +3288,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let reverse = p.opt_bool("reverse")?.unwrap_or(false);
                 let edge = p.opt_i64("edge")?.map(|v| v as i32);
                 let feather = p.opt_i64("feather")?.map(|v| v as i32);
+                let density = p.opt_i64("ditherDensity")?.map(|v| v.clamp(0, 100) as i32);
                 let tex = p.opt_str("texture")?;
                 check_texture_name(p, tex.as_deref())?;
                 let tex_amount = p.opt_i64("textureAmount")?.map(|v| v as i32);
@@ -3302,6 +3311,9 @@ pub fn register(r: &mut CommandRegistry) {
                         pattern.clone()
                     };
                     docops::edit_path_attrs(e, &|a| {
+                        // the uniform dither density (Firepixel extension, FB-38) applies to every
+                        // fill category: it survives a change of the category
+                        let kept_density = a.fill.as_ref().map(|f| f.dither_density).unwrap_or(0);
                         match cat.as_deref() {
                             Some("none") => {
                                 a.fill = None;
@@ -3386,6 +3398,7 @@ pub fn register(r: &mut CommandRegistry) {
                             }
                         }
                         let Some(f) = a.fill.as_mut() else { return };
+                        f.dither_density = density.unwrap_or(kept_density);
                         if let Some(sh) = shape
                             && f.gradient.is_some()
                         {

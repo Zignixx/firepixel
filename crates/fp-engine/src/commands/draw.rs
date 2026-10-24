@@ -461,6 +461,8 @@ pub fn effect_moa_id(name: &str) -> Option<String> {
         "invert" => EffectKind::Invert,
         "findedges" => EffectKind::FindEdges,
         "converttoalpha" => EffectKind::ConvertToAlpha,
+        // Firepixel extension (FB-38)
+        "screentone" => EffectKind::Screentone,
         _ => return None,
     };
     k.moa_id().map(|s| s.to_string())
@@ -514,6 +516,17 @@ fn menu_preset(name: &str) -> &'static [(&'static str, &'static str)] {
             ("ButtonState", "0"),
             ("GlowStartDistance", "0"),
             ("GlowWidth", "5"),
+        ],
+        // Screentone (Firepixel extension, FB-38): dots, 8 px, the classic 45° screen, tone from
+        // the luminance, black ink
+        "screentone" => &[
+            ("screentone_type", "0"),
+            ("screentone_size", "8"),
+            ("screentone_angle", "45"),
+            ("screentone_density", "50"),
+            ("screentone_from_luminance", "true"),
+            ("screentone_color", "#000000"),
+            ("screentone_keep_color", "false"),
         ],
         _ => &[],
     }

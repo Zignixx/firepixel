@@ -301,6 +301,7 @@ fn paint(
             texture,
             stamping: fv::StampingMode::from_u32(f.stamping_mode.max(0) as u32),
             transparency_dither: f.transparent_dither.unwrap_or(false),
+            dither_density: f.dither_density.clamp(0, 100) as u8,
         }
     });
     let stroke = attrs.brush.as_ref().map(|b| {
@@ -356,6 +357,7 @@ pub fn fill_only(mut v: fv::VectorPath) -> fv::VectorPath {
         f.kind = fv::FillKind::Solid(Argb(0xff00_0000));
         f.texture = None;
         f.transparency_dither = false;
+        f.dither_density = 0;
     }
     v
 }

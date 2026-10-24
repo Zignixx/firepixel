@@ -416,6 +416,15 @@ dlg-lbl-blend-mode = Mischmodus:
 dlg-fx-edge-shape = Kantenform:
 dlg-fx-show-object = Objekt anzeigen
 dlg-fx-button-preset = Schaltflächen-Vorgabe:
+# Rasterfolie (Firepixel-Erweiterung, FB-38)
+dlg-fx-screentone-pattern = Muster:
+dlg-fx-screentone-dots = Punkte
+dlg-fx-screentone-lines = Linien
+dlg-fx-screentone-cross = Kreuzschraffur
+dlg-fx-screentone-size = Rasterweite:
+dlg-fx-screentone-density = Dichte:
+dlg-fx-screentone-from-luminance = Dichte aus der Helligkeit
+dlg-fx-screentone-keep-color = Objektfarbe beibehalten
 
 ## Formular-Dialoge (form.rs)
 dlg-preview = Vorschau

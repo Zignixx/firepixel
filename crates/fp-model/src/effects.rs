@@ -101,6 +101,9 @@ pub enum EffectKind {
     SimpleBlur,
     /// Photoshop-Plugin-Filter (`{d810e821-f86b-11d0-…}`), letzte 8 Byte = zwei ASCII-Vierercodes.
     PhotoshopPlugin,
+    /// Screentone / halftone screen (Firepixel extension, FB-38; EffectMoaID
+    /// [`SCREENTONE_MOA_ID`], stored in FW-PNG in the Firepixel marker `fpLv`).
+    Screentone,
     /// Unbekannte ID.
     Unknown,
 }
@@ -206,6 +209,14 @@ pub const EFFECT_MOA_IDS: &[(&str, EffectKind)] = &[
 /// Präfix der Photoshop-Plugin-IDs.
 pub const PLUGIN_MOA_PREFIX: &str = "{d810e821-f86b-11d0-";
 
+/// Prefix of the EffectMoaIDs of Firepixel's own live filters (FB-38). Effects with this prefix
+/// are Firepixel extensions: FW-PNG stores them in the Firepixel marker tag `fpLv` instead of an
+/// `EPSv`, so files of the reference format never carry them.
+pub const FIREPIXEL_MOA_PREFIX: &str = "{firepixel-";
+
+/// EffectMoaID of the Screentone live filter (Firepixel extension, FB-38).
+pub const SCREENTONE_MOA_ID: &str = "{firepixel-screentone}";
+
 impl EffectKind {
     /// Effektart zu einer MOA-ID (Groß-/Kleinschreibung egal).
     pub fn from_moa_id(id: &str) -> EffectKind {
@@ -216,11 +227,17 @@ impl EffectKind {
         if l.starts_with(PLUGIN_MOA_PREFIX) {
             return EffectKind::PhotoshopPlugin;
         }
+        if l == SCREENTONE_MOA_ID {
+            return EffectKind::Screentone;
+        }
         EffectKind::Unknown
     }
 
     /// MOA-ID der Effektart (nicht für Plugin/Unbekannt).
     pub fn moa_id(self) -> Option<&'static str> {
+        if self == EffectKind::Screentone {
+            return Some(SCREENTONE_MOA_ID);
+        }
         EFFECT_MOA_IDS
             .iter()
             .find(|(_, k)| *k == self)
@@ -246,6 +263,16 @@ impl Effect {
     /// `EffectMoaID`.
     pub fn moa_id(&self) -> Option<&str> {
         self.params.get_str("EffectMoaID")
+    }
+
+    /// Is it one of Firepixel's own live filters (EffectMoaID with [`FIREPIXEL_MOA_PREFIX`],
+    /// FB-38)?
+    pub fn is_firepixel(&self) -> bool {
+        self.moa_id().is_some_and(|m| {
+            m.trim()
+                .to_ascii_lowercase()
+                .starts_with(FIREPIXEL_MOA_PREFIX)
+        })
     }
 
     /// Effektart aus der MOA-ID.
@@ -301,6 +328,7 @@ impl Effect {
             EffectKind::Invert => "filter-adjustColor-invert",
             EffectKind::FindEdges => "filter-other-findEdges",
             EffectKind::ConvertToAlpha => "filter-other-convertToAlpha",
+            EffectKind::Screentone => "effect-screentone",
             _ => return None,
         })
     }

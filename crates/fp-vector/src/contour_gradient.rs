@@ -186,6 +186,10 @@ pub fn contour_fill_layer(
             };
         }
     }
+    // uniform dither density (Firepixel extension, FB-38): applied to the finished colours so the
+    // splatting above still sees every pixel of the shape
+    let mut m = m;
+    crate::feather::apply_density(&mut m, fill.dither_density);
     for (k, (o, &c)) in out.iter_mut().zip(&m.data).enumerate() {
         if c != 0 {
             *o = fill_pixel(colors[k], c);

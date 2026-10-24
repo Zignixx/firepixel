@@ -147,8 +147,8 @@ pi-edge-feather = Feather
 pi-edge-dither = Dither
 pi-texture-transparent = Transparent
 # Firepixel extension (FB-44): the pattern or gradient stays put in the document while the object moves
-pi-fill-lock = Lock
 pi-fill-lock-tip = Lock pattern to document: the pattern or gradient stays put when the object is moved or transformed (Firepixel extension)
+pi-fill-dither-density-tip = Dither density of the whole fill in % (0 = off): an even pattern of opaque and empty pixels (Firepixel extension)
 pi-texture-other = Other...
 pi-texture-pick-title = Choose Texture
 # Texturnamen (Dateinamen der Texturen ohne Endung) in der Texturliste

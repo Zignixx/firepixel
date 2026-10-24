@@ -164,6 +164,16 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
   * Fill handles with the Pointer (`tool_event` drags on a selected gradient or pattern): a drag starting on the
     round centre handle h1 moves all three handles by the same delta (the tile / gradient vectors stay, RE spec 61
     §1.2); a drag on h2 or h3 moves only that handle; one `element.setFillHandles` step each
+  * Dither density (Firepixel extension): `pi.fill {ditherDensity}` 0..100 % quantises the whole fill (any category)
+    to an ordered 8 × 8 on/off half tone on document pixels (50 = checkerboard, 0 = off, 100 = solid), applied before
+    the edge; one *Fill* history row, kept when the category changes. Scripts: `pathAttributes.fill.ditherDensity`,
+    `setFill` with `ditherDensity`. FW-PNG: only in the Firepixel marker `fpDi` (when not 0)
+  * Screentone live filter (Firepixel extension): `element.addEffect {effect: "screentone", params?}` (EffectMoaID
+    `{firepixel-screentone}`) with the text parameters `screentone_type` 0 dots / 1 lines / 2 cross-hatch,
+    `screentone_size` 2..32 (default 8), `screentone_angle` 0..180 (45), `screentone_density` 0..100 (50, used
+    when `screentone_from_luminance` is `false`), `screentone_from_luminance` (`true`), `screentone_color`
+    (`#000000`), `screentone_keep_color` (`false`); edit with `pi.effect.set {index, params}`, scripts through
+    `effectList` like the other live filters. FW-PNG: an `fpLv` entry of the effect list instead of an `EPSv`
   * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Paint Bucket),
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Gradient tool; `fillSelection`
     default `true` = fill the pixel selection or the whole bitmap, `false` = contiguous color area at the
