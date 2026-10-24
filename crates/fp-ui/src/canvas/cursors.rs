@@ -756,6 +756,11 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
             arrow(p, at, colors, false);
             badge_plus(p, at, colors, false);
         }
+        // deselect marquee of the Pointer / Subselection (Firepixel extension FB-56)
+        Cursor::Deselect => {
+            arrow(p, at, colors, false);
+            badge_plus(p, at, colors, true);
+        }
         Cursor::MoveMarquee => {
             arrow(p, at, colors, false);
             badge_marquee(p, at, colors);
@@ -931,6 +936,7 @@ mod tests {
                 Cursor::WandIntersect,
                 Cursor::MoveMarquee,
                 Cursor::MovePixels,
+                Cursor::Deselect,
             ] {
                 paint(p, pos2(50.0, 50.0), c, &theme.colors, false);
                 paint(p, pos2(50.0, 50.0), c, &theme.colors, true);
@@ -938,5 +944,41 @@ mod tests {
         });
         assert!(!out.shapes.is_empty());
         out.textures_delta.clear();
+    }
+
+    /// FB-56: the deselect marquee cursor is the copy arrow with "−" instead of "+" (the badge
+    /// lacks only the vertical bar).
+    #[test]
+    fn deselect_cursor_has_a_minus_badge() {
+        let shapes = |c: Cursor| {
+            let ctx = egui::Context::default();
+            let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+                let theme = crate::theme::Theme::new(crate::theme::ThemeKind::Normal);
+                paint(ui.painter(), pos2(50.0, 50.0), c, &theme.colors, false);
+            });
+            out.textures_delta.clear();
+            let segs: Vec<[Pos2; 2]> = out
+                .shapes
+                .iter()
+                .filter_map(|s| match &s.shape {
+                    egui::Shape::LineSegment { points, .. } => Some(*points),
+                    _ => None,
+                })
+                .collect();
+            (out.shapes.len(), segs)
+        };
+        let (copy_n, copy_segs) = shapes(Cursor::Copy);
+        let (minus_n, minus_segs) = shapes(Cursor::Deselect);
+        assert_eq!(minus_n + 1, copy_n, "one stroke less than the + badge");
+        let vertical =
+            |s: &[Pos2; 2]| (s[0].x - s[1].x).abs() < 1e-3 && (s[0].y - s[1].y).abs() > 1.0;
+        let horizontal =
+            |s: &[Pos2; 2]| (s[0].y - s[1].y).abs() < 1e-3 && (s[0].x - s[1].x).abs() > 1.0;
+        assert!(
+            copy_segs.iter().any(vertical) && copy_segs.iter().any(horizontal),
+            "+"
+        );
+        assert!(minus_segs.iter().any(horizontal), "−: horizontal bar");
+        assert!(!minus_segs.iter().any(vertical), "−: no vertical bar");
     }
 }

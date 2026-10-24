@@ -90,6 +90,7 @@ dlg-pref-previewdrag = Vorschau beim Ziehen
 dlg-pref-aiobjecthoverpreview = Auswahlvorschau beim Überfahren anzeigen
 dlg-pref-pickdistance = Markierungsabstand (Pixel):
 dlg-pref-ungroupautoshapes = Gruppierung automatischer Formen bei 9-Slice aufheben
+dlg-pref-altmarqueedeselects = Alt-Ziehen auf leerer Fläche hebt Auswahl auf
 dlg-pref-cap-guides = Hilfslinien:
 dlg-pref-showguides = Anzeigen
 dlg-pref-lockguides = Sperren

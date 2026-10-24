@@ -125,7 +125,14 @@ zeigt kein Zeichen. Firepixel-Erweiterung: Der Eigenschafteninspektor dieser bei
 gewählt) hat die Option **Auswahlrahmen: Rechteck / Lasso** (Voreinstellung `Firepixel_PointerLasso`,
 Vorgabe Rechteck). Mit Lasso zeichnet das Ziehen eine freie Kontur wie das Lasso-Werkzeug; beim Loslassen
 wählt der Zeiger die Objekte, deren Mitte darin liegt, die Teilauswahl die Ankerpunkte darin, mit
-denselben Regeln für die Umschalttasten.
+denselben Regeln für die Umschalttasten. Firepixel-Erweiterung (Vorgabe aus): Mit **Voreinstellungen ▸
+Bearbeitung ▸ Alt-Ziehen auf leerer Fläche hebt Auswahl auf** (Voreinstellung
+`Firepixel_AltMarqueeDeselects`) **entfernt** ein Alt-Rahmen (Alt ohne Umschalt) von Zeiger oder
+Teilauswahl, auf leerer Fläche begonnen, stattdessen jedes Objekt darin aus der Auswahl – gewählte
+Gruppen ebenso wie einzeln gewählte Gruppenkinder –, die Objekte außerhalb bleiben gewählt; es entsteht
+keine Verlaufszeile, ein Alt-Klick ohne Ziehen lässt die Auswahl stehen, die Lasso-Kontur wirkt genauso
+und der Zeiger zeigt den Pfeil mit „−“ statt „+“. Alt-Ziehen an einem Objekt zieht weiterhin eine Kopie,
+Umschalt+Alt schaltet beim Zeiger weiterhin um.
 
 **Bitmap-Werkzeuge:** Der **Pinsel** malt Pixel: Ist keine Bitmap gewählt, legt er eine neue an,
 sonst malt er in die gewählte. **Radiergummi**, **Weichzeichner** und **Stempel** arbeiten mit

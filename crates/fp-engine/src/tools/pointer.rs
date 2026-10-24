@@ -711,10 +711,17 @@ impl ControlDrag {
 /// free-form outline instead of a rectangle when dragged on empty canvas (default: rectangle).
 pub const POINTER_LASSO_PREF: &str = "Firepixel_PointerLasso";
 
+/// Preference of the Firepixel Alt-marquee deselect (FB-56): `true` = an Alt-marquee of the
+/// Pointer or the Subselection started on empty canvas removes the objects inside from the
+/// selection; default off = the reference behaviour (Pointer: select like the Subselection,
+/// Subselection: a normal marquee). Alt-drag on an object still clones.
+pub const ALT_MARQUEE_DESELECT_PREF: &str = "Firepixel_AltMarqueeDeselects";
+
 /// How a marquee of the Pointer / Subselection combines with the selection (RE spec 69 section
 /// 5.3, measured): Pointer plain or Ctrl = replace, Shift (also Shift+Alt) = toggle each object
 /// inside, Alt = replace like the Subselection (children of groups one by one); Subselection
-/// plain or Alt = replace, Shift = add.
+/// plain or Alt = replace, Shift = add. Firepixel extension (FB-56,
+/// [`ALT_MARQUEE_DESELECT_PREF`]): Alt without Shift removes the objects inside instead.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Marquee {
     Replace,
@@ -722,12 +729,20 @@ enum Marquee {
     Toggle,
     /// Replace, objects picked like the Subselection (descending into groups).
     Deep,
+    /// Remove the objects inside from the selection (Firepixel extension, off by default).
+    Subtract,
 }
 
 impl Marquee {
-    fn of(id: ToolId, ev: &ToolEvent) -> Marquee {
+    fn of(id: ToolId, ev: &ToolEvent, ctx: &ToolContext) -> Marquee {
+        let deselect = || ctx.prefs.get_bool(ALT_MARQUEE_DESELECT_PREF, false);
         match id {
             ToolId::Pointer if ev.mods.shift => Marquee::Toggle,
+            ToolId::Pointer | ToolId::Subselection
+                if ev.mods.alt && !ev.mods.shift && deselect() =>
+            {
+                Marquee::Subtract
+            }
             ToolId::Pointer if ev.mods.alt => Marquee::Deep,
             _ if ev.mods.shift => Marquee::Add,
             _ => Marquee::Replace,
@@ -740,12 +755,13 @@ impl Marquee {
             Marquee::Replace | Marquee::Deep => "replace",
             Marquee::Add => "add",
             Marquee::Toggle => "toggle",
+            Marquee::Subtract => "subtract",
         }
     }
 
-    /// Shift held: a click without a drag keeps the selection.
+    /// Shift held (or a deselect marquee): a click without a drag keeps the selection.
     fn keeps(self) -> bool {
-        matches!(self, Marquee::Add | Marquee::Toggle)
+        matches!(self, Marquee::Add | Marquee::Toggle | Marquee::Subtract)
     }
 }
 
@@ -1125,7 +1141,7 @@ impl PointerTool {
             None => {
                 self.state = PState::PressedEmpty {
                     start: p,
-                    mode: Marquee::of(self.id, ev),
+                    mode: Marquee::of(self.id, ev, ctx),
                 };
                 ToolResponse {
                     cursor: self.idle_cursor(),
@@ -1352,8 +1368,11 @@ impl PointerTool {
                     lasso,
                 };
                 // any Alt drag of the Pointer and an Alt marquee of the Subselection show the
-                // arrow with "+" (RE spec 69 section 4.2); Shift shows no badge
-                let cursor = if ev.mods.alt && self.id != ToolId::SelectBehind {
+                // arrow with "+" (RE spec 69 section 4.2); Shift shows no badge; a deselect
+                // marquee (Firepixel extension FB-56) shows the arrow with "−"
+                let cursor = if mode == Marquee::Subtract {
+                    Cursor::Deselect
+                } else if ev.mods.alt && self.id != ToolId::SelectBehind {
                     Cursor::Copy
                 } else {
                     self.idle_cursor()
@@ -1769,7 +1788,8 @@ impl PointerTool {
         let r = Rect::new(start.x, start.y, cur.x, cur.y).normalized();
         let poly = lasso.filter(|pts| pts.len() >= 3);
         let deep = mode == Marquee::Deep || self.id == ToolId::Subselection;
-        if self.id == ToolId::Subselection {
+        // a deselect marquee (FB-56) removes whole objects, also with the Subselection
+        if self.id == ToolId::Subselection && mode != Marquee::Subtract {
             // Teilauswahl: Punkte der Pfade im Rahmen bzw. in der Lasso-Kontur; Umschalt fügt
             // hinzu (RE spec 69 section 5.2 `5q`: add, not toggle)
             let pts = match &poly {

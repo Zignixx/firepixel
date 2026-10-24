@@ -160,6 +160,12 @@ fn page_items(cat: usize) -> &'static [Item] {
                 "dlg-pref-aiobjecthoverpreview",
                 false,
             ),
+            // Alt-marquee of the Pointer / Subselection deselects (FB-56, own option, off = reference)
+            Check(
+                fp_engine::tools::ALT_MARQUEE_DESELECT_PREF,
+                "dlg-pref-altmarqueedeselects",
+                false,
+            ),
         ],
         2 => &[
             Caption("dlg-pref-cap-guides"),
@@ -1313,7 +1319,8 @@ mod tests {
                             || p.get(k).is_some()
                             || *k == crate::language::DEV_PREF_KEY
                             // own key (no counterpart in the original's preference list)
-                            || *k == crate::canvas::tools::ai_object::PREF_KEY,
+                            || *k == crate::canvas::tools::ai_object::PREF_KEY
+                            || *k == fp_engine::tools::ALT_MARQUEE_DESELECT_PREF,
                         "unbekannter Schlüssel {k}"
                     );
                 }

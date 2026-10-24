@@ -121,6 +121,13 @@ mark. Firepixel extension: the Properties inspector of these two tools (nothing 
 **Marquee: Rectangle / Lasso** (preference `Firepixel_PointerLasso`, default Rectangle). With Lasso the
 drag draws a free-form outline like the Lasso tool's; on release the Pointer selects the objects whose
 centre lies inside it and the Subselection the anchor points inside it, with the same modifier rules.
+Firepixel extension (off by default): with **Preferences ▸ Edit ▸ Alt-drag on empty canvas deselects**
+(preference `Firepixel_AltMarqueeDeselects`) an Alt-marquee (Alt without Shift) of the Pointer or the
+Subselection started on empty canvas **removes** every object inside it from the selection instead —
+selected groups and selected group children alike — while the objects outside stay selected; no History
+row is written, an Alt-click without a drag keeps the selection, the lasso outline works the same way and
+the cursor shows the arrow with "−" instead of "+". Alt-dragging an object still drags a copy, and
+Shift+Alt with the Pointer still toggles.
 
 **Bitmap tools:** the **Brush** paints pixels: with no bitmap selected it creates a new one,
 otherwise it paints into the selected one. **Eraser**, **Blur** and **Rubber Stamp** work with a

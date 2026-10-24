@@ -37,7 +37,9 @@ pub use draw::{
     FreehandTool, LineTool, PenTool, ShapeTool, WebShapeTool, freehand_contour, refit_freehand,
 };
 pub use pathedit::{FreeformTool, KnifeTool, ScrubTool};
-pub use pointer::{CropTool, POINTER_LASSO_PREF, PointerTool, TransformTool};
+pub use pointer::{
+    ALT_MARQUEE_DESELECT_PREF, CropTool, POINTER_LASSO_PREF, PointerTool, TransformTool,
+};
 pub use retouch::RetouchTool;
 pub use text::{TextEditView, TextTool};
 pub use viewtools::{HandTool, ZoomTool};
@@ -437,6 +439,9 @@ pub enum Cursor {
     MoveMarquee,
     /// Inside an existing pixel selection with Ctrl: arrow with scissors (drag moves the pixels).
     MovePixels,
+    /// Deselect marquee of the Pointer / Subselection (Firepixel extension FB-56,
+    /// `Firepixel_AltMarqueeDeselects`): arrow with a "−" badge.
+    Deselect,
 }
 
 /// Antwort eines Werkzeugs.

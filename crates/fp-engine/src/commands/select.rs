@@ -384,6 +384,21 @@ fn candidates(d: &DocumentState, deep: bool) -> Vec<ElementId> {
     }
 }
 
+/// Candidates of a marquee (`select.inRect` / `select.inPolygon`); `subtract` also looks at the
+/// selected objects themselves, so a deselect marquee (FB-56) removes a selected group child as
+/// well as a selected top-level object, whatever `deep` says.
+fn marquee_candidates(d: &DocumentState, deep: bool, m: SelectMode) -> Vec<ElementId> {
+    let mut v = candidates(d, deep);
+    if m == SelectMode::Subtract {
+        for id in &d.selection.elements {
+            if !v.contains(id) {
+                v.push(*id);
+            }
+        }
+    }
+    v
+}
+
 fn saved_index(d: &DocumentState, p: &crate::command::Params) -> Result<usize> {
     let list = d
         .doc
@@ -981,7 +996,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let contain = p.bool_or("contain", false)?;
                 let deep = p.bool_or("deep", false)?;
                 with_doc(s, |d| {
-                    let ids: Vec<_> = candidates(d, deep)
+                    let ids: Vec<_> = marquee_candidates(d, deep, m)
                         .into_iter()
                         .filter(|id| {
                             docops::element_on_page(&d.doc, d.page, *id)
@@ -1020,7 +1035,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let m = mode(p)?;
                 let deep = p.bool_or("deep", false)?;
                 with_doc(s, |d| {
-                    let ids: Vec<_> = candidates(d, deep)
+                    let ids: Vec<_> = marquee_candidates(d, deep, m)
                         .into_iter()
                         .filter(|id| {
                             docops::element_on_page(&d.doc, d.page, *id)

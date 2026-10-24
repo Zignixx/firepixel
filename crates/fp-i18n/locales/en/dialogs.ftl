@@ -90,6 +90,7 @@ dlg-pref-previewdrag = Preview drag
 dlg-pref-aiobjecthoverpreview = Show selection preview while hovering
 dlg-pref-pickdistance = Pick distance (pixels):
 dlg-pref-ungroupautoshapes = Ungroup auto shapes for 9-slice
+dlg-pref-altmarqueedeselects = Alt-drag on empty canvas deselects
 dlg-pref-cap-guides = Guides:
 dlg-pref-showguides = Show
 dlg-pref-lockguides = Lock
