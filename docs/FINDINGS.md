@@ -1009,7 +1009,7 @@ row stays highlighted while its mask is edited. Fixes and extensions on `main` a
 TW-237, TW-238), F98 (`3a6cd637`, TW-233), F99 (`b8da4c53` and `30d369c6`, TW-234, TW-235; `e840210d`, TW-236).
 Firepixel extensions: Confine to boundaries on Blur, Rubber Stamp, Brush and Pencil and the Layers group and mask
 tree (switch Layers options ▸ Show Group Contents, default on; the parity runner switches it off); see `[N]`. Not yet
-released; the workspace test run, a preview and a follow-up parity run are to follow, and the comparison is the
+released; GT-1z (3355 passed) and preview `2026-10-24_16-54` are done, a follow-up parity run is to follow, and the comparison is the
 hands-on checks [VERIFICATION.md](VERIFICATION.md) A4-76 to A4-81 (TW-233 A4-76, TW-234 A4-77, TW-235 A4-78, TW-236
 A4-79, TW-237 A4-80, TW-238 A4-81). The 86 rows: new open points are the reference's English page names (not
 measured; Firepixel writes "Page N" and a lowercase "copy" per the glossary, TW-233), Smudge color together with
