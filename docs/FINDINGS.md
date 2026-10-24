@@ -1031,7 +1031,7 @@ panel-menu shots differ there, like View ▸ Coordinate Tag; TW-237); the runner
 and the other rows as listed above.
 
 **After v0.2.13 (24 Oct 2026, user decisions after tester feedback batch 8): F101 to F103.** Three changes on `main`,
-to be released as v0.2.14. F101 (`829ce628`, FB-56, new row TW-239): the optional preference "Alt-drag on empty canvas
+released as v0.2.14 (24 Oct 2026). F101 (`829ce628`, FB-56, new row TW-239): the optional preference "Alt-drag on empty canvas
 deselects" (Preferences ▸ Edit, key `Firepixel_AltMarqueeDeselects`, default off, so the reference's rule is unchanged);
 when on, an Alt-marquee of the Pointer or the Subselection started on empty canvas (also with the lasso marquee option)
 removes the objects inside from the selection, writes no History row and shows the arrow with a "−" badge; an Alt-click
