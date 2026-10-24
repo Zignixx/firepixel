@@ -459,34 +459,98 @@ fn group_ui(
                     .layout(egui::Layout::top_down(egui::Align::Min)),
             );
             child.set_clip_rect(inner.intersect(ui.clip_rect()));
-            if inner.width() + 0.5 >= need {
-                panels::show(&mut child, st, p);
-                // Inhalt breiter als sein Platz (z. B. längere Texte nach Sprachwechsel): merken
-                let used = child.min_rect().width();
-                if used > inner.width() + 1.0 {
-                    record_width(st, p, used);
-                }
-            } else {
-                // zu wenig Platz (Fenster schmaler als das Bedienfeld): waagerechter Bildlauf
-                egui::ScrollArea::horizontal()
-                    .id_salt(("panel-hscroll", p))
-                    .auto_shrink([false, false])
-                    .show(&mut child, |ui| {
-                        let r =
-                            Rect::from_min_size(ui.cursor().min, vec2(need, ui.available_height()));
-                        let mut c = ui.new_child(
-                            egui::UiBuilder::new()
-                                .id_salt(("panel", p))
-                                .max_rect(r)
-                                .layout(egui::Layout::top_down(egui::Align::Min)),
-                        );
-                        panels::show(&mut c, st, p);
-                        ui.allocate_rect(r, Sense::hover());
-                    });
+            // FB-34: vertical scroll bar (and mouse wheel) when the content is taller than the
+            // panel; below the needed width also horizontal scrolling
+            let used = panel_body(&mut child, st, p, inner, need);
+            // Inhalt breiter als sein Platz (z. B. längere Texte nach Sprachwechsel): merken
+            if inner.width() + 0.5 >= need && used > inner.width() + 1.0 {
+                record_width(st, p, used);
             }
         }
     }
     out.background
+}
+
+/// Overflow (px) a panel's content may have below its panel before the vertical scroll bar
+/// appears: content that ends a pixel past the bottom stays clipped as before, without a bar.
+const VSCROLL_TOLERANCE: f32 = 1.0;
+
+fn vscroll_flag_id(p: PanelId) -> Id {
+    Id::new(("panel-vscroll-shown", p))
+}
+
+/// Whether the docked or floating panel `p` showed its vertical scroll bar in the last frame
+/// (its content was taller than the panel, FB-34). For tests and the bridge.
+pub fn panel_vscroll_shown(ctx: &egui::Context, p: PanelId) -> bool {
+    ctx.data(|d| d.get_temp::<bool>(vscroll_flag_id(p)))
+        .unwrap_or(false)
+}
+
+/// Draws the content of panel `p` into `ui` (max rect `inner`) inside a scroll area (FB-34):
+/// vertically always, so content taller than the panel (e.g. the Path panel at its docked height)
+/// gets a scroll bar and scrolls with the mouse wheel; horizontally too when `inner` is narrower
+/// than the `need`ed width. The content sees the same rectangle as without the scroll area (panels
+/// that fill the height, e.g. lists with a footer, keep filling exactly the panel), and the bar
+/// appears only when the content is taller than the panel, so panels that fit are drawn unchanged.
+/// Returns the width the content used.
+fn panel_body(ui: &mut Ui, st: &mut AppState, p: PanelId, inner: Rect, need: f32) -> f32 {
+    let wide_enough = inner.width() + 0.5 >= need;
+    let salt = ("panel-vscroll", p);
+    // Scroll offset of this frame: the content is placed at `inner.min - offset` exactly (the
+    // scroll area itself rounds its content rectangle to whole pixels)
+    let offset = egui::containers::scroll_area::State::load(
+        ui.ctx(),
+        ui.make_persistent_id(egui::IdSalt::new(salt)),
+    )
+    .map_or(egui::Vec2::ZERO, |s| s.offset);
+    let area = if wide_enough {
+        egui::ScrollArea::vertical()
+    } else {
+        egui::ScrollArea::both()
+    };
+    let out = area
+        .id_salt(salt)
+        .auto_shrink([false, false])
+        .min_scrolled_height(0.0)
+        .show(ui, |ui| {
+            let view = ui.max_rect();
+            // the panel's own rectangle while no scroll bar takes room (the scroll area rounds
+            // its view to whole pixels); narrower by the vertical bar, lower by the horizontal one
+            let w = if !wide_enough {
+                need
+            } else if view.width() >= inner.width() - 0.5 {
+                inner.width()
+            } else {
+                view.width()
+            };
+            let h = if view.height() >= inner.height() - 0.5 {
+                inner.height()
+            } else {
+                view.height()
+            };
+            let r = Rect::from_min_size(inner.min - offset, vec2(w, h));
+            let mut c = ui.new_child(
+                egui::UiBuilder::new()
+                    .id_salt(("panel", p))
+                    .max_rect(r)
+                    .layout(egui::Layout::top_down(egui::Align::Min)),
+            );
+            panels::show(&mut c, st, p);
+            let used = c.min_rect();
+            // Content height for the scroll area: none while the content fits (no bar, the panel
+            // stays as it was), down to the content's bottom when it is taller than the panel
+            let h = if used.bottom() > r.bottom() + VSCROLL_TOLERANCE {
+                used.bottom() - view.top()
+            } else {
+                0.0
+            };
+            ui.allocate_rect(Rect::from_min_size(view.min, vec2(w, h)), Sense::hover());
+            used.width()
+        });
+    let shown = out.content_size.y > out.inner_rect.height();
+    ui.ctx()
+        .data_mut(|d| d.insert_temp(vscroll_flag_id(p), shown));
+    out.inner
 }
 
 /// Rechtes Dock (im rechten Seitenbereich).

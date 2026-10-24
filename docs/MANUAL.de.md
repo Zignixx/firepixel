@@ -344,7 +344,9 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
 
 Die Bedienfelder sind rechts angedockt. Klick auf den aktiven Reiter klappt die Gruppe ein, einen
 Reiter ziehen löst ihn oder verschiebt ihn in eine andere Gruppe. Das Menü ≡ jedes Bedienfelds
-enthält dessen Befehle. Tab blendet alle Bedienfelder aus und wieder ein.
+enthält dessen Befehle. Tab blendet alle Bedienfelder aus und wieder ein. Ist der Inhalt eines Bedienfelds
+höher als sein Platz (etwa das Pfad-Bedienfeld in der angedockten Höhe), erscheint eine senkrechte
+Bildlaufleiste, und das Mausrad rollt den Inhalt.
 
 Arbeitsbereiche (Umschalter oben rechts):
 

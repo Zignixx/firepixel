@@ -323,7 +323,8 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
 
 The panels are docked on the right. Clicking the active tab collapses the group; dragging a tab
 detaches it or moves it into another group. The ≡ menu of each panel holds its commands. Tab hides
-and shows all panels.
+and shows all panels. A panel whose content is taller than its space (e.g. the Path panel at its docked
+height) shows a vertical scroll bar and scrolls with the mouse wheel.
 
 Workspaces (switcher at the top right):
 
