@@ -415,6 +415,38 @@ pub fn handles_angle(h: &fp_model::FillHandles) -> f64 {
     if (a - 360.0).abs() < 1e-6 { 0.0 } else { a }
 }
 
+/// Fill handles after a drag on the line h1–h2 (`axis` 1) or h1–h3 (`axis` 2) with the Pointer:
+/// both arms turn rigidly about the centre handle h1, their lengths stay, and the dragged arm then
+/// points at `toward` (the mouse position relative to h1). RE spec 69 §3.2, rows `"rotate1"` /
+/// `"rotate2"` of the reference: a pattern h1 (250,200), h2 (344,200), h3 (250,112) dragged on the
+/// h1–h2 line to h1 + (47,40) gives h2 (321.585,260.923) and h3 (307.034,132.985). A zero `toward`
+/// or a degenerate arm leaves the handles unchanged.
+pub fn rotate_fill_handles(
+    h: fp_model::FillHandles,
+    axis: u8,
+    toward: Point,
+) -> fp_model::FillHandles {
+    let arm = if axis == 2 { h.second } else { h.end };
+    let (ax, ay) = ((arm.x - h.start.x) as f64, (arm.y - h.start.y) as f64);
+    let (tx, ty) = (toward.x as f64, toward.y as f64);
+    if (ax.abs() < 1e-9 && ay.abs() < 1e-9) || (tx.abs() < 1e-9 && ty.abs() < 1e-9) {
+        return h;
+    }
+    let d = ty.atan2(tx) - ay.atan2(ax);
+    let (s, c) = d.sin_cos();
+    let rot = |p: Point| {
+        let (x, y) = ((p.x - h.start.x) as f64, (p.y - h.start.y) as f64);
+        Point::new(
+            h.start.x + (x * c - y * s) as f32,
+            h.start.y + (x * s + y * c) as f32,
+        )
+    };
+    let mut n = h;
+    n.end = rot(h.end);
+    n.second = rot(h.second);
+    n
+}
+
 /// Dreht die Griffe um den Startpunkt, sodass der Vektor den Winkel `deg` hat (Länge bleibt).
 fn rotate_handles(h: &mut fp_model::FillHandles, deg: f64) {
     let cur = handles_angle(h);

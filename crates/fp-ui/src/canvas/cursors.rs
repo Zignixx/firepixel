@@ -570,6 +570,27 @@ fn not_allowed(p: &Painter, at: Pos2, c: &Palette) {
     );
 }
 
+/// Rotate badge at the lower right of the arrow (Pointer over a fill-handle line): a three-quarter
+/// arc with an arrowhead, Firepixel's own design.
+fn badge_rotate(p: &Painter, at: Pos2, c: &Palette) {
+    let o = pos2(at.x + 14.0, at.y + 15.0);
+    let pts: Vec<Pos2> = (0..=10)
+        .map(|i| {
+            let a = std::f32::consts::PI * (-0.5 + 1.4 * i as f32 / 10.0);
+            pos2(o.x + 4.0 * a.cos(), o.y + 4.0 * a.sin())
+        })
+        .collect();
+    p.add(Shape::line(pts.clone(), Stroke::new(3.0, c.cursor_outline)));
+    p.add(Shape::line(pts, Stroke::new(1.0, c.cursor_fill)));
+    poly(
+        p,
+        pos2(o.x, o.y - 4.0),
+        &[(-3.0, -3.0), (1.0, 0.0), (-3.0, 3.0)],
+        c.cursor_fill,
+        c.cursor_outline,
+    );
+}
+
 /// Werkzeuge mit Fadenkreuz bei `UsePrecisionCursors` bzw. Feststelltaste.
 pub fn has_precision_variant(c: Cursor) -> bool {
     matches!(
@@ -706,6 +727,13 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
         Cursor::Wand => wand(p, at, colors),
         Cursor::Lasso => lasso(p, at, colors),
         Cursor::NotAllowed => not_allowed(p, at, colors),
+        // fill handles with the Pointer (RE spec 69 §3.2): hollow arrow over a handle, arrow with
+        // a rotate badge over a handle line
+        Cursor::FillHandle => arrow(p, at, colors, true),
+        Cursor::FillRotate => {
+            arrow(p, at, colors, false);
+            badge_rotate(p, at, colors);
+        }
         // retouch tools over an editable bitmap: no cursor, the tip outline shows the pointer
         // (RE spec 57 section 2); with precise cursors the crosshair above
         Cursor::Hidden => {}
@@ -771,6 +799,8 @@ mod tests {
                 Cursor::GuideH,
                 Cursor::GuideV,
                 Cursor::Crop,
+                Cursor::FillHandle,
+                Cursor::FillRotate,
             ] {
                 paint(p, pos2(50.0, 50.0), c, &theme.colors, false);
                 paint(p, pos2(50.0, 50.0), c, &theme.colors, true);

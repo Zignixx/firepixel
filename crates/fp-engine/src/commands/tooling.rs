@@ -590,6 +590,50 @@ pub(super) fn register(r: &mut CommandRegistry) {
             }),
     );
     r.add(
+        cmd("element.rotateFillHandles")
+            .label("Verlaufsgriffe drehen")
+            .requires(DOC)
+            .opt("ids", ParamKind::Ids, "Elemente (Vorgabe: Auswahl)")
+            .opt_default(
+                "axis",
+                ParamKind::Integer {
+                    min: Some(1),
+                    max: Some(2),
+                },
+                json!(1),
+                "gezogene Achse: 1 = Anfang–Ende, 2 = zweite Achse",
+            )
+            .param(
+                "toward",
+                ParamKind::Point,
+                "Richtung der Achse relativ zum Anfang",
+            )
+            .run(|s, p| {
+                // RE spec 69 §3: a drag on the line h1–h2 / h1–h3 with the Pointer turns both arms
+                // rigidly about h1 (rows "rotate1" / "rotate2" of the reference)
+                let toward = p.point("toward")?;
+                let axis = p.i64_or("axis", 1)?.clamp(1, 2) as u8;
+                with_doc(s, |d| {
+                    let (page, ids) = (d.page, target_ids(d, p)?);
+                    let doc = Arc::make_mut(&mut d.doc);
+                    for id in ids {
+                        docops::edit_by_id(doc, page, id, |e| {
+                            let h = match &mut e.kind {
+                                ElementKind::Path(pe) => &mut pe.fill_handles,
+                                ElementKind::Text(t) => &mut t.fill_handles,
+                                _ => return,
+                            };
+                            if h.valid {
+                                *h = crate::commands::panel::rotate_fill_handles(*h, axis, toward);
+                            }
+                        })
+                        .ok_or(EngineError::ElementNotFound(id.0))?;
+                    }
+                    Ok(CommandOutput::doc())
+                })
+            }),
+    );
+    r.add(
         cmd("bitmap.retouch")
             .label("Retusche")
             .describe("Pinselbasierte Bitmapwerkzeuge: Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel, Farbe ersetzen, Rote Augen")

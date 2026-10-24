@@ -1135,6 +1135,18 @@ pub fn slider_arrow_vertical_on(
                 ui.close();
             }
         });
+    // FB-46 (RE spec 69 §1.2 d1/f1): a press anywhere outside the open pop-up (canvas, another
+    // object, a panel, the menu bar, the arrow itself) closes it and applies the pending value to
+    // the objects it was opened for, and the click itself is swallowed: it neither selects another
+    // object nor opens a menu. A transparent layer under the pop-up takes that press (egui would
+    // close the pop-up only on the release and pass the press on).
+    if was_open
+        && !done
+        && egui::Popup::is_id_open(ui.ctx(), popup_id)
+        && outside_press_guard(ui.ctx(), id)
+    {
+        egui::Popup::close_id(ui.ctx(), popup_id);
+    }
     // Klick daneben (oder auf den Pfeil) schloss das Popup: der gezogene Wert gilt; Esc verwirft ihn.
     // The pending value goes in the same frame, so no live preview outlives the pop-up.
     let open = egui::Popup::is_id_open(ui.ctx(), popup_id);
@@ -1175,6 +1187,42 @@ pub fn slider_arrow_vertical_on(
         }
     }
     out
+}
+
+/// Transparent full-window layer under an open pop-up slider (order `Middle`: above the panels,
+/// the menu bar and the canvas, below the pop-up itself). Returns whether a mouse button went down
+/// on it this frame, i.e. outside the pop-up; that press and its release belong to the layer, so no
+/// widget below sees the click (FB-46, RE spec 69 §1.3: the reference swallows it). The History
+/// panel is left out: a click there discards the pending value and jumps (RE spec 69 §1.4 rule 1,
+/// [`preview::discard_on_history_press`]).
+fn outside_press_guard(ctx: &egui::Context, id: Id) -> bool {
+    let screen = ctx.content_rect();
+    let gid = id.with("outside-press");
+    let parts = match preview::history_rect(ctx).map(|h| h.intersect(screen)) {
+        Some(h) if h.is_positive() => vec![
+            Rect::from_min_max(screen.min, pos2(screen.max.x, h.top())),
+            Rect::from_min_max(pos2(screen.min.x, h.bottom()), screen.max),
+            Rect::from_min_max(pos2(screen.min.x, h.top()), pos2(h.left(), h.bottom())),
+            Rect::from_min_max(pos2(h.right(), h.top()), pos2(screen.max.x, h.bottom())),
+        ],
+        _ => vec![screen],
+    };
+    // one layer per part: an egui area blocks the pointer over its whole rect
+    let mut down = false;
+    for (i, r) in parts.iter().enumerate().filter(|(_, r)| r.is_positive()) {
+        let aid = gid.with(i);
+        down |= egui::Area::new(aid)
+            .order(egui::Order::Middle)
+            .fixed_pos(r.min)
+            .constrain(false)
+            .show(ctx, |ui| {
+                ui.expand_to_include_rect(*r);
+                ui.interact(*r, aid.with("hit"), Sense::click_and_drag())
+                    .is_pointer_button_down_on()
+            })
+            .inner;
+    }
+    down && ctx.input(|i| i.pointer.any_pressed())
 }
 
 /// Memory key of the open pop-up slider: (pop-up id, arrow id), see [`discard_open_slider`].

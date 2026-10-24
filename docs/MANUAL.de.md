@@ -487,7 +487,10 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Farbmischers (an der Auswahl) sowie bei gewählten Textobjekten für Schriftgröße, Laufweite, Zeilenabstand, Einzug, Abstand davor und danach und
   horizontale Skalierung (bei offenem Texteditor zeigt nur das Feld den Wert). Auf den Pfeil drücken und ziehen: Der
   Wert gilt beim Loslassen; Esc verwirft ihn. Auf den Pfeil klicken: Der Schieber bleibt offen, und der Wert gilt,
-  wenn Sie daneben klicken oder die Eingabetaste drücken; Esc verwirft ihn. Rückgängig oder Wiederholen bei offenem
+  wenn Sie daneben klicken oder die Eingabetaste drücken; Esc verwirft ihn. Dieser Klick daneben (auf die
+  Arbeitsfläche, ein anderes Objekt, ein Bedienfeld oder die Menüleiste) schließt nur den Schieber und übernimmt den
+  Wert für die Objekte, für die er geöffnet wurde; er wählt nichts aus und öffnet kein Menü (dafür erneut klicken),
+  wie im Original. Rückgängig oder Wiederholen bei offenem
   Schieber (Tastenkürzel, Menü *Bearbeiten* oder ein Klick im Verlauf-Bedienfeld) verwirft zuerst den offenen Wert
   und schließt den Schieber wie Esc, dann wird rückgängig gemacht bzw. wiederholt; ein offener Wert gilt immer nur
   für die Objekte, die beim Öffnen des Schiebers gewählt waren. Ein eingetippter Wert gilt mit
@@ -540,9 +543,13 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   seine Füllgriffe: den runden Mittelgriff und ein oder zwei eckige Griffe an Linien davon. Ziehen am
   **Mittelgriff verschiebt alle drei Griffe gemeinsam** (das ganze Muster bzw. der ganze Verlauf wandert, Kachelgröße
   und Winkel bleiben), wie im Original gemessen. Ziehen an einem eckigen Griff bewegt nur diesen (er ändert Breite
-  oder Höhe der Kachel und den Winkel eines Musters bzw. Länge und Richtung eines Verlaufs). Ein Druck auf einen
-  Griff verschiebt nie das Objekt; das Objekt an einer Stelle abseits der Griffe ziehen. Jeder Griffzug ist ein
-  Protokollschritt.
+  oder Höhe der Kachel und den Winkel eines Musters bzw. Länge und Richtung eines Verlaufs). Ziehen an einer
+  **Linie** vom Mittelgriff dreht beide Arme starr um den Mittelgriff (die Längen bleiben, der gezogene Arm zeigt
+  zum Zeiger). **Umschalt** beschränkt einen Zug auf die überwiegende Achse (waagerecht oder senkrecht). **Alt** auf
+  einem Griff klont das Objekt wie ein Alt-Zug, statt den Griff zu bewegen. Die Füllung folgt während des Ziehens
+  live. Über einem Griff ist der Zeiger ein hohler Pfeil, über einer Grifflinie ein Pfeil mit Drehzeichen. Ein
+  Druck auf einen Griff verschiebt nie das Objekt; das Objekt an einer Stelle abseits der Griffe ziehen. Jeder
+  Griffzug ist ein Protokollschritt.
 
 - **Muster im Dokument festhalten (Firepixel-Erweiterung):** Normalerweise wandert ein Muster oder Verlauf mit
   seinem Objekt, wie im Original. Mit dem Vorhängeschloss-Knopf im Füllungsteil des Eigenschaften-Inspektors (rechts

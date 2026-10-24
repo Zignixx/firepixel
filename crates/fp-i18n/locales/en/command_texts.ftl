@@ -362,6 +362,8 @@ cmdtext-segment = Segment
 cmdtext-parameter-auf-dem-segment = Parameter on the segment
 cmdtext-schnittlinie-x-y = Cut line [[x, y], …]
 cmdtext-zweite-achse-vorgabe-senkrecht-zu-anfang-ende = second axis (default: perpendicular to start→end)
+cmdtext-gezogene-achse-1-anfang-ende-2-zweite-achse = dragged axis: 1 = start–end, 2 = second axis
+cmdtext-richtung-der-achse-relativ-zum-anfang = direction of the axis relative to the start
 cmdtext-farbe-ersetzen-kolorieren = Replace Color: colorize
 cmdtext-farbe-ersetzen-von-farbe = Replace Color: change from
 cmdtext-werkzeug = Tool

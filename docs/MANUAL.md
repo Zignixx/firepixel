@@ -450,7 +450,9 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   selected text objects font size, tracking, leading, indent, space before and after and horizontal scale (with the
   text editor open only the field shows the value). Press on the arrow and drag: the value is applied on release; Esc
   discards it. Click the arrow: the slider stays open and the value is applied when you click beside it or press
-  Enter; Esc discards it. Undo or Redo while the slider is open (shortcut, *Edit* menu or a click in the History
+  Enter; Esc discards it. That click beside the slider (on the canvas, another object, a panel or the menu bar)
+  only closes it and applies the value to the objects it was opened for; it selects nothing and opens no menu
+  (click again for that), as in the reference. Undo or Redo while the slider is open (shortcut, *Edit* menu or a click in the History
   panel) first discards the pending value and closes the slider like Esc, then undoes or redoes; a pending value
   only ever applies to the objects that were selected when the slider opened. A typed value is applied with Enter,
   Tab or a click into the document; a click on empty panel space applies nothing. Each apply is one History step;
@@ -499,8 +501,12 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   shows its fill handles: the round centre handle and one or two square handles on lines from it. Dragging the
   **centre handle moves all three handles together** (the whole pattern or gradient shifts; tile size and angle
   stay), as measured in the reference. Dragging a square handle moves only that handle (it changes the tile width or
-  height and the angle of a pattern, or the length and direction of a gradient). Pressing on a handle never moves
-  the object; drag the object at a spot away from the handles. Each handle drag is one History step.
+  height and the angle of a pattern, or the length and direction of a gradient). Dragging a **line** from the centre
+  handle turns both arms rigidly about the centre handle (lengths stay; the dragged arm points at the pointer).
+  **Shift** limits a drag to the dominant axis (horizontal or vertical). **Alt** on a handle clones the object
+  like an Alt drag instead of moving the handle. The fill follows live while you drag. Over a handle the pointer
+  is a hollow arrow, over a handle line an arrow with a rotate sign. Pressing on a handle never moves the object;
+  drag the object at a spot away from the handles. Each handle drag is one History step.
 
 - **Lock pattern to document (Firepixel extension):** normally a pattern or gradient moves with its object, as in
   the reference. Press the padlock button in the fill section of the Properties inspector (right of "Transparent",

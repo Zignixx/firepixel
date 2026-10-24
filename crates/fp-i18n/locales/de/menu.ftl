@@ -1160,6 +1160,7 @@ cmd-path-deletePoints = Punkte löschen
 cmd-path-knife = Messer
     .description = Ausgewählte Pfade entlang einer Schnittlinie teilen (knifeElementsFromPoints)
 cmd-element-setFillHandles = Verlaufsgriffe verschieben
+cmd-element-rotateFillHandles = Verlaufsgriffe drehen
 cmd-bitmap-retouch = Retusche
     .description = Pinselbasierte Bitmapwerkzeuge: Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel, Farbe ersetzen, Rote Augen
 cmd-pi-fill = Füllen

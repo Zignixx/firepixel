@@ -417,6 +417,11 @@ pub enum Cursor {
     GuideV,
     /// Zuschneiden (zwei verschränkte Winkel).
     Crop,
+    /// Pointer over a gradient / pattern fill handle and while dragging it: hollow arrow
+    /// (RE spec 69 §3.2).
+    FillHandle,
+    /// Pointer over a fill-handle line and while dragging it: rotate both arms about h1.
+    FillRotate,
 }
 
 /// Antwort eines Werkzeugs.

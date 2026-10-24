@@ -775,6 +775,11 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
             ex(s, "element.setGradient", json!({"from": [100, 20], "to": [160, 80]}));
             Value::Null
         })),
+        "element.rotateFillHandles" => rs(json!({"toward": [30, 40]}), Box::new(move |s: &mut Session| {
+            select(s, &[ellipse]);
+            ex(s, "element.setGradient", json!({"from": [100, 20], "to": [160, 20]}));
+            Value::Null
+        })),
         "element.setCustomData" => r(json!({"ids": [ellipse.0], "data": {"a": 1, "b": "x", "c": [1, 2]}})),
         "element.setPattern" => rs(json!({"ids": [ellipse.0], "image": t("muster.png")}), Box::new(|s: &mut Session| {
             ex(s, "file.exportArea", json!({"rect": [0, 0, 16, 16], "path": tmp().join("muster.png").to_string_lossy(), "settings": {"format": "png32"}}));

@@ -174,6 +174,9 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     when `screentone_from_luminance` is `false`), `screentone_from_luminance` (`true`), `screentone_color`
     (`#000000`), `screentone_keep_color` (`false`); edit with `pi.effect.set {index, params}`, scripts through
     `effectList` like the other live filters. FW-PNG: an `fpLv` entry of the effect list instead of an `EPSv`
+    §1.2); a drag on h2 or h3 moves only that handle; one `element.setFillHandles` step each. A drag on the line
+    h1–h2 / h1–h3 turns both arms rigidly about h1 (one `element.rotateFillHandles {axis, toward}` step, `toward` =
+    pointer − h1); Shift limits the drag to the dominant axis; Alt on a handle clones the object (RE spec 69 §3)
   * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Paint Bucket),
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Gradient tool; `fillSelection`
     default `true` = fill the pixel selection or the whole bitmap, `false` = contiguous color area at the

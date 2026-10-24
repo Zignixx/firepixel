@@ -178,6 +178,9 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     `screentone_from_luminance` = `false`), `screentone_from_luminance` (`true`), `screentone_color` (`#000000`),
     `screentone_keep_color` (`false`); bearbeiten mit `pi.effect.set {index, params}`, Skripte über `effectList` wie
     die anderen Live-Filter. FW-PNG: ein Eintrag `fpLv` der Effektliste statt eines `EPSv`
+    `element.setFillHandles`. Ein Zug an der Linie h1–h2 bzw. h1–h3 dreht beide Arme starr um h1 (ein Schritt
+    `element.rotateFillHandles {axis, toward}`, `toward` = Zeiger − h1); Umschalt beschränkt den Zug auf die
+    überwiegende Achse; Alt auf einem Griff klont das Objekt (RE-Spezifikation 69 §3)
   * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Farbeimer),
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Verlauf-Werkzeug; `fillSelection`
     Vorgabe `true` = Pixelauswahl bzw. ganze Bitmap füllen, `false` = zusammenhängender Farbbereich am

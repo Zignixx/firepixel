@@ -328,6 +328,15 @@ pub fn note_history_rect(ctx: &egui::Context, r: egui::Rect) {
     ctx.data_mut(|d| d.insert_temp(egui::Id::new(HISTORY_RECT), (r, pass)));
 }
 
+/// Area of the History panel when it was drawn in this or the previous pass. A click there with
+/// a pop-up slider open is not swallowed: it discards the pending value and jumps (FB-46).
+pub fn history_rect(ctx: &egui::Context) -> Option<egui::Rect> {
+    let pass = ctx.cumulative_pass_nr();
+    ctx.data(|d| d.get_temp::<(egui::Rect, u64)>(egui::Id::new(HISTORY_RECT)))
+        .filter(|(_, drawn)| drawn + 1 >= pass)
+        .map(|(r, _)| r)
+}
+
 /// At the start of a frame, before any widget closes a pop-up: a mouse press on the History panel
 /// while a pop-up slider is open discards the pending value (FB-46). The click that follows then
 /// jumps in the history with nothing pending; without this the click beside the pop-up would
@@ -346,11 +355,7 @@ pub fn discard_on_history_press(ctx: &egui::Context, st: &mut AppState) {
     let Some(p) = press else {
         return;
     };
-    let pass = ctx.cumulative_pass_nr();
-    let on_history = ctx
-        .data(|d| d.get_temp::<(egui::Rect, u64)>(egui::Id::new(HISTORY_RECT)))
-        .is_some_and(|(r, drawn)| drawn + 1 >= pass && r.contains(p));
-    if on_history {
+    if history_rect(ctx).is_some_and(|r| r.contains(p)) {
         discard_pending(ctx, st);
     }
 }

@@ -476,6 +476,38 @@ pub(crate) enum FillGrip {
     End,
     /// zweite Achse (Ellipse, Rechteck, Muster)
     Second,
+    /// the line h1–h2: turns both arms rigidly about h1 (RE spec 69 §3, row "rotate1")
+    Rotate1,
+    /// the line h1–h3: turns both arms rigidly about h1 (row "rotate2")
+    Rotate2,
+}
+
+impl FillGrip {
+    /// A drag on one of the handle lines (rotation about h1)?
+    pub(crate) fn rotates(self) -> bool {
+        matches!(self, FillGrip::Rotate1 | FillGrip::Rotate2)
+    }
+
+    /// Cursor over this grip and while dragging it (RE spec 69 §3.2: a hollow arrow over a
+    /// handle, a rotate arrow over a handle line).
+    fn cursor(self) -> Cursor {
+        if self.rotates() {
+            Cursor::FillRotate
+        } else {
+            Cursor::FillHandle
+        }
+    }
+}
+
+/// Distance from `p` to the segment `a`–`b`.
+fn segment_dist(a: Point, b: Point, p: Point) -> f32 {
+    let (dx, dy) = (b.x - a.x, b.y - a.y);
+    let len2 = dx * dx + dy * dy;
+    if len2 <= f32::EPSILON {
+        return dist(a, p);
+    }
+    let t = (((p.x - a.x) * dx + (p.y - a.y) * dy) / len2).clamp(0.0, 1.0);
+    dist(Point::new(a.x + t * dx, a.y + t * dy), p)
 }
 
 /// Verlaufs-/Mustergriff des einzigen gewählten Pfads bzw. Texts unter `p` – dieselben Griffe, die
@@ -505,18 +537,46 @@ pub(crate) fn fill_grip_at(
     if second {
         grips.push((FillGrip::Second, h.second));
     }
-    grips
+    if let Some(g) = grips
         .into_iter()
         .filter(|g| dist(g.1, p) <= tol)
         .min_by(|a, b| dist(a.1, p).total_cmp(&dist(b.1, p)))
-        .map(|g| (*id, h, g.0))
+    {
+        return Some((*id, h, g.0));
+    }
+    // then the handle lines with the same tolerance (RE spec 69 §8: handles before lines)
+    let mut lines = vec![(FillGrip::Rotate1, segment_dist(h.start, h.end, p))];
+    if second {
+        lines.push((FillGrip::Rotate2, segment_dist(h.start, h.second, p)));
+    }
+    lines
+        .into_iter()
+        .filter(|l| l.1 <= tol)
+        .min_by(|a, b| a.1.total_cmp(&b.1))
+        .map(|l| (*id, h, l.0))
+}
+
+/// Shift on a fill-handle drag limits the mouse delta to the dominant axis (RE spec 69 §3.2:
+/// `|dy| > |dx|` keeps only y; `constrain = true` in the reference's row).
+pub(crate) fn constrain_fill_drag(from: Point, to: Point, shift: bool) -> Point {
+    if !shift {
+        return to;
+    }
+    let (dx, dy) = (to.x - from.x, to.y - from.y);
+    if dx.abs() >= dy.abs() {
+        Point::new(to.x, from.y)
+    } else {
+        Point::new(from.x, to.y)
+    }
 }
 
 /// Fill handles after dragging the handle `which` from `from` to `to`. The centre handle (h1,
 /// round) moves the whole set: h2 and h3 follow by the same delta, the tile / gradient vectors stay
 /// (RE spec 61 §1.2: a press on h1 of a pattern moved h1..h3 by the same 37/23,
 /// `moveFillVectorHandleBy(…, "start", …)`; the gradient case follows the same rule, to confirm by
-/// RE-37). Dragging h2 or h3 moves only that handle (re 40 §1).
+/// RE-37; RE spec 69 §3.2 confirms it for both). Dragging h2 or h3 moves only that handle (re 40
+/// §1). Dragging the line h1–h2 / h1–h3 turns both arms rigidly about h1 so that the dragged arm
+/// points at the mouse ([`crate::commands::panel::rotate_fill_handles`]).
 pub(crate) fn dragged_fill_handles(
     h: fp_model::FillHandles,
     which: FillGrip,
@@ -534,6 +594,11 @@ pub(crate) fn dragged_fill_handles(
         }
         FillGrip::End => n.end = mv(h.end),
         FillGrip::Second => n.second = mv(h.second),
+        FillGrip::Rotate1 | FillGrip::Rotate2 => {
+            let axis = if which == FillGrip::Rotate2 { 2 } else { 1 };
+            let toward = Point::new(to.x - h.start.x, to.y - h.start.y);
+            n = crate::commands::panel::rotate_fill_handles(h, axis, toward);
+        }
     }
     n
 }
@@ -760,8 +825,10 @@ impl PointerTool {
                 ..ToolResponse::default()
             };
         }
-        if self.id != ToolId::Subselection && fill_grip_at(ctx, p, tol).is_some() {
-            self.hover_cursor = Cursor::Move;
+        if self.id != ToolId::Subselection
+            && let Some((_, _, which)) = fill_grip_at(ctx, p, tol)
+        {
+            self.hover_cursor = which.cursor();
             return ToolResponse {
                 cursor: self.hover_cursor,
                 ..ToolResponse::default()
@@ -863,6 +930,21 @@ impl PointerTool {
         if self.id != ToolId::Subselection
             && let Some((id, handles, which)) = fill_grip_at(ctx, p, tol)
         {
+            // Alt on a handle or a handle line clones the object like an Alt drag on it; the
+            // handles are not dragged (RE spec 69 §3.2, `moveSelectionBy(…, true, …)`)
+            if ev.mods.alt {
+                self.state = PState::PressedObject {
+                    start: p,
+                    copy: true,
+                    toggle: None,
+                    fresh: false,
+                    shift: false,
+                };
+                return ToolResponse {
+                    cursor: Cursor::Copy,
+                    ..ToolResponse::default()
+                };
+            }
             self.state = PState::FillHandle {
                 id,
                 handles,
@@ -871,7 +953,7 @@ impl PointerTool {
                 cur: p,
             };
             return ToolResponse {
-                cursor: Cursor::Move,
+                cursor: which.cursor(),
                 ..ToolResponse::default()
             };
         }
@@ -1086,8 +1168,10 @@ impl PointerTool {
                 ..
             } => {
                 // re 40 §1: mit dem Zeiger ändert sich die Füllung live, die Griffslinie folgt dem
-                // Zeiger, keine zusätzliche Vorschaulinie (anders als das Füllwerkzeug)
-                let n = dragged_fill_handles(handles, which, from, p);
+                // Zeiger, keine zusätzliche Vorschaulinie (anders als das Füllwerkzeug); Shift
+                // keeps the dominant axis of the mouse delta (RE spec 69 §3.2)
+                let cur = constrain_fill_drag(from, p, ev.mods.shift);
+                let n = dragged_fill_handles(handles, which, from, cur);
                 self.overlay = vec![Overlay::FillLive {
                     target: id.0,
                     handles: n,
@@ -1097,9 +1181,9 @@ impl PointerTool {
                     handles,
                     which,
                     from,
-                    cur: p,
+                    cur,
                 };
-                ToolResponse::with_overlay(self.overlay.clone(), Cursor::Move)
+                ToolResponse::with_overlay(self.overlay.clone(), which.cursor())
             }
             PState::Control(mut c) => {
                 c.points.push(p);
@@ -1419,6 +1503,16 @@ impl PointerTool {
             } => {
                 if dist(from, cur) < ctx.drag_threshold() {
                     return ToolResponse::default();
+                }
+                if which.rotates() {
+                    // one row like the reference's "rotate1" / "rotate2": the dragged arm points
+                    // at the mouse, given relative to h1
+                    let axis = if which == FillGrip::Rotate2 { 2 } else { 1 };
+                    let toward = [cur.x - handles.start.x, cur.y - handles.start.y];
+                    return ToolResponse::commit(vec![Invocation::new(
+                        "element.rotateFillHandles",
+                        json!({"ids": [id.0], "axis": axis, "toward": toward}),
+                    )]);
                 }
                 let n = dragged_fill_handles(handles, which, from, cur);
                 ToolResponse::commit(vec![Invocation::new(

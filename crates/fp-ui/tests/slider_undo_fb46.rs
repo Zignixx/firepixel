@@ -405,3 +405,94 @@ fn undo_in_the_same_batch_drops_a_pop_up_commit() {
     assert_eq!(opacity(&h, b), 100.0);
     no_opacity_row(&h);
 }
+
+// ------------------------------------------------------- click outside the open pop-up
+
+fn canvas_at(h: &H, x: f32, y: f32) -> Pos2 {
+    let s = st(h);
+    let d = s.session.active().expect("doc");
+    let area = s.canvases.get(&d.id).and_then(|c| c.area).expect("canvas");
+    let (sx, sy) = d.view.doc_to_screen(fp_geom::Point::new(x, y));
+    Pos2::new(area.min.x + sx as f32, area.min.y + sy as f32)
+}
+
+fn opacity_rows(h: &H) -> usize {
+    rows(h).iter().filter(|l| l.contains("Deckkraft") || l.contains("Opacity")).count()
+}
+
+fn any_menu_open(h: &H) -> bool {
+    (0..=fp_ui::menu::main_menu().len()).any(|i| egui::Popup::is_id_open(&h.ctx, Id::new(("fp-main-menu", i))))
+}
+
+/// RE spec 69 §1.2 f1: a click on object B closes the pop-up, applies the pending value to A
+/// (the object it was opened for, one row) and is swallowed: B is not selected. The next click
+/// on B selects it as usual.
+#[test]
+fn click_on_another_object_commits_to_the_original_selection_and_is_swallowed() {
+    fp_i18n::set_language("de");
+    let (mut h, a, b) = harness();
+    let (n0, rows0) = (undo_count(&h), opacity_rows(&h));
+    open_opacity_and_drag(&mut h, 40.0);
+    let on_b = canvas_at(&h, 320.0, 85.0);
+    click(&mut h, on_b);
+    h.run_steps(2);
+    assert!(sliders(&h).is_empty(), "the pop-up is closed");
+    assert_eq!(preview(&h), None, "no preview left");
+    assert_eq!(opacity(&h, a), 40.0, "applied to A");
+    assert_eq!(opacity(&h, b), 100.0, "not to B");
+    assert_eq!(selected(&h), vec![a], "the click was swallowed: B not selected");
+    assert_eq!(undo_count(&h), n0 + 1, "one step");
+    assert_eq!(opacity_rows(&h), rows0 + 1, "one opacity row: {:?}", rows(&h));
+    // the next click works again
+    click(&mut h, on_b);
+    h.run_steps(2);
+    assert_eq!(selected(&h), vec![b], "a second click selects B");
+    assert_eq!(opacity(&h, b), 100.0);
+    assert_eq!(undo_count(&h), n0 + 1, "no further step");
+}
+
+/// RE spec 69 §1.2 d1: a click on a menu title closes the pop-up and applies the pending value;
+/// the menu opens only on the second click.
+#[test]
+fn click_on_the_menu_bar_commits_and_the_menu_opens_only_on_the_second_click() {
+    fp_i18n::set_language("de");
+    let (mut h, a, b) = harness();
+    let n0 = undo_count(&h);
+    open_opacity_and_drag(&mut h, 40.0);
+    let titles: Vec<Rect> = h.ctx.data(|d| d.get_temp(Id::new(fp_ui::menu::MENU_TITLES_ID))).expect("menu titles");
+    let edit = titles[1].center();
+    click(&mut h, edit);
+    h.run_steps(2);
+    assert!(sliders(&h).is_empty(), "the pop-up is closed");
+    assert_eq!(opacity(&h, a), 40.0, "applied to A");
+    assert_eq!(opacity(&h, b), 100.0);
+    assert_eq!(undo_count(&h), n0 + 1, "one step");
+    assert!(!any_menu_open(&h), "the first click opens no menu");
+    click(&mut h, edit);
+    h.run_steps(2);
+    assert!(any_menu_open(&h), "the second click opens the Edit menu");
+    key(&mut h, Key::Escape, Modifiers::NONE);
+    key(&mut h, Key::Escape, Modifiers::NONE);
+}
+
+/// A click beside the open pop-up on empty canvas still applies the value (TW-52) and keeps the
+/// selection; Esc instead discards it.
+#[test]
+fn click_on_empty_canvas_commits_and_esc_discards() {
+    fp_i18n::set_language("de");
+    let (mut h, a, _b) = harness();
+    let n0 = undo_count(&h);
+    open_opacity_and_drag(&mut h, 40.0);
+    let empty = canvas_at(&h, 220.0, 250.0);
+    click(&mut h, empty);
+    h.run_steps(2);
+    assert_eq!(opacity(&h, a), 40.0);
+    assert_eq!(selected(&h), vec![a], "selection kept");
+    assert_eq!(undo_count(&h), n0 + 1);
+    open_opacity_and_drag(&mut h, 70.0);
+    key(&mut h, Key::Escape, Modifiers::NONE);
+    h.run_steps(2);
+    assert!(sliders(&h).is_empty());
+    assert_eq!(opacity(&h, a), 40.0, "Esc discards");
+    assert_eq!(undo_count(&h), n0 + 1);
+}

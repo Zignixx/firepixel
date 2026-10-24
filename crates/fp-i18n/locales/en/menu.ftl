@@ -1160,6 +1160,7 @@ cmd-path-deletePoints = Delete Points
 cmd-path-knife = Knife
     .description = Splits the selected paths along a cut line (knifeElementsFromPoints)
 cmd-element-setFillHandles = Move Gradient Handles
+cmd-element-rotateFillHandles = Rotate Gradient Handles
 cmd-bitmap-retouch = Retouch
     .description = Brush-based bitmap tools: Blur, Sharpen, Dodge, Burn, Smudge, Rubber Stamp, Replace Color, Red Eye Removal
 cmd-pi-fill = Fill

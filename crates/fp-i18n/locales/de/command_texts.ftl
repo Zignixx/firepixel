@@ -362,6 +362,8 @@ cmdtext-segment = Segment
 cmdtext-parameter-auf-dem-segment = Parameter auf dem Segment
 cmdtext-schnittlinie-x-y = Schnittlinie [[x, y], …]
 cmdtext-zweite-achse-vorgabe-senkrecht-zu-anfang-ende = zweite Achse (Vorgabe: senkrecht zu Anfang→Ende)
+cmdtext-gezogene-achse-1-anfang-ende-2-zweite-achse = gezogene Achse: 1 = Anfang–Ende, 2 = zweite Achse
+cmdtext-richtung-der-achse-relativ-zum-anfang = Richtung der Achse relativ zum Anfang
 cmdtext-farbe-ersetzen-kolorieren = Farbe ersetzen: Kolorieren
 cmdtext-farbe-ersetzen-von-farbe = Farbe ersetzen: Von-Farbe
 cmdtext-werkzeug = Werkzeug
