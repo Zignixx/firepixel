@@ -133,6 +133,17 @@ all four uses and no row lookup expanded a layer (TW-210, TW-216), `transform_ha
 (TW-221), and the tool stroke was "same" at 48 unit starts ("not set" on both sides at the start of `xs-file-formats`
 after the planned restart).
 
+**Tester feedback batch 8 (24 Oct 2026, not yet in a run).** F100 (`d7b80e77`) adds Firepixel's Layers panel switch
+Show Group Contents (`panel.layers.groupTree`, expandable group and mask rows, default on, TW-237); the runner sets it
+to config `fp.layers_group_tree` (default off) after every start, next to the Coordinate Tag switch, so the Layers
+panel lists the reference's rows. Expected in the next run over the touched units: the Layers panel menu carries the
+extra entry Show Group Contents (the panel-menu shots differ there, like View ▸ Coordinate Tag); a selected object's
+thumbnail is framed blue and the row of a masked object stays highlighted while its mask is edited (TW-238, as in the
+reference); a click on a page row writes the measured History row "Change Page Selection", New Page one row "Add
+Page", and a new page lands directly after the current page with the smallest free "Page N" (F98, TW-233). The strokes
+at the bitmap bounds of F99 (TW-234, TW-235) are reached by no unit; the Confine checkbox of TW-236 shows wherever a
+shot holds the inspector of Blur, the Rubber Stamp, the Brush or the Pencil.
+
 ## What the classes mean
 
 | Class | Meaning |
