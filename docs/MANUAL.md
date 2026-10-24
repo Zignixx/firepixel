@@ -148,10 +148,15 @@ bitmap, or paints into a bitmap inside a symbol, is previewed on top until you r
 their effect live while you drag; releasing the mouse changes nothing more, and each stroke is one
 history step named after the tool. Over an editable bitmap these tools hide the mouse pointer and show
 only the outline of the brush tip (it disappears when the pointer leaves the canvas); where no bitmap
-can be edited the pointer shows "not allowed". **Smudge** started on a bitmap can run past its edge:
-the color fades out semi-transparent and the bitmap grows to cover it (with "Entire document" the page
-is smeared in up to the end of the stroke). The Firepixel option **Confine to boundaries** in the
-Smudge inspector keeps the smear inside the bitmap edge. **Blur** across the edge grows the bitmap by
+can be edited the pointer shows "not allowed". **Smudge** is never cut off at the bitmap edge, no
+matter whether the brush centre was on the bitmap or beside it when you pressed (with the bitmap
+selected, a stroke pressed beside it works like one pressed on it; with nothing selected a press beside
+the bitmap does nothing): color carried past the edge fades out semi-transparent and the bitmap grows to
+cover it, while dragging only transparency in grows nothing. With "Entire document" the bitmap grows to
+the whole rectangle of the stroke (tip included), filled with the page, even for a stroke entirely
+outside the bitmap. A stroke entirely outside without "Entire document" changes no pixel but is still
+one history step. The Firepixel option **Confine to boundaries** in the Smudge inspector keeps the
+smear inside the bitmap edge. **Blur** across the edge grows the bitmap by
 up to 2 px.
 
 **Pausing a stroke (Firepixel extension):** while you paint a stroke with Brush, Pencil, Eraser or one

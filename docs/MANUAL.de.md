@@ -156,10 +156,15 @@ obenauf angezeigt.
 jeder Strich ist ein Verlaufsschritt mit dem Namen des Werkzeugs. Über einer bearbeitbaren Bitmap
 blenden diese Werkzeuge den Mauszeiger aus und zeigen nur den Umriss der Pinselspitze (er verschwindet,
 sobald der Zeiger die Leinwand verlässt); wo keine Bitmap bearbeitet werden kann, zeigt der Zeiger
-„nicht erlaubt“. **Verwischen**, auf einer Bitmap begonnen, kann über ihren Rand hinauslaufen: Die
-Farbe läuft halbtransparent aus, und die Bitmap wächst mit (mit „Gesamtes Dokument“ wird die Seite bis
-zum Strichende hineingeschmiert). Die Firepixel-Option **Auf Grenzen beschränken** im Inspektor von
-Verwischen hält das Verwischen innerhalb des Bitmaprands. **Weichzeichner** über den Rand vergrößert
+„nicht erlaubt“. **Verwischen** wird nie am Bitmaprand abgeschnitten, gleich ob die Pinselmitte beim
+Drücken auf der Bitmap oder daneben lag (bei gewählter Bitmap wirkt ein daneben begonnener Strich wie
+ein auf ihr begonnener; ist nichts gewählt, bewirkt ein Druck neben der Bitmap nichts): Über den Rand
+getragene Farbe läuft halbtransparent aus, und die Bitmap wächst mit; nur hineingezogene Transparenz
+vergrößert nichts. Mit „Gesamtes Dokument“ wächst die Bitmap auf das ganze Rechteck des Strichs
+(Spitze eingeschlossen), gefüllt mit der Seite, auch bei einem Strich ganz außerhalb der Bitmap. Ein
+Strich ganz außerhalb ohne „Gesamtes Dokument“ ändert kein Pixel, ist aber trotzdem ein
+Verlaufsschritt. Die Firepixel-Option **Auf Grenzen beschränken** im Inspektor von Verwischen hält das
+Verwischen innerhalb des Bitmaprands. **Weichzeichner** über den Rand vergrößert
 die Bitmap um bis zu 2 px.
 
 **Strich anhalten (Firepixel-Erweiterung):** Während Sie mit Pinsel, Bleistift, Radiergummi oder einem

@@ -188,6 +188,10 @@ struct Smear {
     grow: Option<bool>,
     /// Some part grew the bitmap past its edge (the finished bitmap may be larger).
     grew: bool,
+    /// "Entire document" with growth (FB-51, RE spec 70 section 1.6): the cells of the dabs that
+    /// worked (every dab after the press, with "Smudge color" also the press dab); the bitmap grows
+    /// to this rectangle, filled with the page image where the smear did not reach.
+    hull: IRect,
     reach: IRect,
     buf: Grow<[f32; 4]>,
     touched: Grow<bool>,
@@ -253,6 +257,7 @@ impl RetouchStroke {
             "smudge" => State::Smear(Box::new(Smear {
                 grow: None,
                 grew: false,
+                hull: IRect::default(),
                 reach: IRect::default(),
                 buf: Grow::empty(),
                 touched: Grow::empty(),
@@ -349,16 +354,14 @@ impl RetouchStroke {
             State::Cover(c) => push_cover(c, base, dab, prm, sel, &stamps),
             State::Passes(p) => push_passes(p, base, dab, prm, sel, pts, &stamps),
             State::Smear(s) => {
-                if s.grow.is_none()
-                    && let Some(q) = pts.first()
-                {
-                    // FB-15/FB-40: without "Confine to boundaries" the smear runs past the edge
-                    // and grows the bitmap wherever it carries colour, also when the stroke
-                    // started outside (dragging transparency in alone grows nothing); with
-                    // "Entire document" only a stroke that starts on the bitmap grows it (the
-                    // page would otherwise be smeared into new pixels far from the bitmap)
-                    let inside = in_rect(&orig, q.x.floor() as i32, q.y.floor() as i32);
-                    let grow = !prm.confine && !orig.is_empty() && (self.page.is_none() || inside);
+                if s.grow.is_none() && !pts.is_empty() {
+                    // FB-15/FB-40/FB-51 (RE spec 70 section 1.6): without "Confine to
+                    // boundaries" the smear is never cut at the bitmap edge, wherever the brush
+                    // centre was at the press: it grows the bitmap where it carries colour
+                    // (dragging transparency in alone grows nothing), with "Entire document" to
+                    // the whole stroke rectangle, also for a stroke pressed outside or running
+                    // entirely outside the bitmap
+                    let grow = !prm.confine && !orig.is_empty();
                     s.grow = Some(grow);
                     s.grew |= grow;
                 }
@@ -373,10 +376,26 @@ impl RetouchStroke {
         match &self.state {
             State::Cover(c) => c.out.get(x, y).unwrap_or_else(own),
             State::Passes(p) => p.pass[2].get(x, y).unwrap_or_else(own),
-            State::Smear(s) => match (s.touched.get(x, y), s.buf.get(x, y)) {
-                (Some(true), Some(v)) => v.map(|c| c as u8),
-                _ => own(),
-            },
+            State::Smear(s) => {
+                let orig = self.base.bounds();
+                if let Some(page) = self.page.as_deref().filter(|_| s.grew)
+                    && !in_rect(&orig, x, y)
+                {
+                    // "Entire document": outside the bitmap only the stroke rectangle, the page
+                    // image where the smear did not reach (FB-51)
+                    if !in_rect(&s.hull, x, y) {
+                        return [0; 4];
+                    }
+                    return match (s.touched.get(x, y), s.buf.get(x, y)) {
+                        (Some(true), Some(v)) => v.map(|c| c as u8),
+                        _ => page.get(x, y).unwrap_or([0; 4]),
+                    };
+                }
+                match (s.touched.get(x, y), s.buf.get(x, y)) {
+                    (Some(true), Some(v)) => v.map(|c| c as u8),
+                    _ => own(),
+                }
+            }
         }
     }
 
@@ -414,6 +433,40 @@ impl RetouchStroke {
                     let keep = orig.union(&img.alpha_bounds());
                     if keep != img.bounds() {
                         img = img.cropped(keep);
+                    }
+                }
+                img
+            }
+            State::Smear(s) if s.grew && !orig.is_empty() && self.page.is_some() => {
+                // "Entire document" (FB-51, RE spec 70 section 1.6): the bitmap grows to the
+                // stroke rectangle, wherever the stroke was pressed, also when it lies entirely
+                // outside (the gap stays transparent); new pixels the smear did not reach are the
+                // page image
+                let mut img = (*self.base).clone();
+                let ext = orig.union(&s.hull);
+                if ext != orig
+                    && let Ok(e) = img.extended_to(ext)
+                {
+                    img = e;
+                }
+                let t = s.touched.r.intersect(&orig);
+                for y in t.top..t.bottom {
+                    for x in t.left..t.right {
+                        if s.touched.get(x, y) == Some(true)
+                            && let Some(v) = s.buf.get(x, y)
+                        {
+                            let p = v.map(|c| c as u8);
+                            img.set_pixel(x, y, Rgba8::new(p[0], p[1], p[2], p[3]));
+                        }
+                    }
+                }
+                let h = s.hull;
+                for y in h.top..h.bottom {
+                    for x in h.left..h.right {
+                        if !in_rect(&orig, x, y) {
+                            let p = self.pixel(x, y);
+                            img.set_pixel(x, y, Rgba8::new(p[0], p[1], p[2], p[3]));
+                        }
                     }
                 }
                 img
@@ -506,6 +559,13 @@ fn copy_px(img: &mut RgbaImage, g: &Grow<[u8; 4]>, within: IRect) {
             }
         }
     }
+}
+
+/// Raster cells a dab at `p` can cover (its bounds without the spare cell at the right and
+/// bottom): diameter 22 at x 280 covers 269..291 (RE spec 70 section 1.3).
+fn dab_cells(dab: &Dab, p: Point) -> IRect {
+    let b = dab.bounds(p);
+    IRect::new(b.left, b.top, b.right - 1, b.bottom - 1)
 }
 
 #[inline]
@@ -847,6 +907,11 @@ fn push_smear(
         for (i, v) in changes {
             s.buf.v[i] = v;
             s.touched.v[i] = true;
+        }
+        // "Entire document": the dabs that work span the rectangle the bitmap grows to (the press
+        // dab picks nothing up, except with "Smudge color")
+        if grow && page.is_some() && (s.prev.is_some() || prm.finger.is_some()) {
+            s.hull = s.hull.union(&dab_cells(dab, st));
         }
         if s.prev.is_some() {
             s.color_w *= 0.93;

@@ -4,7 +4,8 @@
 //! size 22); with "Entire document" the page is smeared in and the bitmap grows to the end of the
 //! stroke plus the tip radius. The Firepixel option "Confine to boundaries" (`confineToBounds`)
 //! keeps the old clipped behaviour. A stroke entirely outside the selected bitmap changes nothing
-//! but still writes one "Smudge" step; with no bitmap at all nothing happens. The blur grows a
+//! but still writes one "Smudge" step (with "Entire document" its rectangle joins the bitmap,
+//! FB-51); with no bitmap at all nothing happens. The blur grows a
 //! bitmap by up to 2 px.
 
 use crate::common;
@@ -169,9 +170,13 @@ fn smudge_outside_the_selected_bitmap_changes_nothing_but_writes_a_step() {
     assert_eq!(steps(&s), n0 + 1, "one Smudge step");
     assert_eq!(image(&s, id), base, "no pixel changed");
     assert_eq!(top_elements(&s).len(), count, "no new object");
-    // also with "Entire document": the stroke does not reach the bitmap, no growth there
+    // with "Entire document" the stroke rectangle becomes part of the bitmap, also entirely
+    // outside it (FB-51, RE spec 70 section 1.3 case d: a separate strip, the gap transparent)
     smudge(&mut s, (180.0, 250.0), (260.0, 270.0), json!({"wholeDocument": true}));
-    assert_eq!(image(&s, id).bounds(), base.bounds());
+    let b = image(&s, id).bounds();
+    assert!(b.right > 260 && b.bottom > 270, "grown to the stroke: {b:?}");
+    assert_eq!(top_elements(&s).len(), count, "still no new object");
+    assert_eq!(image(&s, id).get(150, 210).map(|p| p[3]), Some(0), "gap transparent");
 }
 
 #[test]
