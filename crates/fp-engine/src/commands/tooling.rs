@@ -2,7 +2,7 @@
 //! Verlaufsgriffe und die Retusche-Werkzeuge (`bitmap.retouch`). Wie alle Befehle landen sie im
 //! Verlauf und sind für MCP/JSF aufrufbar.
 
-use super::bitmap::{BREAKS_PARAM_TEXT, Dab, dab_points, dab_points_segments};
+use super::bitmap::{BREAKS_PARAM_TEXT, Dab, dab_points};
 use super::select::bitmap_for;
 use super::{DOC, sel_err, take_ids, target_ids, with_doc};
 use crate::command::{CommandOutput, CommandRegistry, ParamKind, Params, cmd};
@@ -650,16 +650,19 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 with_doc(s, |d| {
                     let (path, target) = bitmap_for(d, pts.first().copied(), &BasicGeometry).ok_or_else(|| sel_err("err-sel-no-bitmap-under-stroke"))?;
                     let sel = d.selection.pixels.clone().filter(|_| d.selection.has_pixels());
+                    // FB-39: the tool's live preview already computed exactly this stroke
+                    let done = if whole { None } else { super::retouch_stroke::take_live_result(&target, &pts, &prm, sel.as_ref()) };
                     // ohne Renderer (headless): Leinwandfarbe mit der Bitmap darüber
                     let page_img = if whole { rendered.clone().or_else(|| canvas_with_bitmap(&d.doc, d.page, &target)) } else { None };
                     let doc = Arc::make_mut(&mut d.doc);
                     docops::edit_at(doc, &path, |e| {
-                        if let ElementKind::Bitmap(b) = &mut e.kind
-                            && let Some(mut img) = bitmap_image(b)
-                        {
-                            let bounds = img.bounds();
-                            retouch_dispatch(&mut img, &pts, &prm, bounds, sel.as_ref(), page_img.as_ref());
-                            set_bitmap_image(b, &img);
+                        if let ElementKind::Bitmap(b) = &mut e.kind {
+                            if let Some(img) = done.as_ref() {
+                                set_bitmap_image(b, img);
+                            } else if let Some(mut img) = bitmap_image(b) {
+                                retouch_dispatch(&mut img, &pts, &prm, sel.as_ref(), page_img.as_ref());
+                                set_bitmap_image(b, &img);
+                            }
                         }
                     });
                     let out = CommandOutput::doc();
@@ -718,49 +721,66 @@ fn retouch_params(p: &Params, mode: &str, fill: Rgba8) -> Result<Retouch> {
             None
         },
         confine: p.bool_or("confineToBounds", false)?,
-        grow: false,
         breaks: crate::paint::parse_breaks(p.get("breaks")),
     })
 }
 
-/// Runs one retouch stroke on `img` (the computation of `bitmap.retouch` for the brush modes).
-/// `bitmap` = bounds of the whole target bitmap (`img` may be a part of it, the live preview).
+/// Runs one retouch stroke on `img` (the computation of `bitmap.retouch` for the brush modes):
+/// Blur, Sharpen, Dodge, Burn and Smudge with the incremental stroke engine (the same code as the
+/// live preview, FB-39), the stamp dab by dab.
 fn retouch_dispatch(
     img: &mut RgbaImage,
     pts: &[Point],
     prm: &Retouch,
-    bitmap: fp_geom::IRect,
     sel: Option<&fp_raster::Mask>,
     page: Option<&RgbaImage>,
 ) {
-    // FB-31: a resumed stroke has several segments. Dodge, burn, blur and sharpen take the
-    // coverage of the whole stroke (one pass, the overlap is not worked twice); smudge and the
-    // stamp carry pixels along the path, so each segment starts afresh at its press point
-    match prm.mode.as_str() {
-        "dodge" | "burn" => retouch_cover(img, pts, prm, sel),
-        "blur" | "sharpen" => retouch_blur(img, pts, prm, sel),
-        "smudge" => {
-            for seg in crate::paint::split_segments(pts, &prm.breaks) {
-                // FB-15 (RE spec 57 section 3): a smudge that starts on the bitmap runs past its
-                // edge and grows the bitmap; one that starts outside only acts where it reaches
-                // the bitmap (no new object), and "Confine to boundaries" keeps every smear inside
-                let grow = !prm.confine
-                    && seg
-                        .first()
-                        .is_some_and(|q| in_rect(&bitmap, q.x.floor() as i32, q.y.floor() as i32));
-                let prm = Retouch {
-                    grow,
-                    ..prm.clone()
-                };
-                smudge(img, seg, &prm, sel, page);
-            }
+    let base = Arc::new(std::mem::replace(img, RgbaImage::empty_at(0, 0)));
+    match super::retouch_stroke::RetouchStroke::new(
+        Arc::clone(&base),
+        prm.clone(),
+        sel.cloned().map(Arc::new),
+        page.cloned().map(Arc::new),
+    ) {
+        Some(mut st) => {
+            // FB-31: the engine starts a new part at every break of a resumed stroke (dodge, burn,
+            // blur and sharpen work the whole stroke once, smudge starts afresh at each press)
+            st.feed(pts, &prm.breaks);
+            *img = st.finish();
         }
-        _ => {
+        None => {
+            *img = Arc::unwrap_or_clone(base);
+            // FB-31: the stamp carries pixels along the path, each segment starts afresh
             for seg in crate::paint::split_segments(pts, &prm.breaks) {
                 retouch(img, seg, prm, sel);
             }
         }
     }
+}
+
+/// Live stroke of the retouch tools (FB-39) for the parameters `params` the tool sends on release:
+/// Blur, Sharpen, Dodge, Burn and Smudge on the whole target bitmap `base`; `None` for the other
+/// modes (they use [`retouch_preview`]) and for "Entire document" without its page.
+pub(crate) fn retouch_live_stroke(
+    base: Arc<RgbaImage>,
+    params: &serde_json::Value,
+    sel: Option<Arc<fp_raster::Mask>>,
+    page: Option<Arc<RgbaImage>>,
+) -> Option<super::retouch_stroke::RetouchStroke> {
+    let p = Params::new("bitmap.retouch", params.clone());
+    let mode = p.str("mode").ok()?;
+    if !matches!(
+        mode.as_str(),
+        "blur" | "sharpen" | "dodge" | "burn" | "smudge"
+    ) {
+        return None;
+    }
+    let whole = mode == "smudge" && p.bool_or("wholeDocument", false).unwrap_or(false);
+    if whole && page.is_none() {
+        return None;
+    }
+    let prm = retouch_params(&p, &mode, Rgba8::new(0, 0, 0, 255)).ok()?;
+    super::retouch_stroke::RetouchStroke::new(base, prm, sel, page.filter(|_| whole))
 }
 
 /// Source page of "Entire document" (smudge): the rendered page with its canvas, or without a
@@ -810,15 +830,13 @@ fn replace_from_image(prm: &mut super::retouch_px::ReplaceParams, img: &RgbaImag
 
 /// Live preview of a retouch stroke without a command (FB-14a, like the stamp preview PAR 05/04):
 /// the same computation as `bitmap.retouch` with the parameters `params` the tool sends on release,
-/// applied to `img` (a copy of the target bitmap or a part of it around the stroke; `bitmap` = the
-/// bounds of the whole bitmap). `page` = the source page of "Entire document"
+/// applied to `img` (a copy of the target bitmap or a part of it around the stroke). `page` = the source page of "Entire document"
 /// ([`smudge_page_source`], rendered once at the press). Returns `false` when the mode has no live
 /// preview (red eye; smudge over the whole document without a page).
 pub(crate) fn retouch_preview(
     img: &mut RgbaImage,
     pts: &[Point],
     params: &serde_json::Value,
-    bitmap: fp_geom::IRect,
     sel: Option<&fp_raster::Mask>,
     page: Option<&RgbaImage>,
 ) -> bool {
@@ -852,7 +870,7 @@ pub(crate) fn retouch_preview(
             let Ok(prm) = retouch_params(&p, &mode, Rgba8::new(0, 0, 0, 255)) else {
                 return false;
             };
-            retouch_dispatch(img, pts, &prm, bitmap, sel, page.filter(|_| whole));
+            retouch_dispatch(img, pts, &prm, sel, page.filter(|_| whole));
             true
         }
     }
@@ -1011,29 +1029,27 @@ fn nine_slice_element(
 }
 
 /// Parameter der Retusche.
-#[derive(Clone)]
-struct Retouch {
-    mode: String,
-    size: f32,
-    round: bool,
-    soft: f32,
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Retouch {
+    pub(crate) mode: String,
+    pub(crate) size: f32,
+    pub(crate) round: bool,
+    pub(crate) soft: f32,
     /// 0..1.
-    strength: f32,
-    range: i64,
-    spacing: f32,
-    offset: (f32, f32),
-    from: Rgba8,
-    to: Rgba8,
-    colorize: bool,
-    tolerance: f32,
+    pub(crate) strength: f32,
+    pub(crate) range: i64,
+    pub(crate) spacing: f32,
+    pub(crate) offset: (f32, f32),
+    pub(crate) from: Rgba8,
+    pub(crate) to: Rgba8,
+    pub(crate) colorize: bool,
+    pub(crate) tolerance: f32,
     /// Verwischen: „Farbe verwischen“ mit dieser Farbe.
-    finger: Option<Rgba8>,
+    pub(crate) finger: Option<Rgba8>,
     /// Smudge: "Confine to boundaries" (Firepixel option, `confineToBounds`).
-    confine: bool,
-    /// Smudge: the stroke may grow the bitmap past its edge (set by [`retouch_dispatch`]).
-    grow: bool,
+    pub(crate) confine: bool,
     /// FB-31: indices into the points where a paused stroke was resumed (`breaks`).
-    breaks: Vec<usize>,
+    pub(crate) breaks: Vec<usize>,
 }
 
 fn rgb_to_hsv(p: [u8; 4]) -> (f32, f32, f32) {
@@ -1060,7 +1076,7 @@ fn rgb_to_hsv(p: [u8; 4]) -> (f32, f32, f32) {
 /// Verstärkung des Weichzeichners: Ein voller Abdruck mischt bei Intensität 100 % 35,3 % des
 /// 3×3-Mittels ein (gemessen am Original: Intensität 50 an einer Farbkante → 15/255, an der
 /// Bitmapkante → 30/255; FV-11, PARITAET_A L38).
-const BLUR_GAIN: f32 = 0.353;
+pub(super) const BLUR_GAIN: f32 = 0.353;
 /// Abstand der Abdrücke: `Durchmesser × Abstand % × Faktor` (an den Strichmessungen des Originals
 /// kalibriert, Vorgabe 20 %: Weichzeichner 13 → ≈ 2 px, Stempel 16 → ≈ 2,1 px).
 fn spacing_gain(mode: &str) -> f32 {
@@ -1069,18 +1085,16 @@ fn spacing_gain(mode: &str) -> f32 {
 /// Farbe außerhalb der Bitmap beim Weichzeichnen: transparentes Weiß (das Original hellt die
 /// Bitmapkante dabei auf und lässt die Bitmap wachsen: 1 px bei einem Klick, 2 px bei einem Zug,
 /// RE spec 57 section 3.2).
-const OUTSIDE: [f32; 4] = [255.0, 255.0, 255.0, 0.0];
-/// How far the blur may grow a bitmap past its edge (px).
-const BLUR_GROWTH: i32 = 2;
+pub(super) const OUTSIDE: [f32; 4] = [255.0, 255.0, 255.0, 0.0];
 
-fn in_rect(r: &fp_geom::IRect, x: i32, y: i32) -> bool {
+pub(super) fn in_rect(r: &fp_geom::IRect, x: i32, y: i32) -> bool {
     x >= r.left && x < r.right && y >= r.top && y < r.bottom
 }
 
 /// Scharfzeichner: Verstärkung der Abweichung vom 3×3-Mittel je voller Abdruck bei Intensität
 /// 100 % (Original Intensität 50: G 212 neben Schwarz +8, G 160 neben Schwarz +6 bzw. +12 bei
 /// zwei Abdrücken; nur an Kanten, gesättigte Kanäle bleiben).
-const SHARPEN_DAB_GAIN: f32 = 0.226;
+pub(super) const SHARPEN_DAB_GAIN: f32 = 0.226;
 
 /// Gradationskurve von Abwedler (`dodge`) und Nachbelichter je Bereich und Kanal, `a` = Belichtung
 /// 0..1. Gemessen am Original bei Belichtung 50 (PAR-X 04/06, 04/07): je Kanal getrennt, also ohne
@@ -1088,7 +1102,7 @@ const SHARPEN_DAB_GAIN: f32 = 0.226;
 /// (133 → 160, Schwarz/Weiß bleiben), Lichter × 1,346 (133 → 179); Nachbelichten spiegelbildlich:
 /// Schatten 255 − (255 − c) × 1,346 (133 → 91), Mitteltöne Gamma 1,42 (133 → 101), Lichter × 0,75
 /// (Weiß → 191).
-fn tone_curve(dodge: bool, range: i64, a: f32, c: f32) -> f32 {
+pub(super) fn tone_curve(dodge: bool, range: i64, a: f32, c: f32) -> f32 {
     let x = (c / 255.0).clamp(0.0, 1.0);
     let v = match (dodge, range) {
         (true, 0) => x + (1.0 - x) * 0.494 * a,
@@ -1099,194 +1113,6 @@ fn tone_curve(dodge: bool, range: i64, a: f32, c: f32) -> f32 {
         (false, _) => x.powf(1.0 + 0.84 * a),
     };
     v.clamp(0.0, 1.0) * 255.0
-}
-
-/// Deckung eines ganzen Zugs über `work`: Abdrücke je Pixel, jeder nimmt seine Deckung vom Rest.
-fn stroke_cover(dab: &Dab, stamps: &[Point], work: fp_geom::IRect) -> Vec<f32> {
-    let ww = work.width() as usize;
-    let mut keep = vec![1.0f32; ww * work.height() as usize];
-    for s in stamps {
-        dab.each(*s, |x, y, w| {
-            if in_rect(&work, x, y) {
-                keep[(y - work.top) as usize * ww + (x - work.left) as usize] *= 1.0 - w;
-            }
-        });
-    }
-    keep.iter().map(|k| 1.0 - k).collect()
-}
-
-/// Abwedler und Nachbelichter wie im Original: Die Belichtung richtet sich nach der Deckung des
-/// ganzen Zugs (Abdruck [`Dab::stroke`], dicht gesetzt) und wirkt einmal auf die Ausgangspixel;
-/// ein zweiter Zug verstärkt.
-fn retouch_cover(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_raster::Mask>) {
-    let dab = Dab::stroke(prm.size, prm.round, prm.soft * 100.0);
-    let stamps = dab_points_segments(pts, &prm.breaks, 1.0);
-    let reach = stamps
-        .iter()
-        .fold(fp_geom::IRect::default(), |r, s| r.union(&dab.bounds(*s)));
-    let work = reach.intersect(&img.bounds());
-    if work.is_empty() {
-        return;
-    }
-    let cover = stroke_cover(&dab, &stamps, work);
-    let ww = work.width() as usize;
-    for y in work.top..work.bottom {
-        for x in work.left..work.right {
-            let mut c = cover[(y - work.top) as usize * ww + (x - work.left) as usize];
-            if let Some(m) = sel {
-                c *= m.get(x, y) as f32 / 255.0;
-            }
-            if c <= 0.0 {
-                continue;
-            }
-            let Some(px) = img.get(x, y) else { continue };
-            let dodge = prm.mode == "dodge";
-            // die Deckung schwächt die Belichtung ab (nicht das Ergebnis)
-            let f = |k: usize| {
-                tone_curve(dodge, prm.range, prm.strength * c, px[k] as f32)
-                    .round()
-                    .clamp(0.0, 255.0) as u8
-            };
-            img.set_pixel(x, y, Rgba8::new(f(0), f(1), f(2), px[3]));
-        }
-    }
-}
-
-/// Weichzeichner und Scharfzeichner wie im Original (PAR-X 04/02–04/14): Ein Pixel wird je Zug
-/// ein- oder zweimal bearbeitet – einmal, wenn ein Mauspunkt höchstens `D/2 + 1,5` entfernt liegt,
-/// zweimal, wenn es zwei sind (Original bei Intensität 50 an einer Kante 0|255: 15 bzw. 29 Stufen,
-/// bei 100: 31 bzw. 52, bei 10: 3 bzw. 6; Einzelklick 15). Quer zum Zug schwächt die Deckung des
-/// Abdrucks ([`Dab::stroke`], eckig/Rand 0 hart) die Wirkung ab. Weiche Verläufe bleiben (das
-/// 3×3-Mittel weicht dort weniger als eine halbe Stufe ab).
-fn retouch_blur(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_raster::Mask>) {
-    let dab = Dab::stroke(prm.size, prm.round, prm.soft * 100.0);
-    let stamps = dab_points_segments(pts, &prm.breaks, 1.0);
-    let reach = stamps
-        .iter()
-        .fold(fp_geom::IRect::default(), |r, s| r.union(&dab.bounds(*s)));
-    let orig = img.bounds();
-    let blur = prm.mode == "blur";
-    if blur && !orig.is_empty() {
-        // the blur may grow the bitmap by up to 2 px (new pixels transparent white); the second
-        // ring only gets coverage from the later passes of a stroke (measured 360 -> 362, RE 57)
-        let ext = orig.union(&reach.intersect(&orig.inflate(BLUR_GROWTH, BLUR_GROWTH)));
-        if ext != orig
-            && let Ok(mut e) = img.extended_to(ext)
-        {
-            for y in ext.top..ext.bottom {
-                for x in ext.left..ext.right {
-                    if !in_rect(&orig, x, y) {
-                        e.set_pixel(x, y, Rgba8::new(255, 255, 255, 0));
-                    }
-                }
-            }
-            *img = e;
-        }
-    }
-    let work = reach.intersect(&img.bounds());
-    if work.is_empty() {
-        return;
-    }
-    let ww = work.width() as usize;
-    let cover = stroke_cover(&dab, &stamps, work);
-    // Mauspunkte je Pixel (höchstens 2)
-    let mut events: Vec<Point> = Vec::with_capacity(pts.len());
-    for p in pts {
-        if events.last() != Some(p) {
-            events.push(*p);
-        }
-    }
-    let radius = prm.size.max(1.0) / 2.0 + 1.5;
-    let hits = |x: i32, y: i32| -> usize {
-        let (cx, cy) = (x as f32 + 0.5, y as f32 + 0.5);
-        events
-            .iter()
-            .filter(|p| (p.x - cx).hypot(p.y - cy) <= radius)
-            .take(3)
-            .count()
-            .max(1)
-    };
-    let hit_map: Vec<usize> = (work.top..work.bottom)
-        .flat_map(|y| (work.left..work.right).map(move |x| (x, y)))
-        .map(|(x, y)| hits(x, y))
-        .collect();
-    let gain = if blur { BLUR_GAIN } else { SHARPEN_DAB_GAIN } * prm.strength;
-    let multi = events.len() > 1;
-    // Durchgänge: Einzelklick einmal; ein schneller Zug trifft eine Stelle im Original ein- oder
-    // zweimal, je nach Lage der Mauspunkte (nicht vorhersagbar) – hier anderthalbmal; ein langsamer
-    // Zug (≥ 3 Mauspunkte in Reichweite) dreimal (FV-11: Strich entlang der Kante 40/255)
-    let weight = |h: usize, round: usize| -> f32 {
-        match round {
-            1 => 1.0,
-            2 if h >= 3 => 1.0,
-            2 if multi => 0.5,
-            3 if h >= 3 => 1.0,
-            _ => 0.0,
-        }
-    };
-    for round in 1..=3usize {
-        let src = img.clone();
-        let read = |x: i32, y: i32| -> [f32; 4] {
-            src.get(x, y)
-                .map(|p| p.map(|v| v as f32))
-                .unwrap_or(OUTSIDE)
-        };
-        for y in work.top..work.bottom {
-            for x in work.left..work.right {
-                let i = (y - work.top) as usize * ww + (x - work.left) as usize;
-                let rw = weight(hit_map[i], round);
-                if rw <= 0.0 {
-                    continue;
-                }
-                let mut c = cover[i] * rw;
-                if let Some(m) = sel {
-                    c *= m.get(x, y) as f32 / 255.0;
-                }
-                if c <= 0.0 {
-                    continue;
-                }
-                let px = read(x, y);
-                let mut acc = [0f32; 4];
-                for dy in -1..=1 {
-                    for dx in -1..=1 {
-                        let q = read(x + dx, y + dy);
-                        for k in 0..4 {
-                            acc[k] += q[k];
-                        }
-                    }
-                }
-                let a = acc.map(|v| v / 9.0);
-                let t = c * gain;
-                let out = if blur {
-                    [0, 1, 2, 3].map(|k| px[k] + (a[k] - px[k]) * t)
-                } else {
-                    [
-                        px[0] + (px[0] - a[0]) * t,
-                        px[1] + (px[1] - a[1]) * t,
-                        px[2] + (px[2] - a[2]) * t,
-                        px[3],
-                    ]
-                };
-                let mut p = out.map(|v| v.round().clamp(0.0, 255.0) as u8);
-                if blur && !in_rect(&orig, x, y) {
-                    // neue Randpixel: Deckung abrunden, unter 2/255 verwerfen (FV-11)
-                    p[3] = if out[3] < 2.0 {
-                        0
-                    } else {
-                        out[3].floor().clamp(0.0, 255.0) as u8
-                    };
-                }
-                img.set_pixel(x, y, Rgba8::new(p[0], p[1], p[2], p[3]));
-            }
-        }
-    }
-    if blur && !orig.is_empty() {
-        // nur Ränder behalten, die wirklich Deckung bekommen haben
-        let keep = orig.union(&img.alpha_bounds());
-        if keep != img.bounds() {
-            *img = img.cropped(keep);
-        }
-    }
 }
 
 /// Seite ohne Renderer: Leinwandfarbe mit der Zielbitmap darüber (für „Gesamtes Dokument“).
@@ -1321,155 +1147,8 @@ fn canvas_with_bitmap(
     Some(out)
 }
 
-/// Verwischen wie im Original (PAR-X 04/09–04/11): Abdrücke je Pixel, jeder zieht den Inhalt um
-/// den Weg seit dem vorigen Abdruck mit (Druck 50 → 47 %), das Zwischenergebnis wird je Abdruck auf
-/// ganze Stufen gerundet. Harte Kanten wandern so ≈ 14 px in Zugrichtung, weiche Verläufe bleiben
-/// (die Änderung je Abdruck liegt unter einer halben Stufe). „Farbe verwischen“ mischt die Farbe
-/// am Zuganfang ein und lässt sie mit dem Zug auslaufen; „Gesamtes Dokument“ nimmt die sichtbare
-/// Seite (`page`, mit Leinwand) statt nur der Bitmap auf.
-///
-/// Past the bitmap edge (FB-15, RE spec 57 section 3): with `prm.grow` the work area is the whole
-/// reach of the stroke; pixels outside the bitmap start transparent (or as the page with "Entire
-/// document"), so the smear carries the picked-up colour over the edge with the decaying weight of
-/// the drag and fades out semi-transparent; the bitmap then grows to the pixels that got coverage
-/// (with "Entire document" to the whole reach, filled with the page). Without `grow` only the
-/// bitmap is worked on; a stroke from outside drags transparency in, unless `prm.confine` keeps the
-/// outside out entirely (the previous clipped behaviour). Colours mix premultiplied by their
-/// alpha, so transparent pixels carry no colour of their own (identical to straight mixing for
-/// opaque pixels).
-fn smudge(
-    img: &mut RgbaImage,
-    pts: &[Point],
-    prm: &Retouch,
-    sel: Option<&fp_raster::Mask>,
-    page: Option<&RgbaImage>,
-) {
-    let dab = Dab::stroke(prm.size, prm.round, prm.soft * 100.0);
-    let stamps = dab_points(pts, 1.0);
-    let reach = stamps
-        .iter()
-        .fold(fp_geom::IRect::default(), |r, s| r.union(&dab.bounds(*s)));
-    let orig = img.bounds();
-    let work = if prm.grow && !orig.is_empty() {
-        let w = reach.inflate(2, 2);
-        if let Ok(e) = img.extended_to(w) {
-            *img = e;
-        }
-        w.intersect(&img.bounds())
-    } else {
-        reach.inflate(2, 2).intersect(&orig)
-    };
-    if work.is_empty() {
-        return;
-    }
-    let ww = work.width() as usize;
-    let idx = |x: i32, y: i32| (y - work.top) as usize * ww + (x - work.left) as usize;
-    let mut buf: Vec<[f32; 4]> = Vec::with_capacity(ww * work.height() as usize);
-    for y in work.top..work.bottom {
-        for x in work.left..work.right {
-            let own = img.get(x, y).unwrap_or([0; 4]);
-            let v = match page.and_then(|pg| pg.get(x, y)) {
-                Some(q) => q,
-                None => own,
-            };
-            buf.push(v.map(|c| c as f32));
-        }
-    }
-    // Quelle außerhalb des Arbeitsbereichs: Seite („Gesamtes Dokument“) oder Bitmap; outside the
-    // bitmap transparent (drags transparency in), with "Confine to boundaries" nothing
-    let confine = prm.confine;
-    let outside = |x: i32, y: i32| -> Option<[f32; 4]> {
-        page.and_then(|pg| pg.get(x, y))
-            .or_else(|| img.get(x, y))
-            .map(|p| p.map(|v| v as f32))
-            .or(if confine { None } else { Some([0.0; 4]) })
-    };
-    let pressure = 0.94 * prm.strength;
-    let mut prev: Option<Point> = None;
-    let mut color_w = 1.0f32;
-    let mut touched = vec![false; buf.len()];
-    for s in stamps {
-        let mut changes: Vec<(usize, [f32; 4])> = Vec::new();
-        {
-            let from: &[[f32; 4]] = &buf;
-            let sample = |x: i32, y: i32| -> Option<[f32; 4]> {
-                if in_rect(&work, x, y) {
-                    Some(from[idx(x, y)])
-                } else {
-                    outside(x, y)
-                }
-            };
-            dab.each(s, |x, y, w0| {
-                if !in_rect(&work, x, y) {
-                    return;
-                }
-                let mut w = w0 * pressure;
-                if let Some(m) = sel {
-                    w *= m.get(x, y) as f32 / 255.0;
-                }
-                if w <= 0.0 {
-                    return;
-                }
-                let px = from[idx(x, y)];
-                let ppx = premul(px);
-                let mut out = ppx;
-                if let Some(pv) = prev {
-                    // Inhalt an der Stelle des vorigen Abdrucks (bilinear)
-                    let (fx, fy) = (x as f32 - (s.x - pv.x), y as f32 - (s.y - pv.y));
-                    let (x0, y0) = (fx.floor() as i32, fy.floor() as i32);
-                    let (ax, ay) = (fx - x0 as f32, fy - y0 as f32);
-                    let g = |xx: i32, yy: i32| premul(sample(xx, yy).unwrap_or(px));
-                    let (q00, q10, q01, q11) =
-                        (g(x0, y0), g(x0 + 1, y0), g(x0, y0 + 1), g(x0 + 1, y0 + 1));
-                    let q = [0, 1, 2, 3].map(|k| {
-                        q00[k] * (1.0 - ax) * (1.0 - ay)
-                            + q10[k] * ax * (1.0 - ay)
-                            + q01[k] * (1.0 - ax) * ay
-                            + q11[k] * ax * ay
-                    });
-                    out = [0, 1, 2, 3].map(|k| ppx[k] + (q[k] - ppx[k]) * w);
-                }
-                if let Some(c) = prm.finger {
-                    let t = w * color_w;
-                    let cv = [c.r as f32, c.g as f32, c.b as f32, 255.0];
-                    out = [0, 1, 2, 3].map(|k| out[k] + (cv[k] - out[k]) * t);
-                }
-                let v = unpremul(out).map(|v| v.round().clamp(0.0, 255.0));
-                // a transparent pixel that stays transparent keeps its stored colour
-                let v = if v[3] == 0.0 && px[3] == 0.0 { px } else { v };
-                changes.push((idx(x, y), v));
-            });
-        }
-        for (i, v) in changes {
-            buf[i] = v;
-            touched[i] = true;
-        }
-        if prev.is_some() {
-            color_w *= 0.93;
-        }
-        prev = Some(s);
-    }
-    for y in work.top..work.bottom {
-        for x in work.left..work.right {
-            if !touched[idx(x, y)] {
-                continue;
-            }
-            let p = buf[idx(x, y)].map(|v| v as u8);
-            img.set_pixel(x, y, Rgba8::new(p[0], p[1], p[2], p[3]));
-        }
-    }
-    if img.bounds() != orig {
-        // keep only the grown pixels that got coverage (measured: the bitmap ends where the smear
-        // fades out, 360 -> 384; with "Entire document" at the end of the stroke plus the radius)
-        let keep = orig.union(&img.alpha_bounds());
-        if keep != img.bounds() {
-            *img = img.cropped(keep);
-        }
-    }
-}
-
 /// Colour premultiplied by its alpha (0..255 channels); unchanged for opaque pixels.
-fn premul(p: [f32; 4]) -> [f32; 4] {
+pub(super) fn premul(p: [f32; 4]) -> [f32; 4] {
     if p[3] >= 255.0 {
         return p;
     }
@@ -1478,7 +1157,7 @@ fn premul(p: [f32; 4]) -> [f32; 4] {
 }
 
 /// Inverse of [`premul`]; fully transparent becomes transparent black.
-fn unpremul(q: [f32; 4]) -> [f32; 4] {
+pub(super) fn unpremul(q: [f32; 4]) -> [f32; 4] {
     if q[3] >= 255.0 {
         return q;
     }

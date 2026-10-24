@@ -234,15 +234,6 @@ pub(crate) fn dab_points(pts: &[Point], step: f32) -> Vec<Point> {
     stamps
 }
 
-/// FB-31: dab positions of a stroke whose points are split into segments at `breaks` (a resumed
-/// stroke): every segment starts with a dab at its first point, the segments are not joined.
-pub(crate) fn dab_points_segments(pts: &[Point], breaks: &[usize], step: f32) -> Vec<Point> {
-    crate::paint::split_segments(pts, breaks)
-        .into_iter()
-        .flat_map(|seg| dab_points(seg, step))
-        .collect()
-}
-
 /// Abstand der Radiergummi-Abdrücke: das Original setzt je Pixel einen Abdruck (gemessen: Strich
 /// 13 / Rand 2 löscht bei 6 px Abstand 81 %, bei 7 px 13 %).
 pub(crate) const ERASER_STEP: f32 = 1.0;

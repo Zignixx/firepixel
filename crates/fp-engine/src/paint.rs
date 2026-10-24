@@ -1067,6 +1067,89 @@ pub(crate) fn diff_tiles(
     tiles
 }
 
+/// Incremental variant of [`diff_tiles`] (FB-39, retouch live preview): rewrites only `area` of
+/// the kept `tiles` with the pixels `new(x, y)` that differ from `base` (fully transparent pixels
+/// count as equal); tiles outside `area` keep their version, so the canvas re-uploads and
+/// re-composites only what the last pointer move changed. A tile is created only where a pixel
+/// differs.
+pub(crate) fn update_diff_tiles(
+    tiles: &mut BTreeMap<(i32, i32), PaintTile>,
+    area: IRect,
+    new: &dyn Fn(i32, i32) -> [u8; 4],
+    base: &RgbaImage,
+    backdrop: Argb,
+    version: u64,
+) {
+    let backdrop = Backdrop(backdrop);
+    let area = area.intersect(&IRect::new(-1_000_000, -1_000_000, 1_000_000, 1_000_000));
+    if area.is_empty() {
+        return;
+    }
+    let norm = |p: [u8; 4]| if p[3] == 0 { [0; 4] } else { p };
+    let (tx0, ty0) = (area.left.div_euclid(TILE), area.top.div_euclid(TILE));
+    let (tx1, ty1) = (
+        (area.right - 1).div_euclid(TILE),
+        (area.bottom - 1).div_euclid(TILE),
+    );
+    for ty in ty0..=ty1 {
+        for tx in tx0..=tx1 {
+            let trect = IRect::from_xywh(tx * TILE, ty * TILE, TILE, TILE);
+            let part = area.intersect(&trect);
+            if part.is_empty() {
+                continue;
+            }
+            // pixels of the part: (true value, shown value)
+            let mut px = Vec::with_capacity(part.area() as usize);
+            let mut any = false;
+            for y in part.top..part.bottom {
+                for x in part.left..part.right {
+                    let n = norm(new(x, y));
+                    let o = norm(base.get(x, y).unwrap_or([0; 4]));
+                    let shown = if n == o {
+                        [0; 4]
+                    } else if n[3] >= o[3] {
+                        n
+                    } else {
+                        over(n, backdrop.at(x, y))
+                    };
+                    any |= shown[3] != 0;
+                    px.push((n, shown));
+                }
+            }
+            if !any && !tiles.contains_key(&(tx, ty)) {
+                continue;
+            }
+            let tile = tiles.entry((tx, ty)).or_insert_with(|| PaintTile {
+                key: (tx, ty),
+                rect: trect,
+                image: Arc::new(
+                    RgbaImage::new(trect)
+                        .unwrap_or_else(|_| RgbaImage::empty_at(trect.left, trect.top)),
+                ),
+                exact: None,
+                version: 0,
+            });
+            let ti = Arc::make_mut(&mut tile.image);
+            let mut exact = tile.exact.take();
+            let mut it = px.into_iter();
+            for y in part.top..part.bottom {
+                for x in part.left..part.right {
+                    let Some((n, shown)) = it.next() else { break };
+                    if shown[3] != 0 && (shown != n || exact.is_some()) {
+                        // first pixel whose shown value differs: start from the shown image,
+                        // which holds the true pixels everywhere else so far
+                        let ex = Arc::make_mut(exact.get_or_insert_with(|| Arc::new(ti.clone())));
+                        ex.set_pixel(x, y, Rgba8::new(n[0], n[1], n[2], n[3]));
+                    }
+                    ti.set_pixel(x, y, Rgba8::new(shown[0], shown[1], shown[2], shown[3]));
+                }
+            }
+            tile.exact = exact;
+            tile.version = version;
+        }
+    }
+}
+
 /// `src` über einem deckenden Hintergrund.
 fn over(src: [u8; 4], bg: [u8; 4]) -> [u8; 4] {
     let a = src[3] as u32;

@@ -2,7 +2,10 @@
 //! Nachbelichter, Verwischen, Stempel, Farbe ersetzen, Rote Augen entfernen. Ziehen sammelt die
 //! Strichpunkte (Umschalt = gerade Linie), beim Loslassen wirkt `bitmap.retouch` auf die Bitmap.
 //! While dragging, the stroke is computed live on a copy of the target bitmap with the same code
-//! as the command, so releasing changes nothing more (FB-14a, RE spec 57 section 1). Over an
+//! as the command, so releasing changes nothing more (FB-14a, RE spec 57 section 1). Blur,
+//! Sharpen, Dodge, Burn and Smudge run incrementally: a pointer move computes and re-tiles only
+//! the part the new dabs can change (FB-39; before, every move recomputed the whole stroke from
+//! its first dab, which lagged with long strokes and large tips). Over an
 //! editable bitmap the system cursor is hidden and only the tip outline shows the pointer; with
 //! nothing to edit the cursor is "not allowed" and no outline is drawn (RE spec 57 section 2).
 //! Durchmesser, Kante, Form, Intensität/Belichtung/Druck, Bereich und Toleranz kommen aus den
@@ -128,6 +131,15 @@ struct RetouchLive {
     /// Canvas colour behind pixels whose coverage drops (see `paint::diff_tiles`).
     backdrop: fp_color::Argb,
     preview: crate::paint::PaintPreview,
+    /// Incremental stroke (Blur, Sharpen, Dodge, Burn, Smudge; FB-39) with its parameters.
+    engine: Option<(crate::commands::retouch_stroke::RetouchStroke, Value)>,
+    /// Kept preview tiles of the incremental stroke.
+    tiles: std::collections::BTreeMap<(i32, i32), crate::paint::PaintTile>,
+    /// Union of the areas the incremental stroke changed.
+    painted: fp_geom::IRect,
+    /// The target bitmap element at the press (the release hands the finished stroke to the
+    /// command while the element is unchanged).
+    elem: std::sync::Arc<fp_model::Element>,
 }
 
 fn next_live_stroke() -> u64 {
@@ -137,6 +149,55 @@ fn next_live_stroke() -> u64 {
 }
 
 impl RetouchLive {
+    /// Feeds the points not yet given to the stroke engine (FB-39) with the breaks of a resumed
+    /// stroke (FB-31: a break starts a new part, as in `bitmap.retouch`); `restart` (Shift: the
+    /// points were replaced) starts the stroke anew. Returns the area that may have changed (with
+    /// a restart also everything the old stroke changed), `None` without an engine.
+    fn feed(&mut self, pts: &[Point], breaks: &[usize], restart: bool) -> Option<fp_geom::IRect> {
+        let (engine, prm) = self.engine.as_mut()?;
+        let mut redo = fp_geom::IRect::default();
+        if restart || pts.len() < engine.fed() {
+            *engine = crate::commands::retouch_live_stroke(
+                std::sync::Arc::clone(engine.base()),
+                prm,
+                self.sel.clone().map(std::sync::Arc::new),
+                self.page.clone(),
+            )?;
+            redo = self.painted;
+        }
+        let dirty = engine.feed(pts, breaks);
+        Some(dirty.union(&redo))
+    }
+
+    /// Incremental preview (FB-39): feeds the new points to the stroke engine and re-tiles only
+    /// what they changed. `false` when there is no engine for this mode.
+    fn advance(&mut self, pts: &[Point], breaks: &[usize], restart: bool) -> bool {
+        let Some(area) = self.feed(pts, breaks, restart) else {
+            return false;
+        };
+        let Some((engine, _)) = self.engine.as_ref() else {
+            return false;
+        };
+        let next_gen = self.preview.generation + 1;
+        crate::paint::update_diff_tiles(
+            &mut self.tiles,
+            area,
+            &|x, y| engine.pixel(x, y),
+            &self.base,
+            self.backdrop,
+            next_gen,
+        );
+        self.painted = self.painted.union(&area);
+        self.preview = crate::paint::PaintPreview {
+            bounds: self.painted.to_rect(),
+            generation: next_gen,
+            stroke: self.preview.stroke,
+            target: self.preview.target,
+            tiles: std::sync::Arc::new(self.tiles.values().cloned().collect()),
+        };
+        true
+    }
+
     /// Computes the stroke (parameters as sent by `bitmap.retouch` on release) on a copy of the
     /// target bitmap and keeps the changed pixels as tiles. `false`: no live preview for this mode.
     fn update(&mut self, pts: &[Point], params: &Value, size: f32) -> bool {
@@ -156,7 +217,6 @@ impl RetouchLive {
             &mut img,
             pts,
             params,
-            self.base.bounds(),
             self.sel.as_ref(),
             self.page.as_deref(),
         ) {
@@ -215,7 +275,7 @@ impl RetouchTool {
     fn commit(&mut self, ctx: &ToolContext, end: Option<(Point, bool)>) -> ToolResponse {
         self.active = false;
         self.paused = false;
-        self.live = None;
+        let live = self.live.take();
         if !self.target_ok {
             // no editable bitmap: no effect, no history step, no message (RE 57 §3.2)
             self.drop_stroke();
@@ -231,6 +291,15 @@ impl RetouchTool {
             if self.points.last().is_none_or(|l| dist(*l, pos) > 0.0) {
                 self.points.push(pos);
             }
+        }
+        // FB-39: the live stroke with the release point is the result; the command takes it
+        // instead of computing the stroke again (Shift replaced the points: the engine restarts)
+        let restart = end.is_some_and(|(_, shift)| shift);
+        if let Some(mut l) = live
+            && l.feed(&self.points, &self.breaks, restart).is_some()
+            && let Some((engine, _)) = l.engine.as_ref()
+        {
+            engine.remember(std::sync::Arc::clone(&l.elem), &self.points);
         }
         let p = self.stroke_params(ctx, &self.points);
         self.points.clear();
@@ -289,12 +358,26 @@ impl RetouchTool {
             .get(ctx.page)
             .map(|pg| pg.root.background)
             .unwrap_or(fp_color::Argb(0xffff_ffff));
+        let base = std::sync::Arc::new(base);
+        // the stroke parameters without points (the engine gets the points one move at a time)
+        let prm = self.stroke_params(ctx, &[]);
+        let engine = crate::commands::retouch_live_stroke(
+            std::sync::Arc::clone(&base),
+            &prm,
+            sel.clone().map(std::sync::Arc::new),
+            page.clone(),
+        )
+        .map(|e| (e, prm));
         self.live = Some(RetouchLive {
-            base: std::sync::Arc::new(base),
+            base,
             sel,
             whole: self.id == ToolId::RubberStamp,
             page,
             backdrop,
+            engine,
+            tiles: std::collections::BTreeMap::new(),
+            painted: fp_geom::IRect::default(),
+            elem: std::sync::Arc::clone(&e),
             preview: crate::paint::PaintPreview {
                 stroke: next_live_stroke(),
                 target: Some(id.0),
@@ -303,8 +386,17 @@ impl RetouchTool {
         });
     }
 
-    /// Recomputes the live preview for the points so far; a mode without preview drops it.
-    fn update_live(&mut self, ctx: &ToolContext) {
+    /// Recomputes the live preview for the points so far (incrementally where the mode allows
+    /// it; `restart` = the points were replaced); a mode without preview drops it.
+    fn update_live(&mut self, ctx: &ToolContext, restart: bool) {
+        if let Some(l) = self.live.as_mut()
+            && l.engine.is_some()
+        {
+            if !l.advance(&self.points, &self.breaks, restart) {
+                self.live = None;
+            }
+            return;
+        }
         let size = params(self.id, ctx).size;
         let stroke = self.stroke_params(ctx, &self.points);
         if let Some(l) = self.live.as_mut()
@@ -489,7 +581,7 @@ impl ToolMachine for RetouchTool {
                 self.paused = false;
                 self.breaks.push(self.points.len());
                 self.points.push(*pos);
-                self.update_live(ctx);
+                self.update_live(ctx, false);
             }
             _ if self.paused => {}
             PointerKind::Down
@@ -538,17 +630,22 @@ impl ToolMachine for RetouchTool {
                 self.active = true;
                 if self.id != ToolId::RedEyeRemoval {
                     self.begin_live(ctx, *pos);
-                    self.update_live(ctx);
+                    self.update_live(ctx, false);
                 }
             }
             PointerKind::Move if self.active && self.id == ToolId::RedEyeRemoval => {}
             PointerKind::Move if self.active => {
-                if ev.mods.shift {
+                // Shift: a straight line from the start point of the running part replaces its
+                // points (the engine recomputes the stroke)
+                let restart = ev.mods.shift;
+                if restart {
                     self.points.truncate(self.segment_start() + 1);
                 }
                 if self.points.last().is_none_or(|l| dist(*l, *pos) >= 0.5) {
                     self.points.push(*pos);
-                    self.update_live(ctx);
+                    self.update_live(ctx, restart);
+                } else if restart {
+                    self.update_live(ctx, true);
                 }
             }
             PointerKind::Up if self.active && self.id == ToolId::RedEyeRemoval => {

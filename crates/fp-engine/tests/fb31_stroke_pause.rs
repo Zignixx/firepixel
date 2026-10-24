@@ -280,3 +280,106 @@ fn retouch_dodge_pause_covers_the_overlap_once() {
     assert_eq!(img.get(150, 100).expect("px")[0], single, "the overlap is dodged once");
     assert_eq!(img.get(200, 70).expect("px")[0], 100, "not joined");
 }
+
+/// Opaque 300 x 200 bitmap at 0/0 with hard edges (blur, sharpen and smudge change it).
+fn pattern_bitmap(s: &mut Session) -> ElementId {
+    let r = fp_geom::IRect::new(0, 0, 300, 200);
+    let mut img = fp_raster::RgbaImage::new(r).expect("image");
+    for y in r.top..r.bottom {
+        for x in r.left..r.right {
+            let c = if ((x / 9) + (y / 7)) % 2 == 0 {
+                [220, 40, (y % 256) as u8, 255]
+            } else {
+                [(x % 256) as u8, 90, 20, 255]
+            };
+            img.set_pixel(x, y, fp_color::Rgba8::new(c[0], c[1], c[2], c[3]));
+        }
+    }
+    s.clipboard.clear();
+    s.clipboard.pixels = Some(img);
+    let v = ex(s, "edit.paste", json!({}));
+    ElementId(v["ids"][0].as_u64().expect("id"))
+}
+
+fn last_preview(s: &mut Session) -> Option<fp_engine::paint::PaintPreview> {
+    s.tool_feedback().into_iter().find_map(|o| match o {
+        Overlay::Paint(p) => Some(p),
+        _ => None,
+    })
+}
+
+/// FB-31 with the incremental retouch engine (FB-39): a paused and resumed Blur, Sharpen, Dodge,
+/// Burn or Smudge stroke is previewed part by part with the breaks, the last live preview equals
+/// the stored bitmap, and the stored bitmap equals `bitmap.retouch` computed on its own from the
+/// sent parameters (with `breaks`). Applied with the release and with Enter while paused.
+#[test]
+fn retouch_pause_live_stroke_equals_the_command() {
+    for (k, tool) in [
+        ToolId::Blur,
+        ToolId::Sharpen,
+        ToolId::Dodge,
+        ToolId::Burn,
+        ToolId::Smudge,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        for enter in [false, true] {
+            let mut s = new_session();
+            let id = pattern_bitmap(&mut s);
+            select(&mut s, &[id]);
+            s.set_tool(tool).expect("tool");
+            let base = image(&s, id);
+            let n0 = steps(&s);
+            paint_and_pause(&mut s, (40.0, 60.0), (200.0, 60.0 + k as f32));
+            events(&mut s, &[ToolEvent::drag(120.0, 20.0)]);
+            events(&mut s, &[ToolEvent::down(120.0, 20.0)]);
+            assert_eq!(s.tool_stroke_pause(), StrokePause::Painting, "{tool:?}: resumed");
+            drag(&mut s, (120.0, 20.0), (125.0, 160.0));
+            let p = last_preview(&mut s).unwrap_or_else(|| panic!("{tool:?}: live preview"));
+            let r = if enter {
+                key(&mut s, ToolKey::Pause);
+                events(&mut s, &[ToolEvent::up(125.0, 160.0)]);
+                key(&mut s, ToolKey::Enter)
+            } else {
+                s.tool_event(&ToolEvent::up(125.0, 160.0)).expect("up")
+            };
+            assert_eq!(steps(&s), n0 + 1, "{tool:?}: one row");
+            let breaks = r.commands[0].params["breaks"].as_array().cloned().unwrap_or_default();
+            assert_eq!(breaks.len(), 1, "{tool:?}: one resume {breaks:?}");
+            let res = image(&s, id);
+            assert!(res != base, "{tool:?}: the stroke changes pixels");
+            // the last live preview is the result
+            let norm = |p: [u8; 4]| if p[3] == 0 { [0; 4] } else { p };
+            let u = res.bounds().union(&base.bounds());
+            let mut diff = 0;
+            for y in u.top..u.bottom {
+                for x in u.left..u.right {
+                    let orig = base.get(x, y).unwrap_or([0; 4]);
+                    let seen = match p.tiles.iter().find(|t| t.rect.contains(x, y)) {
+                        Some(t) => {
+                            let v = t.image.get(x, y).unwrap_or([0; 4]);
+                            if v[3] == 0 {
+                                orig
+                            } else {
+                                t.exact.as_ref().and_then(|e| e.get(x, y)).unwrap_or(v)
+                            }
+                        }
+                        None => orig,
+                    };
+                    if norm(seen) != norm(res.get(x, y).unwrap_or([0; 4])) {
+                        diff += 1;
+                    }
+                }
+            }
+            assert_eq!(diff, 0, "{tool:?} enter {enter}: preview equals the result");
+            // the command on its own computes the same bitmap
+            let params = s.active().expect("document").history.top().expect("step").params.clone();
+            let mut t = new_session();
+            let id2 = pattern_bitmap(&mut t);
+            select(&mut t, &[id2]);
+            ex(&mut t, "bitmap.retouch", params);
+            assert!(image(&t, id2) == res, "{tool:?} enter {enter}: the command's own result");
+        }
+    }
+}
