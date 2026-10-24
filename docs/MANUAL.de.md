@@ -491,6 +491,28 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   transformieren* und `scaleSelection` skalieren sie um die Mitte, mit und ohne „Attribute skalieren“; Bearbeiten
   des Texts (mehr Zeichen, andere Größe) lässt sie an ihrer Stelle.
 
+- **Füllgriffe von Verlauf und Muster:** Mit dem Zeiger zeigt ein gewähltes Objekt mit Verlaufs- oder Musterfüllung
+  seine Füllgriffe: den runden Mittelgriff und ein oder zwei eckige Griffe an Linien davon. Ziehen am
+  **Mittelgriff verschiebt alle drei Griffe gemeinsam** (das ganze Muster bzw. der ganze Verlauf wandert, Kachelgröße
+  und Winkel bleiben), wie im Original gemessen. Ziehen an einem eckigen Griff bewegt nur diesen (er ändert Breite
+  oder Höhe der Kachel und den Winkel eines Musters bzw. Länge und Richtung eines Verlaufs). Ein Druck auf einen
+  Griff verschiebt nie das Objekt; das Objekt an einer Stelle abseits der Griffe ziehen. Jeder Griffzug ist ein
+  Protokollschritt.
+
+- **Muster im Dokument festhalten (Firepixel-Erweiterung):** Normalerweise wandert ein Muster oder Verlauf mit
+  seinem Objekt, wie im Original. Mit dem Häkchen **Fest** im Füllungsteil des Eigenschaften-Inspektors (unter der
+  Beschriftung „Textur“; sichtbar, wenn das gewählte Objekt eine Muster- oder Verlaufsfüllung hat) bleibt die
+  Füllung stattdessen im Dokument stehen: Verschieben (Ziehen, Pfeiltasten, Felder X/Y, *Ausrichten*,
+  `moveSelectionBy`/`moveSelectionTo`) und Transformieren (Numerisch transformieren, Skalieren-, Neigen- und
+  Verzerren-Werkzeug, Frei transformieren, Spiegeln und Drehen, mit und ohne „Attribute skalieren“) lassen die
+  Füllgriffe stehen, das Objekt gleitet über ein festes Muster. Setzen oder Löschen ist ein Protokollschritt
+  „Füllen“. Kopien behalten die Einstellung: Duplikat, Klon, Kopie per Alt-Ziehen und eingefügte Kopie zeigen das
+  Muster an derselben Stelle im Dokument wie das Original. Die Füllgriffe selbst lassen sich weiter ziehen. Das
+  Original kennt diese Option nicht; in einer `.fw.png`-Datei steht die Einstellung nur in der Firepixel-Markierung
+  der Füllung (andere Programme zeigen das Objekt mit mitwanderndem Muster, Dateien ohne die Einstellung bleiben
+  unverändert). Befehle: `pi.fill {lockPattern: true}`; in Skripten `setFill` mit `lockToDocument: true` (ein aus
+  `pathAttributes.fill` gelesenes Füllungsobjekt meldet `lockToDocument: true` nur, wenn sie an ist).
+
 - **Filter (+):** Das Menü „+“ gliedert die Effekte wie im Original, z. B. *Abgeflachte Kante und
   Relief* ▸ *Abgeflachte Kante innen*, *Abgeflachte Kante außen*, *Relief vertieft*, *Relief erhaben*.
   Die Art steht im Menüeintrag; der Dialog hat dafür kein eigenes Feld. Doppelklick auf einen Eintrag

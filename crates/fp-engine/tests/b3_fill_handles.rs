@@ -1,6 +1,7 @@
 //! B3 (BA-043): Verlaufs-/Mustergriffe lassen sich mit dem Zeiger auf der Leinwand ziehen – ein
-//! Verlaufsschritt, nur der gezogene Griff bewegt sich; ein Klick auf den Griff ändert nichts, Ziehen
-//! neben den Griffen verschiebt weiter das Objekt.
+//! Verlaufsschritt; h2/h3 move alone, the centre handle h1 moves all three (FB-44, RE spec 61
+//! §1.2); ein Klick auf den Griff ändert nichts, Ziehen neben den Griffen verschiebt weiter das
+//! Objekt.
 
 use crate::common;
 use common::*;
@@ -53,6 +54,7 @@ fn pointer_drags_gradient_end_handle_in_one_step() {
     assert_eq!(handles(&s, r).end, h0.end);
 }
 
+/// FB-44: dragging the centre handle moves the whole set (the gradient vector stays).
 #[test]
 fn pointer_drags_gradient_start_handle() {
     let mut s = doc_session(400.0, 300.0);
@@ -61,7 +63,8 @@ fn pointer_drags_gradient_start_handle() {
     drag(&mut s, (60.0, 85.0), (70.0, 95.0));
     let h = handles(&s, r);
     assert_eq!((h.start.x, h.start.y), (70.0, 95.0));
-    assert_eq!(h.end, h0.end);
+    assert_eq!((h.end.x, h.end.y), (h0.end.x + 10.0, h0.end.y + 10.0));
+    assert_eq!((h.second.x, h.second.y), (h0.second.x + 10.0, h0.second.y + 10.0));
 }
 
 #[test]

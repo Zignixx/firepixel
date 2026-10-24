@@ -996,6 +996,10 @@ fn draw_pattern_swatch(ui: &Ui, r: Rect, name: &str) {
 pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: bool) {
     let ta = tool_attrs(ui.ctx());
     let attrs = first_attrs(st);
+    let lock = attrs
+        .as_deref()
+        .and_then(|a| a.fill.as_ref())
+        .is_some_and(|f| f.lock_to_document);
     let (kind, tex, amount, transparent, dither) = match tgt {
         Target::Selection => {
             let a = attrs.as_deref();
@@ -1075,6 +1079,15 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
         &t("pi-gradient-dither"),
     ) {
         st.run("pi.fill", json!({"dither": !dither}));
+    }
+    // "Lock pattern to document" (Firepixel extension, FB-44): only for a selected pattern or
+    // gradient, in the free corner below the texture label
+    if tgt == Target::Selection && (kind == 2 || kind == 3) {
+        let lr = d.r(0.0, 15.0, 32.0, 10.0);
+        if let Some(v) = fields::checkbox(ui, id.with("lock"), lr, &t("pi-fill-lock"), lock, en) {
+            st.run("pi.fill", json!({"lockPattern": v}));
+        }
+        tooltip_at(ui, id.with("lock-tip"), lr, &t("pi-fill-lock-tip"));
     }
 }
 

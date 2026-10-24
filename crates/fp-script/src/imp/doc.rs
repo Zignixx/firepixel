@@ -282,9 +282,25 @@ pub(super) fn fill_edge_code(mode: &str) -> Option<i32> {
 }
 
 /// Fill-Objekt → Füllfarbe/Verlauf auf der Auswahl; `edgeType: "dither"` (Firepixel extension,
-/// FB-23) also sets the dither edge with the object's `feather` as its width.
+/// FB-23) also sets the dither edge with the object's `feather` as its width. A pattern fill
+/// (`category` "fc_Pattern" or `shape` "pattern" with `pattern.name`) sets that pattern instead of a
+/// solid fill; `lockToDocument` (Firepixel extension, FB-44) sets "Lock pattern to document".
 fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
-    apply_fill_colors(doc, fill, color)?;
+    let pattern = fill
+        .get("pattern")
+        .and_then(|p| p.get("name"))
+        .and_then(|n| n.as_str())
+        .filter(|n| !n.is_empty())
+        .filter(|_| {
+            fill.get("category").and_then(|c| c.as_str()) == Some("fc_Pattern")
+                || fill.get("shape").and_then(|c| c.as_str()) == Some("pattern")
+        });
+    match pattern {
+        Some(name) if !selection(doc)?.is_empty() => {
+            on_selection(doc, "pi.fill", json!({"pattern": name}))?;
+        }
+        _ => apply_fill_colors(doc, fill, color)?,
+    }
     if fill
         .get("edgeType")
         .and_then(|v| v.as_str())
@@ -297,6 +313,11 @@ fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
             "pi.fill",
             json!({"edge": fp_model::Fill::EDGE_DITHER, "feather": amount.clamp(0, 100)}),
         )?;
+    }
+    if let Some(lock) = fill.get("lockToDocument").and_then(|v| v.as_bool())
+        && !selection(doc)?.is_empty()
+    {
+        on_selection(doc, "pi.fill", json!({"lockPattern": lock}))?;
     }
     Ok(())
 }

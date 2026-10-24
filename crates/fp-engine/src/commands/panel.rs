@@ -3149,6 +3149,8 @@ pub fn register(r: &mut CommandRegistry) {
     };
 
     // Füllung (Teilfeld 14011, Fülltextur 14013, Verlaufs-Popup 5980)
+    // German source text of the `pi.fill` option `lockPattern` (key in `command_texts.ftl`).
+    const LOCK_PATTERN_TEXT: &str = "Muster im Dokument festhalten: Muster bzw. Verlauf bleibt beim Verschieben und Transformieren des Objekts im Dokument stehen (Firepixel-Erweiterung)";
     r.add(
         ids(cmd("pi.fill").label("Füllen").requires(DOC))
             .opt(
@@ -3221,6 +3223,7 @@ pub fn register(r: &mut CommandRegistry) {
                 ParamKind::String,
                 "Musterfüllung nach Name (Datei aus den Musterordnern)",
             )
+            .opt("lockPattern", ParamKind::Bool, LOCK_PATTERN_TEXT)
             .run(|s, p| {
                 let cat = p.opt_str("category")?;
                 // Muster nur per Name: Datei aus den Musterordnern laden (`crate::resources`);
@@ -3282,6 +3285,7 @@ pub fn register(r: &mut CommandRegistry) {
                 let tex_amount = p.opt_i64("textureAmount")?.map(|v| v as i32);
                 let tex_tr = p.opt_bool("textureTransparent")?;
                 let dither = p.opt_bool("dither")?;
+                let lock = p.opt_bool("lockPattern")?;
                 let fallback_fill = s.tools.fill_color;
                 let mut out = edit_each_changed(s, p, |e, bounds| {
                     let (attrs0, handles0) = (docops::path_attrs_of(e), handles_of(e));
@@ -3471,6 +3475,12 @@ pub fn register(r: &mut CommandRegistry) {
                             && let Some(f) = a.fill.as_mut()
                         {
                             f.transparent_dither = Some(tt);
+                        }
+                        // "Lock pattern to document" (Firepixel extension, FB-44)
+                        if let Some(l) = lock
+                            && let Some(f) = a.fill.as_mut()
+                        {
+                            f.lock_to_document = l;
                         }
                     });
                     let after = docops::path_attrs_of(e)
@@ -5105,7 +5115,7 @@ pub fn register(r: &mut CommandRegistry) {
                     if (dx != 0.0 || dy != 0.0)
                         && let Some(path) = docops::find_on_page(doc, page, id)
                     {
-                        docops::translate_at(doc, &path, dx, dy);
+                        docops::move_at(doc, &path, dx, dy);
                     }
                 }
                 for (id, from, to) in scales {

@@ -690,3 +690,4 @@ cmdtext-ziel-ebenen-id-ebene-oder-unterebene = target layer ID (layer or sublaye
 cmdtext-kopien-statt-verschieben-alt = copies instead of moving (Alt)
 cmdtext-wie-das-skalieren-werkzeug-eine-reine-ac-1789a5 = like the Scale tool: a pure axis scale of a single selected text is turned into font size and horizontal scale instead of being stored as a matrix
 cmdtext-fortsetzungen-eines-angehaltenen-strichs-0b4f66 = continuations of a paused stroke: indices in `points` where a new, unconnected piece of the same stroke begins (Firepixel extension)
+cmdtext-muster-im-dokument-festhalten-muster-bzw-77ed86 = lock pattern to document: the pattern or gradient stays put in the document while the object is moved or transformed (Firepixel extension)

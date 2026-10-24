@@ -143,6 +143,9 @@ pi-edge-feather-short = Weiche Kte.
 pi-edge-feather = Weiche Kante
 pi-edge-dither = Dither
 pi-texture-transparent = Transparent
+# Firepixel-Erweiterung (FB-44): Muster bzw. Verlauf bleibt beim Verschieben im Dokument stehen
+pi-fill-lock = Fest
+pi-fill-lock-tip = Muster im Dokument festhalten: Muster bzw. Verlauf bleibt stehen, wenn das Objekt verschoben oder transformiert wird (Firepixel-Erweiterung)
 pi-texture-other = Andere...
 pi-texture-pick-title = Textur wählen
 # Texturnamen (Dateinamen der Texturen ohne Endung) in der Texturliste

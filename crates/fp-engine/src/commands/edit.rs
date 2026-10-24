@@ -256,7 +256,7 @@ pub(crate) fn paste_elements(
     let mut copies = Vec::new();
     for e in els {
         let mut c = docops::reassign(doc, e);
-        docops::translate_element(&mut c, offset.0, offset.1);
+        docops::move_element(&mut c, offset.0, offset.1);
         ids.push(c.id);
         copies.push(Arc::new(c));
     }
@@ -357,7 +357,8 @@ fn duplicate(s: &mut Session, offset: (f32, f32)) -> Result<CommandOutput> {
         // je Element direkt darüber einfügen, unten beginnen, damit Indizes gültig bleiben
         for (path, e) in els.iter().rev() {
             let mut c = docops::reassign(doc, e);
-            docops::translate_element(&mut c, offset.0, offset.1);
+            // a duplicate of a locked fill shows the same pattern phase in the document (FB-44)
+            docops::move_element(&mut c, offset.0, offset.1);
             let id = c.id;
             if let Some(cur) = docops::find_on_page(doc, page, e.id)
                 && let Some((list, idx)) = docops::parent_list_mut(doc, &cur)
@@ -409,8 +410,9 @@ pub(crate) fn move_selection(
         // Verschieben ändert die Baumstruktur nicht, die Adressen bleiben gültig
         let paths = docops::find_many_on_page(&d.doc, page, &ids);
         let doc = Arc::make_mut(&mut d.doc);
+        // a fill locked to the document keeps its handles (FB-44)
         for path in paths.iter().flatten() {
-            docops::translate_at(doc, path, dx, dy);
+            docops::move_at(doc, path, dx, dy);
         }
         if let Some(m) = &mut d.selection.pixels
             && ids.is_empty()

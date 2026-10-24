@@ -512,8 +512,11 @@ pub(crate) fn fill_grip_at(
         .map(|g| (*id, h, g.0))
 }
 
-/// Griffe nach dem Ziehen des Griffs `which` um `from` → `to` (nur dieser Griff bewegt sich, wie
-/// beim Füll- und Verlaufswerkzeug).
+/// Fill handles after dragging the handle `which` from `from` to `to`. The centre handle (h1,
+/// round) moves the whole set: h2 and h3 follow by the same delta, the tile / gradient vectors stay
+/// (RE spec 61 §1.2: a press on h1 of a pattern moved h1..h3 by the same 37/23,
+/// `moveFillVectorHandleBy(…, "start", …)`; the gradient case follows the same rule, to confirm by
+/// RE-37). Dragging h2 or h3 moves only that handle (re 40 §1).
 pub(crate) fn dragged_fill_handles(
     h: fp_model::FillHandles,
     which: FillGrip,
@@ -524,7 +527,11 @@ pub(crate) fn dragged_fill_handles(
     let mv = |q: Point| Point::new(q.x + dx, q.y + dy);
     let mut n = h;
     match which {
-        FillGrip::Start => n.start = mv(h.start),
+        FillGrip::Start => {
+            n.start = mv(h.start);
+            n.end = mv(h.end);
+            n.second = mv(h.second);
+        }
         FillGrip::End => n.end = mv(h.end),
         FillGrip::Second => n.second = mv(h.second),
     }

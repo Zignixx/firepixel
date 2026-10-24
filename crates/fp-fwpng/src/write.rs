@@ -969,8 +969,10 @@ fn write_texture(t: &Texture, ctx: &mut WriteCtx) -> Vec<RawNode> {
     w.finish()
 }
 
-/// Firepixel-own edge marker in a fill `FPLv` (FB-23): `fpEi` = 3 marks the dither edge, which
-/// the file otherwise stores as a feather (`FETi` 2, `FEFi` = width; `FETi` 0 at width 0). Like
+/// Firepixel-own marker in a fill `FPLv`: `fpEi` & 3 = 3 marks the dither edge (FB-23), which
+/// the file otherwise stores as a feather (`FETi` 2, `FEFi` = width; `FETi` 0 at width 0); bit 4
+/// ([`Fill::EXT_LOCK_TO_DOCUMENT`]) marks a pattern or gradient locked to the document (FB-44).
+/// Without either the tag is not written. Like
 /// [`SPRITE_EXT`] the tag starts with a lower-case letter and cannot clash with a tag of the
 /// reference format; readers that do not know it keep / drop it and show the feather.
 pub const FILL_EDGE_EXT: TagKey = k!(b"fpEi");
@@ -1005,8 +1007,15 @@ pub fn write_fill(f: &Fill, ctx: &mut WriteCtx) -> Vec<RawNode> {
         w.int(k!(b"FD4i"), d[3]);
     }
     w.opt_bool(k!(b"FDTb"), f.transparent_dither);
-    if dither {
-        w.i32(FILL_EDGE_EXT, Fill::EDGE_DITHER);
+    // Firepixel-own bits: 3 = dither edge, 4 = lock pattern to document (FB-44); absent at default
+    let ext = if dither { Fill::EDGE_DITHER } else { 0 }
+        | if f.lock_to_document {
+            Fill::EXT_LOCK_TO_DOCUMENT
+        } else {
+            0
+        };
+    if ext != 0 {
+        w.i32(FILL_EDGE_EXT, ext);
     }
     if let Some(g) = &f.gradient {
         w.list(k!(b"FGLv"), write_gradient(g));

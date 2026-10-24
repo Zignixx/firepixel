@@ -455,6 +455,26 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   them about the centre, with or without "Scale attributes"; editing the text (more characters, another size) leaves
   them in place.
 
+- **Fill handles of gradients and patterns:** with the Pointer, a selected object with a gradient or pattern fill
+  shows its fill handles: the round centre handle and one or two square handles on lines from it. Dragging the
+  **centre handle moves all three handles together** (the whole pattern or gradient shifts; tile size and angle
+  stay), as measured in the reference. Dragging a square handle moves only that handle (it changes the tile width or
+  height and the angle of a pattern, or the length and direction of a gradient). Pressing on a handle never moves
+  the object; drag the object at a spot away from the handles. Each handle drag is one History step.
+
+- **Lock pattern to document (Firepixel extension):** normally a pattern or gradient moves with its object, as in
+  the reference. Tick **Lock** in the fill section of the Properties inspector (below the texture label; shown when
+  the selected object has a pattern or gradient fill) and the fill stays put in the document instead: moving the
+  object (dragging, arrow keys, the X/Y fields, *Align*, `moveSelectionBy`/`moveSelectionTo`) and transforming it
+  (Numeric Transform, the Scale, Skew and Distort tools, Free Transform, flips and rotations, with or without "Scale
+  attributes") leave the fill handles where they are, so the object slides over a fixed pattern. Ticking or
+  clearing it is one History step "Fill". Copies keep the setting: a duplicate, a clone, an Alt-drag copy or a pasted
+  copy shows the pattern in the same place in the document as the original. You can still drag the fill handles
+  themselves. The reference has no such option; in a `.fw.png` file the setting is kept only in the Firepixel marker
+  of the fill (other programs show the object with the pattern moving along, files without it stay unchanged).
+  Commands: `pi.fill {lockPattern: true}`; in scripts `setFill` with `lockToDocument: true` (a fill object read from
+  `pathAttributes.fill` reports `lockToDocument: true` only when it is on).
+
 - **Live Filters (+):** the “+” menu groups the effects as in the original, e.g. *Bevel and Emboss* ▸
   *Inner Bevel*, *Outer Bevel*, *Inset Emboss*, *Raised Emboss*. The kind is part of the menu item;
   the dialog has no separate field for it. Double-click an entry in the filter list to open its settings.

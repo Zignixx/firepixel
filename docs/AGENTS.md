@@ -154,6 +154,19 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     (Breite in `feather`), `dom.setFillEdgeMode("dither", breite)` (auch `"hard"`, `"antialias"`, `"feather"`) und
     `setFill` mit `edgeType: "dither"` setzen ihn an der Auswahl; auch Textobjekte zeigen weiche Kante (2) und
     Dither (3) (der Text-Inspektor hat nur die Liste der Glättungsstufe, sie setzt Kante 1, bzw. 0 für „keine“)
+  * Muster im Dokument festhalten (**Firepixel-Erweiterung**, FB-44; das Original kennt die Option nicht):
+    `pi.fill {lockPattern: true|false}` an der Auswahl (ein Protokollschritt „Füllen“). Ist sie an, behalten Muster
+    und Verlauf ihre Füllgriffe im Dokument, wann immer das Objekt verschoben (`edit.move`, `edit.nudge.*`,
+    `element.setBounds` X/Y, Ausrichten, Ziehen mit dem Zeiger) oder transformiert wird (`modify.transform.*`,
+    `transform.matrix`, `transform.distort`, gleich was `scaleAttributes` sagt); Duplikate, Klone, Alt-Kopien und
+    eingefügte Kopien behalten die Einstellung und dieselbe Musterlage. Skripte: `setFill` mit
+    `lockToDocument: true|false` (ein Musterfüllungsobjekt behält sein Muster), `pathAttributes.fill.lockToDocument`
+    ist nur vorhanden (`true`), wenn sie an ist. In einer `.fw.png` nur in der Firepixel-Markierung `fpEi` (Bit 4)
+    der Füllung; Vorgabe aus, Ausgabe im Format des Originals unverändert.
+  * Füllgriffe mit dem Zeiger (`tool_event`-Züge an einem gewählten Verlauf oder Muster): Ein Zug, der auf dem
+    runden Mittelgriff h1 beginnt, verschiebt alle drei Griffe um dasselbe Delta (Kachel- bzw. Verlaufsvektoren
+    bleiben, RE-Spezifikation 61 §1.2); ein Zug an h2 oder h3 bewegt nur diesen Griff; je ein Schritt
+    `element.setFillHandles`
   * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Farbeimer),
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Verlauf-Werkzeug; `fillSelection`
     Vorgabe `true` = Pixelauswahl bzw. ganze Bitmap füllen, `false` = zusammenhängender Farbbereich am

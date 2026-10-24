@@ -153,6 +153,17 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     `dom.setFillEdgeMode("dither", width)` (also `"hard"`, `"antialias"`, `"feather"`) and `setFill` with
     `edgeType: "dither"` set it on the selection; text objects honour feather (2) and dither (3) as well (the
     text inspector has only the anti-aliasing level list, which sets edge 1, or 0 for "none")
+  * Lock pattern to document (**Firepixel extension**, FB-44; the reference has no such option):
+    `pi.fill {lockPattern: true|false}` on the selection (one History row "Fill"). With it on, a pattern or gradient
+    keeps its fill handles in the document whenever the object is moved (`edit.move`, `edit.nudge.*`,
+    `element.setBounds` X/Y, align, Pointer drag) or transformed (`modify.transform.*`, `transform.matrix`,
+    `transform.distort`, whatever `scaleAttributes` says); duplicates, clones, Alt copies and pasted copies keep the
+    flag and the same pattern phase. Scripts: `setFill` with `lockToDocument: true|false` (a pattern fill object
+    keeps its pattern), `pathAttributes.fill.lockToDocument` is present (`true`) only when on. Stored only in the
+    Firepixel fill marker `fpEi` (bit 4) of a `.fw.png`; default off, reference-format output unchanged.
+  * Fill handles with the Pointer (`tool_event` drags on a selected gradient or pattern): a drag starting on the
+    round centre handle h1 moves all three handles by the same delta (the tile / gradient vectors stay, RE spec 61
+    §1.2); a drag on h2 or h3 moves only that handle; one `element.setFillHandles` step each
   * Bitmap: `bitmap.floodFill {point, tolerance?, color?, fillSelection?}` (Paint Bucket),
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Gradient tool; `fillSelection`
     default `true` = fill the pixel selection or the whole bitmap, `false` = contiguous color area at the

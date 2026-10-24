@@ -106,11 +106,27 @@ pub struct Fill {
     /// Muster (`FPTv`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pattern: Option<Pattern>,
+    /// "Lock pattern to document" (Firepixel extension, FB-44): moving or transforming the object
+    /// leaves the fill handles of a pattern or gradient where they are in the document, so the
+    /// pattern stays put while the object moves. The reference has no such option; FW-PNG keeps it
+    /// only in the Firepixel-own marker `fpEi` (bit [`Fill::EXT_LOCK_TO_DOCUMENT`]). Default off.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub lock_to_document: bool,
     #[serde(default, skip_serializing_if = "Extra::is_empty")]
     pub extra: Extra,
 }
 
 impl Fill {
+    /// Bit of the Firepixel-own fill marker `fpEi` for [`Fill::lock_to_document`] (FB-44); the low
+    /// bits `3` are the dither edge ([`Fill::EDGE_DITHER`]), so a marker reads `3`, `4` or `7`.
+    pub const EXT_LOCK_TO_DOCUMENT: i32 = 4;
+
+    /// Does the fill keep its handles in the document while the object moves or is transformed
+    /// (FB-44)? Only patterns and gradients have handles that matter.
+    pub fn locked_to_document(&self) -> bool {
+        self.lock_to_document && (self.shape == 15 || (self.gradient.is_some() && self.shape != 0))
+    }
+
     /// Edge kind "hard" (`FETi` 0).
     pub const EDGE_HARD: i32 = 0;
     /// Edge kind "anti-alias" (`FETi` 1).
@@ -147,6 +163,7 @@ impl Fill {
             transparent_dither: None,
             gradient: None,
             pattern: None,
+            lock_to_document: false,
             extra: Extra::default(),
         }
     }

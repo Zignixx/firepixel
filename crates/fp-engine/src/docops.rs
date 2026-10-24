@@ -378,6 +378,103 @@ pub fn translate_at(doc: &mut Document, path: &ElementPath, dx: f32, dy: f32) ->
     Some(())
 }
 
+/// A user move of the element at `path` by (dx, dy): [`translate_at`], except that fills locked
+/// to the document keep their handles (FB-44, [`move_element`]).
+pub fn move_at(doc: &mut Document, path: &ElementPath, dx: f32, dy: f32) -> Option<()> {
+    if let Some((list, idx)) = parent_list_mut(doc, path) {
+        move_element(Arc::make_mut(list.get_mut(idx)?), dx, dy);
+        return Some(());
+    }
+    move_element(doc.element_at_mut(path)?, dx, dy);
+    Some(())
+}
+
+/// A user move of `e` by (dx, dy) (drag, arrow keys, X/Y fields, `moveSelectionBy/To`, align,
+/// duplicate, paste offset): [`translate_element`], but the fill handles of a pattern or gradient
+/// locked to the document stay where they are, so the pattern stays put in the document
+/// (Firepixel extension FB-44; without a locked fill it is exactly [`translate_element`]).
+pub fn move_element(e: &mut Element, dx: f32, dy: f32) {
+    if !has_locked_fill(e) {
+        translate_element(e, dx, dy);
+        return;
+    }
+    let orig = e.clone();
+    translate_element(e, dx, dy);
+    restore_locked_fill_handles(e, &orig);
+}
+
+/// Does `e` (also inside groups, masks and compound shapes) have a pattern or gradient fill locked
+/// to the document ([`fp_model::Fill::locked_to_document`], FB-44)?
+pub fn has_locked_fill(e: &Element) -> bool {
+    let locked = |a: &PathAttrs| a.fill.as_ref().is_some_and(|f| f.locked_to_document());
+    match &e.kind {
+        ElementKind::Path(p) => locked(&p.attrs),
+        ElementKind::Text(t) => locked(&t.attrs),
+        ElementKind::Group(g) => {
+            g.children.iter().any(|c| has_locked_fill(c))
+                || g.mask.as_ref().is_some_and(|m| has_locked_fill(m))
+        }
+        ElementKind::CompoundShape(c) => c
+            .result
+            .iter()
+            .chain(c.operands.iter())
+            .chain(c.proxy.iter())
+            .any(|x| has_locked_fill(x)),
+        _ => false,
+    }
+}
+
+/// Puts the fill handles of the paths and texts in `e` whose fill is locked to the document
+/// (FB-44) back to those of `orig`, the same element before a move or transformation; drops the
+/// render caches that no longer match. Returns whether anything changed.
+pub fn restore_locked_fill_handles(e: &mut Element, orig: &Element) -> bool {
+    let locked = |a: &PathAttrs| a.fill.as_ref().is_some_and(|f| f.locked_to_document());
+    let zip = |xs: &mut Vec<Arc<Element>>, os: &Vec<Arc<Element>>| {
+        let mut changed = false;
+        for (x, ox) in xs.iter_mut().zip(os) {
+            if has_locked_fill(ox) {
+                changed |= restore_locked_fill_handles(Arc::make_mut(x), ox);
+            }
+        }
+        changed
+    };
+    let opt = |x: &mut Option<Arc<Element>>, ox: &Option<Arc<Element>>| match (x, ox) {
+        (Some(x), Some(ox)) if has_locked_fill(ox) => {
+            restore_locked_fill_handles(Arc::make_mut(x), ox)
+        }
+        _ => false,
+    };
+    let changed = match (&mut e.kind, &orig.kind) {
+        (ElementKind::Path(p), ElementKind::Path(o)) if locked(&o.attrs) => {
+            let mut changed = p.fill_handles != o.fill_handles;
+            p.fill_handles = o.fill_handles;
+            if let (Some(pr), Some(op)) = (&mut p.primitive, &o.primitive) {
+                changed |= pr.fill_handles != op.fill_handles;
+                pr.fill_handles = op.fill_handles;
+            }
+            changed
+        }
+        (ElementKind::Text(t), ElementKind::Text(o)) if locked(&o.attrs) => {
+            let changed = t.fill_handles != o.fill_handles;
+            t.fill_handles = o.fill_handles;
+            changed
+        }
+        (ElementKind::Group(g), ElementKind::Group(o)) => {
+            zip(&mut g.children, &o.children) | opt(&mut g.mask, &o.mask)
+        }
+        (ElementKind::CompoundShape(c), ElementKind::CompoundShape(o)) => {
+            opt(&mut c.result, &o.result)
+                | zip(&mut c.operands, &o.operands)
+                | opt(&mut c.proxy, &o.proxy)
+        }
+        _ => false,
+    };
+    if changed {
+        e.cache = None;
+    }
+    changed
+}
+
 /// Ändert ein Element per ID auf einer Seite.
 pub fn edit_by_id<R>(
     doc: &mut Document,

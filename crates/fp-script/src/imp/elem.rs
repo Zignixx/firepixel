@@ -140,13 +140,19 @@ fn fill_json(f: &fp_model::Fill) -> Value {
             "opacityNodes": g.opacity_stops().iter().map(|s| json!({"color": hex(s.color), "position": r6(s.position as f64), "isOpacityNode": true})).collect::<Vec<_>>(),
         })
     });
-    json!({
+    let mut v = json!({
         "category": f.category, "name": f.name, "shape": shape, "edgeType": edge, "feather": f.feather,
         "textureBlend": f.texture_amount, "stampingMode": if f.stamping_mode == 0 { "blend" } else { "blend opaque" },
         "webDitherTransparent": f.transparent_dither.unwrap_or(false),
         "ditherColors": f.dither_colors.map(|c| c.iter().map(|x| hex(fp_color::Argb(*x))).collect::<Vec<_>>()).unwrap_or_else(|| vec!["#000000".into(), "#000000".into()]),
         "gradient": gradient, "pattern": f.pattern.as_ref().map(|p| json!({"name": p.name, "image": p.user_name.clone().unwrap_or_else(|| p.name.clone())})),
-    })
+    });
+    // "Lock pattern to document" (Firepixel extension, FB-44): only reported when on, so the
+    // object matches the reference's at the default
+    if f.lock_to_document {
+        v["lockToDocument"] = json!(true);
+    }
+    v
 }
 
 pub(crate) fn brush_json(b: &fp_model::Brush) -> Value {

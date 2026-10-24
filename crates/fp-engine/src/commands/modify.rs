@@ -32,8 +32,18 @@ fn sampler(s: &Session) -> fp_raster::Sampler {
     s.prefs.edit_sampler()
 }
 
-/// Transformiert die ausgewählten Elemente mit `m`.
+/// Transformiert die ausgewählten Elemente mit `m`. Fills locked to the document keep their
+/// handles (FB-44).
 pub(crate) fn transform_selection(s: &mut Session, m: Matrix3) -> Result<CommandOutput> {
+    let locked = locked_fill_snapshot(s);
+    let out = transform_selection_plain(s, m)?;
+    if let Some(before) = locked {
+        restore_locked_fill_handles(s, &before)?;
+    }
+    Ok(out)
+}
+
+fn transform_selection_plain(s: &mut Session, m: Matrix3) -> Result<CommandOutput> {
     let sm = sampler(s);
     with_doc(s, |d| {
         let (page, ids) = (d.page, d.selection.elements.clone());
@@ -61,8 +71,21 @@ pub(crate) enum FoldTexts {
 }
 
 /// [`transform_selection`] that folds a pure axis scale into the attributes of the texts named by
-/// `fold` ([`docops::fold_text_scale`]).
+/// `fold` ([`docops::fold_text_scale`]). Fills locked to the document keep their handles (FB-44).
 pub(crate) fn transform_selection_folding(
+    s: &mut Session,
+    m: Matrix3,
+    fold: FoldTexts,
+) -> Result<CommandOutput> {
+    let locked = locked_fill_snapshot(s);
+    let out = transform_selection_folding_plain(s, m, fold)?;
+    if let Some(before) = locked {
+        restore_locked_fill_handles(s, &before)?;
+    }
+    Ok(out)
+}
+
+fn transform_selection_folding_plain(
     s: &mut Session,
     m: Matrix3,
     fold: FoldTexts,
@@ -81,7 +104,7 @@ pub(crate) fn transform_selection_folding(
             .then_some(r),
     };
     let Some(r) = fold else {
-        return transform_selection(s, m);
+        return transform_selection_plain(s, m);
     };
     let sm = sampler(s);
     with_doc(s, |d| {
@@ -126,6 +149,37 @@ pub(crate) fn selection_snapshot(
             .filter_map(|&id| docops::element_on_page(&d.doc, d.page, id).map(|e| (id, e)))
             .collect(),
     )
+}
+
+/// The selected elements that hold a pattern or gradient locked to the document (FB-44, for
+/// [`restore_locked_fill_handles`]); `None` when there is none, so moves and transformations of
+/// ordinary objects cost nothing extra.
+pub(crate) fn locked_fill_snapshot(
+    s: &Session,
+) -> Option<Vec<(fp_model::ElementId, Arc<fp_model::Element>)>> {
+    let v: Vec<_> = selection_snapshot(s)?
+        .into_iter()
+        .filter(|(_, e)| docops::has_locked_fill(e))
+        .collect();
+    (!v.is_empty()).then_some(v)
+}
+
+/// Puts the fill handles of the locked fills (FB-44) among `before` back: "Lock pattern to
+/// document" keeps a pattern or gradient in the document whatever the move or transformation and
+/// whatever "Scale attributes" says (Firepixel extension).
+pub(crate) fn restore_locked_fill_handles(
+    s: &mut Session,
+    before: &[(fp_model::ElementId, Arc<fp_model::Element>)],
+) -> Result<()> {
+    let d = s.doc_mut()?;
+    let page = d.page;
+    let doc = Arc::make_mut(&mut d.doc);
+    for (id, orig) in before {
+        docops::edit_by_id(doc, page, *id, |e| {
+            docops::restore_locked_fill_handles(e, orig)
+        });
+    }
+    Ok(())
 }
 
 /// Puts the fill handles of the selected elements back to `before` (transformation with "Scale
@@ -489,7 +543,7 @@ fn align(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
         let doc = Arc::make_mut(&mut d.doc);
         for (id, dx, dy) in moves {
             if let Some(path) = docops::find_on_page(doc, page, id) {
-                docops::translate_at(doc, &path, dx, dy);
+                docops::move_at(doc, &path, dx, dy);
             }
         }
         Ok(CommandOutput::doc())
@@ -2296,6 +2350,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                 };
                 let before = (!scale_attrs).then(|| selection_snapshot(s)).flatten();
+                let locked = locked_fill_snapshot(s);
                 let mc = docops::about(c, &m);
                 // the numeric scale folds a pure axis scale into the size and horizontal scale of
                 // every text of the selection, also inside groups (RE spec 66 §3.1); rotating keeps
@@ -2322,6 +2377,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             docops::transform_text_fill_handles(e, &mc)
                         });
                     }
+                }
+                // "Lock pattern to document" (FB-44): also the text fill handles stay put
+                if let Some(locked) = locked {
+                    restore_locked_fill_handles(s, &locked)?;
                 }
                 // „Attribute skalieren“ wie Info-Bedienfeld/Werkzeug: Strich mit √(sx·sy)
                 let f = (m.m[0][0] * m.m[1][1] - m.m[0][1] * m.m[1][0]).abs().sqrt();
