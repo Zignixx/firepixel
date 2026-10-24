@@ -32,10 +32,12 @@ fn main() {
         .collect();
     nums.resize(4, 0);
     let (a, b, c, d) = (nums[0], nums[1], nums[2], nums[3]);
+    // display name "Firepixel Studio" (same as fp_i18n::DISPLAY_NAME); InternalName and
+    // OriginalFilename keep the technical binary name
     let desc = if name == "firepixel" {
-        "Firepixel"
+        "Firepixel Studio"
     } else {
-        "Firepixel Kommandozeile"
+        "Firepixel Studio CLI"
     };
     let rc = format!(
         r#"1 ICON "{ico_s}"
@@ -54,7 +56,7 @@ BEGIN
       VALUE "FileVersion", "{ver}"
       VALUE "InternalName", "{name}"
       VALUE "OriginalFilename", "{name}.exe"
-      VALUE "ProductName", "Firepixel"
+      VALUE "ProductName", "Firepixel Studio"
       VALUE "ProductVersion", "{ver}"
     END
   END

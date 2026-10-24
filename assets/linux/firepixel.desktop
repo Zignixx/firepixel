@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Firepixel
+Name=Firepixel Studio
 GenericName=Graphics Editor
 Comment=Bitmap, vector and web graphics editor
 Exec=firepixel %F

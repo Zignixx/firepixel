@@ -452,7 +452,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         let cr = dialog_frame(
             ctx,
             "fp-bsel-confirm",
-            "Firepixel",
+            fp_i18n::DISPLAY_NAME,
             vec2(w, (16.0 + th + 16.0 + 40.0).ceil()),
             |ui, body| {
                 super::text_block(

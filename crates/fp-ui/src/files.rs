@@ -644,7 +644,7 @@ pub fn save_chosen(st: &mut AppState, c: file_dialog::SaveChoice) -> bool {
 fn write_active(st: &mut AppState, path: Option<PathBuf>, kind: SaveKind, copy: bool) -> bool {
     let failed = |st: &mut AppState, e: fp_engine::EngineError| {
         st.dialogs.message = Some((
-            "Firepixel".into(),
+            fp_i18n::DISPLAY_NAME.into(),
             fp_i18n::tr!("ui-file-save-failed", error = e.to_string()),
         ));
         false
@@ -749,7 +749,7 @@ pub fn pick_and_open(st: &mut AppState) {
 pub fn open_chosen(st: &mut AppState, paths: &[PathBuf], choice: file_dialog::OpenChoice) {
     let failed = |st: &mut AppState, p: &Path, e: fp_engine::EngineError| {
         st.dialogs.message = Some((
-            "Firepixel".into(),
+            fp_i18n::DISPLAY_NAME.into(),
             fp_i18n::tr!(
                 "ui-file-open-failed",
                 path = p.display().to_string(),
@@ -802,7 +802,7 @@ pub fn open_path(st: &mut AppState, p: &Path) {
         .execute("file.open", json!({ "path": p.to_string_lossy() }))
     {
         st.dialogs.message = Some((
-            "Firepixel".into(),
+            fp_i18n::DISPLAY_NAME.into(),
             fp_i18n::tr!(
                 "ui-file-open-failed",
                 path = p.display().to_string(),
@@ -914,7 +914,7 @@ pub fn drop_files_at(st: &mut AppState, files: &[PathBuf], pos: Option<egui::Pos
             }
             Err(e) => {
                 st.dialogs.message = Some((
-                    "Firepixel".into(),
+                    fp_i18n::DISPLAY_NAME.into(),
                     fp_i18n::tr!("ui-file-import-failed", error = e.to_string()),
                 ))
             }

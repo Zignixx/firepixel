@@ -561,7 +561,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         Ok(CommandOutput::session())
     }));
     r.add(cmd("help.about").run(|_, _| {
-        Ok(CommandOutput::value(json!({"name": "Firepixel", "version": env!("CARGO_PKG_VERSION"), "engine": "fp-engine"})))
+        Ok(CommandOutput::value(json!({"name": "Firepixel", "displayName": fp_i18n::DISPLAY_NAME, "version": env!("CARGO_PKG_VERSION"), "engine": "fp-engine"})))
     }));
 
     // Voreinstellungen und Tastenkürzel

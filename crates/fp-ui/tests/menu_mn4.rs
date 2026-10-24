@@ -177,7 +177,7 @@ fn new_commands_run_and_explain_missing_functions() {
             }
             Some(text) => {
                 let (title, body) = msg.unwrap_or_else(|| panic!("{path:?}: Meldung erwartet, Status {:?}", st.status));
-                assert_eq!(title, "Firepixel");
+                assert_eq!(title, fp_i18n::DISPLAY_NAME);
                 assert!(body.starts_with(text), "{path:?}: {body}");
             }
             None => assert!(msg.is_none(), "{path:?}: keine Meldung: {msg:?}"),

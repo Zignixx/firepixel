@@ -329,8 +329,9 @@ impl AppState {
         }
     }
 
-    /// Titel des Hauptfensters wie im Original: nur der Dokumentname, mit Stern vorn bei
-    /// ungespeicherten Änderungen („*Name.fw.png“, ohne Zoom); ohne Dokument „Firepixel“.
+    /// Title of the main window: the display name, then the document name as in the original, with
+    /// a leading star for unsaved changes ("Firepixel Studio – *Name.fw.png", no zoom); without a
+    /// document only the display name ([`fp_i18n::DISPLAY_NAME`]).
     pub fn window_title(&self) -> String {
         match self.session.active() {
             Some(d) => {
@@ -341,9 +342,9 @@ impl AppState {
                     .and_then(|p| p.file_name())
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_else(|| d.title.clone());
-                format!("{star}{name}")
+                format!("{} – {star}{name}", fp_i18n::DISPLAY_NAME)
             }
-            None => "Firepixel".to_string(),
+            None => fp_i18n::DISPLAY_NAME.to_string(),
         }
     }
 

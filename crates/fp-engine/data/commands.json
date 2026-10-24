@@ -5816,12 +5816,12 @@
 "name": "help.about",
 "path_de": [
 "Hilfe",
-"Über Firepixel..."
+"Über Firepixel Studio..."
 ],
 "path_en": null,
 "status_de": "Zeigt Programm- und Copyrightinformationen sowie die Versionsnummer an",
-"label_de": "Über Firepixel",
-"menu_label_de": "Über Firepixel...",
+"label_de": "Über Firepixel Studio",
+"menu_label_de": "Über Firepixel Studio...",
 "main_menu": true,
 "js": [],
 "undo_classes": [],

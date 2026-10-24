@@ -545,7 +545,7 @@ fn cases() -> Vec<Case> {
             },
         },
         Case {
-            name: "Fenstertitel wie im Original („*Name.fw.png“), Speichern/Wiederherstellen grau bei unverändertem Dokument, Wiederherstellen fragt nach",
+            name: "Fenstertitel: Anzeigename, dann der Dokumentname wie im Original („Firepixel Studio – *Name.fw.png“), Speichern/Wiederherstellen grau bei unverändertem Dokument, Wiederherstellen fragt nach",
             run: || {
                 let (mut h, f) = fresh();
                 key(&mut h, Key::S, ctrl());
@@ -561,7 +561,7 @@ fn cases() -> Vec<Case> {
                 h.run_steps(2);
                 let asks = st(&h).dialogs.confirm.as_ref().map(|c| c.text.clone()).unwrap_or_default();
                 let msg = format!("Titel „{t0}“ → „{t1}“, Speichern unverändert {save_unchanged:?}, geändert {save_changed:?}, Rückfrage „{asks}“");
-                if t0 == "gespeichert.fw.png" && t1 == "*gespeichert.fw.png" && save_unchanged == Some(false) && save_changed == Some(true) && asks.contains("wiederherstellen") { Ok(msg) } else { Err(msg) }
+                if t0 == format!("{} – gespeichert.fw.png", fp_i18n::DISPLAY_NAME) && t1 == format!("{} – *gespeichert.fw.png", fp_i18n::DISPLAY_NAME) && save_unchanged == Some(false) && save_changed == Some(true) && asks.contains("wiederherstellen") { Ok(msg) } else { Err(msg) }
             },
         },
         Case {

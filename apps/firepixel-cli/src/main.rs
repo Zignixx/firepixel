@@ -214,7 +214,10 @@ fn localized_command() -> clap::Command {
         .action(clap::ArgAction::Version)
         .help(t("cli-version"))
         .help_heading(t("cli-heading-options"));
+    // `--version` prints "Firepixel Studio CLI <version>" (display name); the binary, the command
+    // name in usage lines and every subcommand stay `firepixel-cli`
     localize(Cli::command(), "cli-root")
+        .display_name(format!("{} CLI", fp_i18n::DISPLAY_NAME))
         .disable_version_flag(true)
         .arg(version)
 }

@@ -1,5 +1,5 @@
 # Command line firepixel-cli: help (`cli-<command>`, `.examples`, `cli-<command>-arg-<option>`, `.value`), messages, language check – UE-3
-cli-root = Firepixel – command line (edit FW-PNG, render, scripts, MCP server for AI agents)
+cli-root = Firepixel Studio – command line (edit FW-PNG, render, scripts, MCP server for AI agents)
     .examples = 
         Examples:
           firepixel-cli commands --filter align

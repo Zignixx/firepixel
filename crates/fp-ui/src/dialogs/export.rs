@@ -1291,7 +1291,7 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
         let c = dialog_frame(
             ctx,
             "fp-export-notice",
-            "Firepixel",
+            fp_i18n::DISPLAY_NAME,
             vec2(w, h + 40.0),
             |ui, body| {
                 super::put_left(
@@ -1331,7 +1331,7 @@ fn show_full(ctx: &egui::Context, st: &mut AppState, mut d: ExportDialog) {
         let c = dialog_frame(
             ctx,
             "fp-export-replace",
-            "Firepixel",
+            fp_i18n::DISPLAY_NAME,
             vec2(w, h + 40.0),
             |ui, body| {
                 super::put_left(

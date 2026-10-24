@@ -134,7 +134,7 @@ fn d25_message_without_own_commands_list_with_own() {
     let _ = std::fs::remove_file(dir.join(format!("{own}.jsf")));
     run(&mut h, "commands.manageSavedCommands");
     let (title, text) = st(&h).dialogs.message.clone().expect("Meldung statt Liste");
-    assert_eq!(title, "Firepixel");
+    assert_eq!(title, fp_i18n::DISPLAY_NAME);
     assert_eq!(text, "Befehle werden dem Verlauf-Bedienfeld entnommen. Zurzeit sind dort keine gespeicherten Befehle vorhanden.");
     assert!(st(&h).dialogs.saved_commands.is_none());
     key(&mut h, Key::Enter);

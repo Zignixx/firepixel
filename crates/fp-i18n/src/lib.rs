@@ -62,6 +62,12 @@ pub fn embedded_files() -> &'static [(&'static str, &'static str, &'static str)]
     EMBEDDED
 }
 
+/// Display name of the product: window title, About dialog, start page, CLI version banner, message
+/// box titles. A brand name, the same in every language (not a Fluent text). The technical name stays
+/// "firepixel"/"Firepixel" (binaries, crates, ids, file markers, storage folders such as
+/// [`profile::APP_DIR`]); "Firepixel" alone is also the short form in running text.
+pub const DISPLAY_NAME: &str = "Firepixel Studio";
+
 /// Ausgangssprache aller Texte (vollständig, Maßstab für die Vollständigkeitsprüfung).
 pub const SOURCE_LANG: &str = "de";
 /// Rückfallsprache vor der Ausgangssprache.

@@ -592,7 +592,7 @@ pub fn native_options() -> eframe::NativeOptions {
     #[allow(unused_mut)]
     let mut options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("Firepixel")
+            .with_title(fp_i18n::DISPLAY_NAME)
             .with_app_id("firepixel")
             // own chrome on Windows/Linux; native title bar with traffic lights on macOS (FB-03)
             .with_decorations(appbar::native_title_bar())

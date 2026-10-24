@@ -150,7 +150,7 @@ ui-history-import-files = Dateien importieren
 
 ## Kommandozeile (firepixel.exe --help)
 ui-cli-help =
-    Firepixel – Grafik- und Webdesign-Programm
+    Firepixel Studio – Grafik- und Webdesign-Programm
 
     Aufruf: firepixel [Optionen] [Datei …]
 
@@ -175,9 +175,9 @@ fieldmenu-delete = Löschen
 fieldmenu-select-all = Alles auswählen
 
 ## Programmmenü unter macOS (app_menu.rs)
-ui-macmenu-about = Über Firepixel
+ui-macmenu-about = Über Firepixel Studio
 ui-macmenu-services = Dienste
-ui-macmenu-hide = Firepixel ausblenden
+ui-macmenu-hide = Firepixel Studio ausblenden
 ui-macmenu-hide-others = Andere ausblenden
 ui-macmenu-show-all = Alle einblenden
-ui-macmenu-quit = Firepixel beenden
+ui-macmenu-quit = Firepixel Studio beenden

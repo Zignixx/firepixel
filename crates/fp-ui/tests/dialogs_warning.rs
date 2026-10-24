@@ -92,7 +92,7 @@ fn warning_with_do_not_show_again_and_reset() {
         assert_eq!(w.warning.key, "combinePaths");
         assert!(!w.dont_show);
         // Aussehen wie im Original: Titel Programmname, Text, Kästchen, OK
-        assert!(find(&h, "Firepixel").is_some(), "Titel");
+        assert!(find(&h, fp_i18n::DISPLAY_NAME).is_some(), "Titel");
         assert!(all_texts(&h).iter().any(|(t, _)| t == Z01), "Wortlaut");
         let check = find(&h, "Nicht mehr anzeigen").expect("Kästchen");
         let ok = find(&h, "OK").expect("OK");

@@ -108,7 +108,7 @@ impl ChoiceDialog {
     /// OK / Abbrechen.
     pub fn share_layer(layer: u64, name: &str) -> ChoiceDialog {
         ChoiceDialog {
-            title: "Firepixel".into(),
+            title: fp_i18n::DISPLAY_NAME.into(),
             text: fp_i18n::tr!("dlg-layer-share-confirm", name = name),
             warning: true,
             buttons: vec![
@@ -152,7 +152,7 @@ impl ChoiceDialog {
     pub fn delete_mask(vector: bool) -> ChoiceDialog {
         let run = |apply: bool| Some(("modify.mask.deleteMask".into(), json!({ "apply": apply })));
         ChoiceDialog {
-            title: "Firepixel".into(),
+            title: fp_i18n::DISPLAY_NAME.into(),
             text: t(if vector {
                 "dlg-mask-delete-vector"
             } else {

@@ -2,6 +2,11 @@
 
 Englische Begriffe so, wie Nutzer des Originals sie aus dessen englischer Fassung kennen (Sachbegriffe, keine Produkt- oder Herstellernamen). Neue Fachbegriffe hier ergänzen (I18N-KERN pflegt die Liste; Konflikte dort eintragen).
 
+## Produktname
+**Firepixel Studio** ist der Anzeigename (unübersetzt, in allen Sprachen gleich): Fenstertitel, „Über Firepixel Studio“, Startbildschirm, Titel von Meldungsfenstern, Kopfzeile von Hilfe und Kommandozeile, macOS-App-Menü. Im Code `fp_i18n::DISPLAY_NAME`.
+
+**Firepixel** ist der technische Name und die Kurzform: Programmdateien (`firepixel.exe`, `firepixel-cli`), Crates, Befehls-, MCP- und JSON-Kennungen, Dateikennungen (`Software`), Fluent-Schlüssel, Umgebungsvariablen und alle Speicherorte (`%APPDATA%\Firepixel`, Tastenkürzel-Set „Firepixel“) – nie umbenennen. In Fließtext ist die Kurzform „Firepixel“ erlaubt („Firepixel lädt nichts herunter“, „Firepixel-Erweiterung“, „Firepixel-Dokument“).
+
 ## Menüs
 Datei = File · Bearbeiten = Edit · Ansicht = View · Auswählen = Select · Modifizieren = Modify · Text = Text · Befehle = Commands · Filter = Filters · Fenster = Window · Hilfe = Help
 

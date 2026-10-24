@@ -115,7 +115,7 @@ fn shows_all_areas_and_entries() {
     let a = tmp_file("banner.fw.png");
     let b = tmp_file("foto.jpg");
     let h = harness(state(vec![a, b, PathBuf::from(r"Z:\gibt\es\nicht.fw.png")], ThemeKind::Normal), 1280.0, 860.0, 1.0);
-    for s in ["Firepixel", "Zuletzt geöffnete Dateien", "Neu erstellen", "Firepixel-Dokument (FW-PNG)", "Aus Vorlage...", "Öffnen...", "Kurzanleitung", "Tastenkürzel", "KI-Modelle verwalten", "Nicht mehr anzeigen", "banner.fw.png", "foto.jpg", "nicht.fw.png"] {
+    for s in [fp_i18n::DISPLAY_NAME, "Zuletzt geöffnete Dateien", "Neu erstellen", "Firepixel-Dokument (FW-PNG)", "Aus Vorlage...", "Öffnen...", "Kurzanleitung", "Tastenkürzel", "KI-Modelle verwalten", "Nicht mehr anzeigen", "banner.fw.png", "foto.jpg", "nicht.fw.png"] {
         assert!(find(&h, s).is_some(), "„{s}“ fehlt; gezeichnet: {:?}", texts(&h).iter().map(|t| t.text.clone()).collect::<Vec<_>>());
     }
     // Erweitern nur mit vorhandenen Befehlen

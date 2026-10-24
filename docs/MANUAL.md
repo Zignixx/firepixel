@@ -1,6 +1,6 @@
-# Firepixel – Quick Guide
+# Firepixel Studio – Quick Guide
 
-Firepixel is a graphics and web design application for vector and bitmap editing with pages,
+Firepixel Studio (short: Firepixel) is a graphics and web design application for vector and bitmap editing with pages,
 states (animation frames), layers, symbols and Live Filters. It reads and writes FW-PNG files
 (`.fw.png`) and works like the well-known original: same menus, tools, panels, keyboard shortcuts
 and mouse handling.
@@ -22,8 +22,8 @@ build is new and has not yet been tried on many desktops.
 
 **macOS:** the window keeps the native title bar with the traffic-light buttons (close, minimise,
 zoom); Firepixel's menu bar sits directly below it. Cmd+Q quits like File ▸ Exit and asks to save
-changed documents first. The application menu in the macOS menu bar offers About Firepixel,
-Services, Hide Firepixel, Hide Others, Show All and Quit Firepixel (Cmd+Q, also with the save prompt).
+changed documents first. The application menu in the macOS menu bar offers About Firepixel Studio,
+Services, Hide Firepixel Studio, Hide Others, Show All and Quit Firepixel Studio (Cmd+Q, also with the save prompt).
 
 **Starting:**
 

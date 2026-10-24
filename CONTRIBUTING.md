@@ -1,6 +1,6 @@
-# Contributing to Firepixel
+# Contributing to Firepixel Studio
 
-Thanks for helping. Firepixel reimplements a classic web, bitmap and vector graphics editor in pure Rust and
+Thanks for helping. Firepixel Studio (short: Firepixel) reimplements a classic web, bitmap and vector graphics editor in pure Rust and
 tries to match the reference application button by button. This page explains how to contribute; the
 complete rule set for humans and AI agents is in [AGENTS.md](AGENTS.md).
 

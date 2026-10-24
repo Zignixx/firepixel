@@ -1,5 +1,5 @@
 name: Bug report
-description: Crash, wrong result, broken file or other defect in Firepixel.
+description: Crash, wrong result, broken file or other defect in Firepixel Studio.
 title: "[Bug]: "
 labels: ["bug"]
 body:

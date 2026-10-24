@@ -5,7 +5,7 @@
 //!
 //! ```text
 //! ╭──────────────────────────────────────────────────────────────╮
-//! │ [Logo] Firepixel                          · ·▪ ▪·▪ (Pixel)   │  Kopfzeile
+//! │ [Logo] Firepixel Studio                   · ·▪ ▪·▪ (Pixel)   │  Kopfzeile
 //! │        Leitsatz                                              │
 //! ╰──────────────────────────────────────────────────────────────╯
 //! ╭─ ▣ Neu erstellen ──────╮ ╭─ ▣ Zuletzt geöffnete Dateien ─────╮
@@ -269,7 +269,8 @@ fn hash01(x: i32, y: i32) -> f32 {
     ((h ^ (h >> 16)) & 0xffff) as f32 / 65535.0
 }
 
-/// Kopfbanner (Startbildschirm, Über Firepixel): Fläche aus dem Design, Pixelfeld, Logo, Name, Leitsatz.
+/// Kopfbanner (Startbildschirm, Über Firepixel Studio): Fläche aus dem Design, Pixelfeld, Logo, Anzeigename
+/// ([`fp_i18n::DISPLAY_NAME`]), Leitsatz.
 pub(crate) fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, narrow: bool, tagline: &str) {
     let b = banner_colors(theme);
     crate::widgets::vgradient(p, r, b.top, b.bottom);
@@ -299,7 +300,7 @@ pub(crate) fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, narrow: bo
     };
     let text_end = x
         + ui_kit::text_w(p.ctx(), tagline, &theme.font(12.5))
-            .max(ui_kit::text_w(p.ctx(), "Firepixel", &theme.bold(name_size)))
+            .max(ui_kit::text_w(p.ctx(), fp_i18n::DISPLAY_NAME, &theme.bold(name_size)))
             .min(max_w)
         + sp::L;
     for j in 0..rows {
@@ -341,7 +342,7 @@ pub(crate) fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, narrow: bo
             pos2(x, r.center().y - 2.0 - name_size * 1.3),
             pos2(x + max_w, r.center().y - 2.0),
         ),
-        "Firepixel",
+        fp_i18n::DISPLAY_NAME,
         theme.bold(name_size),
         b.text,
     );

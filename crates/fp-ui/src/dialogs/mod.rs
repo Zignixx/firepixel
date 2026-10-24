@@ -1,5 +1,5 @@
 //! Dialoge. Phase 3: „Neues Dokument“ (Vorlage 5961), Ungespeichert-Abfrage, Voreinstellungen
-//! (Grundgerüst mit Design-Auswahl), „Über Firepixel“ und Meldungen. Phase 4 ergänzt die übrigen
+//! (Grundgerüst mit Design-Auswahl), „Über Firepixel Studio“ und Meldungen. Phase 4 ergänzt die übrigen
 //! Dialoge aus `re\bedienfelder\dialoge.json` nach demselben Muster ([`dialog_frame`] + eigenes
 //! Zustands-Struct in [`Dialogs`]).
 

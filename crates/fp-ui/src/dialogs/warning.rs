@@ -293,7 +293,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let r = dialog_frame(
         ctx,
         "fp-warning",
-        "Firepixel",
+        fp_i18n::DISPLAY_NAME,
         vec2(width, (sp::L + content_h + sp::L + sp::BUTTON_BAR_H).ceil()),
         |ui, body| {
             let theme = Theme::current(ui.ctx());

@@ -1,5 +1,5 @@
 # Kommandozeile firepixel-cli: Hilfe (`cli-<befehl>`, `.examples`, `cli-<befehl>-arg-<option>`, `.value`), Meldungen, Sprachprüfung – UE-3
-cli-root = Firepixel – Kommandozeile (FW-PNG bearbeiten, rendern, Skripte, MCP-Server für KI-Agenten)
+cli-root = Firepixel Studio – Kommandozeile (FW-PNG bearbeiten, rendern, Skripte, MCP-Server für KI-Agenten)
     .examples = 
         Beispiele:
           firepixel-cli commands --filter align

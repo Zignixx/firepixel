@@ -1,4 +1,4 @@
-//! „Über Firepixel“ (Hilfe-Menü, eigener Inhalt statt des Dialogs des Originals). Gestaltung nach
+//! „Über Firepixel Studio“ (Hilfe-Menü, eigener Inhalt statt des Dialogs des Originals). Gestaltung nach
 //! `docs\DESIGN.md` §3 (Info-Fenster): Kopfbanner wie der Startbildschirm (Logo, Name, Version),
 //! Beschreibung, Knopfleiste.
 

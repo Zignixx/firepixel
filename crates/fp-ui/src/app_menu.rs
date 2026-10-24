@@ -2,8 +2,8 @@
 //!
 //! winit's default menu binds "Quit" (Cmd+Q) to `terminate:`, which ends the event loop without a
 //! close request, so unsaved changes were lost (see `native_options`). Firepixel turns that menu
-//! off and installs its own with muda: *About Firepixel* (the app's About dialog), *Services*,
-//! *Hide Firepixel* / *Hide Others* / *Show All* (system items) and a custom *Quit Firepixel*
+//! off and installs its own with muda: *About Firepixel Studio* (the app's About dialog), *Services*,
+//! *Hide Firepixel Studio* / *Hide Others* / *Show All* (system items) and a custom *Quit Firepixel Studio*
 //! (Cmd+Q) that runs [`Action::Quit`] with the save prompt. The menu is built on the first frame
 //! (the shared `NSApplication` exists then) and again after a language switch; menu clicks are
 //! queued by muda's event handler, which also requests a frame, and handled in the next frame. `input::take_quit_key` stays as a fallback for Cmd+Q.
@@ -13,9 +13,9 @@
 
 use crate::app_state::{Action, AppState};
 
-/// Menu id of *About Firepixel*.
+/// Menu id of *About Firepixel Studio*.
 pub const ABOUT: &str = "app.about";
-/// Menu id of *Quit Firepixel*.
+/// Menu id of *Quit Firepixel Studio*.
 pub const QUIT: &str = "app.quit";
 
 /// Action of a custom app-menu item (the system items need none).
@@ -108,7 +108,7 @@ mod mac {
     fn build() -> muda::Result<Menu> {
         let t = fp_i18n::t;
         let app = Submenu::with_items(
-            "Firepixel",
+            fp_i18n::DISPLAY_NAME,
             true,
             &[
                 &MenuItem::with_id(ABOUT, t("ui-macmenu-about"), true, None),

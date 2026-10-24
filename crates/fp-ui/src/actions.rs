@@ -311,7 +311,7 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
                 })
                 .unwrap_or_default();
             st.dialogs.confirm = Some(crate::dialogs::Confirm {
-                title: "Firepixel".into(),
+                title: fp_i18n::DISPLAY_NAME.into(),
                 text: fp_i18n::tr!("ui-revert-confirm", name = name),
                 command: "file.revert".into(),
                 params: json!({ "confirmed": true }),
@@ -326,7 +326,7 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             let mut p = params;
             p["confirmed"] = json!(true);
             st.dialogs.confirm = Some(crate::dialogs::Confirm {
-                title: "Firepixel".into(),
+                title: fp_i18n::DISPLAY_NAME.into(),
                 text: fp_i18n::t("dlg-pmenu-delete-settings-confirm"),
                 command: name.into(),
                 params: p,
@@ -691,7 +691,7 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
                     save_script_text(st, &req);
                 }
                 if !alerts.is_empty() {
-                    st.dialogs.message = Some(("Firepixel".into(), alerts.join("\n\n")));
+                    st.dialogs.message = Some((fp_i18n::DISPLAY_NAME.into(), alerts.join("\n\n")));
                 } else if let Some(p) = &script_file
                     && no_doc_before
                     && st.session.active().is_none()
@@ -700,20 +700,20 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
                     // lief ohne Dokument ins Leere (z. B. „Als Großbuchstaben“): im Original ein
                     // Skriptfehler (re 29 §2)
                     st.dialogs.message =
-                        Some(("Firepixel".into(), script_failed("ui-script-error")));
+                        Some((fp_i18n::DISPLAY_NAME.into(), script_failed("ui-script-error")));
                 }
             }
         }
         // CT-A-03 (re 29 §2): ohne Dokument „Skript konnte nicht ausgeführt werden.“ + Grund
         Err(EngineError::NoDocument) if script_file.is_some() => {
             st.dialogs.message = Some((
-                "Firepixel".into(),
+                fp_i18n::DISPLAY_NAME.into(),
                 script_failed("ui-script-needs-document"),
             ));
         }
         Err(e) if script_file.is_some() && no_doc_before && st.session.active().is_none() => {
             log::info!("Befehlsskript ohne Dokument: {e}");
-            st.dialogs.message = Some(("Firepixel".into(), script_failed("ui-script-error")));
+            st.dialogs.message = Some((fp_i18n::DISPLAY_NAME.into(), script_failed("ui-script-error")));
         }
         // mit Dokument, aber unpassender Auswahl: im Original weder Meldung noch Statuszeile
         Err(EngineError::Unavailable { reason, .. }) if script_file.is_some() => {
@@ -752,7 +752,7 @@ fn save_script_text(st: &mut AppState, req: &serde_json::Value) {
         &[("dlg-filter-script", &["jsf"])],
         move |st, p| {
             if let Err(e) = std::fs::write(&p, text.as_bytes()) {
-                st.dialogs.message = Some(("Firepixel".into(), e.to_string()));
+                st.dialogs.message = Some((fp_i18n::DISPLAY_NAME.into(), e.to_string()));
             }
         },
     );

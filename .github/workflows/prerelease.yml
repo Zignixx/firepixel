@@ -138,7 +138,7 @@ jobs:
             PREV=""
           fi
           {
-            echo "# Firepixel $VERSION (pre-release)"
+            echo "# Firepixel Studio $VERSION (pre-release)"
             echo
             echo "This is a preview build, not a final release."
             echo
@@ -175,6 +175,6 @@ jobs:
           gh release create "v$VERSION" dist/*.zip dist/*.tar.gz dist/*.AppImage \
             --target "$SHA" \
             --prerelease \
-            --title "Firepixel $VERSION (pre-release)" \
+            --title "Firepixel Studio $VERSION (pre-release)" \
             --notes-file notes.md
           gh release view "v$VERSION" --json url --jq .url

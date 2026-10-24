@@ -87,7 +87,7 @@ fn delete_settings_asks_first_and_no_keeps_preset() {
     // Weg wie aus dem Auswahldialog: Befehl mit Namen → erst die Rückfrage
     run(&mut st, &ctx, "panel.optimize.deleteSettings", json!({ "name": "Klein" }));
     let c = st.dialogs.confirm.clone().expect("Rückfrage 3169");
-    assert_eq!(c.title, "Firepixel");
+    assert_eq!(c.title, fp_i18n::DISPLAY_NAME);
     assert_eq!(c.text, "Aktuelle Einstellungen löschen? Dies kann nicht rückgängig gemacht werden.");
     assert_eq!(presets(&st), ["Klein"], "vor der Antwort nichts gelöscht");
     // „Nein“ (bzw. Schließen/Esc): nichts gelöscht
@@ -165,7 +165,7 @@ fn builtin_scripts_follow_ui_language() {
         let _ = st.session.execute("select.set", json!({ "ids": [] }));
         run(&mut st, &ctx, "commands.runScript", json!({ "path": script.to_string_lossy() }));
         let (title, body) = st.dialogs.message.clone().unwrap_or_else(|| panic!("{lang}: Meldung erwartet, Status {:?}", st.status));
-        assert_eq!(title, "Firepixel");
+        assert_eq!(title, fp_i18n::DISPLAY_NAME);
         assert!(body.starts_with(expect), "{lang}: {body}");
     }
     fp_i18n::set_language("de");

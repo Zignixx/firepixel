@@ -56,7 +56,7 @@ Everything sits on an **8 px grid** (`ui_kit::sp`):
 | **Settings dialog of the original** | no extra header (as in the original); title bar only | Canvas Size, Image Size, filters, effects, Levels, Curves |
 | **Own management window** | `ui_kit::dialog_header`: 32 px icon, title 15 px bold, explanatory sentence (wrapped, muted), card surface, etched line | Manage AI Models, Language, MCP control channel, Saved Commands |
 | **Confirmation / message** | 32 px icon on the left (info/warning/error, `KitIcon`), text to its right, no title in the content (it is in the title bar) | Unsaved changes, Confirm, Message |
-| **Info window** | app logo (`HeaderIcon::App`), name, version | About Firepixel |
+| **Info window** | app logo (`HeaderIcon::App`), name, version | About Firepixel Studio |
 
 ## 4. Sections and separators
 
@@ -243,7 +243,7 @@ within 3 px of the button row) intentionally have **no** footer.
 ## 13. Open design items
 
 - Tables and lists of individual dialogs: key–value pairs as a grid in Document Info / messages,
-  version and licence as a grid in About Firepixel, the label–value grid (§5) in the generic form
+  version and licence as a grid in About Firepixel Studio, the label–value grid (§5) in the generic form
   dialogs.
 - A footer for Preferences (requires shortening the category list by about 10 px, i.e. a layout
   change).

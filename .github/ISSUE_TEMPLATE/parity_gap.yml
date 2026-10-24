@@ -1,5 +1,5 @@
 name: Parity gap
-description: Firepixel behaves or looks different from the reference application.
+description: Firepixel Studio behaves or looks different from the reference application.
 title: "[Parity]: "
 labels: ["parity"]
 body:
@@ -13,7 +13,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Firepixel version
+      label: Firepixel Studio version
       description: Build name or commit (Help ▸ About).
     validations:
       required: true

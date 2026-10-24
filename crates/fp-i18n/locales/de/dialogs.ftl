@@ -20,8 +20,8 @@ dlg-unit-points = Punkt
 dlg-short-w = B:
 dlg-short-h = H:
 
-## Über Firepixel (about.rs)
-dlg-about-title = Über Firepixel
+## Über Firepixel Studio (about.rs)
+dlg-about-title = Über Firepixel Studio
 dlg-about-version = Version { $version }
 dlg-about-text = Grafikprogramm für Bildschirm- und Webgrafik, in Rust.
 
@@ -709,7 +709,7 @@ dlg-md-saved-title = Gespeicherte Befehle verwalten
 dlg-md-saved-col-name = Name
 dlg-md-no-saved = Keine gespeicherten Befehle
 dlg-md-no-saved-info = Befehle werden dem Verlauf-Bedienfeld entnommen. Zurzeit sind dort keine gespeicherten Befehle vorhanden.
-dlg-md-app-title = Firepixel
+dlg-md-app-title = Firepixel Studio
 dlg-md-rename = Umbenennen
 dlg-md-delete = Löschen
 dlg-md-done = Fertig

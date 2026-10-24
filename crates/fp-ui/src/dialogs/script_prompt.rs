@@ -77,7 +77,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let r = dialog_frame(
         ctx,
         "fp-script-prompt",
-        "Firepixel",
+        fp_i18n::DISPLAY_NAME,
         vec2(w, h),
         |ui, body| {
             put_left(

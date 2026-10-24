@@ -571,7 +571,7 @@ err-import-d-av1 = AV1 decoder: { $error }
 
 # >>> UE-3 Kurzhilfe
 # Built-in quick help (Help menu without MANUAL.md), UE-3
-msg-help-title = Firepixel – quick help
+msg-help-title = Firepixel Studio – quick help
 msg-help-intro = The detailed guide is `MANUAL.md` next to the program or in the folder `docs`.
 msg-help-topic-start = Getting started
 msg-help-topic-tools = Tools

@@ -1,6 +1,6 @@
 # Security Policy
 
-Firepixel parses complex image and document formats (FW-PNG, PSD, GIF, TIFF, SVG, PDF, AI/EPS and more), runs JSF
+Firepixel Studio parses complex image and document formats (FW-PNG, PSD, GIF, TIFF, SVG, PDF, AI/EPS and more), runs JSF
 scripts and exposes a CLI and an MCP server (headless and as a bridge into the running app). Treat files, paths,
 metadata, scripts and automation requests as potentially malicious.
 

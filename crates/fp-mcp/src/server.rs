@@ -96,7 +96,7 @@ fn to_result(out: tools::ToolOutput) -> CallToolResult {
 impl ServerHandler for FirepixelMcp {
     fn get_info(&self) -> ServerConfig {
         let mut imp = Implementation::new("firepixel", env!("CARGO_PKG_VERSION"));
-        imp.title = Some(format!("Firepixel ({})", self.host.mode()));
+        imp.title = Some(format!("{} ({})", fp_i18n::DISPLAY_NAME, self.host.mode()));
         let text = fp_i18n::with_language(&self.env.language, || {
             instructions(self.host.mode() == "bridge")
         });

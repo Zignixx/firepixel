@@ -95,7 +95,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     let r = dialog_frame(
         ctx,
         "fp-unsaved",
-        "Firepixel",
+        fp_i18n::DISPLAY_NAME,
         vec2(w, 120f32.max(20.0 + th + 56.0).ceil()),
         |ui, body| {
             let theme = crate::theme::Theme::current(ui.ctx());

@@ -122,8 +122,8 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-            <key>CFBundleName</key><string>Firepixel</string>
-            <key>CFBundleDisplayName</key><string>Firepixel</string>
+            <key>CFBundleName</key><string>Firepixel Studio</string>
+            <key>CFBundleDisplayName</key><string>Firepixel Studio</string>
             <key>CFBundleIdentifier</key><string>app.firepixel</string>
             <key>CFBundleExecutable</key><string>firepixel</string>
             <key>CFBundleIconFile</key><string>Firepixel</string>

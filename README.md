@@ -1,6 +1,6 @@
-# Firepixel
+# Firepixel Studio
 
-Firepixel is a **clean-room reimplementation of a classic web, bitmap and vector graphics editor**, written
+Firepixel Studio (short: Firepixel) is a **clean-room reimplementation of a classic web, bitmap and vector graphics editor**, written
 in pure Rust. It aims to look, feel and behave like the reference application (menus, tools, panels,
 property inspector, shortcuts and its layered `.fw.png` document format), while running as a single native
 executable with no runtime to install.

@@ -1,6 +1,6 @@
-# Firepixel – Kurzanleitung
+# Firepixel Studio – Kurzanleitung
 
-Firepixel ist ein Grafik- und Webdesign-Programm für Vektor- und Bitmapbearbeitung mit Seiten,
+Firepixel Studio (kurz: Firepixel) ist ein Grafik- und Webdesign-Programm für Vektor- und Bitmapbearbeitung mit Seiten,
 Status (Animationsbildern), Ebenen, Symbolen und Live-Filtern. Es liest und schreibt FW-PNG-Dateien
 (`.fw.png`) und bedient sich wie das bekannte Original: gleiche Menüs, Werkzeuge, Bedienfelder,
 Tastenkürzel und Mausbedienung.
@@ -24,8 +24,8 @@ ausprobiert.
 **macOS:** Das Fenster behält die native Titelleiste mit den Ampelknöpfen (Schließen, Minimieren,
 Zoomen); die Menüleiste von Firepixel liegt direkt darunter. Cmd+Q beendet wie Datei ▸ Beenden und
 fragt vorher, ob geänderte Dokumente gespeichert werden sollen. Das Programmmenü in der Menüleiste von
-macOS bietet Über Firepixel, Dienste, Firepixel ausblenden, Andere ausblenden, Alle einblenden und
-Firepixel beenden (Cmd+Q, ebenfalls mit der Rückfrage).
+macOS bietet Über Firepixel Studio, Dienste, Firepixel Studio ausblenden, Andere ausblenden, Alle
+einblenden und Firepixel Studio beenden (Cmd+Q, ebenfalls mit der Rückfrage).
 
 **Start:**
 
