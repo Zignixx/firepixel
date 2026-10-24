@@ -348,3 +348,68 @@ fn live_preview_equals_the_result_for_strokes_pressed_outside() {
         }
     }
 }
+
+/// RE spec 70 sections 1.8/1.9: the Rubber Stamp (size 16, source Alt-clicked at 165/170,
+/// aligned) pressed outside the selected bitmap works, lays the cloned pixels down also outside and
+/// grows the bitmap to them (measured b 147, c 289, d 369 with a transparent gap).
+#[test]
+fn stamp_pressed_outside_works_and_grows_the_bitmap_to_the_clone() {
+    let run_stamp = |xs: &[f32]| {
+        let mut s = doc_session(400.0, 300.0);
+        let id = stripes(&mut s);
+        select(&mut s, &[id]);
+        s.prefs.set("StampToolSize", PrefValue::Int(16));
+        s.set_tool(ToolId::RubberStamp)
+            .unwrap_or_else(|e| panic!("{e}"));
+        events(
+            &mut s,
+            &[
+                ToolEvent::down(165.0, 170.0).alt(),
+                ToolEvent::up(165.0, 170.0).alt(),
+            ],
+        );
+        let n0 = steps(&s);
+        stroke(&mut s, xs);
+        (image(&s, id), steps(&s) - n0)
+    };
+    let (img, rows) = run_stamp(B);
+    assert_eq!(rows, 1);
+    let b = img.bounds();
+    assert!((143..=151).contains(&b.left), "b grows to the left: {b:?}");
+    let (img, _) = run_stamp(C);
+    let b = img.bounds();
+    assert!(
+        (286..=292).contains(&b.right),
+        "c grows to the right: {b:?}"
+    );
+    let (img, _) = run_stamp(D);
+    let b = img.bounds();
+    assert!(
+        (366..=372).contains(&b.right),
+        "d: separate clone strip: {b:?}"
+    );
+    assert_eq!(img.get(260, 150).map(|p| p[3]), Some(0), "gap transparent");
+    assert!(
+        img.get(330, 150).is_some_and(|p| p[3] > 0),
+        "the clone strip"
+    );
+}
+
+/// RE spec 70 section 1.8: the Brush with the bitmap selected, a stroke 60 px beside it (case d)
+/// grows the selected bitmap to include the detached stroke (no new object).
+#[test]
+fn brush_detached_stroke_beside_the_selected_bitmap_grows_it() {
+    let mut s = doc_session(400.0, 300.0);
+    let id = stripes(&mut s);
+    select(&mut s, &[id]);
+    s.tools.options.brush_size = 4.0;
+    s.set_tool(ToolId::Brush).unwrap_or_else(|e| panic!("{e}"));
+    let count = top_elements(&s).len();
+    stroke(&mut s, D);
+    let b = image(&s, id).bounds();
+    assert!(
+        b.right >= 360 && b.right <= 366,
+        "grown to the stroke: {b:?}"
+    );
+    assert_eq!(top_elements(&s).len(), count, "no new bitmap");
+}

@@ -165,7 +165,12 @@ vergrößert nichts. Mit „Gesamtes Dokument“ wächst die Bitmap auf das ganz
 Strich ganz außerhalb ohne „Gesamtes Dokument“ ändert kein Pixel, ist aber trotzdem ein
 Verlaufsschritt. Die Firepixel-Option **Auf Grenzen beschränken** im Inspektor von Verwischen hält das
 Verwischen innerhalb des Bitmaprands. **Weichzeichner** über den Rand vergrößert
-die Bitmap um bis zu 2 px.
+die Bitmap um bis zu 2 px. Der **Stempel** legt die geklonten Pixel auch außerhalb der gewählten Bitmap
+ab, die darauf wächst (auch auf einen abgesetzten Streifen, die Lücke bleibt transparent); ein
+**Pinsel**-Strich, der bis etwa 80 px neben der gewählten Bitmap beginnt, vergrößert sie ebenfalls
+(weiter entfernt beginnt er eine neue Bitmap). **Scharfzeichner**, **Abwedler** und **Nachbelichter**
+wirken nur innerhalb der Bitmap. Bei allen darf die Pinselmitte beim Drücken außerhalb der Bitmap
+liegen, solange die Bitmap gewählt ist.
 
 **Strich anhalten (Firepixel-Erweiterung):** Während Sie mit Pinsel, Bleistift, Radiergummi oder einem
 der Retusche-Werkzeuge (Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel,

@@ -1253,8 +1253,9 @@ fn retouch(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_ra
     let orig = img.bounds();
     let grows = prm.mode == "blur";
     if grows && !orig.is_empty() {
-        // Weichzeichner darf die Bitmap um 1 px erweitern (neue Pixel transparent weiß)
-        let ext = orig.union(&reach.intersect(&orig.inflate(1, 1)));
+        // the blur may grow the bitmap by 2 px, new pixels transparent white (RE spec 57 section
+        // 3, RE spec 70 section 1.9; the incremental stroke engine does the same)
+        let ext = orig.union(&reach.intersect(&orig.inflate(2, 2)));
         if ext != orig
             && let Ok(mut e) = img.extended_to(ext)
         {
@@ -1267,6 +1268,15 @@ fn retouch(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_ra
             }
             *img = e;
         }
+    }
+    // RE spec 70 section 1.9: the stamp lays the cloned pixels down also outside the selected
+    // bitmap, which grows to what was painted (also a separate strip, the gap transparent); the
+    // Firepixel option "Confine to boundaries" keeps it inside (FB-52)
+    let stamp_grows = prm.mode == "stamp" && !prm.confine && !orig.is_empty();
+    if stamp_grows
+        && let Ok(e) = img.extended_to(orig.union(&reach))
+    {
+        *img = e;
     }
     let ib = img.bounds();
     let work = reach.inflate(1, 1).intersect(&ib);
@@ -1437,7 +1447,7 @@ fn retouch(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_ra
             img.set_pixel(x, y, Rgba8::new(p[0], p[1], p[2], p[3]));
         }
     }
-    if grows && !orig.is_empty() {
+    if (grows || stamp_grows) && !orig.is_empty() {
         // nur Ränder behalten, die wirklich Deckung bekommen haben
         let keep = orig.union(&img.alpha_bounds());
         if keep != img.bounds() {

@@ -756,9 +756,10 @@ pub struct BrushTool {
     breaks: Vec<usize>,
 }
 
-/// Abstand (px) des Zugbeginns von der gewählten Bitmap, ab dem der Pinsel ein neues Bitmap malt
-/// (Annahme zwischen den Messungen 19 px → Bitmap wächst und 100 px → neues Bitmap).
-pub const OUTSIDE_NEW_BITMAP: f32 = 32.0;
+/// Distance (px) of the stroke start from the selected bitmap from which the brush paints a new
+/// bitmap: assumed between the measurements 60 px -> the selected bitmap grows to include the
+/// detached stroke (RE spec 70 section 1.8) and 100 px -> new bitmap (T03).
+pub const OUTSIDE_NEW_BITMAP: f32 = 80.0;
 
 /// Strichtextur des Pinsels, solange im Inspektor keine gewählt ist (Liste des Originals zeigt „Ader“).
 pub const DEFAULT_STROKE_TEXTURE: &str = "Vein";

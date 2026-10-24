@@ -157,7 +157,11 @@ the whole rectangle of the stroke (tip included), filled with the page, even for
 outside the bitmap. A stroke entirely outside without "Entire document" changes no pixel but is still
 one history step. The Firepixel option **Confine to boundaries** in the Smudge inspector keeps the
 smear inside the bitmap edge. **Blur** across the edge grows the bitmap by
-up to 2 px.
+up to 2 px. **Rubber Stamp** lays the cloned pixels down also outside the selected bitmap, which grows
+to them (also to a separate strip, the gap stays transparent); a **Brush** stroke started up to about
+80 px beside the selected bitmap grows it as well (farther away it starts a new bitmap). **Sharpen**,
+**Dodge** and **Burn** work only inside the bitmap. For all of them the brush centre may lie outside
+the bitmap when you press, as long as the bitmap is selected.
 
 **Pausing a stroke (Firepixel extension):** while you paint a stroke with Brush, Pencil, Eraser or one
 of the retouch tools (Blur, Sharpen, Dodge, Burn, Smudge, Rubber Stamp, Replace Color), the status line
