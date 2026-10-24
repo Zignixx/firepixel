@@ -1008,8 +1008,8 @@ or mask objects, a subselected child marks no object row, a selected object fram
 row stays highlighted while its mask is edited. Fixes and extensions on `main` after v0.2.12: F100 (`d7b80e77`,
 TW-237, TW-238), F98 (`3a6cd637`, TW-233), F99 (`b8da4c53` and `30d369c6`, TW-234, TW-235; `e840210d`, TW-236).
 Firepixel extensions: Confine to boundaries on Blur, Rubber Stamp, Brush and Pencil and the Layers group and mask
-tree (switch Layers options ▸ Show Group Contents, default on; the parity runner switches it off); see `[N]`. Not yet
-released; GT-1z (3355 passed) and preview `2026-10-24_16-54` are done, and so is follow-up parity run 44
+tree (switch Layers options ▸ Show Group Contents, default on; the parity runner switches it off); see `[N]`. Released as
+v0.2.13 (24 Oct 2026); GT-1z (3355 passed) and preview `2026-10-24_16-54` are done, and so is follow-up parity run 44
 (24 Oct 2026, `panel-pages-states-history`, `panel-layers`, `panel-layers-menu`, `inspector-bitmap`, 92 steps, runner R-36
 with the new setting `fp.layers_group_tree` off; see [PARITY.md](PARITY.md)): 49 / 0 / 0 / 0, proven 1:1 100.0 %
 (49 / 49), quota 88.0 % (1095 / 1244), canvas pairs 195 / 224, errors 33 / 21, all unchanged; no step status, class or
