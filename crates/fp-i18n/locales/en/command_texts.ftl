@@ -630,7 +630,8 @@ cmdtext-verwischen-farbe-fuer-farbe-verwischen-v-920ed2 = Smudge: color for "Smu
 cmdtext-verwischen-gesamtes-dokument-alle-sichtb-1546ef = Smudge: Entire document (pick up all visible objects and the canvas)
 cmdtext-kante-0-hart-1-anti-alias-2-weiche-kante-61307b = Edge: 0 hard, 1 anti-alias, 2 feather, 3 dither (Firepixel extension)
 cmdtext-breite-der-weichen-kante-bzw-des-dither-93efad = Width of the feather or dither transition
-cmdtext-verwischen-auf-grenzen-beschraenken-aus-bc598e = Smudge: Confine to boundaries (off = the bitmap grows where the smear runs past its edge)
+cmdtext-auf-grenzen-beschraenken-firepixel-optio-2b5fd6 = Confine to boundaries (Firepixel option; Smudge, Blur, Rubber Stamp): change nothing outside the bitmap and pick up nothing from there; off = Smudge and Rubber Stamp grow the bitmap where the stroke runs past its edge, Blur by up to 2 px
+cmdtext-auf-grenzen-beschraenken-firepixel-optio-c9a4f9 = Confine to boundaries (Firepixel option): do not paint past the target bitmap, it does not grow
 cmdtext-farbe-ersetzen-staerke-0-255-vorgabe-200 = Replace color: strength 0..255 (default 200)
 cmdtext-farbe-ersetzen-von-farbe-aus-der-grafik-278aa3 = Replace color: from-color taken from the graphic under the start point
 cmdtext-fuellart-pattern-vorgabemuster-cotton-we-1de580 = Fill category (pattern: default pattern "Cotton" if there is no pattern yet)

@@ -680,7 +680,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt_default("fingerPaint", ParamKind::Bool, json!(false), "Verwischen: Farbe verwischen (Farbe `color` einmischen)")
             .opt("color", ParamKind::Color, "Verwischen: Farbe für „Farbe verwischen“ (Vorgabe: Füllfarbe)")
             .opt_default("wholeDocument", ParamKind::Bool, json!(false), "Verwischen: Gesamtes Dokument (alle sichtbaren Objekte und die Leinwand aufnehmen)")
-            .opt_default("confineToBounds", ParamKind::Bool, json!(false), "Verwischen: Auf Grenzen beschränken (aus = das Bitmap wächst, wo der Strich über den Rand hinausläuft)")
+            .opt_default("confineToBounds", ParamKind::Bool, json!(false), "Auf Grenzen beschränken (Firepixel-Option, Verwischen, Weichzeichner, Stempel): nichts außerhalb der Bitmap ändern oder von dort aufnehmen; aus = Verwischen und Stempel lassen die Bitmap wachsen, wo der Strich über den Rand hinausläuft, Weichzeichner um bis zu 2 px")
             .opt("replaceStrength", ParamKind::Integer { min: Some(0), max: Some(255) }, "Farbe ersetzen: Stärke 0..255 (Vorgabe 200)")
             .opt("fromImage", ParamKind::Bool, "Farbe ersetzen: Von-Farbe aus der Grafik unter dem Startpunkt")
             .opt("breaks", ParamKind::Json, BREAKS_PARAM_TEXT)
@@ -1110,7 +1110,8 @@ pub(crate) struct Retouch {
     pub(crate) tolerance: f32,
     /// Verwischen: „Farbe verwischen“ mit dieser Farbe.
     pub(crate) finger: Option<Rgba8>,
-    /// Smudge: "Confine to boundaries" (Firepixel option, `confineToBounds`).
+    /// "Confine to boundaries" (Firepixel option, `confineToBounds`; Smudge FB-15, Blur and the
+    /// Rubber Stamp FB-52): change nothing outside the bitmap and pick up nothing from there.
     pub(crate) confine: bool,
     /// FB-31: indices into the points where a paused stroke was resumed (`breaks`).
     pub(crate) breaks: Vec<usize>,

@@ -239,7 +239,9 @@ impl RetouchStroke {
                 out: Grow::empty(),
             }),
             "blur" | "sharpen" => {
-                let ext = if prm.mode == "blur" && !orig.is_empty() {
+                // FB-52 (Firepixel option): "Confine to boundaries" keeps the blur from growing
+                // the bitmap by its 2 px
+                let ext = if prm.mode == "blur" && !orig.is_empty() && !prm.confine {
                     orig.inflate(2, 2)
                 } else {
                     orig
@@ -708,6 +710,8 @@ fn push_passes(
         return region;
     }
     let gain = if blur { BLUR_GAIN } else { SHARPEN_DAB_GAIN } * prm.strength;
+    // FB-52: the option is the blur's (the sharpen works only inside anyway)
+    let confine = prm.confine && blur;
     let multi = p.events > 1;
     // passes: a single click once; a fast stroke hits a spot one or two times in the original,
     // depending on where the mouse points lie - here one and a half times; a slow stroke (≥ 3
@@ -753,15 +757,22 @@ fn push_passes(
                 }
                 let px = read(x, y);
                 let mut acc = [0f32; 4];
+                let mut n = 0.0f32;
                 for dy in -1..=1 {
                     for dx in -1..=1 {
+                        // FB-52 (Firepixel option): with "Confine to boundaries" nothing from
+                        // outside the bitmap (the transparent white ring) is mixed in
+                        if confine && !in_rect(&orig, x + dx, y + dy) {
+                            continue;
+                        }
                         let q = read(x + dx, y + dy);
                         for k in 0..4 {
                             acc[k] += q[k];
                         }
+                        n += 1.0;
                     }
                 }
-                let a = acc.map(|v| v / 9.0);
+                let a = acc.map(|v| v / n.max(1.0));
                 let t = c * gain;
                 let o = if blur {
                     [0, 1, 2, 3].map(|k| px[k] + (a[k] - px[k]) * t)

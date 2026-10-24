@@ -84,6 +84,9 @@ pub struct PaintMix {
     pub blend: u8,
     /// „Transparenz beibehalten“: nur auf deckende Pixel malen, Alpha der Bitmap bleibt.
     pub preserve: bool,
+    /// "Confine to boundaries" (Firepixel option, FB-52): paint only inside the target bitmap,
+    /// which does not grow (no effect when the stroke makes a new bitmap).
+    pub confine: bool,
 }
 
 /// Radiergummi: Abdruck und Deckkraft.
@@ -277,6 +280,7 @@ impl PaintJob {
                     opacity: 255,
                     blend: 0,
                     preserve: false,
+                    confine: false,
                 },
                 erase: Some(erase),
                 trim_end: false,
@@ -320,6 +324,10 @@ impl PaintJob {
                 blend: if blend == 55 { 0 } else { blend },
                 preserve: p
                     .get("preserveTransparency")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                confine: p
+                    .get("confineToBounds")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false),
             },
@@ -588,7 +596,7 @@ pub fn paint_into(
     sel: Option<&Mask>,
 ) -> Option<RgbaImage> {
     let mut region = job.cover();
-    if job.mix.preserve || job.tool == PaintTool::Eraser {
+    if job.mix.preserve || job.tool == PaintTool::Eraser || (job.mix.confine && base.is_some()) {
         region = region.intersect(&base.map(|b| b.bounds()).unwrap_or_default());
     }
     if let Some(m) = sel {
@@ -900,7 +908,10 @@ impl LivePaint {
         let sane = IRect::new(-1_000_000, -1_000_000, 1_000_000, 1_000_000);
         for r in rects {
             let mut r = r.intersect(&sane);
-            if self.job.mix.preserve || self.job.tool == PaintTool::Eraser {
+            if self.job.mix.preserve
+                || self.job.tool == PaintTool::Eraser
+                || (self.job.mix.confine && self.base.is_some())
+            {
                 r = r.intersect(&self.base.as_ref().map(|b| b.bounds()).unwrap_or_default());
             }
             if r.is_empty() {
@@ -1192,6 +1203,7 @@ mod tests {
                 opacity: 255,
                 blend: 0,
                 preserve: false,
+                confine: false,
             },
             erase: None,
             trim_end: true,

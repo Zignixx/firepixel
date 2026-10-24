@@ -172,6 +172,14 @@ ab, die darauf wächst (auch auf einen abgesetzten Streifen, die Lücke bleibt t
 wirken nur innerhalb der Bitmap. Bei allen darf die Pinselmitte beim Drücken außerhalb der Bitmap
 liegen, solange die Bitmap gewählt ist.
 
+**Auf Grenzen beschränken (Firepixel-Erweiterung):** Verwischen, Weichzeichner, Stempel, Pinsel und
+Bleistift haben das Kästchen **Auf Grenzen beschränken** in der rechten Spalte des
+Eigenschaften-Inspektors (Vorgabe aus; jedes Werkzeug merkt sich seine Einstellung). Ist es an, ändert
+das Werkzeug kein Pixel außerhalb der Bitmap und nimmt von dort nichts auf: Die Bitmap wächst nie
+(Weichzeichner: kein Rand von 2 px und kein transparentes Weiß in der Kante). Scharfzeichner, Abwedler
+und Nachbelichter wirken ohnehin nur innerhalb der Bitmap und haben keine solche Option; das
+Referenzprogramm hat sie bei keinem Werkzeug.
+
 **Strich anhalten (Firepixel-Erweiterung):** Während Sie mit Pinsel, Bleistift, Radiergummi oder einem
 der Retusche-Werkzeuge (Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel,
 Farbe ersetzen) einen Strich malen, steht in der Statuszeile „P auf der Tastatur hält den aktuellen

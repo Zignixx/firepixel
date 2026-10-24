@@ -495,10 +495,16 @@ pub fn sync_tool_attrs(ctx: &egui::Context, st: &mut crate::app_state::AppState)
     if ctx.data(|d| d.get_temp::<fp_engine::ToolId>(tool_key)) != Some(tool) {
         ctx.data_mut(|d| d.insert_temp(tool_key, tool));
         let mut ta = crate::inspector::obj_quads::tool_attrs(ctx);
-        if attrs_from_prefs(tool, &st.session.prefs, &mut ta) {
-            if tool == fp_engine::ToolId::Brush {
-                st.session.tools.options.brush_size = ta.stroke_width.max(1) as f32;
-            }
+        let loaded = attrs_from_prefs(tool, &st.session.prefs, &mut ta);
+        if loaded && tool == fp_engine::ToolId::Brush {
+            st.session.tools.options.brush_size = ta.stroke_width.max(1) as f32;
+        }
+        // Firepixel option "Confine to boundaries" of the new tool (FB-15/FB-52)
+        let confine = confine_pref(tool).map(|k| st.session.prefs.get_bool(k, false));
+        if let Some(c) = confine {
+            ta.confine_bounds = c;
+        }
+        if loaded || confine.is_some() {
             let t2 = ta.clone();
             crate::inspector::obj_quads::edit_tool_attrs(ctx, |a| *a = t2);
         }
@@ -511,9 +517,29 @@ pub fn sync_tool_attrs(ctx: &egui::Context, st: &mut crate::app_state::AppState)
             for (k, v) in retouch_prefs(st.session.tools.active, &ta) {
                 st.session.prefs.set(&k, v);
             }
+            if let Some(k) = confine_pref(st.session.tools.active) {
+                st.session
+                    .prefs
+                    .set(k, fp_engine::prefs::PrefValue::Bool(ta.confine_bounds));
+            }
         }
         ctx.data_mut(|d| d.insert_temp(last_id, ta));
     }
+}
+
+/// Preference of the Firepixel option "Confine to boundaries" of a bitmap tool that can paint past
+/// the bitmap edge (Smudge FB-15; Blur, Rubber Stamp, Brush and Pencil FB-52); Sharpen, Dodge and
+/// Burn work only inside the bitmap anyway (RE spec 70 section 1.9) and have none.
+pub fn confine_pref(tool: fp_engine::ToolId) -> Option<&'static str> {
+    use fp_engine::ToolId as T;
+    Some(match tool {
+        T::Smudge => "SmudgeToolConfineToBounds",
+        T::Blur => "BlurToolConfineToBounds",
+        T::RubberStamp => "StampToolConfineToBounds",
+        T::Brush => "BrushToolConfineToBounds",
+        T::Pencil => "PencilToolConfineToBounds",
+        _ => return None,
+    })
 }
 
 /// Werkzeugattribute des Inspektors aus den Voreinstellungen des Werkzeugs (Umkehrung von
@@ -581,7 +607,6 @@ pub fn attrs_from_prefs(
             ta.strength = int(&k("Pressure"), 50);
             ta.smudge_color = p.get_bool("SmudgeToolFingerPaint", false);
             ta.whole_doc = p.get_bool("SmudgeToolUseEntireDocument", false);
-            ta.confine_bounds = p.get_bool("SmudgeToolConfineToBounds", false);
         }
         T::RedEyeRemoval => {
             ta.strength = int(&k("Strength"), 50);
@@ -744,8 +769,6 @@ pub fn retouch_prefs(
             // „Farbe verwischen“ und „Gesamtes Dokument“ wirken auf den Zug (PAR 04/10, 04/11)
             v.push(("SmudgeToolFingerPaint".into(), Bool(ta.smudge_color)));
             v.push(("SmudgeToolUseEntireDocument".into(), Bool(ta.whole_doc)));
-            // Firepixel option "Confine to boundaries" (FB-15)
-            v.push(("SmudgeToolConfineToBounds".into(), Bool(ta.confine_bounds)));
         }
         T::RedEyeRemoval => {
             v.push((k("Strength"), Int(ta.strength as i64)));

@@ -883,7 +883,9 @@ impl BrushTool {
                 } else {
                     s
                 };
-                json!({"tool": "pencil", "brush": b, "color": hex(color), "opacity": o.opacity, "blend": o.paint_blend, "preserveTransparency": o.keep_transparency, "trimEnd": false})
+                // Firepixel option "Confine to boundaries" (FB-52)
+                let confine = ctx.prefs.get_bool("PencilToolConfineToBounds", false);
+                json!({"tool": "pencil", "brush": b, "color": hex(color), "opacity": o.opacity, "blend": o.paint_blend, "preserveTransparency": o.keep_transparency, "trimEnd": false, "confineToBounds": confine})
             }
             _ => {
                 let st = o.new_stroke.as_ref();
@@ -903,7 +905,9 @@ impl BrushTool {
                 b.diameter = b.diameter.max(1);
                 // echte Züge malen bis einschließlich Endpunkt (r03: 60→500 = 441 px), eigener
                 // Zufalls-Startwert je Zug (natürliche Pinsel)
-                let mut p = json!({"brush": b, "color": hex(ctx.stroke_color), "opacity": o.opacity, "blend": o.paint_blend, "preserveTransparency": o.keep_transparency, "trimEnd": false, "seed": stroke_seed()});
+                // Firepixel option "Confine to boundaries" (FB-52)
+                let confine = ctx.prefs.get_bool("BrushToolConfineToBounds", false);
+                let mut p = json!({"brush": b, "color": hex(ctx.stroke_color), "opacity": o.opacity, "blend": o.paint_blend, "preserveTransparency": o.keep_transparency, "trimEnd": false, "seed": stroke_seed(), "confineToBounds": confine});
                 // Textur der Strichvorgabe; ohne Wahl wie im Original „Ader“ (Vein, Vorgabe der Liste),
                 // damit texturierte Arten (Graphit, Kohlestift …) ihre Textur zeigen
                 let tex = st

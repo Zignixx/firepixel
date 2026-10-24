@@ -49,6 +49,18 @@ fn prefix(id: ToolId) -> &'static str {
     }
 }
 
+/// Preference of the Firepixel option "Confine to boundaries" of a retouch tool: only the tools that
+/// can change pixels past the bitmap edge (Smudge FB-15; Blur and Rubber Stamp FB-52). Sharpen,
+/// Dodge and Burn never do (RE spec 70 section 1.9), Replace Color and Red Eye neither.
+pub fn confine_pref(id: ToolId) -> Option<&'static str> {
+    Some(match id {
+        ToolId::Blur => "BlurToolConfineToBounds",
+        ToolId::Smudge => "SmudgeToolConfineToBounds",
+        ToolId::RubberStamp => "StampToolConfineToBounds",
+        _ => return None,
+    })
+}
+
 /// Parameter eines Retusche-Werkzeugs.
 pub fn params(id: ToolId, ctx: &ToolContext) -> RetouchParams {
     let p = ctx.prefs;
@@ -447,11 +459,13 @@ impl RetouchTool {
                 p["color"] = json!(ctx.fill_color.to_rgba8().to_hex_rgba());
                 p["wholeDocument"] =
                     json!(ctx.prefs.get_bool("SmudgeToolUseEntireDocument", false));
-                // Firepixel option: keep the smear inside the bitmap edge (FB-15)
-                p["confineToBounds"] =
-                    json!(ctx.prefs.get_bool("SmudgeToolConfineToBounds", false));
             }
             _ => {}
+        }
+        // Firepixel option "Confine to boundaries": nothing outside the bitmap is changed or
+        // picked up (Smudge FB-15; Blur, Rubber Stamp FB-52)
+        if let Some(key) = confine_pref(self.id) {
+            p["confineToBounds"] = json!(ctx.prefs.get_bool(key, false));
         }
         p
     }

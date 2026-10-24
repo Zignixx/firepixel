@@ -58,9 +58,10 @@ use ObjectKind as K;
 use Pred::*;
 
 const TOOL_EMPTY: [u16; 6] = [14006, 14080, 14081, 14082, 14083, 14084];
-/// Firepixel's own Q5 of the smudge tool ("Confine to boundaries", FB-15); the original leaves
+/// Firepixel's own Q5 of the bitmap tools that can paint past the bitmap edge: Smudge (FB-15),
+/// Blur, Rubber Stamp, Brush and Pencil (FB-52) with "Confine to boundaries"; the original leaves
 /// Q5 empty there (14083). The id lies outside the original's template range.
-pub const SMUDGE_Q5: u16 = 61006;
+pub const CONFINE_Q5: u16 = 61006;
 const DOC_Q: [u16; 6] = [14100, 14080, 14031, 6564, 14083, 14084];
 /// Firepixel's own Q5 of the Pointer and the Subselection: marquee shape "Rectangle / Lasso"
 /// (Firepixel extension, `Firepixel_PointerLasso`); the original leaves Q5 empty there (14083).
@@ -92,7 +93,7 @@ pub const LAYOUTS: &[PiLayout] = &[
     row(
         2,
         Tool(ToolId::Brush),
-        [14006, 14080, 14050, 14051, 14083, 14084],
+        [14006, 14080, 14050, 14051, CONFINE_Q5, 14084],
         118,
     ),
     row(
@@ -192,19 +193,19 @@ pub const LAYOUTS: &[PiLayout] = &[
     row(
         12,
         Tool(ToolId::RubberStamp),
-        [14006, 14080, 14070, 14119, 14083, 14084],
+        [14006, 14080, 14070, 14119, CONFINE_Q5, 14084],
         73,
     ),
     row(
         13,
         Tool(ToolId::Pencil),
-        [14006, 14080, 14067, 14119, 14083, 14084],
+        [14006, 14080, 14067, 14119, CONFINE_Q5, 14084],
         73,
     ),
     row(
         14,
         Tool(ToolId::Blur),
-        [14006, 14080, 14136, 14119, 14083, 14084],
+        [14006, 14080, 14136, 14119, CONFINE_Q5, 14084],
         73,
     ),
     row(
@@ -228,7 +229,7 @@ pub const LAYOUTS: &[PiLayout] = &[
     row(
         18,
         Tool(ToolId::Smudge),
-        [14006, 14080, 15006, 14119, SMUDGE_Q5, 14084],
+        [14006, 14080, 15006, 14119, CONFINE_Q5, 14084],
         73,
     ),
     row(

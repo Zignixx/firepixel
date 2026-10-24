@@ -585,6 +585,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("texture", ParamKind::String, "Strichtextur (Name oder Datei); Menge über brush.textureBlend")
             .opt("blend", ParamKind::Integer { min: Some(0), max: Some(55) }, "Mischmodus (Nummer wie element.setBlendMode)")
             .opt("preserveTransparency", ParamKind::Bool, "Transparenz beibehalten: nur auf deckende Pixel malen")
+            .opt("confineToBounds", ParamKind::Bool, "Auf Grenzen beschränken (Firepixel-Option): nicht über die Ziel-Bitmap hinaus malen, sie wächst nicht")
             .opt("trimEnd", ParamKind::Bool, "Endpunkt weglassen (Vorgabe aus: echte Züge malen bis einschließlich Endpunkt)")
             .opt("seed", ParamKind::Integer { min: Some(0), max: None }, "Zufalls-Startwert des Zugs (natürliche Pinsel; Vorgabe aus den Punkten)")
             .opt("velocities", ParamKind::Json, "Geschwindigkeit je Punkt (VELf in px/ms, 1/256-Schritte, aus der Zeigerbewegung; Vorgabe 0,125)")

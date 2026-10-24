@@ -143,7 +143,8 @@ pub struct ToolAttrs {
     pub exposure: i32,
     pub smudge_color: bool,
     pub whole_doc: bool,
-    /// Smudge: "Confine to boundaries" (Firepixel option, `SmudgeToolConfineToBounds`, FB-15).
+    /// "Confine to boundaries" of the active tool (Firepixel option, `<Tool>ConfineToBounds`;
+    /// Smudge FB-15; Blur, Rubber Stamp, Brush and Pencil FB-52).
     pub confine_bounds: bool,
     pub source_aligned: bool,
     pub tolerance: i32,

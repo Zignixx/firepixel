@@ -163,6 +163,13 @@ to them (also to a separate strip, the gap stays transparent); a **Brush** strok
 **Dodge** and **Burn** work only inside the bitmap. For all of them the brush centre may lie outside
 the bitmap when you press, as long as the bitmap is selected.
 
+**Confine to boundaries (Firepixel extension):** Smudge, Blur, Rubber Stamp, Brush and Pencil have the
+checkbox **Confine to boundaries** in the right column of the Properties inspector (off by default;
+each tool keeps its own setting). When it is on, the tool changes no pixel outside the bitmap and picks
+up nothing from outside it: the bitmap never grows (Blur: no 2 px border and no transparent white
+mixed into the edge). Sharpen, Dodge and Burn work only inside the bitmap anyway and have no such
+option; the reference application has it for no tool.
+
 **Pausing a stroke (Firepixel extension):** while you paint a stroke with Brush, Pencil, Eraser or one
 of the retouch tools (Blur, Sharpen, Dodge, Burn, Smudge, Rubber Stamp, Replace Color), the status line
 reads "Press P on the keyboard to pause the current brush stroke." Press **P** with the mouse button
