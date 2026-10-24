@@ -7070,7 +7070,10 @@ fn register_layer_menu(r: &mut CommandRegistry) {
             .requires(&[Requirement::Document, Requirement::Selection])
             .menu_when(selection_has_mask)
             .run(|s, _| {
-                super::with_doc(s, |d| {
+                // selecting the mask (thumbnail click, context menu) is one History row
+                // "Modify Mask" like in the original (RE spec 68 §7)
+                s.force_history_step();
+                let out = super::with_doc(s, |d| {
                     let page = d.page;
                     let first = d
                         .selection
@@ -7093,7 +7096,8 @@ fn register_layer_menu(r: &mut CommandRegistry) {
                         d.bitmap_mode = true;
                     }
                     Ok(CommandOutput::doc())
-                })
+                })?;
+                Ok(out.labeled(fp_i18n::t("msg-step-mask-modify")))
             }),
     );
     alias(

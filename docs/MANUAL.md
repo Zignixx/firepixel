@@ -245,7 +245,7 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   measurements, not every case is known).
 - *Modify ▸ Mask ▸ Reveal All / Hide All* puts an empty mask over the selected object. The Layers
   panel and the inspector still show the object itself (e.g. the bitmap) with the mask as a second
-  thumbnail.
+  thumbnail. The History row is *Add Mask*.
 - **Working with masks:** a *Subselection* click on a masked object selects its mask, and so does a
   *Pointer* click with Alt held (on a normal group, Pointer + Alt-click selects the clicked child;
   Alt-drag still duplicates); *Select Behind* never picks a mask. A click on the mask thumbnail in the
@@ -262,6 +262,21 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   masks) that hides what lies inside the mask and keeps everything outside (the mask object's own
   opacity, or a grey value in grayscale mode, sets how strongly). Inverted masks are stored in a
   Firepixel-own tag of the FW-PNG file; other programs show the plain mask.
+- **Mask modes.** *Group as Mask* always makes a grayscale mask with *Show fill and stroke* off; the masked
+  element stays selected (History row *Group*). *Paste as Mask* gives a vector mask in *Path outline* mode
+  and a bitmap mask in *Grayscale* mode and selects the mask; *Paste Inside* uses *Path outline* with
+  *Show fill and stroke* on, so the mask's fill (or bitmap) shows under the content until you turn the
+  checkbox off (both History rows *Paste*). In grayscale the mask value is the luma (Rec. 709) of the mask's
+  rendered look times its alpha: white shows, black hides, red gives 21 %, green 72 %, blue 7 %; gradients and
+  feathered edges ramp. With a mask selected (mask thumbnail in the Layers panel or *Edit Mask*) the inspector
+  follows the kind of the mask object, not the mode: a path, text or group (also a group of bitmaps) shows
+  **Vector mask** with *Path outline* / *Grayscale*, *Show fill and stroke* (usable in *Path outline* only) and
+  all fill and stroke controls in both modes; a bitmap shows **Bitmap mask** with *Alpha channel* /
+  *Grayscale*. Switching back is always possible; selecting the mask, the mode and the checkbox are each one
+  History row *Modify Mask*. The colour wells show grey (the luma) while a mask is selected.
+- **Painting on a bitmap mask** (brush, pencil, eraser) works live in both modes: white reveals, black hides,
+  the masked element updates during the stroke, the brush outline is red, and each stroke is one *Brush*
+  row. The painting tools show the mask's *Alpha channel* / *Grayscale* radios, which switch the mode.
 - *Select ▸ Select Inverse* inverts a pixel selection only; without one it shows a warning and leaves
   the selected objects alone.
 - *Text ▸ Size ▸ Larger / Smaller* change the size by exactly 1 pt (24 → 25 → 24), on selected texts

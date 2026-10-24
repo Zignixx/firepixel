@@ -186,7 +186,8 @@ pub fn element_thumb(
 }
 
 /// Miniatur der Maske eines maskierten Objekts (Ebenen-Bedienfeld): weiß = sichtbar wie im Original.
-/// Bitmapmasken mit `MNAb` speichern invertiertes Grau (07 §7.5), daher hier zurückgedreht.
+/// Grayscale mode: the luma of the mask object (red fill → dark grey, RE spec 68 §1.1); mask
+/// bitmaps are kept in display form in memory (white = visible).
 pub fn mask_thumb(
     ctx: &Context,
     st: &AppState,
@@ -196,11 +197,10 @@ pub fn mask_thumb(
     mask: &Arc<Element>,
     size: u32,
 ) -> Option<TextureHandle> {
-    let invert = matches!(&group.kind, fp_model::ElementKind::Group(g) if g.kind == fp_model::GroupKind::BitmapMask && g.mask_flags.hide_attrs)
-        && matches!(mask.kind, fp_model::ElementKind::Bitmap(_));
+    let gray = matches!(&group.kind, fp_model::ElementKind::Group(g) if g.kind == fp_model::GroupKind::BitmapMask);
     // Vektormaske (Pfadumriss): Form weiß auf Schwarz wie im Original (N35, Nutzerbild 15)
     let shape = matches!(&group.kind, fp_model::ElementKind::Group(g) if g.kind == fp_model::GroupKind::VectorMask);
-    if !invert && !shape {
+    if !gray && !shape {
         return element_thumb(ctx, st, doc, 0, d, mask, size);
     }
     let r = Arc::clone(&st.renderer);
@@ -221,9 +221,10 @@ pub fn mask_thumb(
                     p[1] = 255;
                     p[2] = 255;
                 } else {
-                    p[0] = 255 - p[0];
-                    p[1] = 255 - p[1];
-                    p[2] = 255 - p[2];
+                    let l = fp_color::models::luma709(p[0], p[1], p[2]);
+                    p[0] = l;
+                    p[1] = l;
+                    p[2] = l;
                 }
             }
             Some(img)
@@ -234,7 +235,7 @@ pub fn mask_thumb(
 /// Schlüsselbit der Formminiaturen von Vektormasken.
 const MASK_SHAPE: u64 = 1 << 60;
 
-/// Schlüsselbit der invertierten Maskenminiaturen.
+/// Schlüsselbit der Graustufen-Maskenminiaturen.
 const MASK_INV: u64 = 1 << 61;
 
 /// Schlüsselbit der Miniaturen „Element auf der Seite“ (getrennt von Element-, Seiten- und

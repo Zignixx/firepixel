@@ -2847,6 +2847,12 @@ fn overlays(
     // Werkzeug-Rückmeldung
     let Some(d) = st.session.active() else { return };
     let stroke = Stroke::new(1.0, c.tool_preview);
+    // the brush outline is red while a mask is being edited (RE spec 68 §4.1 e5)
+    let tip_color = if st.session.mask_selected() {
+        Color32::from_rgb(255, 0, 0)
+    } else {
+        c.tool_preview
+    };
     // Gerenderte Vorschauen (Verschieben, Kopie, Transformieren, Text) nur innerhalb der Leinwand
     // wie im fertigen Bild; Rahmen, Griffe und Umrisse dürfen darüber hinaus
     let page_clip = st
@@ -3227,12 +3233,12 @@ fn overlays(
                 let p = spp(at);
                 let rr = (diameter as f64 * view.zoom / 2.0).max(1.0) as f32;
                 if round {
-                    painter.circle_stroke(p, rr, Stroke::new(1.0, c.tool_preview));
+                    painter.circle_stroke(p, rr, Stroke::new(1.0, tip_color));
                 } else {
                     painter.rect_stroke(
                         Rect::from_center_size(p, vec2(rr * 2.0, rr * 2.0)),
                         0.0,
-                        Stroke::new(1.0, c.tool_preview),
+                        Stroke::new(1.0, tip_color),
                         StrokeKind::Middle,
                     );
                 }

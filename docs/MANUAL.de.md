@@ -264,7 +264,7 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   jeder Fall ist bekannt).
 - *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
   gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
-  mit der Maske als zweiter Miniatur.
+  mit der Maske als zweiter Miniatur. Die Verlaufszeile heißt *Maske hinzufügen*.
 - **Arbeiten mit Masken:** Ein Klick mit der *Teilauswahl* auf ein maskiertes Objekt wählt dessen Maske,
   ebenso ein Klick mit dem *Zeiger* bei gedrückter Alt-Taste (auf einer normalen Gruppe wählt Zeiger +
   Alt-Klick das getroffene Kind; Alt-Ziehen dupliziert weiterhin); *Hintere auswählen* wählt nie eine
@@ -283,6 +283,23 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   außerhalb zeigt (die eigene Deckkraft des Maskenobjekts bzw. ein Grauwert im Graustufenmodus bestimmt,
   wie stark). Invertierte Masken stehen in einem Firepixel-eigenen Tag der FW-PNG-Datei; andere Programme
   zeigen die normale Maske.
+- **Maskenmodi.** *Als Maske gruppieren* legt immer eine Graustufenmaske an, *Füllung und Pinselstrich
+  anzeigen* aus; das maskierte Element bleibt gewählt (Verlaufszeile *Gruppieren*). *Als Maske einfügen* gibt
+  bei einer Vektormaske den Modus *Pfadumriss*, bei einer Bitmapmaske *Graustufen* und wählt die Maske;
+  *Innen einfügen* nimmt *Pfadumriss* mit *Füllung und Pinselstrich anzeigen* an, die Füllung (bzw. Bitmap)
+  der Maske liegt also unter dem Inhalt, bis das Kästchen aus ist (beide Zeilen *Einfügen*). In Graustufen ist
+  der Maskenwert die Luma (Rec. 709) des gerenderten Maskenaussehens mal Alpha: Weiß zeigt, Schwarz blendet aus,
+  Rot ergibt 21 %, Grün 72 %, Blau 7 %; Verläufe und weiche Kanten laufen aus. Ist eine Maske gewählt
+  (Maskenminiatur im Ebenen-Bedienfeld oder *Maske bearbeiten*), richtet sich der Inspektor nach der Art des
+  Maskenobjekts, nicht nach dem Modus: Pfad, Text oder Gruppe (auch aus Bitmaps) zeigt **Vektormaske** mit
+  *Pfadumriss* / *Graustufendarstellung*, *Füllung und Pinselstrich anzeigen* (nur im Pfadumriss bedienbar)
+  und allen Füll- und Strichfeldern in beiden Modi; eine Bitmap zeigt **Bitmap-Maske** mit *Alphakanal* /
+  *Graustufen*. Der Rückweg geht immer; Maske wählen, Modus und Kästchen sind je eine Verlaufszeile *Maske
+  modifizieren*. Die Farbfelder zeigen bei gewählter Maske Grau (die Luma).
+- **Malen auf einer Bitmapmaske** (Pinsel, Bleistift, Radiergummi) wirkt in beiden Modi live: Weiß deckt auf,
+  Schwarz blendet aus, das maskierte Element ändert sich während des Zugs, der Pinselumriss ist rot, jeder Zug
+  ist eine Zeile *Pinsel*. Die Malwerkzeuge zeigen die Radios *Alphakanal* / *Graustufen* der Maske, die den
+  Modus umschalten.
 - *Auswählen ▸ Auswahl umkehren* kehrt nur eine Pixelauswahl um; ohne sie erscheint eine Warnung, und
   die gewählten Objekte bleiben unverändert.
 - *Text ▸ Größe ▸ Größer / Kleiner* ändern die Größe um genau 1 pt (24 → 25 → 24), bei gewählten Texten

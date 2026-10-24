@@ -722,9 +722,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     if let Some((list, _)) = docops::parent_list_mut(doc, &path) {
                         list.insert(idx.min(list.len()), Arc::new(g));
                     }
-                    // wie im Original: danach ist die **Maske** gewählt (re 28 S5, re 31 §5.2; RT-3 S5)
+                    // wie im Original: danach ist die **Maske** gewählt (re 28 S5, re 31 §5.2; RT-3 S5);
+                    // vector → path outline, bitmap → grayscale with the mask in bitmap editing,
+                    // History row "Paste" (RE spec 68 §1.3 rule 2)
                     d.selection.set(vec![mask_id]);
-                    Ok(CommandOutput::doc())
+                    if !vector {
+                        d.bitmap_mode = true;
+                    }
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-paste")))
                 })
             }),
     );
@@ -773,7 +778,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     } else {
                         d.selection.set(vec![gid]);
                     }
-                    Ok(CommandOutput::doc_with(json!({"id": gid.0})))
+                    // path outline with "Show fill and stroke" on; History row "Paste" (RE spec 68 §1.3 rule 3)
+                    Ok(CommandOutput::doc_with(json!({"id": gid.0}))
+                        .labeled(fp_i18n::t("msg-step-paste")))
                 })
             }),
     );

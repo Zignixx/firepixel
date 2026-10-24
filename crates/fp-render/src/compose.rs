@@ -1288,8 +1288,11 @@ impl Renderer {
         let mut img = cv.img;
         let masked = g.kind.is_mask() && g.mask_flags.enabled;
         if masked && let Some(me) = g.effective_mask() {
-            // Pfadumriss mit „Füllung und Pinselstrich anzeigen“ (Flags 0x01 und 0x10, re 26 §3.1)
-            let show = g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs;
+            // Pfadumriss mit „Füllung und Pinselstrich anzeigen“ (Flags 0x01 und 0x10, re 26 §3.1);
+            // not while the mask bitmap is being painted (live preview, RE spec 68 §4.2 rule 5)
+            let painting_mask = st.over.as_ref().is_some_and(|o| o.id == me.id.0);
+            let show =
+                g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs && !painting_mask;
             let mask = self.mask_values(doc, e, g, me, show, st, rep);
             let invert = mask_invert(g, me);
             let b = img.bounds();
@@ -1370,9 +1373,16 @@ impl Renderer {
         }
     }
 
-    /// Maskenwerte (Grenzen, Breite, Daten) einer Maskengruppe (07 §7.5, Laufzeit T3; re 26 §3.2).
-    /// Pfad: Fülldeckung der Geometrie (Farbe, Farbalpha und Strich zählen nicht); die weiche Kante
-    /// wirkt nur ohne „anzeigen“ (`show`), sonst beschneidet die Geometrie mit Kantenglättung.
+    /// Maskenwerte (Grenzen, Breite, Daten) einer Maskengruppe (07 §7.5, Laufzeit T3; re 26 §3.2;
+    /// RE spec 68 §2.3/§4.2). The mode is the group's switch (`GRTi`), not the kind of the mask
+    /// object:
+    /// - path outline / alpha channel ("mask to path"): a path gives the fill coverage of its
+    ///   geometry (colour, colour alpha and stroke do not count; the feather only without `show`),
+    ///   a bitmap its alpha, anything else the alpha of its look;
+    /// - grayscale ("mask to image"): Rec. 709 luma × alpha of the mask object's rendered look
+    ///   (fill colour, gradient, pattern, feather and stroke count; red → 21 %), a bitmap in display
+    ///   form (white = visible). The bitmap's live paint pixels (BA-039 override) count during a
+    ///   stroke.
     #[allow(clippy::type_complexity, clippy::too_many_arguments)]
     fn mask_values(
         &self,
@@ -1384,11 +1394,29 @@ impl Renderer {
         st: &State,
         rep: &mut RenderReport,
     ) -> Option<(IRect, usize, Vec<u8>)> {
-        // Graustufen nur bei Bitmapmasken (`MNAb`); Pfadumriss nimmt das Alpha (re 26 §3.2)
-        let gray = g.kind == GroupKind::BitmapMask && g.mask_flags.hide_attrs;
-        let img: Option<RgbaImage> = match (&me.kind, g.kind) {
-            (ElementKind::Path(p), GroupKind::VectorMask)
-            | (ElementKind::Path(p), GroupKind::BitmapMask) => {
+        let gray = g.kind == GroupKind::BitmapMask;
+        let to_gray = |mut i: RgbaImage| {
+            for p in i.data_mut() {
+                let lum = fp_color::models::luma709(p[0], p[1], p[2]) as u32;
+                p[3] = ((p[3] as u32 * lum + 127) / 255) as u8;
+            }
+            i
+        };
+        let img: Option<RgbaImage> = match &me.kind {
+            ElementKind::Bitmap(b) => {
+                let painted = st.over.as_ref().filter(|o| o.id == me.id.0);
+                let src = match painted {
+                    Some(o) => self.place_bitmap(&o.image, &st.map, rep),
+                    None => b
+                        .effect_result
+                        .as_ref()
+                        .and_then(|r| convert::image_of_node(r))
+                        .or_else(|| convert::image_of(&b.image))
+                        .and_then(|i| self.place_bitmap(&i, &st.map, rep)),
+                };
+                src.map(|i| if gray { to_gray(i) } else { i })
+            }
+            ElementKind::Path(p) if !gray => {
                 if !self.options.rasterize {
                     rep.miss("GRPv:mask");
                     return None;
@@ -1405,24 +1433,9 @@ impl Renderer {
                 }
                 fp_vector::render_path_layer(&vp).map(|l| l.image)
             }
-            (ElementKind::Bitmap(b), _) => {
-                let src = b
-                    .effect_result
-                    .as_ref()
-                    .and_then(|r| convert::image_of_node(r))
-                    .or_else(|| convert::image_of(&b.image));
-                let src = src.and_then(|i| self.place_bitmap(&i, &st.map, rep));
-                src.map(|mut i| {
-                    if gray {
-                        for p in i.data_mut() {
-                            let lum =
-                                (p[0] as u32 * 299 + p[1] as u32 * 587 + p[2] as u32 * 114) / 1000;
-                            p[3] = ((p[3] as u32 * (255 - lum) + 127) / 255) as u8;
-                        }
-                    }
-                    i
-                })
-            }
+            _ if gray => self
+                .look(doc, me, st, rep)
+                .map(|l| to_gray((*l.image).clone())),
             _ => {
                 rep.approx("mask-generic");
                 self.look(doc, me, st, rep).map(|l| (*l.image).clone())

@@ -1880,8 +1880,9 @@ fn element_set(
                         g.mask_flags.invert = v;
                     }
                     match mode.as_deref() {
-                        Some("mask to path") => g.kind = fp_model::element::GroupKind::VectorMask,
-                        Some("mask to image") | Some("alpha") | Some("grayscale") => g.kind = fp_model::element::GroupKind::BitmapMask,
+                        // "alpha" (alpha channel) is the bitmap-mask name of "mask to path" (RE spec 68 §4.2)
+                        Some("mask to path") | Some("alpha") => g.kind = fp_model::element::GroupKind::VectorMask,
+                        Some("mask to image") | Some("grayscale") => g.kind = fp_model::element::GroupKind::BitmapMask,
                         _ => {}
                     }
                     e.cache = None;

@@ -400,6 +400,37 @@ impl ImageData {
         Point::new(self.origin.x + self.offset.x, self.origin.y + self.offset.y)
     }
 
+    /// The same bitmap with every colour channel inverted (`255 − v`, alpha kept). A grayscale
+    /// bitmap mask (`GRTi` 1) is stored inverted in the file (07 §7.5: value = α·(255 − grey));
+    /// Firepixel keeps it in display form (white = visible) and converts with this at file I/O
+    /// (RE spec 68 §9.2 M-6). Inflated image tiles become new tiles without the file's zlib
+    /// stream; tiles that were never inflated (lazy reads) and missing tiles stay as they are.
+    pub fn inverted_rgb(&self) -> ImageData {
+        let mut out = self.clone();
+        for e in &mut out.grid.tiles {
+            match e {
+                TileEntry::Tile(t) if t.kind == TileKind::Image && !t.pixels.is_empty() => {
+                    let mut px = t.pixels.to_vec();
+                    for c in px.as_chunks_mut::<4>().0 {
+                        c[1] = 255 - c[1];
+                        c[2] = 255 - c[2];
+                        c[3] = 255 - c[3];
+                    }
+                    *t = Arc::new(Tile {
+                        id: t.id,
+                        kind: t.kind,
+                        pixels: px.into(),
+                        compressed: None,
+                        reserved: t.reserved.clone(),
+                    });
+                }
+                TileEntry::Solid(c) => *c = Argb(c.0 ^ 0x00ff_ffff),
+                _ => {}
+            }
+        }
+        out
+    }
+
     /// Bitmap als RGBA8 zusammensetzen.
     pub fn to_rgba(&self) -> (Vec<u8>, bool) {
         self.grid.to_rgba()

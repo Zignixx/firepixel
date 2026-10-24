@@ -1226,7 +1226,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             editable && (mt.contains(p) || chain.contains(p))
                         }) {
                             // the mask thumbnail works like Edit Mask (RE spec 68 section 7):
-                            // the masked element, then the mask-select command; the chain
+                            // the masked element, then the mask-select command (one History row
+                            // "Modify Mask", a bitmap mask goes into bitmap editing); the chain
                             // toggles the link
                             if mt.contains(p) {
                                 if !selected_set.contains(&mid) {

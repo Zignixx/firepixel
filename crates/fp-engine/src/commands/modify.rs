@@ -397,8 +397,9 @@ fn group(d: &mut DocumentState, as_mask: bool) -> Result<ElementId> {
     let g = if as_mask {
         let mut it = removed.into_iter();
         let mask = it.next().ok_or_else(|| sel_err("err-sel-empty"))?;
-        let vector = !matches!(mask.kind, ElementKind::Bitmap(_));
-        Element::new_mask_group(&mut idg, mask, it.collect(), vector)
+        // the menu command records `group("mask to image")`: grayscale for every kind of mask
+        // object (path, group, bitmap), show fill and stroke off (RE spec 68 §1.3 rule 1)
+        Element::new_mask_group(&mut idg, mask, it.collect(), false)
     } else {
         Element::new_group(&mut idg, removed)
     };
@@ -943,20 +944,22 @@ pub(crate) fn mask_from_selection(
         let b = docops::element_bounds(&d.doc, &e)
             .ok_or_else(|| sel_err("err-sel-no-bounds-short"))?
             .round_out();
-        // Gespeichertes Masken-IMGv = invertiertes Grau (07 §7.5, Laufzeit T3): schwarz = sichtbar
+        // grayscale mask in display form (white = visible); the file stores the inverted grey
+        // (07 §7.5), converted at file I/O (RE spec 68 M-6)
         let img = match reveal_all {
             Some(reveal) => RgbaImage::filled(
                 b,
                 if reveal {
-                    fp_color::Rgba8::new(0, 0, 0, 255)
-                } else {
                     fp_color::Rgba8::new(255, 255, 255, 255)
+                } else {
+                    fp_color::Rgba8::new(0, 0, 0, 255)
                 },
             )?,
             None => return Err(EngineError::Failed(fp_i18n::t("err-internal"))),
         };
         let id = mask_bitmap(d, img, target)?;
-        Ok(CommandOutput::doc_with(json!({"id": id.0})))
+        // History row "Add Mask" like the original's `addElementMask` (RE spec 68 §8)
+        Ok(CommandOutput::doc_with(json!({"id": id.0})).labeled(fp_i18n::t("msg-step-mask-add")))
     })
 }
 
@@ -984,8 +987,8 @@ pub(crate) fn mask_from_pixels(s: &mut Session, reveal: bool) -> Result<CommandO
         for (i, px) in img.data_mut().iter_mut().enumerate() {
             let (x, y) = (b.left + (i % w) as i32, b.top + (i / w) as i32);
             let v = m.get(x, y);
-            // invertiertes Grau wie oben: gewählt + einblenden → schwarz (sichtbar)
-            let g = if reveal { 255 - v } else { v };
+            // display form like above: selected + reveal → white (visible)
+            let g = if reveal { v } else { 255 - v };
             *px = [g, g, g, 255];
         }
         d.selection.pixels = None;
@@ -1895,7 +1898,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, _| {
                 with_doc(s, |d| {
                     let id = group(d, true)?;
-                    Ok(CommandOutput::doc_with(json!({"id": id.0})))
+                    // the masked element stays selected; History row "Group" (RE spec 68 §1.1)
+                    Ok(CommandOutput::doc_with(json!({"id": id.0}))
+                        .labeled(fp_i18n::t("msg-step-group")))
                 })
             }),
     );
@@ -2019,6 +2024,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                                 if let Some(v) = invert {
                                     g.mask_flags.invert = v;
                                 }
+                                // the mode is a switch on the mask group (`GRTi`), never the
+                                // kind of the mask object (RE spec 68 §2.4 rule 2)
                                 match mode.as_deref() {
                                     Some("path") => g.kind = fp_model::GroupKind::VectorMask,
                                     Some("image") => g.kind = fp_model::GroupKind::BitmapMask,
@@ -2028,7 +2035,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             }
                         });
                     }
-                    Ok(CommandOutput::doc())
+                    // mode and "Show fill and stroke": one History row "Modify Mask" (RE spec 68 §2.2)
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-mask-modify")))
                 })
             }),
     );

@@ -1726,7 +1726,7 @@ fn read_group(r: &mut Rd, ctx: &mut ReadCtx) -> GroupElem {
         replacement_extra = ex;
     }
     let smart_shape = r.list(k!(b"ISSv")).map(|s| read_smart_shape(s, ctx));
-    GroupElem {
+    let mut g = GroupElem {
         kind,
         mask,
         children,
@@ -1735,7 +1735,11 @@ fn read_group(r: &mut Rd, ctx: &mut ReadCtx) -> GroupElem {
         replacement,
         replacement_extra,
         smart_shape,
-    }
+    };
+    // grayscale bitmap mask: the file holds the inverted grey (07 §7.5), memory the display form
+    // (white = visible, RE spec 68 M-6)
+    g.invert_grayscale_bitmap_mask();
+    g
 }
 
 fn read_smart_shape(v: &[RawNode], ctx: &mut ReadCtx) -> SmartShape {

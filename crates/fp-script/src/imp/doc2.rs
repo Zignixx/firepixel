@@ -1828,16 +1828,23 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             u()
         }
         "setElementMaskMode" => {
-            let alpha = arg_str(args, 0).to_lowercase().contains("alpha");
-            edit_mask_groups(doc, |g| {
-                if g.kind.is_mask() {
-                    g.kind = if alpha {
-                        fp_model::element::GroupKind::BitmapMask
-                    } else {
-                        fp_model::element::GroupKind::VectorMask
-                    };
-                }
-            })?;
+            // "mask to image" = grayscale (`GRTi` 1), "mask to path" = path outline / alpha channel
+            // (`GRTi` 2), as the original records them (RE spec 68 §2.2, §4.1)
+            let mode = arg_str(args, 0).to_lowercase();
+            let kind = if mode.contains("image") || mode.contains("gray") || mode.contains("grey") {
+                Some(fp_model::element::GroupKind::BitmapMask)
+            } else if mode.contains("path") || mode.contains("alpha") {
+                Some(fp_model::element::GroupKind::VectorMask)
+            } else {
+                None
+            };
+            if let Some(kind) = kind {
+                edit_mask_groups(doc, |g| {
+                    if g.kind.is_mask() {
+                        g.kind = kind;
+                    }
+                })?;
+            }
             u()
         }
         "moveElementMaskBy" | "moveMaskGroupContentsBy" => {

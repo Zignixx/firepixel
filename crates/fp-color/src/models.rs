@@ -278,6 +278,14 @@ pub fn gray_level(r: u8, g: u8, b: u8) -> u8 {
     (((r as u32 * 109 + g as u32 * 366 + b as u32 * 37) >> 9) & 0xff) as u8
 }
 
+/// Rec. 709 luma `(13933·R + 46871·G + 4732·B + 32768) >> 16` (weights 0.2126/0.7152/0.0722): the
+/// value of a grayscale mask ("mask to image") and the grey the colour wells show while a mask is
+/// selected (RE spec 68 §2.3: red 54 = 21 %, green 182 = 72 %, blue 18 = 7 %).
+#[inline]
+pub fn luma709(r: u8, g: u8, b: u8) -> u8 {
+    ((r as u32 * 13933 + g as u32 * 46871 + b as u32 * 4732 + 32768) >> 16).min(255) as u8
+}
+
 /// Anzeige „K:“ in Prozent Schwarz (Mischer-Modell 4).
 pub fn rgb_to_mixer_k(r: u8, g: u8, b: u8) -> i32 {
     trunc(100.0 - round_away(gray_level(r, g, b) as f64 * 100.0 / 255.0)) as i32
@@ -628,5 +636,17 @@ mod tests {
         for v in 0..=65535u16 {
             assert_eq!(to8_float(v as u32), to8(v), "{v}");
         }
+    }
+
+    /// RE spec 68 §2.3: grayscale mask values of pure colours (±1 to the measured 0.211/0.716/0.069).
+    #[test]
+    fn luma709_mask_values() {
+        use super::luma709;
+        assert_eq!(luma709(255, 0, 0), 54);
+        assert_eq!(luma709(0, 255, 0), 182);
+        assert_eq!(luma709(0, 0, 255), 18);
+        assert_eq!(luma709(255, 255, 255), 255);
+        assert_eq!(luma709(0, 0, 0), 0);
+        assert_eq!(luma709(128, 128, 128), 128);
     }
 }

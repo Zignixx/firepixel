@@ -392,7 +392,8 @@ pi-aa-smooth = Anti-Alias glatt
 pi-aa-custom = Benutzerdef. Anti-Alias...
 pi-text-offset = Textversatz:
 pi-text-autokern = Autom. Unterschneidung
-pi-mask-editing = Bitmapmaske wird bearbeitet
+pi-mask-head-vector = Vektormaske
+pi-mask-head-bitmap = Bitmap-Maske
 
 ## Farbfelder-Popup
 pi-color-system = Systemfarbwähler

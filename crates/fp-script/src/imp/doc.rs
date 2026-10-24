@@ -246,9 +246,18 @@ fn tool_path_attrs_json(session: &fp_engine::Session) -> Value {
     } else {
         st.stroke_color
     };
+    // a selected mask reports its colours as grey (luma; red → #363636, RE spec 68 §2.1)
+    let (stroke_color, fill_color) = if session.mask_selected() {
+        (
+            fp_engine::tool_follow::mask_gray(stroke_color),
+            fp_engine::tool_follow::mask_gray(st.fill_color),
+        )
+    } else {
+        (stroke_color, st.fill_color)
+    };
     json!({
         "fill": (!fill_none).then(|| json!({"category": "fc_Solid", "name": "fn_Normal", "shape": "solid"})),
-        "fillColor": fp_engine::commands::argb_hex(st.fill_color),
+        "fillColor": fp_engine::commands::argb_hex(fill_color),
         "brush": brush,
         "brushColor": fp_engine::commands::argb_hex(stroke_color),
         "brushPlacement": st.placement(),

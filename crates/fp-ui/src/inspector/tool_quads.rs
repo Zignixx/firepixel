@@ -1492,51 +1492,27 @@ fn url_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     }
 }
 
-/// Wird gerade eine Maske bearbeitet (Auswahl = Maskenelement einer Gruppe, „Maske bearbeiten“)?
-fn editing_mask(st: &AppState) -> bool {
-    let Some(d) = st.session.active() else {
-        return false;
-    };
-    let Some(id) = d.selection.elements.first().copied() else {
-        return false;
-    };
-    let Some(pg) = d.doc.pages.get(d.page) else {
-        return false;
-    };
-    let mut found = false;
-    fp_model::traverse::walk_root(&pg.root, fp_model::RootRef::Page(d.page), &mut |_, _, e| {
-        if let fp_model::ElementKind::Group(g) = &e.kind
-            && g.mask.as_ref().is_some_and(|m| m.id == id)
-        {
-            found = true;
-        }
-    });
-    found
+/// Wird gerade eine Bitmapmaske bearbeitet (Auswahl = Bitmap-Maskenobjekt einer Maskengruppe)?
+/// Vector masks (groups of bitmaps included) have no sub-panel (RE spec 68 §5).
+fn editing_bitmap_mask(st: &AppState) -> bool {
+    st.session.active().is_some_and(|d| {
+        d.selection.elements.len() == 1
+            && fp_engine::docops::mask_owner(&d.doc, d.page, d.selection.elements[0])
+                .and_then(|o| {
+                    o.element_mask()
+                        .map(|m| matches!(m.element.kind, fp_model::ElementKind::Bitmap(_)))
+                })
+                .unwrap_or(false)
+    })
 }
 
-/// Masken-Teilfeld (14117): wie im Original nur sichtbar, während eine Maske bearbeitet wird
-/// (sonst bleibt die Fläche leer).
-fn mask_sub(ui: &mut Ui, st: &AppState, d: Dl) {
-    if !editing_mask(st) {
+/// Masken-Teilfeld (14117): wie im Original nur sichtbar, während eine Bitmapmaske bearbeitet wird
+/// (sonst bleibt die Fläche leer); the radios show the real mode and switch it (RE spec 68 §4.2).
+fn mask_sub(ui: &mut Ui, st: &mut AppState, d: Dl) {
+    if !editing_bitmap_mask(st) {
         return;
     }
-    fields::label(ui, d.r(2.0, 2.0, 29.0, 8.0), &tx("pi-mask"), false);
-    let _ = fields::radio(
-        ui,
-        Id::new("mask-alpha"),
-        d.r(39.0, 2.0, 80.0, 10.0),
-        &tx("pi-mask-alpha"),
-        true,
-        false,
-    );
-    let _ = fields::radio(
-        ui,
-        Id::new("mask-gray"),
-        d.r(39.0, 15.0, 80.0, 10.0),
-        &tx("pi-mask-gray"),
-        false,
-        false,
-    );
+    obj_quads::bitmap_mask_radios(ui, st, d, "mask-sub");
 }
 
 fn mask_sub_q4(ui: &mut Ui, st: &mut AppState, r: Rect) {

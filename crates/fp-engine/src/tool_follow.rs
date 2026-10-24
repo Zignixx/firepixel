@@ -337,6 +337,23 @@ impl Session {
     /// this is only a display, the tool attributes stay. Otherwise the tool attributes, with "none"
     /// for a stroke or fill of the kind none.
     pub fn tool_well_colors(&self) -> (Argb, Argb) {
+        let (stroke, fill) = self.tool_well_colors_raw();
+        if self.mask_selected() {
+            (mask_gray(stroke), mask_gray(fill))
+        } else {
+            (stroke, fill)
+        }
+    }
+
+    /// Is exactly one mask selected (mask editing)? Then the colour wells show grey (RE spec 68
+    /// §2.1, §2.4 rule 4).
+    pub fn mask_selected(&self) -> bool {
+        self.active().is_some_and(|d| {
+            matches!(d.selection.elements.as_slice(), [id] if crate::docops::mask_owner(&d.doc, d.page, *id).is_some())
+        })
+    }
+
+    fn tool_well_colors_raw(&self) -> (Argb, Argb) {
         if let Some(d) = self.active() {
             let shown = match d.selection.elements.as_slice() {
                 [] => None,
@@ -490,6 +507,13 @@ impl Session {
         self.follow_seen = Some(key);
         style
     }
+}
+
+/// The grey a colour well shows while a mask is selected: Rec. 709 luma of the colour, alpha kept
+/// (red `#ff0000` → `#363636`, RE spec 68 §2.1).
+pub fn mask_gray(c: Argb) -> Argb {
+    let l = fp_color::models::luma709(c.r(), c.g(), c.b()) as u32;
+    Argb((c.0 & 0xff00_0000) | (l << 16) | (l << 8) | l)
 }
 
 #[cfg(test)]

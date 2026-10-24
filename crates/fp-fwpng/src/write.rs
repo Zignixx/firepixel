@@ -676,7 +676,12 @@ pub fn write_element(e: &Element, ctx: &mut WriteCtx) -> RawNode {
             w.i32_def(k!(b"GRTi"), g.kind.code(), 0, true);
             w.bool_def(k!(b"MRXb"), mf.auto_expand, false, false);
             let mut all: Vec<Arc<Element>> = Vec::with_capacity(g.children.len() + 1);
-            if let Some(m) = &g.mask {
+            if g.has_grayscale_bitmap_mask() {
+                // display form in memory, inverted grey in the file (07 §7.5, RE spec 68 M-6)
+                let mut file_form = g.clone();
+                file_form.invert_grayscale_bitmap_mask();
+                all.extend(file_form.mask);
+            } else if let Some(m) = &g.mask {
                 all.push(Arc::clone(m));
             }
             all.extend(g.children.iter().cloned());

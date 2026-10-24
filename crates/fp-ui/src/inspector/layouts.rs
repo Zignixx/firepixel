@@ -25,8 +25,8 @@ pub enum Pred {
     /// Zeigerwerkzeug ist aktiv: die KI-Feineinstellungen bleiben auch nach dem Menübefehl
     /// erreichbar (N21).
     AiSubjectResult,
-    /// Genau eine Maske gewählt (Maskenbearbeitung, re 31 §5.3 / RT-3 S5): `true` = Vektormaske
-    /// (Pfadumriss), `false` = Bitmapmaske.
+    /// Genau eine Maske gewählt (Maskenbearbeitung, re 31 §5.3 / RT-3 S5): `true` = vector mask
+    /// (mask object is not a bitmap), `false` = bitmap mask; independent of the mode (RE spec 68).
     MaskSel(bool),
     /// Zustände, die fp-engine noch nicht meldet (Vektormaske/Bitmapmaske/Text bearbeiten,
     /// gemischte Mehrfachauswahl): trifft vorerst nie zu.
@@ -531,9 +531,11 @@ pub fn matches(pred: &Pred, s: &Session) -> bool {
         NoDocument => d.is_none(),
         Tool(t) => d.is_some() && s.tools.active == *t,
         Never => false,
+        // by the kind of the mask OBJECT (bitmap or anything else, groups of bitmaps included),
+        // never by the mode: a vector mask keeps its inspector in grayscale mode (RE spec 68 §2.4)
         MaskSel(vector) => d.is_some_and(|d| {
             d.selection.elements.len() == 1
-                && fp_engine::docops::mask_owner(&d.doc, d.page, d.selection.elements[0]).is_some_and(|o| matches!(&o.kind, fp_model::ElementKind::Group(g) if (g.kind == fp_model::GroupKind::VectorMask) == *vector))
+                && fp_engine::docops::mask_owner(&d.doc, d.page, d.selection.elements[0]).is_some_and(|o| matches!(&o.kind, fp_model::ElementKind::Group(g) if g.mask.as_ref().is_some_and(|m| !matches!(m.kind, fp_model::ElementKind::Bitmap(_)) == *vector)))
         }),
         AiSubjectResult => d.is_some_and(|d| d.selection.has_pixels()) && TUNE_TOOLS.contains(&s.tools.active) && subject_result(s),
         Sel(k) | Multi(k) => {

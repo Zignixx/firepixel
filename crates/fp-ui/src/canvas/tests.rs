@@ -685,7 +685,11 @@ fn clipboard_shortcuts_with_shift_alt_use_their_commands() {
         Key::V,
         &cs(Modifiers::CTRL | Modifiers::SHIFT),
     );
+    // Paste Inside / Paste as Mask write the History row "Paste" like the original (RE spec 68 §1.3)
     let label = expected.as_ref().and_then(|c| {
+        if c == "edit.pasteInside" || c == "edit.pasteAsMask" {
+            return Some(fp_i18n::t("msg-step-paste"));
+        }
         h.state()
             .state
             .session

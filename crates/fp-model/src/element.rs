@@ -431,6 +431,34 @@ impl GroupElem {
         Some(b)
     }
 
+    /// Grayscale mask ("mask to image", `GRTi` 1) whose mask object is a bitmap: its pixels are
+    /// stored colour-inverted in the file and kept in display form in memory (RE spec 68 M-6).
+    pub fn has_grayscale_bitmap_mask(&self) -> bool {
+        self.kind == GroupKind::BitmapMask
+            && self
+                .mask
+                .as_ref()
+                .is_some_and(|m| matches!(m.kind, ElementKind::Bitmap(_)))
+    }
+
+    /// Converts the mask bitmap of a grayscale bitmap mask between file form and display form
+    /// (an involution: colour channels `255 − v`, alpha kept). Other groups stay unchanged.
+    pub fn invert_grayscale_bitmap_mask(&mut self) {
+        if !self.has_grayscale_bitmap_mask() {
+            return;
+        }
+        if let Some(m) = &mut self.mask {
+            let m = Arc::make_mut(m);
+            if let ElementKind::Bitmap(b) = &mut m.kind {
+                b.image = b.image.inverted_rgb();
+                if let Some(r) = &mut b.effect_result {
+                    let r = Arc::make_mut(r);
+                    r.bitmap.image = r.bitmap.image.inverted_rgb();
+                }
+            }
+        }
+    }
+
     /// Wirksame Maske: bei `MRMv` dessen erstes Element, sonst das erste Kind.
     pub fn effective_mask(&self) -> Option<&Arc<Element>> {
         if let Some(r) = &self.replacement

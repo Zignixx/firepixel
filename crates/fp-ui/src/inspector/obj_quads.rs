@@ -658,6 +658,15 @@ pub fn fill_popup_ids(tool: bool) -> (Id, Id) {
     (id.with("grad-pop"), id.with("pat-pop"))
 }
 
+/// Colour a selection well shows: grey (luma) while a mask is selected (RE spec 68 §2.1).
+fn mask_well(st: &AppState, c: Argb) -> Argb {
+    if st.session.mask_selected() {
+        fp_engine::tool_follow::mask_gray(c)
+    } else {
+        c
+    }
+}
+
 /// Teilfeld „Füllung“ an DLU-Ursprung `d` (Breite 119 DLU, Höhe 29 DLU).
 pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: bool) {
     let theme = Theme::current(ui.ctx());
@@ -671,7 +680,10 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             let a = attrs.as_deref();
             let fill = a.and_then(|a| a.fill.clone());
             let kind = ui_commands::fill_kind(fill.as_ref());
-            let col = a.map(|a| a.fill_color).filter(|_| kind != 0);
+            let col = a
+                .map(|a| a.fill_color)
+                .filter(|_| kind != 0)
+                .map(|c| mask_well(st, c));
             (
                 kind,
                 col,
@@ -1524,7 +1536,9 @@ pub fn stroke_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled:
             let b = a.and_then(|a| a.brush.as_ref());
             (
                 b.is_some(),
-                a.map(|a| a.stroke_color).filter(|_| b.is_some()),
+                a.map(|a| a.stroke_color)
+                    .filter(|_| b.is_some())
+                    .map(|c| mask_well(st, c)),
                 b.map(|b| b.diameter).unwrap_or(1),
                 b.map(texts::brush_label).unwrap_or_else(|| t("pi-none")),
                 b.map(|b| b.softness / 10).unwrap_or(0),
@@ -1890,10 +1904,27 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
     let theme = Theme::current(ui.ctx());
     // maskiertes Einzelbild: Werte des Bildes, nicht der Maskengruppe (re 29b §2, BA-006); die
     // Befehle schreiben ebenso an den Inhalt
-    let sel: Vec<Arc<Element>> = selection(st)
+    // a selected mask: opacity and blend mode belong to the masked element (RE spec 68 §6)
+    let owner = st
+        .session
+        .active()
+        .and_then(|ds| match ds.selection.elements.as_slice() {
+            [id] => fp_engine::docops::mask_owner(&ds.doc, ds.page, *id),
+            _ => None,
+        });
+    let target_ids = owner.as_ref().map(|o| vec![o.id.0]);
+    let sel: Vec<Arc<Element>> = owner
+        .map(|o| vec![o])
+        .unwrap_or_else(|| selection(st))
         .into_iter()
         .map(|e| e.masked_single().map(|(c, _)| Arc::clone(c)).unwrap_or(e))
         .collect();
+    let with_ids = |mut v: Value| {
+        if let Some(ids) = &target_ids {
+            v["ids"] = json!(ids);
+        }
+        v
+    };
     let f = sel.first().cloned();
     let en = f.is_some();
     // gemischte Werte (Mehrfachauswahl mit verschiedenen Werten) zeigen wie im Original ein leeres Feld
@@ -1926,7 +1957,7 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
         (en && !mixed_op).then_some(op),
         en,
     ) {
-        st.run("element.setOpacity", json!({"opacity": v}));
+        st.run("element.setOpacity", with_ids(json!({"opacity": v})));
     }
     // live preview of the dragged value on the canvas (FB-09, Firepixel enhancement)
     if en && let Some(v) = fields::slider_live(ui.ctx(), "pi-opacity") {
@@ -1944,7 +1975,10 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
     ) {
         let m = BLEND_ITEMS[i].1;
         if m >= 0 {
-            st.run("element.setBlendMode", json!({"mode": m.to_string()}));
+            st.run(
+                "element.setBlendMode",
+                with_ids(json!({"mode": m.to_string()})),
+            );
         }
     }
     fields::tip(
@@ -4045,11 +4079,54 @@ fn text_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     tool_opacity_panel(ui, st, d.offset(261.0, 0.0), true);
 }
 
+/// Q3 bei gewählter Bitmapmaske (RE spec 68 §4.2 rule 2): "Mask:" Alpha channel ("mask to path") /
+/// Grayscale ("mask to image"), always usable; no opacity or blend mode.
 fn mask_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
-    fields::label(ui, d.r(2.0, 2.0, 140.0, 10.0), &t("pi-mask-editing"), true);
-    mask_invert_box(ui, st, d.r(2.0, 18.0, 160.0, 12.0));
-    opacity_panel(ui, st, d.offset(260.0, 0.0));
+    bitmap_mask_radios(ui, st, d, "pi-bmask");
+    // Firepixel extension (FB-35): Invert below the mode radios
+    mask_invert_box(ui, st, d.r(2.0, 28.0, 160.0, 12.0));
+}
+
+/// Mode of the mask being edited (owner of the selected mask): `Some(true)` = "mask to path"
+/// (alpha channel / path outline), `Some(false)` = "mask to image" (grayscale).
+pub fn selected_mask_mode(st: &AppState) -> Option<bool> {
+    let ds = st.session.active()?;
+    let id = ds.selection.elements.first()?;
+    let owner = fp_engine::docops::mask_owner(&ds.doc, ds.page, *id)?;
+    owner.element_mask().map(|m| m.to_path)
+}
+
+/// "Mask:" Alpha channel / Grayscale of a bitmap mask (inspector and the painting tools'
+/// sub-panel, RE spec 68 §4.2 rule 2): shows the real mode and switches it (one History row
+/// "Modify Mask"). Nothing when no mask is selected.
+pub fn bitmap_mask_radios(ui: &mut Ui, st: &mut AppState, d: Dl, id: &str) {
+    let Some(to_path) = selected_mask_mode(st) else {
+        return;
+    };
+    fields::label(ui, d.r(2.0, 2.0, 29.0, 8.0), &t("pi-mask"), true);
+    if fields::radio(
+        ui,
+        egui::Id::new((id, "alpha")),
+        d.r(39.0, 2.0, 80.0, 10.0),
+        &t("pi-mask-alpha"),
+        to_path,
+        true,
+    ) && !to_path
+    {
+        st.run("modify.mask.options", json!({"mode": "path"}));
+    }
+    if fields::radio(
+        ui,
+        egui::Id::new((id, "gray")),
+        d.r(39.0, 15.0, 80.0, 10.0),
+        &t("pi-mask-gray"),
+        !to_path,
+        true,
+    ) && to_path
+    {
+        st.run("modify.mask.options", json!({"mode": "image"}));
+    }
 }
 
 /// Firepixel extension (FB-35, RE spec 68 section 6): "Invert" checkbox of the selected mask

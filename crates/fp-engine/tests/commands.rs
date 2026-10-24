@@ -458,7 +458,8 @@ fn masks() {
     let b = ellipse(&mut s, 10.0, 10.0, 40.0, 40.0);
     select(&mut s, &[a, b]);
     let g = ElementId(ex(&mut s, "modify.mask.groupAsMask", json!({}))["id"].as_u64().unwrap_or(0));
-    assert!(matches!(&el(&s, g).kind, ElementKind::Group(gr) if gr.kind == fp_model::GroupKind::VectorMask && gr.mask.as_ref().map(|m| m.id) == Some(b)));
+    // Group as Mask is grayscale ("mask to image") for every mask object (RE spec 68 §1.3)
+    assert!(matches!(&el(&s, g).kind, ElementKind::Group(gr) if gr.kind == fp_model::GroupKind::BitmapMask && gr.mask.as_ref().map(|m| m.id) == Some(b)));
     ex(&mut s, "modify.mask.disableMask", json!({}));
     assert!(matches!(&el(&s, g).kind, ElementKind::Group(gr) if !gr.mask_flags.enabled));
     // RE spec 68 section 8: no check mark, the menu text swaps to "Enable Mask" instead

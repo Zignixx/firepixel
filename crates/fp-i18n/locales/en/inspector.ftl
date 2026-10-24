@@ -395,7 +395,8 @@ pi-aa-smooth = Smooth Anti-Alias
 pi-aa-custom = Custom Anti-Alias...
 pi-text-offset = Text offset:
 pi-text-autokern = Auto kern
-pi-mask-editing = Editing bitmap mask
+pi-mask-head-vector = Vector mask
+pi-mask-head-bitmap = Bitmap mask
 
 ## Swatches popup
 pi-color-system = System color picker

@@ -491,6 +491,31 @@ fn selection_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
     };
     let _ = c;
     let row = d.r(0.0, 3.0, 1.0, 10.0);
+    // RE spec 68 §2.1/§4.2: a selected mask shows "Vector mask" / "Bitmap mask" (by the kind of the
+    // mask object, not the mode) and, greyed, the kind of the mask object in the name field
+    if st
+        .session
+        .active()
+        .and_then(|ds| fp_engine::docops::mask_owner(&ds.doc, ds.page, e.id))
+        .is_some()
+    {
+        let head = if matches!(e.kind, fp_model::ElementKind::Bitmap(_)) {
+            t("pi-mask-head-bitmap")
+        } else {
+            t("pi-mask-head-vector")
+        };
+        fields::label(
+            ui,
+            Rect::from_min_max(
+                pos2(thumb.right() + 5.0, row.top()),
+                pos2(r.right() - 3.0, row.bottom()),
+            ),
+            &head,
+            true,
+        );
+        let _ = fields::text(ui, "pi-objname", d.r(30.0, 14.0, 46.0, 12.0), &label, false);
+        return;
+    }
     fields::label(
         ui,
         Rect::from_min_max(

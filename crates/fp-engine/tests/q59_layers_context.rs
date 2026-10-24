@@ -97,10 +97,11 @@ fn add_mask_adds_linked_empty_mask_and_selects_it() {
     assert!(!m.to_path, "mask to image");
     assert_eq!(v["mask"].as_u64(), Some(mask.id.0));
     assert_eq!(s.active().expect("d").selection.elements, vec![mask.id], "the mask is selected");
-    // empty mask that shows everything (stored inverted grey: black = visible)
+    // empty mask that shows everything (display form in memory, white = visible; the file
+    // stores the inverted grey, RE spec 68 M-6)
     let ElementKind::Bitmap(bm) = &mask.kind else { unreachable!() };
     let img = fp_engine::docops::bitmap_image(bm).expect("mask pixels");
-    assert!(img.data().iter().all(|px| px[0] == 0 && px[3] == 255), "reveal all");
+    assert!(img.data().iter().all(|px| px[0] == 255 && px[3] == 255), "reveal all");
     assert_eq!(s.active().expect("d").history.undo_label(), Some("Maske hinzufügen"));
     ex(&mut s, "edit.undo", json!({}));
     assert_eq!(top_elements(&s)[0].id, p, "undo removes the mask");
