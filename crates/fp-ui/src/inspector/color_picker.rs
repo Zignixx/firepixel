@@ -16,6 +16,7 @@
 use super::fields;
 use super::glyphs::Glyph;
 use super::popups::ColorChoice;
+use super::preview::{self, PreviewTarget};
 use super::texts;
 use crate::app_state::AppState;
 use crate::theme::Theme;
@@ -351,6 +352,8 @@ struct CpState {
     /// Primary button went down on the grid or outside the popup and is still held: the choice
     /// follows the pointer and is taken on release (like the reference, TW-112).
     track: bool,
+    /// Objects selected when the pop-up opened (FB-46): a choice is applied only to them.
+    target: Option<PreviewTarget>,
 }
 
 fn state_id(pid: Id) -> Id {
@@ -377,6 +380,30 @@ pub fn open_rect(ctx: &egui::Context, swatch: Id) -> Option<Rect> {
     }
     ctx.data(|d| d.get_temp::<CpState>(state_id(pid)))
         .map(|s| Rect::from_min_size(s.pos, vec2(POPUP_W, POPUP_H)))
+}
+
+/// Closes the open colour pop-up **without** applying anything, like Esc (FB-46: Undo, Redo and a
+/// History jump first discard a pending colour or opacity). Returns whether one was open.
+pub fn discard_open(ctx: &egui::Context) -> bool {
+    let Some(pid) = ctx.data(|d| d.get_temp::<Id>(Id::new(OPEN_MARK))) else {
+        return false;
+    };
+    let open = egui::Popup::is_id_open(ctx, pid);
+    if open {
+        egui::Popup::close_id(ctx, pid);
+    }
+    ctx.data_mut(|d| {
+        d.remove::<CpState>(state_id(pid));
+        d.remove::<Id>(Id::new(OPEN_MARK));
+    });
+    let fields = ["hex", "op", "r", "g", "b"].map(|f| pid.with(f));
+    ctx.memory_mut(|m| {
+        if let Some(f) = m.focused().filter(|f| fields.contains(f)) {
+            m.surrender_focus(f);
+        }
+    });
+    ctx.request_repaint();
+    open
 }
 
 /// Angezeigte Farbe (Vorschaufeld) des offenen Popups zum Farbfeld `swatch` im letzten Bild:
@@ -445,6 +472,7 @@ impl CpState {
             shot_pos: None,
             shot_pending: None,
             track: false,
+            target: None,
         };
         // HEX/RGB always show the base colour, never blended with its alpha (RE-29, re 61 §2: the
         // reference keeps #FF0000 / 255 0 0 while the alpha is edited; its blended value on
@@ -679,6 +707,7 @@ pub fn show(
         && !open
     {
         let mut s = CpState::new(popup_pos(anchor, x, screen), color, pass);
+        s.target = PreviewTarget::of(st);
         // gleich mit dem Farbdialog (Farbkreis) öffnen, z. B. Farbrad-Knopf im Verlaufs-Popup
         let wheel_flag = pid.with("open-wheel");
         if ctx
@@ -700,13 +729,24 @@ pub fn show(
         }
         return None;
     }
-    let mut s = ctx
-        .data(|d| d.get_temp::<CpState>(sid))
-        .unwrap_or_else(|| CpState::new(popup_pos(anchor, anchor.left(), screen), color, pass));
+    let mut s = ctx.data(|d| d.get_temp::<CpState>(sid)).unwrap_or_else(|| {
+        let mut s = CpState::new(popup_pos(anchor, anchor.left(), screen), color, pass);
+        s.target = PreviewTarget::of(st);
+        s
+    });
     // offen halten (egui schließt Popups, die ein Bild lang nicht gezeigt werden)
     egui::Popup::open_id(&ctx, pid);
     ctx.data_mut(|d| d.insert_temp(Id::new(OPEN_MARK), pid));
-    let (out, close) = body(ui, &ctx, swatch, st, &mut s, footer, pass);
+    let (mut out, close) = body(ui, &ctx, swatch, st, &mut s, footer, pass);
+    // FB-46: a choice applies only to the objects selected when the pop-up opened; the command the
+    // caller queues for it runs only while they are still selected
+    if out.is_some() {
+        if PreviewTarget::still_applies(&s.target, &PreviewTarget::of(st)) {
+            preview::stamp_commit(s.target.clone());
+        } else {
+            out = None;
+        }
+    }
     if close {
         egui::Popup::close_id(&ctx, pid);
         ctx.data_mut(|d| {

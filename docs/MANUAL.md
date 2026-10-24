@@ -400,8 +400,11 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   selected text objects font size, tracking, leading, indent, space before and after and horizontal scale (with the
   text editor open only the field shows the value). Press on the arrow and drag: the value is applied on release; Esc
   discards it. Click the arrow: the slider stays open and the value is applied when you click beside it or press
-  Enter; Esc discards it. A typed value is applied with Enter, Tab or a click into the document; a click on empty
-  panel space applies nothing. Each apply is one History step; an unchanged value makes none. The slider opens
+  Enter; Esc discards it. Undo or Redo while the slider is open (shortcut, *Edit* menu or a click in the History
+  panel) first discards the pending value and closes the slider like Esc, then undoes or redoes; a pending value
+  only ever applies to the objects that were selected when the slider opened. A typed value is applied with Enter,
+  Tab or a click into the document; a click on empty panel space applies nothing. Each apply is one History step;
+  an unchanged value makes none. The slider opens
   flush left with its arrow, with the thumb of the current value under the point where you pressed; near the
   window edge it is moved just enough to stay inside (the first drag then sets the value under the pointer).
   The opacity sliders (inspector, tool options, Layers panel and the colour pop-up's opacity) move 1 % per 2 px
@@ -410,7 +413,8 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   a typed value) for the fill or stroke of the selection — in the inspector, in the Tools panel or in the Color
   Mixer — the canvas previews the colour with that opacity while the pop-up is open. Enter, or releasing after a
   press-and-drag on the opacity arrow, applies it (one History step); Esc closes the opacity slider and then the
-  pop-up without any change.
+  pop-up without any change. Undo or Redo closes the pop-up the same way without applying anything, then undoes or
+  redoes.
 
 - **Fill edge:** *Hard*, *Anti-Alias*, *Feather* and *Dither*. Feather and Dither use the width field next to the
   list (a new Feather or Dither edge starts at 10 px). *Dither* gives a retro pixel-art edge: the same transition as

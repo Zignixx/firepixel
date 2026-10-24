@@ -320,10 +320,43 @@ pub fn take_quit_key(ctx: &egui::Context) -> bool {
     ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, Key::Q))
 }
 
+/// Is a shortcut for Undo or Redo (of the active shortcut set) pressed in this frame (FB-46)?
+fn history_key_pressed(ctx: &egui::Context, st: &AppState) -> bool {
+    ctx.input(|i| {
+        i.events.iter().any(|ev| match ev {
+            Event::Key {
+                key,
+                pressed: true,
+                modifiers,
+                ..
+            } if modifiers.ctrl || modifiers.command => vk_of(*key).is_some_and(|vk| {
+                let sc = Shortcut {
+                    ctrl: true,
+                    alt: modifiers.alt,
+                    shift: modifiers.shift,
+                    vk,
+                };
+                command_for_key(st, *key, &sc)
+                    .is_some_and(|c| crate::inspector::preview::moves_history(&c))
+            }),
+            _ => false,
+        })
+    })
+}
+
 /// Verarbeitet die Tastatureingaben dieses Frames.
 pub fn handle(ctx: &egui::Context, st: &mut AppState) {
     let editing = st.session.tool_is_editing_text();
     st.space_down = ctx.input(|i| i.key_down(Key::Space)) && !ctx.text_edit_focused() && !editing;
+    // FB-46: Undo / Redo with an open colour pop-up first discard it like Esc (the pending colour
+    // or opacity is not applied), then run like without the pop-up
+    if !ctx.text_edit_focused()
+        && !st.dialogs.any_open()
+        && crate::inspector::color_picker::any_open(ctx)
+        && history_key_pressed(ctx, st)
+    {
+        crate::inspector::preview::discard_pending(ctx, st);
+    }
     // offenes Farbwähler-Popup: Tippen ohne Feldklick wird ignoriert, Esc/Enter gehören dem Popup
     // (Original, re\22 §2.3; FARB-1b)
     if ctx.text_edit_focused()

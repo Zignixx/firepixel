@@ -18,12 +18,20 @@
 //! Extended by FB-28/FB-29 (TW-205/TW-206): the Layers panel's opacity slider, the pending alpha
 //! (and colour) of the fill and stroke colour pop-ups of the inspector, the Tools panel and the
 //! Color Mixer, the Color Mixer's channel sliders and the rectangle roundness.
+//!
+//! FB-46: a pending value belongs to the objects it was started for. The pop-up slider and the
+//! colour pop-up remember the selection when they open ([`PreviewTarget`]); a commit whose
+//! selection changed in between is discarded, both when the pop-up decides to apply and when the
+//! queued command runs ([`crate::app_state::Action::Commit`]). Undo, Redo and a jump in the History
+//! panel first discard an open pop-up slider or colour pop-up like Esc ([`discard_pending`]) and
+//! only then move in the history, so a pending value never lands on the objects the undo selects.
 
 use crate::app_state::AppState;
 use fp_color::Argb;
 use fp_engine::DocId;
 use fp_model::element::ElementKind;
 use fp_model::{Document, Element, ElementId};
+use std::cell::RefCell;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
@@ -222,4 +230,176 @@ pub fn preview_key(st: &AppState, id: DocId, generation: u64, page: usize) -> u6
         .filter(|p| p.doc == id && p.generation == generation && p.page == page)
         .map(InspectorPreview::key)
         .unwrap_or(0)
+}
+
+// ------------------------------------------------------------------ FB-46: preview targets
+
+/// The objects a pending slider or colour pop-up value was started for (FB-46): document, page
+/// and the selected element ids when the pop-up opened. `None` (as `Option<PreviewTarget>`)
+/// stands for "no document".
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreviewTarget {
+    pub doc: DocId,
+    pub page: usize,
+    pub ids: Vec<ElementId>,
+}
+
+impl PreviewTarget {
+    /// The active document's current selection (`None` without a document).
+    pub fn of(st: &AppState) -> Option<PreviewTarget> {
+        let d = st.session.active()?;
+        Some(PreviewTarget {
+            doc: d.id,
+            page: d.page,
+            ids: d.selection.elements.clone(),
+        })
+    }
+
+    /// Does a commit started for `started` still apply to the selection `now`? Only when both are
+    /// the same document, page and ids (FB-46: otherwise the value would land on other objects).
+    pub fn still_applies(started: &Option<PreviewTarget>, now: &Option<PreviewTarget>) -> bool {
+        started == now
+    }
+}
+
+/// Memory key of the selection published for this frame ([`publish_target`]).
+const CURRENT_TARGET: &str = "fp-preview-current-target";
+
+/// Publishes the active selection for the widgets of this frame that have no access to the
+/// application state (the pop-up sliders of [`super::fields`]). Called at the start of every frame
+/// and again after a direct history jump.
+pub fn publish_target(ctx: &egui::Context, st: &AppState) {
+    let t = PreviewTarget::of(st);
+    ctx.data_mut(|d| d.insert_temp(egui::Id::new(CURRENT_TARGET), t));
+}
+
+/// The selection published by [`publish_target`] (`None` without a document or before the first
+/// frame).
+pub fn current_target(ctx: &egui::Context) -> Option<PreviewTarget> {
+    ctx.data(|d| d.get_temp::<Option<PreviewTarget>>(egui::Id::new(CURRENT_TARGET)))
+        .flatten()
+}
+
+thread_local! {
+    /// Target of the pop-up commit made in this frame that has not reached a command yet: the next
+    /// [`AppState::push`] of a command takes it and queues an [`crate::app_state::Action::Commit`].
+    static COMMIT_STAMP: RefCell<Option<Option<PreviewTarget>>> = const { RefCell::new(None) };
+}
+
+/// A slider or colour pop-up applies its pending value now; the command the caller queues next
+/// runs only while the selection is still `target` (FB-46).
+pub fn stamp_commit(target: Option<PreviewTarget>) {
+    COMMIT_STAMP.with(|c| *c.borrow_mut() = Some(target));
+}
+
+/// Takes the target of the pending pop-up commit ([`stamp_commit`]), if any.
+pub fn take_commit_stamp() -> Option<Option<PreviewTarget>> {
+    COMMIT_STAMP.with(|c| c.borrow_mut().take())
+}
+
+/// Forgets a pop-up commit that queued no command (start and end of every frame, an unchanged
+/// value).
+pub fn clear_commit_stamp() {
+    COMMIT_STAMP.with(|c| *c.borrow_mut() = None);
+}
+
+/// Commands that move in the history: they first discard an open slider or colour pop-up
+/// (FB-46).
+pub fn moves_history(name: &str) -> bool {
+    matches!(name, "edit.undo" | "edit.redo" | "history.goTo")
+}
+
+/// Closes an open pop-up slider and an open colour pop-up **without** applying their pending
+/// value, like Esc, and ends the canvas preview (FB-46: before Undo, Redo or a History jump).
+/// Returns whether a pop-up was open.
+pub fn discard_pending(ctx: &egui::Context, st: &mut AppState) -> bool {
+    let slider = super::fields::discard_open_slider(ctx);
+    let colour = super::color_picker::discard_open(ctx);
+    st.inspector_preview = None;
+    slider || colour
+}
+
+/// Memory key of the History panel's area and the pass it was drawn in.
+const HISTORY_RECT: &str = "fp-history-panel-rect";
+
+/// The History panel was drawn at `r` in this pass (see [`discard_on_history_press`]).
+pub fn note_history_rect(ctx: &egui::Context, r: egui::Rect) {
+    let pass = ctx.cumulative_pass_nr();
+    ctx.data_mut(|d| d.insert_temp(egui::Id::new(HISTORY_RECT), (r, pass)));
+}
+
+/// At the start of a frame, before any widget closes a pop-up: a mouse press on the History panel
+/// while a pop-up slider is open discards the pending value (FB-46). The click that follows then
+/// jumps in the history with nothing pending; without this the click beside the pop-up would
+/// apply the value in the same frame as the jump.
+pub fn discard_on_history_press(ctx: &egui::Context, st: &mut AppState) {
+    if !super::fields::slider_open(ctx) {
+        return;
+    }
+    let press = ctx.input(|i| {
+        if i.pointer.any_pressed() {
+            i.pointer.press_origin()
+        } else {
+            None
+        }
+    });
+    let Some(p) = press else {
+        return;
+    };
+    let pass = ctx.cumulative_pass_nr();
+    let on_history = ctx
+        .data(|d| d.get_temp::<(egui::Rect, u64)>(egui::Id::new(HISTORY_RECT)))
+        .is_some_and(|(r, drawn)| drawn + 1 >= pass && r.contains(p));
+    if on_history {
+        discard_pending(ctx, st);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn target(doc: u64, page: usize, ids: &[u64]) -> Option<PreviewTarget> {
+        Some(PreviewTarget {
+            doc: DocId(doc),
+            page,
+            ids: ids.iter().map(|i| ElementId(*i)).collect(),
+        })
+    }
+
+    #[test]
+    fn target_guard_applies_only_to_the_same_objects() {
+        let a = target(1, 0, &[5, 7]);
+        assert!(PreviewTarget::still_applies(&a, &target(1, 0, &[5, 7])));
+        // undo selected another object, or the selection grew / shrank
+        assert!(!PreviewTarget::still_applies(&a, &target(1, 0, &[9])));
+        assert!(!PreviewTarget::still_applies(&a, &target(1, 0, &[5])));
+        assert!(!PreviewTarget::still_applies(&a, &target(1, 0, &[])));
+        // the same ids on another page or in another document are other objects
+        assert!(!PreviewTarget::still_applies(&a, &target(1, 1, &[5, 7])));
+        assert!(!PreviewTarget::still_applies(&a, &target(2, 0, &[5, 7])));
+        assert!(!PreviewTarget::still_applies(&a, &None));
+        assert!(PreviewTarget::still_applies(&None, &None));
+    }
+
+    #[test]
+    fn commit_stamp_is_taken_once() {
+        clear_commit_stamp();
+        assert_eq!(take_commit_stamp(), None);
+        stamp_commit(target(1, 0, &[3]));
+        assert_eq!(take_commit_stamp(), Some(target(1, 0, &[3])));
+        assert_eq!(take_commit_stamp(), None, "the next command is unguarded");
+        stamp_commit(None);
+        clear_commit_stamp();
+        assert_eq!(take_commit_stamp(), None);
+    }
+
+    #[test]
+    fn history_commands() {
+        assert!(moves_history("edit.undo"));
+        assert!(moves_history("edit.redo"));
+        assert!(moves_history("history.goTo"));
+        assert!(!moves_history("element.setOpacity"));
+        assert!(!moves_history("history.replay"));
+    }
 }

@@ -6,6 +6,7 @@
 //! Textfelder übernehmen ihren Wert bei Eingabe bzw. Fokusverlust (Esc verwirft), wie Windows.
 
 use crate::inspector::glyphs::{self, Glyph};
+use crate::inspector::preview::{self, PreviewTarget};
 use crate::theme::Theme;
 use egui::{
     Align2, Color32, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, pos2, vec2,
@@ -866,6 +867,7 @@ fn number_on(
             }
         })
         .map(|v| clamp_range(v, range));
+    let mut slid = false;
     if let Some(a) = arrow
         && let Some(v) = slider_arrow_vertical_on(
             ui,
@@ -879,10 +881,16 @@ fn number_on(
         )
     {
         out = Some(v);
+        slid = true;
     }
     // an unchanged value creates no history step (FB-09: the reference records one even then,
     // Firepixel deliberately skips it; "305" on 100 is clamped to 100 = unchanged)
-    out.filter(|v| value.is_none_or(|c| (v - c).abs() > 1e-9))
+    let out = out.filter(|v| value.is_none_or(|c| (v - c).abs() > 1e-9));
+    if slid && out.is_none() {
+        // a slider commit of an unchanged value queues no command (FB-46)
+        preview::clear_commit_stamp();
+    }
+    out
 }
 
 /// Pfeilknopf ▾ mit senkrechtem Popup-Schieber (linear) wie im Original. Übernommen wird beim
@@ -1006,11 +1014,13 @@ pub fn slider_arrow_vertical_on(
     );
     let key = id.with("val");
     let drag_key = id.with("drag-mode");
+    let target_key = id.with("target");
     let popup_id = egui::Popup::default_response_id(&resp);
     if !egui::Popup::is_id_open(ui.ctx(), popup_id) {
         ui.data_mut(|d| {
             d.remove::<f64>(key);
             d.remove::<bool>(drag_key);
+            d.remove::<Option<PreviewTarget>>(target_key);
         });
     }
     // Pfeil gedrückt und gezogen: Popup öffnen, der Wert folgt dem Zeiger bis zum Loslassen
@@ -1127,13 +1137,73 @@ pub fn slider_arrow_vertical_on(
         });
     // Klick daneben (oder auf den Pfeil) schloss das Popup: der gezogene Wert gilt; Esc verwirft ihn.
     // The pending value goes in the same frame, so no live preview outlives the pop-up.
-    if !egui::Popup::is_id_open(ui.ctx(), popup_id) {
+    let open = egui::Popup::is_id_open(ui.ctx(), popup_id);
+    if !open {
         let pending = ui.data_mut(|d| d.remove_temp::<f64>(key));
         if was_open && !done && !esc {
             out = pending;
         }
     }
+    // FB-46: the open pop-up is known to Undo / Redo (which discard it first) and remembers the
+    // objects it was opened for; a value whose selection changed meanwhile is not applied, and the
+    // command the caller queues for it runs only while that selection is still there
+    let target = if open {
+        let now = preview::current_target(ui.ctx());
+        ui.data_mut(|d| {
+            d.insert_temp(Id::new(OPEN_VSLIDER), (popup_id, id));
+            if d.get_temp::<Option<PreviewTarget>>(target_key).is_none() {
+                d.insert_temp(target_key, now);
+            }
+        });
+        None
+    } else {
+        ui.data_mut(|d| {
+            if d.get_temp::<(Id, Id)>(Id::new(OPEN_VSLIDER))
+                .is_some_and(|(p, _)| p == popup_id)
+            {
+                d.remove::<(Id, Id)>(Id::new(OPEN_VSLIDER));
+            }
+            d.remove_temp::<Option<PreviewTarget>>(target_key)
+        })
+    };
+    if out.is_some() {
+        let started = target.unwrap_or_else(|| preview::current_target(ui.ctx()));
+        if PreviewTarget::still_applies(&started, &preview::current_target(ui.ctx())) {
+            preview::stamp_commit(started);
+        } else {
+            out = None;
+        }
+    }
     out
+}
+
+/// Memory key of the open pop-up slider: (pop-up id, arrow id), see [`discard_open_slider`].
+const OPEN_VSLIDER: &str = "fp-open-vslider";
+
+/// Is a pop-up slider of a number field open (FB-46)?
+pub fn slider_open(ctx: &egui::Context) -> bool {
+    ctx.data(|d| d.get_temp::<(Id, Id)>(Id::new(OPEN_VSLIDER)))
+        .is_some_and(|(pid, _)| egui::Popup::is_id_open(ctx, pid))
+}
+
+/// Closes an open pop-up slider and drops its pending value **without** applying it, like Esc
+/// (FB-46: Undo, Redo and a History jump first discard it). Returns whether one was open.
+pub fn discard_open_slider(ctx: &egui::Context) -> bool {
+    let Some((pid, id)) = ctx.data(|d| d.get_temp::<(Id, Id)>(Id::new(OPEN_VSLIDER))) else {
+        return false;
+    };
+    let open = egui::Popup::is_id_open(ctx, pid);
+    if open {
+        egui::Popup::close_id(ctx, pid);
+    }
+    ctx.data_mut(|d| {
+        d.remove::<f64>(id.with("val"));
+        d.remove::<bool>(id.with("drag-mode"));
+        d.remove::<Option<PreviewTarget>>(id.with("target"));
+        d.remove::<(Id, Id)>(Id::new(OPEN_VSLIDER));
+    });
+    ctx.request_repaint();
+    open
 }
 
 /// Outer size of the vertical pop-up slider (24 × 222: slider, inner margin and 1 px border).

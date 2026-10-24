@@ -22,6 +22,14 @@ use std::sync::Arc;
 pub enum Action {
     /// Befehl aus dem Register ausführen (mit Abfangen der Befehle, die Dialoge brauchen).
     Run(String, Value),
+    /// A command that applies the pending value of a pop-up slider or colour pop-up (FB-46): it
+    /// runs only while the selection is still `target`, the objects the pop-up was opened for, and
+    /// is dropped when the same batch undoes or redoes (see [`AppState::push`]).
+    Commit {
+        target: Option<crate::inspector::preview::PreviewTarget>,
+        name: String,
+        params: Value,
+    },
     /// Werkzeug wählen.
     SetTool(ToolId),
     /// Design umschalten.
@@ -180,14 +188,26 @@ impl AppState {
         st
     }
 
-    /// Aktion einreihen.
+    /// Aktion einreihen. The first command after a pop-up commit of this frame is queued as an
+    /// [`Action::Commit`] for the objects that pop-up was opened for (FB-46).
     pub fn push(&mut self, a: Action) {
+        let a = match a {
+            Action::Run(name, params) => match crate::inspector::preview::take_commit_stamp() {
+                Some(target) => Action::Commit {
+                    target,
+                    name,
+                    params,
+                },
+                None => Action::Run(name, params),
+            },
+            a => a,
+        };
         self.actions.push(a);
     }
 
     /// Befehl einreihen (Kurzform).
     pub fn run(&mut self, name: &str, params: Value) {
-        self.actions.push(Action::Run(name.to_string(), params));
+        self.push(Action::Run(name.to_string(), params));
     }
 
     /// Wie lange eine Meldung in der Statuszeile steht (Sekunden), danach wieder die Auswahl-Info.
@@ -288,12 +308,20 @@ impl AppState {
         let mut guard = 0;
         while !self.actions.is_empty() && guard < 64 {
             guard += 1;
-            let batch = std::mem::take(&mut self.actions);
+            let mut batch = std::mem::take(&mut self.actions);
+            // FB-46: Undo / Redo / a History jump discard what a pop-up wanted to apply in the
+            // same frame (the pop-up is discarded, not applied)
+            if batch.iter().any(
+                |a| matches!(a, Action::Run(n, _) if crate::inspector::preview::moves_history(n)),
+            ) {
+                batch.retain(|a| !matches!(a, Action::Commit { .. }));
+            }
             for a in batch {
                 crate::actions::execute(self, ctx, a);
             }
             self.handle_session_events();
         }
+        crate::inspector::preview::clear_commit_stamp();
         // Rastern für den Filter nach der Vektor-Rückfrage gilt nur bis zum Schließen des
         // Filterdialogs (OK oder Abbrechen, re 28 L9)
         if self.session.filter_rasterize && self.actions.is_empty() && !self.dialogs.any_open() {

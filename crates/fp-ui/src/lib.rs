@@ -262,9 +262,15 @@ impl FirepixelApp {
         canvas::note_popup_press(&ctx);
         // the inspector sets it again while a pop-up slider holds a pending value (FB-09/FB-10)
         st.inspector_preview = None;
+        // FB-46: a press on the History panel discards an open pop-up slider before its click
+        // jumps in the history; no pop-up commit of an earlier frame is left over
+        inspector::preview::clear_commit_stamp();
+        inspector::preview::discard_on_history_press(&ctx, st);
         input::handle(&ctx, st);
         // KI-Steuerkanal (MCP-Brücke, AU): Aufträge im UI-Thread abarbeiten
         crate::bridge::frame(&ctx, st);
+        // the selection the pop-up sliders of this frame start from (FB-46)
+        inspector::preview::publish_target(&ctx, st);
         appbar::resize_edges(&ctx);
 
         let m = theme.metrics.clone();

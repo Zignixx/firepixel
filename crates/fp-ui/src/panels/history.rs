@@ -17,6 +17,8 @@ const SEL: &str = "history-sel";
 pub fn show(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
     let c = theme.colors.clone();
+    // FB-46: a press here first discards an open pop-up slider (see `discard_on_history_press`)
+    crate::inspector::preview::note_history_rect(ui.ctx(), ui.max_rect());
     let Some(d) = st.session.active() else {
         return;
     };
@@ -109,10 +111,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     });
     ui.data_mut(|dd| dd.insert_temp(Id::new(SEL), sel.clone()));
     st.dialogs.panel_sel.history = sel.clone();
-    if let Some(p) = goto
-        && let Err(e) = st.session.history_go_to(p)
-    {
-        st.push(Action::Status(e.to_string()));
+    if let Some(p) = goto {
+        // FB-46: a pending pop-up value is discarded, never applied after the jump
+        crate::inspector::preview::discard_pending(ui.ctx(), st);
+        if let Err(e) = st.session.history_go_to(p) {
+            st.push(Action::Status(e.to_string()));
+        }
+        crate::inspector::preview::publish_target(ui.ctx(), st);
     }
     let any = !sel.is_empty();
     let replay = sel.iter().all(|i| steps.get(*i).is_some_and(|s| s.1));

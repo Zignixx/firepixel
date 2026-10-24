@@ -430,7 +430,10 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Farbmischers (an der Auswahl) sowie bei gewählten Textobjekten für Schriftgröße, Laufweite, Zeilenabstand, Einzug, Abstand davor und danach und
   horizontale Skalierung (bei offenem Texteditor zeigt nur das Feld den Wert). Auf den Pfeil drücken und ziehen: Der
   Wert gilt beim Loslassen; Esc verwirft ihn. Auf den Pfeil klicken: Der Schieber bleibt offen, und der Wert gilt,
-  wenn Sie daneben klicken oder die Eingabetaste drücken; Esc verwirft ihn. Ein eingetippter Wert gilt mit
+  wenn Sie daneben klicken oder die Eingabetaste drücken; Esc verwirft ihn. Rückgängig oder Wiederholen bei offenem
+  Schieber (Tastenkürzel, Menü *Bearbeiten* oder ein Klick im Verlauf-Bedienfeld) verwirft zuerst den offenen Wert
+  und schließt den Schieber wie Esc, dann wird rückgängig gemacht bzw. wiederholt; ein offener Wert gilt immer nur
+  für die Objekte, die beim Öffnen des Schiebers gewählt waren. Ein eingetippter Wert gilt mit
   Eingabetaste, Tab oder einem Klick ins Dokument; ein Klick auf eine leere Stelle des Bedienfelds übernimmt nichts.
   Jedes Übernehmen ist ein Schritt im Verlauf; ein unveränderter Wert erzeugt keinen. Der Schieber öffnet sich links
   bündig mit dem Pfeil, der Regler beim aktuellen Wert unter der Stelle, an der Sie gedrückt haben; am Fensterrand
@@ -442,7 +445,8 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Farbmischer –, zeigt die Arbeitsfläche die Farbe mit dieser Deckkraft als Vorschau, solange das Popup offen ist.
   Die Eingabetaste oder das Loslassen nach Drücken und Ziehen am Deckkraft-Pfeil übernimmt sie (ein Schritt im
   Verlauf); Esc schließt erst den Deckkraft-Schieber und dann das
-  Popup ohne Änderung.
+  Popup ohne Änderung. Rückgängig oder Wiederholen schließt das Popup ebenso ohne Änderung und macht dann rückgängig
+  bzw. wiederholt.
 
 - **Rand der Füllung:** *Hart*, *Anti-Alias*, *Weiche Kante* und *Dither*. Weiche Kante und Dither nutzen das
   Breitenfeld neben der Liste (ein neuer weicher oder Dither-Rand beginnt mit 10 px). *Dither* ergibt einen

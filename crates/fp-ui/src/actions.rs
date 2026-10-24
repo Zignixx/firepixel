@@ -52,7 +52,25 @@ pub fn ui_command_state(st: &AppState, name: &str) -> Option<(bool, Option<bool>
 /// Führt eine Aktion aus.
 pub fn execute(st: &mut AppState, ctx: &egui::Context, a: Action) {
     match a {
-        Action::Run(name, params) => run_command(st, ctx, &name, params),
+        Action::Run(name, params) => {
+            // FB-46: Undo / Redo / a History jump first discard an open pop-up slider or colour
+            // pop-up like Esc, so its pending value never lands on the objects the undo selects
+            if crate::inspector::preview::moves_history(&name) {
+                crate::inspector::preview::discard_pending(ctx, st);
+            }
+            run_command(st, ctx, &name, params)
+        }
+        Action::Commit {
+            target,
+            name,
+            params,
+        } => {
+            use crate::inspector::preview::PreviewTarget;
+            // FB-46: a pending value applies only to the objects it was started for
+            if PreviewTarget::still_applies(&target, &PreviewTarget::of(st)) {
+                run_command(st, ctx, &name, params);
+            }
+        }
         Action::SetTool(t) => {
             if let Err(e) = st.session.set_tool(t) {
                 st.set_status(e.to_string(), now(ctx));
