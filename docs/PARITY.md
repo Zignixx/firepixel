@@ -3,22 +3,24 @@
 Firepixel aims to behave like the reference application button by button. This page explains how that is
 measured, what the figures mean, where the method stops, and gives the current per-unit result.
 
-**Current state (full run 43 over all 49 units, 24 Oct 2026, on top of runs 42 … 33; TW-231 settled by the hand check CHK-1):**
+**Current state (follow-up run 44 over 4 units on top of full run 43, 24 Oct 2026, all 49 units; TW-231 settled by the hand check CHK-1):**
 **49 equal except for design**, 0 real deviations, 0 unclear, 0 under-measured.
 **Proven 1:1: 100.0 %** (49 / 49; all 49 units are sufficiently measured). Measurement quota over all 49 units:
-**88.0 %** (1095 / 1244 steps). Canvas image pairs within 1 %: **195 / 224**. Run 43 played all 49 units (1310 steps)
-with runner R-36 and the new F90 runner settings (Firepixel's View ▸ Coordinate Tag off, View ▸ Tooltips on) on preview
-`2026-10-24_08-38` (`main` at `22355408`: v0.2.11 plus tester feedback batch 7, F88 to F97). No Firepixel-side step
-status changed; every value the runner compares reads as in each unit's newest earlier run, and the confirmed rows of
-runs 33 to 42 (TW-204 to TW-208, TW-212, TW-214 to TW-216, TW-219, Q-65) read as before. The batch 7 changes show where
-expected: the dither density field in the fill row (F95), the Marquee list in the Pointer inspector (F94), the Screentone
-entry (F95), the Path and Image Editing panels with a scroll bar and the docked panels' lists 2 px shorter (F92), the
-mask thumbnail as luma (F88a) and View ▸ Coordinate Tag in the View menu (F90). One Firepixel-only value changed:
-`xs-context-menus/15_effect_delete_result` read 7 objects (6 in every earlier run; the reference side is `unmapped`).
-The hand check CHK-1 (24 Oct 2026) showed a runner artefact, not a regression: the canvas context menu has no Delete
-entry, and the runner's label click "Löschen" fell back to a window-wide search and hit another "… löschen" button
-(TW-231, runner item R-37), so `xs-context-menus` stays equal except for design. Four reference-side steps of `filters-adjust-color` became `unsupported` (the live-filter "+" menu
-did not open; runner row TW-232) and `tool-autoshapes/10` is `ok` on the reference side again.
+**88.0 %** (1095 / 1244 steps). Canvas image pairs within 1 %: **195 / 224**. Run 44 repeated `panel-pages-states-history`,
+`panel-layers`, `panel-layers-menu` and `inspector-bitmap` (92 steps) with runner R-36 and the new F100 setting
+`fp.layers_group_tree` off (Firepixel's Layers options ▸ Show Group Contents switched off at every unit start) on preview
+`2026-10-24_16-54` (`main` at `28691c50`: v0.2.12 plus tester feedback batch 8, F98 to F100). No step status, no class
+and no compared value changed; every pair reads its run 43 value except where batch 8 shows. Batch 8 where the runner
+reaches it: a selected object's own Layers thumbnail is framed blue as in the reference (F100, TW-238; 9 shots with the
+Layers rows, 2 px in #0078d7 against the reference's #00a8ff), and the Layers options menu carries the extra entry Show Group
+Contents, unchecked (TW-237; `panel-layers-menu/01`, `02` 15.6 → 23.4 %). Not reached: F98's page placement, names and
+History row "Change Page Selection" (TW-233; no History step clicks a page row, the page count of
+`panel-pages-states-history/03` reads as before), F99's strokes at the bitmap bounds (TW-234, TW-235), the Confine
+checkbox (TW-236; no shot holds a retouch or brush tool's inspector) and the row highlight during mask editing (TW-238;
+no step selects a mask in the Layers panel). `panel-layers-menu/10_options_open` fails on Firepixel's side as in every
+run since run 17 (the row double-click opens no dialog); it does not use the options menu, so the new entry plays no
+part. The reference was restarted once (an access violation while opening the test file at the start of
+`inspector-bitmap`, no step lost).
 
 **Units: 49.** Over the 48 units classified before run 24 (without the measurement unit `xs-select-behind`, added on
 19 Oct 2026): 48 / 0 / 0 / 0, proven 1:1 100.0 %, quota 87.9 % (1086 / 1235; run 17 alone: 86.3 %), canvas pairs
@@ -133,16 +135,18 @@ all four uses and no row lookup expanded a layer (TW-210, TW-216), `transform_ha
 (TW-221), and the tool stroke was "same" at 48 unit starts ("not set" on both sides at the start of `xs-file-formats`
 after the planned restart).
 
-**Tester feedback batch 8 (24 Oct 2026, not yet in a run).** F100 (`d7b80e77`) adds Firepixel's Layers panel switch
+**Tester feedback batch 8 (24 Oct 2026, follow-up run 44).** F100 (`d7b80e77`) adds Firepixel's Layers panel switch
 Show Group Contents (`panel.layers.groupTree`, expandable group and mask rows, default on, TW-237); the runner sets it
 to config `fp.layers_group_tree` (default off) after every start, next to the Coordinate Tag switch, so the Layers
-panel lists the reference's rows. Expected in the next run over the touched units: the Layers panel menu carries the
-extra entry Show Group Contents (the panel-menu shots differ there, like View ▸ Coordinate Tag); a selected object's
-thumbnail is framed blue and the row of a masked object stays highlighted while its mask is edited (TW-238, as in the
-reference); a click on a page row writes the measured History row "Change Page Selection", New Page one row "Add
-Page", and a new page lands directly after the current page with the smallest free "Page N" (F98, TW-233). The strokes
-at the bitmap bounds of F99 (TW-234, TW-235) are reached by no unit; the Confine checkbox of TW-236 shows wherever a
-shot holds the inspector of Blur, the Rubber Stamp, the Brush or the Pencil.
+panel lists the reference's rows. In run 44 it logged "Layers options > Show Group Contents: switched on -> off" at all
+four unit starts, and the Layers rows read as in run 43 (`layers_disclosure`
+found the document's flags at all four uses, no row lookup expanded a layer). Seen in run 44: the Layers panel menu
+carries the extra entry Show Group Contents, unchecked, under Thumbnail Options (the panel-menu shots differ there, like
+View ▸ Coordinate Tag), and a selected object's thumbnail is framed blue as in the reference (TW-238). Not reached: the
+row of a masked object kept highlighted while its mask is edited (TW-238; no step selects a mask in the Layers panel),
+F98's page placement, names and History rows (TW-233; the History steps of `panel-pages-states-history` click no page
+row), the strokes at the bitmap bounds of F99 (TW-234, TW-235; no unit paints with these tools) and the Confine checkbox
+of TW-236 (no shot of run 44 holds the inspector of Blur, the Rubber Stamp, the Brush or the Pencil).
 
 ## What the classes mean
 
@@ -155,7 +159,7 @@ shot holds the inspector of Blur, the Rubber Stamp, the Brush or the Pencil.
 
 **Measurement quota** = steps with both sides `ok` / steps without an `unsupported` or `skipped` side (repeated
 steps count with their second attempt). **Proven 1:1** = units "equal except for design" / sufficiently
-measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 to 29, 32, 34 to 36, 39, 42 and 43 (after the hand check CHK-1), 98.0 % after runs 30, 33, 38, 40 and 41, 95.9 % after runs 31 and 37); since
+measured units. The headline figure is the strict one over all classified units (all 49 since run 24; 100.0 % after runs 26 to 29, 32, 34 to 36, 39, 42, 43 (after the hand check CHK-1) and 44, 98.0 % after runs 30, 33, 38, 40 and 41, 95.9 % after runs 31 and 37); since
 run 15 no unit is under-measured, so both figures are the same.
 
 ## Limits
@@ -204,9 +208,24 @@ The runner cannot reach everything; these parts need a human (see [VERIFICATION.
 - The reference application's own rendering is the oracle only where it is deterministic; cursor images
   cannot be captured.
 
-## Per-unit result (run 43 (full) on top of runs 42, 41, 40, 39, 38, 37, 36, 35, 34 and 33)
+## Per-unit result (run 44 (follow-up) on top of run 43 (full))
 
-Every row comes from full run 43 (24 Oct 2026, 08:38–14:02, 49 units, 1310 scripted steps, 715 image pairs plus 50 shots
+Four rows (`inspector-bitmap`, `panel-layers`, `panel-layers-menu`, `panel-pages-states-history`) come from follow-up
+run 44 (24 Oct 2026, 16:55–17:18, 4 units, 92 scripted steps, 53 image pairs plus 5 shots without a partner), preview
+build `2026-10-24_16-54` from `main` at `28691c50` (v0.2.12 plus tester feedback batch 8: F100 `d7b80e77` the Layers
+group and mask tree, a Firepixel extension behind the switch Show Group Contents, plus the selected object's blue
+thumbnail frame and the row kept highlighted during mask editing; F98 `3a6cd637` New Page and Duplicate Page after the
+current page with the smallest free number and copy names, the History row "Change Page Selection", the page row context
+menu and a row dragged onto the New Page button; F99 `b8da4c53` and `30d369c6` the smudge, Rubber Stamp and Brush growth
+at the bitmap bounds, and `e840210d` Confine to boundaries for Blur, Rubber Stamp, Brush and Pencil, a Firepixel
+extension), runner R-36 (`f528cb2b`) with the F90 settings and the new F100 setting `fp.layers_group_tree` off (see the
+method notes). "Was" compares each row with run 43, whose steps the run repeats unchanged. The units ran in the order
+`panel-pages-states-history`, `panel-layers`, `panel-layers-menu`, `inspector-bitmap`. The reference was restarted once,
+after a script access violation while opening the test file at the start of `inspector-bitmap` (unit-start reset
+repeated, no step lost); its Properties inspector read 125 px at all unit starts (TW-197). One other application's window
+was open at the start (logged); none took the foreground. No `runner error` line. Canvas pairs are recomputed with the
+offset search (± 3 px, 32 levels); all six read their run 43 values.
+The other 45 rows come from full run 43 (24 Oct 2026, 08:38–14:02, 49 units, 1310 scripted steps, 715 image pairs plus 50 shots
 without a partner), preview build `2026-10-24_08-38` from `main` at `22355408` (v0.2.11 plus tester feedback batch 7:
 F88a `d8ca200a` and F88b `2bc47925` masks, F89 `e76821af` slider undo, F90 `e27198cb` tooltips and coordinate tag, F91
 `362d1b97` retouch performance, F92 `9699d53d` panel scroll, F93 `7a858f99` pause key, F94 `22355408` cursor badges,
@@ -261,7 +280,7 @@ its History read-backs (`panel-layers/22`, `inspector-fields/25`, `color-popup/2
 | `fx-bevel-emboss-fill` | live effects | equal except for design | run 43: 90.5 % (19 / 21), unchanged since run 40; 2 / 4 canvas pairs within 1 % (`01` 21.1 %, `09_live_pressed` 21.8 % as before; the reference's slider found without R-35's retry); every compared value as in run 40; Firepixel's shots pixel-identical to run 40 except the overview (Marquee list, Layers footer). `03` (Firepixel: no second combo box) and `11` (both sides) fail as before |
 | `fx-shadow-glow` | live effects | equal except for design | run 43: 100.0 % (23 / 23), unchanged; 5 / 6 canvas pairs within 1 % (`05_shadow_live_pressed` 23.3 % as before); Firepixel's selected rectangle in `05`, `08`, `16`, `17` shows its four corner handles at one size (15 px; run 33: the bottom-right one larger), overview as above |
 | `fx-stack` | live effects | equal except for design | run 43: 92.0 % (23 / 25), unchanged; 2 / 2 canvas pairs within 1 %. Firepixel's effects menu `02_submenus_other_open` lists the new Screentone entry ("Rasterfolie", F95, a Firepixel extension; pair 63.0 → 61.6 %); the fill row of the inspector shots `03`, `07` carries the dither density field (F95, 717 px); `04` the corner handles (15 px); the `ui_state` tool fill of `14` reads #22aa44 (run 33: #ff9900; not compared) |
-| `inspector-bitmap` | property inspector | equal except for design | run 43: 100.0 % (15 / 15), unchanged; 3 / 3 canvas pairs within 1 %. The Layers flyout pairs `08_mask_layers_normal` and `09_thumbnail_normal` read 54.4 and 53.5 % (run 33: 56.5 and 55.6 %): Firepixel's "Ebene 1" row in the lighter current-layer tint, grey circles (F83, F85) and the footer 2 px higher (F92); B1's reveal-all mask thumbnail is white in both runs (F88a's luma of a white mask). The mask inspector `08_mask_inspector_normal` is pixel-identical to run 33 (no step selects the mask itself) |
+| `inspector-bitmap` | property inspector | equal except for design | run 44: 100.0 % (15 / 15), unchanged; 3 / 3 canvas pairs within 1 % at their run 43 values (0.25, 0.35, 0.36 %); the six exports are pixel-identical to run 43 on both sides (the reference's files differ in their bytes only). **TW-238 seen (F100):** with B1 selected Firepixel now frames B1's own thumbnail with a 2 px #0078d7 line in `08_mask_layers_normal` and `09_thumbnail_normal` (176 px each), as the reference does (2 px #00a8ff in `09`); pairs 54.350 → 54.353 and 53.505 → 53.507 %. `08` also shows the open TW-225 rest that Reveal All does not select the new mask: after Modify ▸ Mask ▸ Reveal All the reference edits the mask (its Layers row frames the white mask thumbnail green, `08_mask_inspector_normal` shows "Bitmap-Maske" with Alpha channel / Grayscale), while Firepixel keeps B1 selected (its Bitmap inspector, and now the blue frame on B1's thumbnail instead of no frame); both sides' inspector shots are pixel-identical to run 33, so this is no batch 8 change (the run 43 note "no step selects the mask itself" holds for Firepixel only). **TW-236 not reached:** every inspector shot is an object inspector, pixel-identical to run 43. The reference was restarted at the unit start (access violation while opening `par_bitmap.fw.png`, no step lost); its overview reads 33.17 % (run 43: 33.16 %). Firepixel's other shots pixel-identical to run 43 |
 | `inspector-fields` | property inspector | equal except for design | run 43: 87.5 % (28 / 32), unchanged since run 40; 2 / 3 canvas pairs within 1 % (`14_popup_drag_live_canvas_pressed` 1.58 % as before, TW-171). **TW-207 still confirmed:** `25_pattern_move_*` read the pattern handles of runs 37 to 40 in both programs, pairs 0.09 % (the reference's History read-back 0 → 0, run 40: 2 → 6). **F95 seen:** the fill row of every inspector shot with a solid fill (`17`, `21`, `23`, `24`) shows the dither density field "0 %" with its checker icon under the Texture list (717 px; `23_disabled_look_path_no_fill_disabled` 243 px); no step shows a pattern or gradient fill in the inspector, so F96's padlock is in no shot. The pop-up steps `14` and the History read-backs as in run 40; `10` (reference side) and `20_undo_each_result` (Firepixel: no text field at the stroke size) fail as before |
 | `inspector-stroke` | property inspector | equal except for design | run 43: 88.2 % (45 / 51), unchanged; 31 / 31 canvas pairs within 1 %, `04_edge_e0`, `e50`, `e100` 0.89 → 0.80 % and `05_texture_result` 0.27 → 0.20 %: Firepixel's selected free path P1 now shows outline and anchors instead of the bounding box (F65, TW-202; after run 33) in the path result shots `02` to `05`, `09` and `13` and PG its outline in the position shots `06` and `14`; `06_position_buttons_normal` and `18_disabled` carry the dither density field. The `ui_state` tool fill reads #808080 after the selected objects (F58 follow; not compared). `03` and `12` fail on the reference side as before |
 | `inspector-text` | property inspector | equal except for design | run 43: 90.3 % (28 / 31), unchanged since run 39; 11 / 12 canvas pairs within 1 % (`21_live_result` 1.87 %), all at their run 39 values. **TW-214 still confirmed** (`25`: left 448, top 378, ink 450,382–531,430 in both), **TW-204** as documented. Every compared value as in run 39; Firepixel's shots pixel-identical to run 39 except the overview and the font list `02_font_list_open` (its scroll bar, F92). The reference shows its Text tool inspector in `23_tool_vs_object_normal` again (24.1 → 19.9 %). `07`, `08`, `11` (`unmapped`) and `18` as before |
@@ -275,12 +294,12 @@ its History read-backs (`panel-layers/22`, `inspector-fields/25`, `color-popup/2
 | `menu-text` | menus | equal except for design | run 43: 90.9 % (20 / 22), unchanged; 4 / 4 canvas pairs within 1 %. Firepixel's TX1 reads 14 px wide (run 33: 4) and 1 px lower at 24 pt in `02`, `03`, `16` (F82's zero-width frame; not compared, the reference reads no bounds); shots pixel-identical to run 33 except the overview |
 | `menu-view` | menus | equal except for design | run 43: 96.0 % (24 / 25), unchanged; 6 / 6 canvas pairs within 1 %. `10_guides_menu_result` 40.9 → 45.0 %: Firepixel's View menu is 21 px taller with the new entry View ▸ Coordinate Tag (F90, a Firepixel extension, unchecked by the runner) and shows View ▸ Tooltips checked (the runner's new `fp.view_tooltips` on; the reference's is unchecked). The painted cursor lies elsewhere in `11`, `12`; `17_screen_modes_result` adds the Marquee list. The menu read-backs equal as in run 33 |
 | `panel-info-align-path` | panels | equal except for design | run 43: 83.3 % (30 / 36), unchanged; 2 / 2 canvas pairs within 1 %. **F92 seen:** Firepixel's Path panel (`10_path_layout_normal`, `13`, `14`) now has a vertical scroll bar and wraps Crop to a third row of Combine Paths (16 941 px); the panel pairs move with it. `11_path_buttons_union_result` shows the union's outline and anchors (F65). The History read-back of `15` reads 1 → 2 against 0 → 1 as in run 33 |
-| `panel-layers` | panels | equal except for design | run 43: 96.7 % (29 / 30), unchanged since run 39; every compared value as in run 39. **TW-205, TW-208, TW-215, TW-216 and Q-65 still confirmed** (80 after the 41 px press-drag, `08` 1 then 0 in both, `09`, `12`, `15` `ok` with the order unchanged, `currentLayerNum` 0, "Ebene 1" current on open); `layers_disclosure` found the document's flags at all four uses, no row lookup expanded a layer. **F92 seen:** the panel's list ends 2 px higher, so the footer and, where the list is scrolled to the current layer, every row lie 2 px higher (17 of 20 shots; the row positions logged 639 → 638, the drag end 632.7 → 632.3); the panel pairs move by less than a point. **F88a seen:** the mask thumbnail of R1 in `18_mask_row_normal` is the mask's luma (a grey ellipse on black; run 39: white); no step selects a mask, so the green frame is in no shot. The reference's History read-back of `22` reads 0 → 0 (run 39: 0 → 2; Firepixel 0 → 2). `14`, `17`, `21` as before |
-| `panel-layers-menu` | panels | equal except for design | run 43: 81.0 % (17 / 21), unchanged since run 39; every compared value as in run 39; Firepixel's `05_footer_normal` and the overview show the footer 2 px higher (F92), the menus pixel-identical. `10_options_open` still opens no dialog the bridge finds |
+| `panel-layers` | panels | equal except for design | run 44: 96.7 % (29 / 30), unchanged since run 39; every compared value as in run 43 (only the bridge's frame counter and the reference's window class name differ). **TW-205, TW-208, TW-215, TW-216 and Q-65 still confirmed**; `layers_disclosure` found the document's flags at all four uses and no row lookup expanded a layer; Show Group Contents was switched off at the unit start, so Firepixel lists the reference's rows. **TW-238 seen (F100):** the selected object's own thumbnail carries a 2 px #0078d7 frame in six shots, as the reference frames it (2 px #00a8ff): L1obj in `02_row_states_normal`, `02_row_states_pressed`, `11_rename_focus` and `23_opacity_slider_drag_panel_pressed` (48–176 px; cut by the list's lower edge where the list is scrolled), R1 in `18_mask_row_normal` and B1 in `19_bitmap_mode_row_normal` (176 px each); the pairs move by at most 0.03 points (`18` 62.38 → 62.41 %). No step selects a mask, so the row kept highlighted during mask editing is not reached. The reference's pressed shot `23_opacity_slider_drag_panel_pressed` shows no slider pop-up and the "Pfad" row of Ebene 2 highlighted (run 43: the pop-up at 30 with L1obj selected), pair 64.1 → 60.4 %; its slider results read as before (the three `23` canvas pairs 2.10, 2.10 and 0.10 %). `14`, `17`, `21` as before; Firepixel's other shots pixel-identical to run 43 |
+| `panel-layers-menu` | panels | equal except for design | run 44: 81.0 % (17 / 21), unchanged since run 39; every compared value as in run 43 except Firepixel's menu read-back. **TW-237 seen:** Firepixel's options menu in `01_menu_open_open` and `02_menu_states_no_sel_open` lists the extra entry "Gruppeninhalte anzeigen" (Show Group Contents, unchecked, after a separator under Thumbnail Options) next to the reference's 24 entries, which read the same on both sides; the menu is 33 px taller and the shot 375 × 635 px (run 43: 362 × 602; 13 px of the dock behind the menu included), pairs 15.6 → 23.4 % and 15.5 → 23.3 %; the read-back no longer picks up the texts "800 x 600" and "100%" behind the menu (run 43). `04_context_object_open` shows the blue frame on L1obj's thumbnail below the context menu (88 px, TW-238; pair 39.38 % unchanged). `10_options_open` fails on Firepixel's side with "no dialog window found" as in every run since run 17: the step double-clicks the "Ebene 1" row, where the reference opens its Layer Options dialog and Firepixel none; it does not use the options menu, so the new entry plays no part (neither a runner artefact of batch 8 nor a regression). `05_footer_hover`, `09`, `18` `unmapped` as before; Firepixel's other shots pixel-identical to run 43 |
 | `panel-misc` | panels | equal except for design | run 43: 87.5 % (14 / 16), unchanged; embedded panels `unsupported`. Firepixel's Image Editing panel `06_image_editing_normal` has the F92 scroll bar and re-wrapped buttons (15 885 px), the Auto Shapes grid `01` draws its previews with the 1 px anti-aliased stroke (F61, after run 33), `18_menus_find_open` a grey circle (F85); overview as above |
 | `panel-optimize` | panels | equal except for design | run 43: 83.3 % (20 / 24), unchanged; Firepixel's shots pixel-identical to run 33 except the overview |
 | `panel-library-styles` | panels | equal except for design | run 43: 93.3 % (14 / 15), unchanged; 1 / 1 canvas pairs within 1 %; Firepixel's shots differ only in the overview, `04_doclib_props_open` and the Layers circles under the menus `12`, `16` (F83, F85) |
-| `panel-pages-states-history` | panels | equal except for design | run 43: 75.0 % (18 / 24), unchanged; the History rows of `16` and `21` as in run 31. Firepixel's Pages and States footers lie 2 px higher (F92; `01`, `05`, `06`, `08`, and 28–61 px in the pop-ups `07`, `09`, `10`); the overview as above. `18_history_save_cmd_open` as before |
+| `panel-pages-states-history` | panels | equal except for design | run 44: 75.0 % (18 / 24), unchanged; every compared value as in run 43, and Firepixel's 14 shots are pixel-identical to run 43. **TW-233 (F98) not reached:** the page steps read only the page count (`03`: New Page, Duplicate Page from the panel menu, Delete; Firepixel 3 → 4 → 3, the reference 2 → 3 → 3, both as in run 43) and take no shot after New Page, and no History step clicks a page row, so neither the new page's place and name nor the History row "Change Page Selection" is in a shot or a value; the History read-backs of `16` and `21` (the vector test file, nudges only) read "Move", "Deselect", "Move" against the reference's four script rows, as since run 31. `09_states_onion_open`, `10_states_loop_open` (reference `error`), `09_states_onion_result`, `12`, `15` (`unmapped`) and `18_history_save_cmd_open` (Firepixel `error`) as before |
 | `preview-options` | preview / export | equal except for design | run 43: 76.9 % (30 / 39), unchanged; Firepixel's 19 shots pixel-identical to run 33; Firepixel-side errors as in run 24 |
 | `preview-views` | preview / export | equal except for design | run 43: 69.6 % (16 / 23), unchanged; Firepixel's shots pixel-identical to run 33 except the running animation `17_anim_buttons_play_pressed` |
 | `color-popup-contexts` | colour | equal except for design | run 43: 68.2 % (15 / 22), unchanged since run 39; every pair (except the overview, 21.7 → 19.6 %) and every compared value as in run 39; Firepixel's shots pixel-identical to run 39 except the overview. `01_toolbox_stroke` fails on the reference side as before |
@@ -301,7 +320,23 @@ its History read-backs (`panel-layers/22`, `inspector-fields/25`, `color-popup/2
 | `xs-canvas` | cross-cutting | equal except for design | run 43: 91.7 % (22 / 24), unchanged since run 34; 1 / 8 canvas pairs within 1 % at the run 34 values (BA-098: the zoom shots pixel-identical). Firepixel's window shots carry the Marquee list (F94), `17_drag_clip_pressed` the Layers rows (F83, F92), `11_grid_show_normal`, `05` and `20` the painted Pointer at another place (the pointer's last position) |
 | `xs-select-behind` | cross-cutting | equal except for design | run 43: 100.0 % (9 / 9), unchanged; 9 / 9 canvas pairs within 1 % at their run 39 values; both programs' shots pixel-identical to run 39 and every compared value as before |
 
-Totals over all 49 units (full run 43, after the hand check CHK-1): **49 / 0 / 0 / 0** (proven 1:1 **100.0 %**, 49 / 49). Step level: 1095 of 1244
+Totals over all 49 units (run 44 on top of full run 43): **49 / 0 / 0 / 0** (proven 1:1 **100.0 %**, 49 / 49). Step level:
+1095 of 1244 measurable steps `ok` on both sides (**88.0 %**, unchanged; the four units 79 / 90 as in run 43); over the 48
+units before run 24: 1086 of 1235 (87.9 %). The 92 steps of run 44: 79 `ok` on both sides, 6 `unmapped` and 1
+`unsupported` on both sides, 2 reference-side `error` against `ok`, 2 `ok` against a Firepixel-side `error`
+(`panel-pages-states-history/18_history_save_cmd_open`, `panel-layers-menu/10_options_open`), 1 `unmapped` / `ok` and 1
+`unsupported` / `ok`; no step status changed. Errors: **33 reference-side and 21 Firepixel-side**, unchanged. Canvas
+image pairs within 1 %: **195 of 224**, unchanged (the six canvas pairs of the four units read their run 43 values); over
+the 48 old units 186 of 215. No class changed. Compared values: none changed on either side (only the bridge's frame
+counter, the reference's window class name and export bytes, the runner's list click 0.5 px and the runner script names
+in the reference's History rows); Firepixel's menu read-back of `panel-layers-menu/01`, `02` adds the entry Show Group
+Contents (TW-237). Firepixel's shots are pixel-identical to run 43 except nine shots with the blue thumbnail frame
+(TW-238: `panel-layers/02` normal and pressed, `11`, `18`, `19`, `23` panel, `panel-layers-menu/04`,
+`inspector-bitmap/08` Layers, `09`) and the two options-menu shots (TW-237); the reference's except its overviews (dock
+groups after its restart) and the pressed panel shot `panel-layers/23` (no slider pop-up). No `runner error` line in run
+44 (over the newest run of every unit: 9, all in `tool-text`).
+
+Run 43's totals (full run, after the hand check CHK-1), for comparison: **49 / 0 / 0 / 0** (proven 1:1 **100.0 %**, 49 / 49). Step level: 1095 of 1244
 measurable steps `ok` on both sides (**88.0 %**; counted as before, with the Firepixel-only step
 `toolbox/17_ai_tools_normal` as `ok`); over the 48 units before run 24: 1086 of 1235 (87.9 %). The 1310 steps: 1094 `ok`
 on both sides, 79 `unmapped` and 37 `unsupported` on both sides, 10 `error` on both sides, 20 reference-side `error`
@@ -695,6 +730,28 @@ does not enlarge text, and Ctrl+Shift+E, Ctrl+Alt+Shift+S and Ctrl+Shift+I do ot
 machine (TW-126; the reference machine's active set needs a behaviour description). `panel-optimize` shows one real
 deviation: export formats chosen per slice in the Optimize panel are not stored on the slices (TW-128).
 `xs-preferences` clicks stored settings without a fixed start state (TW-127, runner).
+
+**What run 44 found.** The follow-up run over the four units touched by tester feedback batch 8 changes no step status,
+no class and no compared value; every pair reads its run 43 value except where batch 8 shows, so no Firepixel-side
+regression is found. With the new runner setting `fp.layers_group_tree` off (Show Group Contents switched off at every
+unit start) Firepixel lists the reference's Layers rows, and the confirmed rows of `panel-layers` (TW-205, TW-208,
+TW-215, TW-216, Q-65) read as in runs 38 to 43. **Batch 8 as far as the runner reaches it:** F100 frames a selected
+object's own thumbnail blue (2 px #0078d7; the reference 2 px #00a8ff) in nine shots with the Layers rows, as in the
+reference's shots of the same steps (**TW-238**, first part); the Layers options menu lists the extra entry Show Group
+Contents, unchecked, under Thumbnail Options (**TW-237**; the options-menu pairs 15.6 → 23.4 %, like View ▸ Coordinate
+Tag in run 43). `panel-layers-menu/10_options_open` fails on Firepixel's side as in every run since run 17 (the step
+double-clicks the "Ebene 1" row; the reference opens its Layer Options dialog, Firepixel none); it does not open the
+options menu, so the extra entry does not shift its lookup. Not reached: the row kept highlighted during mask editing
+(TW-238, second part; no step selects a mask in the Layers panel), F98's page placement, page names, page row context
+menu, drag onto the New Page button and History row "Change Page Selection" (**TW-233**; the page steps read only the page
+count, which reads 3 → 4 → 3 as before, and the History steps of `panel-pages-states-history` click no page row, so its
+History shots and read-backs are unchanged), F99's strokes at the bitmap bounds (TW-234, TW-235) and the Confine checkbox
+(**TW-236**; no shot holds a retouch or brush tool's inspector). `inspector-bitmap/08` shows the open TW-225 rest that
+Reveal All does not select the new mask (the reference edits the mask with a green frame and its Bitmap mask inspector,
+Firepixel keeps the bitmap selected; both sides as in run 33). Reference-side: one restart (access violation while
+opening `par_bitmap.fw.png` at the start of `inspector-bitmap`, no step lost) and a pressed shot without the slider pop-up
+(`panel-layers/23`, pair 64.1 → 60.4 %). Headline unchanged: 49 / 0 / 0 / 0, proven 1:1 100.0 %, quota 88.0 %
+(1095 / 1244), canvas pairs 195 / 224.
 
 **What run 43 found.** The full run on the batch 7 preview changes no compared value and no Firepixel-side step
 status. The confirmed rows of the follow-up runs hold in their units: TW-205, TW-208, TW-215, TW-216 and Q-65
@@ -1244,8 +1301,9 @@ TW-179, fixed in runner R-27); this bug was already in the host's first version.
 | 41 (1 unit) | 23 Oct 2026 | 48 of 49 (0 under-measured; 1 real deviation, 0 unclear) | **98.0 %** (48 / 49); 97.9 % over the 48 old units; step level 87.9 % (87.8 % over the 48 old units); canvas pairs 196 / 225 |
 | 42 (1 unit) | 23 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 87.9 % (87.8 % over the 48 old units); canvas pairs 196 / 225 |
 | 43 (full, 49 units) | 24 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear; TW-231 closed as a runner artefact by the hand check CHK-1) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 88.0 % (87.9 % over the 48 old units); canvas pairs 195 / 224 |
+| 44 (4 units) | 24 Oct 2026 | 49 of 49 (0 under-measured; 0 real deviations, 0 unclear) | **100.0 %** (49 / 49); 100.0 % over the 48 old units; step level 88.0 % (87.9 % over the 48 old units); canvas pairs 195 / 224 |
 
-The next steps are in [ROADMAP.md](../ROADMAP.md): release v0.2.12 (in progress); the runner items R-37 (TW-231, closed as a runner artefact by the hand check CHK-1: text clicks after a right-click only inside the open context menu, no non-exact fallback for menu entries, `xs-context-menus/15` re-specified) and TW-232; the human click-test, including the batch 7 items A4-67 to A4-75, including the macOS re-test by the tester;
+The next steps are in [ROADMAP.md](../ROADMAP.md): the hands-on checks A4-76 to A4-81 of tester feedback batch 8 (follow-up run 44 reached only TW-237 and the thumbnail frame of TW-238), then a release with batch 8; the TW-225 rest that Reveal All does not select the new mask (seen in `inspector-bitmap/08` since run 33); the runner items R-37 (TW-231, closed as a runner artefact by the hand check CHK-1: text clicks after a right-click only inside the open context menu, no non-exact fallback for menu entries, `xs-context-menus/15` re-specified) and TW-232; the human click-test, including the batch 7 items A4-67 to A4-75, including the macOS re-test by the tester;
 the text selection and size of TW-146 rest and the text tool reset of TW-165 (moved to the click-test A1-19 on
 20 Oct 2026 as runner measurement gaps, not deviations; TW-167 was closed by run 29); the text tool reset of RE spec 56
 (TW-138 R5 to R7, F52, click-test A4-29; known difference: for a new text the reference writes two History rows,
@@ -1260,7 +1318,7 @@ the rule and align); TW-217 and TW-218 (F85), which no runner step reaches, for 
 fills on text). TW-173 was confirmed by run 31, TW-189 by
 run 32, TW-192 (colours), TW-193, TW-194 and the runner item TW-174 by run 33, and TW-195, the refined follow rules of
 TW-192 and the runner item TW-196 by run 34; run 35 saw TW-202 (the Pointer display of a selected rectangle), TW-200
-(the slider pop-up placement) and TW-201 (the tooltips) without a changed value, run 36 none of TW-204 to TW-208, run 37 confirmed TW-206, TW-207 and the runner items TW-197, TW-210 and TW-211, run 38 TW-205, TW-214, TW-215, the runner item TW-216 and Q-65 (TW-208 in its range), run 39 TW-208 in full (with the runner item Q-66, R-34), run 40 TW-212 on the numeric and script paths (with the fold under the Scale tool, whose factor differs by TW-219), run 41 TW-212 again on these paths (TW-219 not reached: the runner's handle position, TW-221), run 42 TW-219 and the Scale-tool factor of TW-212 (with the runner item TW-221, R-36), full run 43 all of these again and the batch 7 changes the runner reaches (TW-223 to TW-227 as display only); Q-63 is closed; TW-176, TW-177, TW-186 and TW-187 are not
+(the slider pop-up placement) and TW-201 (the tooltips) without a changed value, run 36 none of TW-204 to TW-208, run 37 confirmed TW-206, TW-207 and the runner items TW-197, TW-210 and TW-211, run 38 TW-205, TW-214, TW-215, the runner item TW-216 and Q-65 (TW-208 in its range), run 39 TW-208 in full (with the runner item Q-66, R-34), run 40 TW-212 on the numeric and script paths (with the fold under the Scale tool, whose factor differs by TW-219), run 41 TW-212 again on these paths (TW-219 not reached: the runner's handle position, TW-221), run 42 TW-219 and the Scale-tool factor of TW-212 (with the runner item TW-221, R-36), full run 43 all of these again and the batch 7 changes the runner reaches (TW-223 to TW-227 as display only), follow-up run 44 the batch 8 changes the runner reaches (the blue thumbnail frame of TW-238 and the Show Group Contents entry of TW-237 as display only; TW-233 to TW-236 and the mask-editing row of TW-238 not reached); Q-63 is closed; TW-176, TW-177, TW-186 and TW-187 are not
 reached by the runner and stay with the click-test. Run 30 answered the BA-098 question: the tiled canvas shifts no
 sampling position at
 fractional zoom. U-1 rest (PDF layers) and the R3 note of TW-138 were closed on 20 Oct 2026.
