@@ -207,6 +207,89 @@ fn badge_plus(p: &Painter, at: Pos2, c: &Palette, minus: bool) {
     }
 }
 
+/// Combine-mode badge of the bitmap selection tools (RE spec 69 section 4): a small dark square
+/// with a light "+" (add), "-" (subtract) or "x" (intersect), centred on `o`. Own shapes, only
+/// the meaning follows the reference.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Sign {
+    Plus,
+    Minus,
+    Cross,
+}
+
+fn badge_sign(p: &Painter, o: Pos2, c: &Palette, sign: Sign) {
+    let bg = egui::Rect::from_center_size(o, vec2(9.0, 9.0));
+    p.rect_filled(bg, 1.0, c.cursor_outline);
+    let s = Stroke::new(1.0, c.cursor_fill);
+    match sign {
+        Sign::Plus | Sign::Minus => {
+            p.line_segment([pos2(o.x - 3.0, o.y), pos2(o.x + 3.0, o.y)], s);
+            if sign == Sign::Plus {
+                p.line_segment([pos2(o.x, o.y - 3.0), pos2(o.x, o.y + 3.0)], s);
+            }
+        }
+        Sign::Cross => {
+            p.line_segment([pos2(o.x - 2.5, o.y - 2.5), pos2(o.x + 2.5, o.y + 2.5)], s);
+            p.line_segment([pos2(o.x - 2.5, o.y + 2.5), pos2(o.x + 2.5, o.y - 2.5)], s);
+        }
+    }
+}
+
+/// Glyph and badge of a bitmap selection cursor with a combine mode, `None` for other cursors.
+fn selection_badge(c: Cursor) -> Option<(Cursor, Sign)> {
+    Some(match c {
+        Cursor::CrosshairAdd => (Cursor::Crosshair, Sign::Plus),
+        Cursor::CrosshairSubtract => (Cursor::Crosshair, Sign::Minus),
+        Cursor::CrosshairIntersect => (Cursor::Crosshair, Sign::Cross),
+        Cursor::LassoAdd => (Cursor::Lasso, Sign::Plus),
+        Cursor::LassoSubtract => (Cursor::Lasso, Sign::Minus),
+        Cursor::LassoIntersect => (Cursor::Lasso, Sign::Cross),
+        Cursor::WandAdd => (Cursor::Wand, Sign::Plus),
+        Cursor::WandSubtract => (Cursor::Wand, Sign::Minus),
+        Cursor::WandIntersect => (Cursor::Wand, Sign::Cross),
+        _ => return None,
+    })
+}
+
+/// Small dashed rectangle at the lower right of the arrow (move the marquee).
+fn badge_marquee(p: &Painter, at: Pos2, c: &Palette) {
+    let r = egui::Rect::from_min_size(pos2(at.x + 10.0, at.y + 12.0), vec2(8.0, 6.0));
+    p.rect_filled(r.expand(1.5), 0.0, c.cursor_outline);
+    // dashes: every other pixel run of the outline in the light colour
+    let s = Stroke::new(1.0, c.cursor_fill);
+    let (l, t, rr, b) = (r.left(), r.top(), r.right(), r.bottom());
+    let mut x = l;
+    while x < rr {
+        let e = (x + 2.0).min(rr);
+        p.line_segment([pos2(x, t), pos2(e, t)], s);
+        p.line_segment([pos2(x, b), pos2(e, b)], s);
+        x += 4.0;
+    }
+    let mut y = t;
+    while y < b {
+        let e = (y + 2.0).min(b);
+        p.line_segment([pos2(l, y), pos2(l, e)], s);
+        p.line_segment([pos2(rr, y), pos2(rr, e)], s);
+        y += 4.0;
+    }
+}
+
+/// Small scissors at the lower right of the arrow (move the pixels): two crossing blades and two
+/// finger rings.
+fn badge_scissors(p: &Painter, at: Pos2, c: &Palette) {
+    let o = pos2(at.x + 14.0, at.y + 13.0);
+    let blade = |a: (f32, f32), b: (f32, f32)| {
+        badge_line(p, pos2(o.x + a.0, o.y + a.1), pos2(o.x + b.0, o.y + b.1), c)
+    };
+    blade((-3.0, -4.0), (2.0, 2.0));
+    blade((3.0, -4.0), (-2.0, 2.0));
+    for dx in [-2.5, 2.5] {
+        let ring = pos2(o.x + dx, o.y + 4.0);
+        p.circle_filled(ring, 2.5, c.cursor_outline);
+        p.circle_stroke(ring, 1.5, Stroke::new(1.0, c.cursor_fill));
+    }
+}
+
 fn crosshair(p: &Painter, at: Pos2, c: &Palette, gap: f32, len: f32) {
     for (dx, dy) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
         line(p, at, (dx * gap, dy * gap), (dx * len, dy * len), c);
@@ -610,6 +693,12 @@ pub fn has_precision_variant(c: Cursor) -> bool {
             | Cursor::Knife
             | Cursor::Lasso
             | Cursor::Wand
+            | Cursor::LassoAdd
+            | Cursor::LassoSubtract
+            | Cursor::LassoIntersect
+            | Cursor::WandAdd
+            | Cursor::WandSubtract
+            | Cursor::WandIntersect
             | Cursor::Hidden
     )
 }
@@ -619,6 +708,18 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
     let at = pos2(at.x.round() + 0.5, at.y.round() + 0.5);
     if precise && has_precision_variant(c) {
         crosshair(p, at, colors, 2.0, 9.0);
+        return;
+    }
+    // bitmap selection tools with a pixel selection: tool glyph with the combine badge at its
+    // lower right, clear of the hotspot (RE spec 69 section 4)
+    if let Some((base, sign)) = selection_badge(c) {
+        paint(p, at, base, colors, false);
+        let o = match base {
+            Cursor::Lasso => pos2(at.x + 10.0, at.y + 6.0),
+            Cursor::Wand => pos2(at.x + 13.0, at.y + 4.0),
+            _ => pos2(at.x + 10.0, at.y + 10.0),
+        };
+        badge_sign(p, o, colors, sign);
         return;
     }
     match c {
@@ -655,6 +756,24 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
             arrow(p, at, colors, false);
             badge_plus(p, at, colors, false);
         }
+        Cursor::MoveMarquee => {
+            arrow(p, at, colors, false);
+            badge_marquee(p, at, colors);
+        }
+        Cursor::MovePixels => {
+            arrow(p, at, colors, false);
+            badge_scissors(p, at, colors);
+        }
+        // drawn above with their badge
+        Cursor::CrosshairAdd
+        | Cursor::CrosshairSubtract
+        | Cursor::CrosshairIntersect
+        | Cursor::LassoAdd
+        | Cursor::LassoSubtract
+        | Cursor::LassoIntersect
+        | Cursor::WandAdd
+        | Cursor::WandSubtract
+        | Cursor::WandIntersect => {}
         Cursor::Crosshair => crosshair(p, at, colors, 2.0, 8.0),
         Cursor::Pivot => {
             crosshair(p, at, colors, 0.0, 7.0);
@@ -801,6 +920,17 @@ mod tests {
                 Cursor::Crop,
                 Cursor::FillHandle,
                 Cursor::FillRotate,
+                Cursor::CrosshairAdd,
+                Cursor::CrosshairSubtract,
+                Cursor::CrosshairIntersect,
+                Cursor::LassoAdd,
+                Cursor::LassoSubtract,
+                Cursor::LassoIntersect,
+                Cursor::WandAdd,
+                Cursor::WandSubtract,
+                Cursor::WandIntersect,
+                Cursor::MoveMarquee,
+                Cursor::MovePixels,
             ] {
                 paint(p, pos2(50.0, 50.0), c, &theme.colors, false);
                 paint(p, pos2(50.0, 50.0), c, &theme.colors, true);

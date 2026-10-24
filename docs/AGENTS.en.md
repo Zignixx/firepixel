@@ -181,7 +181,13 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Gradient tool; `fillSelection`
     default `true` = fill the pixel selection or the whole bitmap, `false` = contiguous color area at the
     start point by `tolerance` 0…255, default 32), `bitmap.paint`, `bitmap.erase`
-  * Selection: `select.set {ids, mode?}`, `select.inRect {rect}`, `select.pointAt {point}`
+  * Selection: `select.set {ids, mode?}`, `select.inRect {rect, mode?, deep?}`, `select.pointAt {point}`;
+    `mode` `replace`/`add`/`subtract`/`intersect`/`toggle` (the Pointer's Shift-marquee is `toggle`),
+    `deep: true` picks like the Subselection (children of groups one by one; the Pointer's Alt-marquee).
+    Firepixel extension (lasso marquee): `select.inPolygon {points: [[x, y], …], mode?, deep?}` selects the
+    objects whose bounds centre lies inside the closed outline; `tool.pointerLasso {on?}` switches the
+    Pointer/Subselection marquee between rectangle and lasso (preference `Firepixel_PointerLasso`,
+    default off, without `on` it toggles). Marquee selections by the tools write no History row.
   * Structure: `layer.add {name?}`, `layer.setVisible {layer, visible}`, `layer.setActive {layer}`,
     `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`,
     `selection.moveToLayer {layer, copy?}` (the Layers panel's selection circle: the whole selection as one

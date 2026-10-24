@@ -112,6 +112,21 @@ Doppelklick auf eine Bitmap öffnet den Bitmapmodus; Doppelklick auf Text bearbe
 Rechtsklick öffnet das zum Werkzeug und zur Auswahl passende Kontextmenü. Esc ohne laufende Aktion hebt
 die Objektauswahl auf (offene Popups und Menüs schließt das erste Esc).
 
+**Auswählen mit Zeiger und Teilauswahl:** Ziehen auf leerer Fläche zieht einen Auswahlrahmen auf; jedes
+berührte Objekt wird gewählt, der Rahmen schreibt keine Verlaufszeile. Mit dem **Zeiger** **schaltet**
+Umschalt (auch Umschalt+Alt) jedes Objekt im Rahmen **um**: nicht gewählte kommen hinzu, gewählte werden
+abgewählt – ein Umschalt-Rahmen über gewählte Objekte nimmt sie also aus der Auswahl. Strg ergibt einen
+normalen Rahmen. Ein Alt-Rahmen auf leerer Fläche wählt wie die Teilauswahl: die Kinder einer Gruppe
+einzeln, die Auswahl wird ersetzt; Alt-Ziehen an einem Objekt zieht weiterhin eine Kopie. Mit der
+**Teilauswahl** fügt Umschalt die Objekte bzw. Punkte im Rahmen hinzu (nichts wird abgewählt), Alt ergibt
+einen normalen Rahmen. Der Zeiger zeigt bei gehaltenem Alt den hohlen Teilauswahl-Pfeil und während jedes
+Alt-Zugs (Kopie oder Alt-Rahmen) den Pfeil mit „+“, ebenso der Alt-Rahmen der Teilauswahl; Umschalt
+zeigt kein Zeichen. Firepixel-Erweiterung: Der Eigenschafteninspektor dieser beiden Werkzeuge (nichts
+gewählt) hat die Option **Auswahlrahmen: Rechteck / Lasso** (Voreinstellung `Firepixel_PointerLasso`,
+Vorgabe Rechteck). Mit Lasso zeichnet das Ziehen eine freie Kontur wie das Lasso-Werkzeug; beim Loslassen
+wählt der Zeiger die Objekte, deren Mitte darin liegt, die Teilauswahl die Ankerpunkte darin, mit
+denselben Regeln für die Umschalttasten.
+
 **Bitmap-Werkzeuge:** Der **Pinsel** malt Pixel: Ist keine Bitmap gewählt, legt er eine neue an,
 sonst malt er in die gewählte. **Radiergummi**, **Weichzeichner** und **Stempel** arbeiten mit
 weichem Rand wie im Original; Esc beendet das Malen und wechselt zum Zeiger. Nach einer Auswahl mit
@@ -123,7 +138,12 @@ Loslassen bewirkt danach nichts. Esc mitten in einem Pinselstrich wechselt sofor
 die Vorschau stehen, beim Loslassen wird der Strich trotzdem ganz gemalt; das nächste Esc beendet den
 Bitmapmodus. Mit Auswahlrahmen oder Lasso und einer Pixelauswahl verschieben die Pfeiltasten nur den
 Auswahlrahmen (1 px, mit Umschalt 10 px); aufeinanderfolgende Tasten sind eine Verlaufszeile
-„Verschieben“. Das Werkzeug
+„Verschieben“. Solange eine Pixelauswahl besteht, zeigen Auswahlrahmen, Lasso und Zauberstab am
+Mauszeiger die Verknüpfung der nächsten Auswahl: Umschalt „+“ (hinzufügen), Alt „−“ (abziehen),
+Umschalt+Alt „×“ (Schnittmenge, in beiden Reihenfolgen gedrückt); ohne Pixelauswahl trägt der Zeiger kein
+Zeichen. In der Pixelauswahl wird der Zeiger zum Pfeil mit gestricheltem Rechteck – Ziehen verschiebt den
+Auswahlrahmen (auch mit Lasso und Zauberstab) – und mit Strg zum Pfeil mit Schere (Ziehen verschiebt die
+Pixel). Der Zeiger folgt einer geänderten Umschalttaste mit der nächsten Mausbewegung. Das Werkzeug
 **Verlauf** hat eigene Farben (Vorgabe Schwarz → Weiß, Klick aufs Farbfeld öffnet den
 Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
 hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).

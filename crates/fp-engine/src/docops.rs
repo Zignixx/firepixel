@@ -2420,6 +2420,58 @@ pub fn selectable_ids(doc: &Document, page: usize, frame: usize) -> Vec<ElementI
     out
 }
 
+/// Like [`selectable_ids`], but picked like the Subselection: the children of groups one by one
+/// (recursively); a group with a mask stays whole. Used by the Alt marquee of the Pointer and the
+/// marquee of the Subselection (RE spec 69 section 5.2 `5n`, `5p`).
+pub fn selectable_ids_deep(doc: &Document, page: usize, frame: usize) -> Vec<ElementId> {
+    fn walk(e: &Element, out: &mut Vec<ElementId>, depth: u32) {
+        if !e.common.visible || e.common.locked {
+            return;
+        }
+        match &e.kind {
+            ElementKind::Group(g) if depth < 32 && !(g.kind.is_mask() && g.mask.is_some()) => {
+                for c in &g.children {
+                    walk(c, out, depth + 1);
+                }
+            }
+            _ => out.push(e.id),
+        }
+    }
+    let mut out = Vec::new();
+    for (_, l) in own_layers(doc, page).into_iter().rev() {
+        if !l.is_visible() {
+            continue;
+        }
+        let ci = if l.shared_across_frames { 0 } else { frame };
+        let Some(cel) = l.cels.get(ci) else { continue };
+        if cel.locked {
+            continue;
+        }
+        for e in &cel.elements {
+            walk(e, &mut out, 0);
+        }
+    }
+    out
+}
+
+/// Is `p` inside the closed polygon `poly` (even-odd rule)?
+pub fn point_in_polygon(p: Point, poly: &[Point]) -> bool {
+    let n = poly.len();
+    if n < 3 {
+        return false;
+    }
+    let mut inside = false;
+    let mut j = n - 1;
+    for i in 0..n {
+        let (a, b) = (poly[i], poly[j]);
+        if (a.y > p.y) != (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x {
+            inside = !inside;
+        }
+        j = i;
+    }
+    inside
+}
+
 // ------------------------------------------------------------------ Status
 
 /// Fügt `count` leere Status bei `at` ein (alle eigenen, nicht über Status geteilten Ebenen).

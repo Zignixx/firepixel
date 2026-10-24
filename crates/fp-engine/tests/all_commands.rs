@@ -572,6 +572,7 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
         // ---------------------------------------------------------------- Auswahl
         "select.set" => r(json!({"ids": [ellipse.0]})),
         "select.inRect" => r(json!({"rect": [0, 0, 100, 100]})),
+        "select.inPolygon" => r(json!({"points": [[0, 0], [200, 0], [200, 200], [0, 200]]})),
         "select.pointAt" => r(json!({"point": [120, 50]})),
         "select.points" => r(json!({"points": [{"element": ellipse.0, "contour": 0, "node": 0}]})),
         "select.pixels" => r(json!({"shape": "rect", "rect": [0, 0, 10, 10]})),

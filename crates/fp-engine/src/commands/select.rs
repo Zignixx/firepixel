@@ -375,6 +375,15 @@ fn all_selectable(d: &DocumentState) -> Vec<ElementId> {
     docops::selectable_ids(&d.doc, d.page, d.frame)
 }
 
+/// Objects a marquee may pick: top-level objects, or with `deep` like the Subselection.
+fn candidates(d: &DocumentState, deep: bool) -> Vec<ElementId> {
+    if deep {
+        docops::selectable_ids_deep(&d.doc, d.page, d.frame)
+    } else {
+        all_selectable(d)
+    }
+}
+
 fn saved_index(d: &DocumentState, p: &crate::command::Params) -> Result<usize> {
     let list = d
         .doc
@@ -959,13 +968,20 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 json!(false),
                 "nur vollständig umschlossene Objekte",
             )
+            .opt_default(
+                "deep",
+                ParamKind::Bool,
+                json!(false),
+                "in Gruppen absteigen (Teilauswahl)",
+            )
             .run(|s, p| {
                 let rr = p.rect("rect")?.normalized();
                 let m = mode(p)?;
                 // Original: jedes vom Rahmen berührte Objekt zählt (UX-A L1)
                 let contain = p.bool_or("contain", false)?;
+                let deep = p.bool_or("deep", false)?;
                 with_doc(s, |d| {
-                    let ids: Vec<_> = all_selectable(d)
+                    let ids: Vec<_> = candidates(d, deep)
                         .into_iter()
                         .filter(|id| {
                             docops::element_on_page(&d.doc, d.page, *id)
@@ -976,6 +992,45 @@ pub(super) fn register(r: &mut CommandRegistry) {
                                     } else {
                                         rr.intersects(&b)
                                     }
+                                })
+                        })
+                        .collect();
+                    d.selection.apply(&ids, m);
+                    Ok(CommandOutput::doc())
+                })
+            }),
+    );
+    // Firepixel extension: the lasso marquee of the Pointer and the Subselection
+    r.add(
+        cmd("select.inPolygon")
+            .label("Auswahl-Lasso")
+            .describe("Wählt die Objekte, deren Begrenzungsmitte in einer geschlossenen freien Kontur liegt (Lasso-Auswahlrahmen von Zeiger und Teilauswahl, Firepixel-Erweiterung)")
+            .requires(DOC)
+            .param("points", ParamKind::Json, "Kontur [[x, y], …] (wird geschlossen)")
+            .opt_default("mode", mode_param(), json!("replace"), "Verknüpfung")
+            .opt_default(
+                "deep",
+                ParamKind::Bool,
+                json!(false),
+                "in Gruppen absteigen (Teilauswahl)",
+            )
+            .run(|s, p| {
+                // fewer than 3 points enclose nothing
+                let outline = p.points("points")?;
+                let m = mode(p)?;
+                let deep = p.bool_or("deep", false)?;
+                with_doc(s, |d| {
+                    let ids: Vec<_> = candidates(d, deep)
+                        .into_iter()
+                        .filter(|id| {
+                            docops::element_on_page(&d.doc, d.page, *id)
+                                .and_then(|e| docops::element_bounds(&d.doc, &e))
+                                .is_some_and(|b| {
+                                    let c = fp_geom::Point::new(
+                                        (b.left + b.right) / 2.0,
+                                        (b.top + b.bottom) / 2.0,
+                                    );
+                                    docops::point_in_polygon(c, &outline)
                                 })
                         })
                         .collect();

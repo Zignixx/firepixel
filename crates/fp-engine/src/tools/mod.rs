@@ -37,7 +37,7 @@ pub use draw::{
     FreehandTool, LineTool, PenTool, ShapeTool, WebShapeTool, freehand_contour, refit_freehand,
 };
 pub use pathedit::{FreeformTool, KnifeTool, ScrubTool};
-pub use pointer::{CropTool, PointerTool, TransformTool};
+pub use pointer::{CropTool, POINTER_LASSO_PREF, PointerTool, TransformTool};
 pub use retouch::RetouchTool;
 pub use text::{TextEditView, TextTool};
 pub use viewtools::{HandTool, ZoomTool};
@@ -422,6 +422,21 @@ pub enum Cursor {
     FillHandle,
     /// Pointer over a fill-handle line and while dragging it: rotate both arms about h1.
     FillRotate,
+    /// Bitmap selection tools with a pixel selection (RE spec 69 section 4): Shift adds ("+"),
+    /// Alt subtracts ("−"), Shift+Alt intersects ("×"); the glyph of the tool with that badge.
+    CrosshairAdd,
+    CrosshairSubtract,
+    CrosshairIntersect,
+    LassoAdd,
+    LassoSubtract,
+    LassoIntersect,
+    WandAdd,
+    WandSubtract,
+    WandIntersect,
+    /// Inside an existing pixel selection: arrow with a dashed rectangle (drag moves the marquee).
+    MoveMarquee,
+    /// Inside an existing pixel selection with Ctrl: arrow with scissors (drag moves the pixels).
+    MovePixels,
 }
 
 /// Antwort eines Werkzeugs.
@@ -1180,7 +1195,7 @@ pub fn make_machine(id: ToolId) -> Box<dyn ToolMachine> {
         ToolId::Crop | ToolId::ExportArea => Box::new(CropTool::new(id)),
         ToolId::Marquee | ToolId::OvalMarquee => Box::new(MarqueeTool::new(id)),
         ToolId::Lasso | ToolId::PolygonLasso => Box::new(LassoTool::new(id)),
-        ToolId::MagicWand => Box::new(WandTool),
+        ToolId::MagicWand => Box::new(WandTool::default()),
         ToolId::AiObject => Box::new(AiObjectTool::default()),
         ToolId::AiSubject | ToolId::AiRefineEdge => Box::new(AiClickTool::new(id)),
         ToolId::Rectangle | ToolId::Ellipse | ToolId::Polygon | ToolId::AutoShape => {

@@ -108,6 +108,20 @@ bitmap to enter bitmap mode; double-click text to edit it. A right-click opens t
 that fits the tool and the selection. Esc with no action in progress deselects all objects (the first
 Esc closes open popups and menus).
 
+**Selecting with the Pointer and the Subselection:** dragging on empty canvas draws a marquee; every
+object it touches is selected, and the marquee writes no History row. With the **Pointer**, Shift (also
+Shift+Alt) **toggles** each object inside the marquee: unselected objects are added, selected ones are
+deselected — so a Shift-marquee over selected objects removes them from the selection. Ctrl gives a
+normal marquee. An Alt-marquee started on empty canvas selects like the Subselection: the children of a
+group one by one, replacing the selection; Alt-dragging an object still drags a copy. With the
+**Subselection**, Shift adds the objects or points inside the marquee (nothing is deselected) and Alt
+gives a normal marquee. The Pointer shows the hollow Subselection arrow while Alt is held and the arrow
+with "+" during any Alt drag (copy or Alt-marquee), like the Subselection's Alt-marquee; Shift shows no
+mark. Firepixel extension: the Properties inspector of these two tools (nothing selected) has the option
+**Marquee: Rectangle / Lasso** (preference `Firepixel_PointerLasso`, default Rectangle). With Lasso the
+drag draws a free-form outline like the Lasso tool's; on release the Pointer selects the objects whose
+centre lies inside it and the Subselection the anchor points inside it, with the same modifier rules.
+
 **Bitmap tools:** the **Brush** paints pixels: with no bitmap selected it creates a new one,
 otherwise it paints into the selected one. **Eraser**, **Blur** and **Rubber Stamp** work with a
 soft edge as in the original; Esc ends painting and switches to the Pointer. After a Marquee, Lasso
@@ -118,7 +132,12 @@ selection is removed too) and switches to the Pointer; releasing the mouse then 
 the middle of a Brush stroke switches to the Pointer at once and freezes the preview, but the whole
 stroke is still painted when you release the mouse; the next Esc exits bitmap mode. With the
 Marquee or Lasso and a pixel selection the arrow keys move only the marquee (1 px, Shift 10 px);
-consecutive presses are one History row "Move". The **Gradient** tool
+consecutive presses are one History row "Move". While a pixel selection exists, the Marquee, Lasso and
+Magic Wand cursors show the combine mode of the next selection: Shift "+" (add), Alt "−" (subtract),
+Shift+Alt "×" (intersect, in either order of pressing); without a pixel selection the cursor has no mark.
+Inside the pixel selection the cursor becomes an arrow with a dashed rectangle — dragging moves the
+marquee (also with the Lasso and the Magic Wand) — and with Ctrl an arrow with scissors (dragging moves
+the pixels). The cursor follows a changed modifier with the next mouse move. The **Gradient** tool
 has its own colors (default black → white, a click on the swatch opens the gradient editor);
 "Fill selection" and tolerance are separate from the Paint Bucket. **Replace Color** has its own
 "From" and "To" colors (default green → red).

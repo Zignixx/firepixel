@@ -185,7 +185,14 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     `bitmap.gradient {from, to, colors?, fillSelection?, tolerance?}` (Verlauf-Werkzeug; `fillSelection`
     Vorgabe `true` = Pixelauswahl bzw. ganze Bitmap füllen, `false` = zusammenhängender Farbbereich am
     Anfangspunkt nach `tolerance` 0…255, Vorgabe 32), `bitmap.paint`, `bitmap.erase`
-  * Auswahl: `select.set {ids, mode?}`, `select.inRect {rect}`, `select.pointAt {point}`
+  * Auswahl: `select.set {ids, mode?}`, `select.inRect {rect, mode?, deep?}`, `select.pointAt {point}`;
+    `mode` `replace`/`add`/`subtract`/`intersect`/`toggle` (der Umschalt-Rahmen des Zeigers ist `toggle`),
+    `deep: true` wählt wie die Teilauswahl (Kinder von Gruppen einzeln; der Alt-Rahmen des Zeigers).
+    Firepixel-Erweiterung (Lasso-Auswahlrahmen): `select.inPolygon {points: [[x, y], …], mode?, deep?}` wählt
+    die Objekte, deren Begrenzungsmitte in der geschlossenen Kontur liegt; `tool.pointerLasso {on?}` schaltet
+    den Auswahlrahmen von Zeiger und Teilauswahl zwischen Rechteck und Lasso um (Voreinstellung
+    `Firepixel_PointerLasso`, Vorgabe aus, ohne `on` umschalten). Auswahlrahmen der Werkzeuge schreiben keine
+    Verlaufszeile.
   * Struktur: `layer.add {name?}`, `layer.setVisible {layer, visible}`, `layer.setActive {layer}`,
     `page.add`, `page.setCurrent {index}`, `state.add {count?}`, `state.setCurrent {index}`,
     `selection.moveToLayer {layer, copy?}` (der Auswahlkreis im Ebenen-Bedienfeld: die ganze Auswahl als ein

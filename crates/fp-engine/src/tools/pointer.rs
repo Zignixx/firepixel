@@ -415,7 +415,7 @@ enum PState {
     },
     PressedEmpty {
         start: Point,
-        add: bool,
+        mode: Marquee,
     },
     PressedHandle {
         start: Point,
@@ -441,7 +441,10 @@ enum PState {
     Rubber {
         start: Point,
         cur: Point,
-        add: bool,
+        mode: Marquee,
+        /// Firepixel extension (lasso marquee, `Firepixel_PointerLasso`): the free-form outline
+        /// drawn so far; `None` = the rectangle of `start` and `cur`.
+        lasso: Option<Vec<Point>>,
     },
     Scaling {
         handle: usize,
@@ -704,6 +707,48 @@ impl ControlDrag {
     }
 }
 
+/// Preference of the Firepixel lasso marquee: `true` = the Pointer and the Subselection draw a
+/// free-form outline instead of a rectangle when dragged on empty canvas (default: rectangle).
+pub const POINTER_LASSO_PREF: &str = "Firepixel_PointerLasso";
+
+/// How a marquee of the Pointer / Subselection combines with the selection (RE spec 69 section
+/// 5.3, measured): Pointer plain or Ctrl = replace, Shift (also Shift+Alt) = toggle each object
+/// inside, Alt = replace like the Subselection (children of groups one by one); Subselection
+/// plain or Alt = replace, Shift = add.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Marquee {
+    Replace,
+    Add,
+    Toggle,
+    /// Replace, objects picked like the Subselection (descending into groups).
+    Deep,
+}
+
+impl Marquee {
+    fn of(id: ToolId, ev: &ToolEvent) -> Marquee {
+        match id {
+            ToolId::Pointer if ev.mods.shift => Marquee::Toggle,
+            ToolId::Pointer if ev.mods.alt => Marquee::Deep,
+            _ if ev.mods.shift => Marquee::Add,
+            _ => Marquee::Replace,
+        }
+    }
+
+    /// Mode name of `select.inRect` / `select.inPolygon`.
+    fn name(self) -> &'static str {
+        match self {
+            Marquee::Replace | Marquee::Deep => "replace",
+            Marquee::Add => "add",
+            Marquee::Toggle => "toggle",
+        }
+    }
+
+    /// Shift held: a click without a drag keeps the selection.
+    fn keeps(self) -> bool {
+        matches!(self, Marquee::Add | Marquee::Toggle)
+    }
+}
+
 /// Auswahl durch das Werkzeug (kein Verlaufsschritt, `tool.pick`).
 fn pick(command: &str, params: serde_json::Value) -> Invocation {
     Invocation::new("tool.pick", json!({"command": command, "params": params}))
@@ -803,8 +848,19 @@ impl PointerTool {
         t
     }
 
-    /// Überfahren ohne gedrückte Taste: Hervorhebung und Cursor.
-    fn hover(&mut self, p: Point, ctx: &ToolContext) -> ToolResponse {
+    /// Überfahren ohne gedrückte Taste: Hervorhebung und Cursor. The Pointer with Alt shows the
+    /// hollow Subselection arrow instead of its plain arrow (RE spec 69 section 4.2, measured over
+    /// objects and empty canvas); Shift and Ctrl add nothing.
+    fn hover(&mut self, p: Point, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {
+        let mut r = self.hover_plain(p, ctx);
+        if self.id == ToolId::Pointer && ev.mods.alt && r.cursor == Cursor::Arrow {
+            r.cursor = Cursor::Subselect;
+            self.hover_cursor = Cursor::Subselect;
+        }
+        r
+    }
+
+    fn hover_plain(&mut self, p: Point, ctx: &ToolContext) -> ToolResponse {
         self.hover = None;
         if self.click_pos.is_some_and(|c| c != p) {
             self.click_pos = None;
@@ -1069,7 +1125,7 @@ impl PointerTool {
             None => {
                 self.state = PState::PressedEmpty {
                     start: p,
-                    add: ev.mods.shift,
+                    mode: Marquee::of(self.id, ev),
                 };
                 ToolResponse {
                     cursor: self.idle_cursor(),
@@ -1094,7 +1150,7 @@ impl PointerTool {
         let thr = ctx.drag_threshold();
         let st = self.state.clone();
         match st {
-            PState::Idle => self.hover(p, ctx),
+            PState::Idle => self.hover(p, ev, ctx),
             // Shift on an already selected object never moves it with the pointer: the drag
             // becomes an additive selection marquee (TW-118, re 45 §2.3)
             PState::PressedObject {
@@ -1105,7 +1161,8 @@ impl PointerTool {
                 self.state = PState::Rubber {
                     start,
                     cur: p,
-                    add: true,
+                    mode: Marquee::Add,
+                    lasso: self.lasso_start(ctx, start),
                 };
                 self.moved(p, ev, ctx)
             }
@@ -1144,8 +1201,13 @@ impl PointerTool {
                 };
                 self.moved(p, ev, ctx)
             }
-            PState::PressedEmpty { start, add } if dist(start, p) >= thr => {
-                self.state = PState::Rubber { start, cur: p, add };
+            PState::PressedEmpty { start, mode } if dist(start, p) >= thr => {
+                self.state = PState::Rubber {
+                    start,
+                    cur: p,
+                    mode,
+                    lasso: self.lasso_start(ctx, start),
+                };
                 self.moved(p, ev, ctx)
             }
             PState::PressedHandle {
@@ -1264,13 +1326,39 @@ impl PointerTool {
                     if copy { Cursor::Copy } else { Cursor::Move },
                 )
             }
-            PState::Rubber { start, add, .. } => {
-                self.state = PState::Rubber { start, cur: p, add };
-                self.overlay = vec![Overlay::Rect {
-                    rect: Rect::new(start.x, start.y, p.x, p.y).normalized(),
-                    dashed: true,
+            PState::Rubber {
+                start, mode, lasso, ..
+            } => {
+                let lasso = lasso.map(|mut pts| {
+                    if pts.last().is_none_or(|l| dist(*l, p) >= 0.5) {
+                        pts.push(p);
+                    }
+                    pts
+                });
+                self.overlay = vec![match &lasso {
+                    Some(pts) => Overlay::Polyline {
+                        points: pts.clone(),
+                        closed: true,
+                    },
+                    None => Overlay::Rect {
+                        rect: Rect::new(start.x, start.y, p.x, p.y).normalized(),
+                        dashed: true,
+                    },
                 }];
-                ToolResponse::with_overlay(self.overlay.clone(), self.idle_cursor())
+                self.state = PState::Rubber {
+                    start,
+                    cur: p,
+                    mode,
+                    lasso,
+                };
+                // any Alt drag of the Pointer and an Alt marquee of the Subselection show the
+                // arrow with "+" (RE spec 69 section 4.2); Shift shows no badge
+                let cursor = if ev.mods.alt && self.id != ToolId::SelectBehind {
+                    Cursor::Copy
+                } else {
+                    self.idle_cursor()
+                };
+                ToolResponse::with_overlay(self.overlay.clone(), cursor)
             }
             PState::Scaling { handle, bounds, .. } => {
                 let sp = Snapper::new(ctx, &ctx.selection.elements).point(p);
@@ -1586,68 +1674,12 @@ impl PointerTool {
                     None => ToolResponse::default(),
                 }
             }
-            PState::Rubber { start, cur, add } => {
-                let r = Rect::new(start.x, start.y, cur.x, cur.y).normalized();
-                if self.id == ToolId::Subselection {
-                    // Teilauswahl: Punkte der (getroffenen) Pfade im Rechteck
-                    let pts = points_in_rect(ctx, r);
-                    if !pts.is_empty() {
-                        let pj = |l: &[&(ElementId, usize, usize)]| -> Vec<serde_json::Value> {
-                            l.iter()
-                                .map(|(e, c, n)| json!({"element": e.0, "contour": c, "node": n}))
-                                .collect()
-                        };
-                        let ids: Vec<ElementId> = {
-                            let mut v: Vec<ElementId> = pts.iter().map(|(e, _, _)| *e).collect();
-                            v.dedup();
-                            v
-                        };
-                        let all: Vec<&(ElementId, usize, usize)> = pts.iter().collect();
-                        if !add {
-                            return ToolResponse::commit(vec![
-                                pick(
-                                    "select.set",
-                                    json!({"ids": ids_json(&ids), "mode": "replace"}),
-                                ),
-                                pick(
-                                    "select.points",
-                                    json!({"points": pj(&all), "mode": "replace"}),
-                                ),
-                            ]);
-                        }
-                        // Umschalt: Punkte umschalten (ausgewählte abwählen, übrige hinzufügen)
-                        type Pts<'a> = Vec<&'a (ElementId, usize, usize)>;
-                        let (on, off): (Pts, Pts) = pts.iter().partition(|(e, c, n)| {
-                            ctx.selection.points.contains(&PointRef {
-                                element: *e,
-                                contour: *c,
-                                node: *n,
-                            })
-                        });
-                        let mut cmds = vec![pick(
-                            "select.set",
-                            json!({"ids": ids_json(&ids), "mode": "add"}),
-                        )];
-                        if !off.is_empty() {
-                            cmds.push(pick(
-                                "select.points",
-                                json!({"points": pj(&off), "mode": "add"}),
-                            ));
-                        }
-                        if !on.is_empty() {
-                            cmds.push(pick(
-                                "select.points",
-                                json!({"points": pj(&on), "mode": "subtract"}),
-                            ));
-                        }
-                        return ToolResponse::commit(cmds);
-                    }
-                }
-                ToolResponse::commit(vec![pick(
-                    "select.inRect",
-                    json!({"rect": rect_json(r), "mode": if add { "add" } else { "replace" }}),
-                )])
-            }
+            PState::Rubber {
+                start,
+                cur,
+                mode,
+                lasso,
+            } => self.marquee_release(ctx, start, cur, mode, lasso),
             PState::Scaling { bounds, cur, .. } => {
                 if (cur.left - bounds.left).abs()
                     + (cur.right - bounds.right).abs()
@@ -1706,7 +1738,7 @@ impl PointerTool {
             }
             // Klick ins Leere hebt die Auswahl auf – im Original kein Verlaufsschritt (nur der
             // Menübefehl Strg+D ist einer)
-            PState::PressedEmpty { add: false, .. } if !ctx.selection.is_empty() => {
+            PState::PressedEmpty { mode, .. } if !mode.keeps() && !ctx.selection.is_empty() => {
                 ToolResponse::commit(vec![pick(
                     "select.set",
                     json!({"ids": [], "mode": "replace"}),
@@ -1714,6 +1746,65 @@ impl PointerTool {
             }
             _ => ToolResponse::default(),
         }
+    }
+
+    /// Lasso marquee (Firepixel extension, `Firepixel_PointerLasso`) for the Pointer and the
+    /// Subselection: the outline starts at the press point.
+    fn lasso_start(&self, ctx: &ToolContext, start: Point) -> Option<Vec<Point>> {
+        (matches!(self.id, ToolId::Pointer | ToolId::Subselection)
+            && ctx.prefs.get_bool(POINTER_LASSO_PREF, false))
+        .then(|| vec![start])
+    }
+
+    /// Release of a marquee (rectangle or lasso outline); a selection by the tool writes no
+    /// History row (`tool.pick`, RE spec 69 section 5.2).
+    fn marquee_release(
+        &self,
+        ctx: &ToolContext,
+        start: Point,
+        cur: Point,
+        mode: Marquee,
+        lasso: Option<Vec<Point>>,
+    ) -> ToolResponse {
+        let r = Rect::new(start.x, start.y, cur.x, cur.y).normalized();
+        let poly = lasso.filter(|pts| pts.len() >= 3);
+        let deep = mode == Marquee::Deep || self.id == ToolId::Subselection;
+        if self.id == ToolId::Subselection {
+            // Teilauswahl: Punkte der Pfade im Rahmen bzw. in der Lasso-Kontur; Umschalt fügt
+            // hinzu (RE spec 69 section 5.2 `5q`: add, not toggle)
+            let pts = match &poly {
+                Some(outline) => points_in(ctx, &|q| docops::point_in_polygon(q, outline)),
+                None => points_in(ctx, &|q| r.contains(q)),
+            };
+            if !pts.is_empty() {
+                let pj: Vec<serde_json::Value> = pts
+                    .iter()
+                    .map(|(e, c, n)| json!({"element": e.0, "contour": c, "node": n}))
+                    .collect();
+                let mut ids: Vec<ElementId> = pts.iter().map(|(e, _, _)| *e).collect();
+                ids.dedup();
+                let m = if mode == Marquee::Add {
+                    "add"
+                } else {
+                    "replace"
+                };
+                return ToolResponse::commit(vec![
+                    pick("select.set", json!({"ids": ids_json(&ids), "mode": m})),
+                    pick("select.points", json!({"points": pj, "mode": m})),
+                ]);
+            }
+        }
+        let inv = match poly {
+            Some(outline) => pick(
+                "select.inPolygon",
+                json!({"points": outline.iter().map(|q| pt_json(*q)).collect::<Vec<_>>(), "mode": mode.name(), "deep": deep}),
+            ),
+            None => pick(
+                "select.inRect",
+                json!({"rect": rect_json(r), "mode": mode.name(), "deep": deep}),
+            ),
+        };
+        ToolResponse::commit(vec![inv])
     }
 
     fn double(&mut self, p: Point, ctx: &ToolContext) -> ToolResponse {
@@ -1835,8 +1926,13 @@ pub(crate) fn contours_json(cs: &[Contour]) -> serde_json::Value {
 }
 
 /// Pfadpunkte aller sichtbaren, nicht gesperrten Pfade (auch in Gruppen) im Rechteck.
-fn points_in_rect(ctx: &ToolContext, r: Rect) -> Vec<(ElementId, usize, usize)> {
-    fn walk(e: &Element, r: &Rect, out: &mut Vec<(ElementId, usize, usize)>, depth: u32) {
+fn points_in(ctx: &ToolContext, inside: &dyn Fn(Point) -> bool) -> Vec<(ElementId, usize, usize)> {
+    fn walk(
+        e: &Element,
+        r: &dyn Fn(Point) -> bool,
+        out: &mut Vec<(ElementId, usize, usize)>,
+        depth: u32,
+    ) {
         if depth > 16 || !e.common.visible || e.common.locked {
             return;
         }
@@ -1844,7 +1940,7 @@ fn points_in_rect(ctx: &ToolContext, r: Rect) -> Vec<(ElementId, usize, usize)> 
             ElementKind::Path(p) => {
                 for (ci, c) in p.contours.iter().enumerate() {
                     for (ni, n) in c.nodes.iter().enumerate() {
-                        if r.contains(n.anchor) {
+                        if r(n.anchor) {
                             out.push((e.id, ci, ni));
                         }
                     }
@@ -1869,7 +1965,7 @@ fn points_in_rect(ctx: &ToolContext, r: Rect) -> Vec<(ElementId, usize, usize)> 
             continue;
         }
         for e in &cel.elements {
-            walk(e, &r, &mut out, 0);
+            walk(e, inside, &mut out, 0);
         }
     }
     out

@@ -62,6 +62,10 @@ const TOOL_EMPTY: [u16; 6] = [14006, 14080, 14081, 14082, 14083, 14084];
 /// Q5 empty there (14083). The id lies outside the original's template range.
 pub const SMUDGE_Q5: u16 = 61006;
 const DOC_Q: [u16; 6] = [14100, 14080, 14031, 6564, 14083, 14084];
+/// Firepixel's own Q5 of the Pointer and the Subselection: marquee shape "Rectangle / Lasso"
+/// (Firepixel extension, `Firepixel_PointerLasso`); the original leaves Q5 empty there (14083).
+pub const POINTER_Q5: u16 = 61007;
+const POINTER_DOC_Q: [u16; 6] = [14100, 14080, 14031, 6564, POINTER_Q5, 14084];
 const DOC_BOX: [u16; 6] = [14100, 14007, 14031, 6564, 14083, 14084];
 
 /// Die Tabelle in Original-Reihenfolge.
@@ -438,8 +442,8 @@ pub const LAYOUTS: &[PiLayout] = &[
         [14101, 14007, 14037, 15009, 14083, 15102],
         441,
     ),
-    row(30, Tool(ToolId::Pointer), DOC_Q, 73),
-    row(31, Tool(ToolId::Subselection), DOC_Q, 73),
+    row(30, Tool(ToolId::Pointer), POINTER_DOC_Q, 73),
+    row(31, Tool(ToolId::Subselection), POINTER_DOC_Q, 73),
     row(32, Tool(ToolId::SelectBehind), DOC_Q, 73),
     row(33, Tool(ToolId::Hand), DOC_Q, 73),
     row(34, Tool(ToolId::Zoom), DOC_Q, 73),

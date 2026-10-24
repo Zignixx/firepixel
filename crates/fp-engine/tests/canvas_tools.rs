@@ -213,8 +213,13 @@ fn subselection_points_toggle_and_handles() {
     drag(&mut s, (0.0, 0.0), (70.0, 20.0));
     let pts = |s: &Session| s.active().map(|d| d.selection.points.len()).unwrap_or(0);
     assert_eq!(pts(&s), 2);
-    // Umschalt-Gummiband schaltet um: (60,10) ab, (60,60) dazu
-    events(&mut s, &[ToolEvent::down(45.0, -10.0).shift(), ToolEvent::drag(55.0, 30.0).shift(), ToolEvent::drag(70.0, 70.0).shift(), ToolEvent::up(70.0, 70.0).shift()]);
+    // a marquee over (10,10) alone replaces
+    drag(&mut s, (0.0, 0.0), (20.0, 20.0));
+    assert_eq!(pts(&s), 1);
+    // the Shift-marquee adds (RE spec 69 section 5.2 `5q`: add, no toggle): (60,60) added, then
+    // (10,10) again stays selected
+    events(&mut s, &[ToolEvent::down(45.0, 40.0).shift(), ToolEvent::drag(55.0, 55.0).shift(), ToolEvent::drag(70.0, 70.0).shift(), ToolEvent::up(70.0, 70.0).shift()]);
+    events(&mut s, &[ToolEvent::down(0.0, 0.0).shift(), ToolEvent::drag(10.0, 10.0).shift(), ToolEvent::drag(20.0, 20.0).shift(), ToolEvent::up(20.0, 20.0).shift()]);
     let chosen: Vec<usize> = s.active().map(|d| d.selection.points.iter().map(|r| r.node).collect()).unwrap_or_default();
     assert!(chosen.contains(&0) && chosen.contains(&2) && !chosen.contains(&1), "{chosen:?}");
     // Punkte gemeinsam mit Pfeiltasten verschieben

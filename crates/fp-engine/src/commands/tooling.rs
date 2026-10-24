@@ -122,10 +122,11 @@ const SHAPE_COMMANDS: [&str; 5] = [
 ];
 
 /// Auswahlbefehle, die `tool.pick` ohne Verlaufsschritt ausführen darf.
-const PICK_COMMANDS: [&str; 4] = [
+const PICK_COMMANDS: [&str; 5] = [
     "select.set",
     "select.points",
     "select.inRect",
+    "select.inPolygon",
     "select.pointAt",
 ];
 
@@ -168,6 +169,25 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     effect: crate::command::Effect::None,
                     ..out
                 })
+            }),
+    );
+    // Firepixel extension: lasso marquee of the Pointer and the Subselection (Properties
+    // inspector, tool row of these two tools)
+    r.add(
+        cmd("tool.pointerLasso")
+            .label("Lasso-Auswahlrahmen")
+            .describe("Zeiger und Teilauswahl: Ziehen auf leerer Fläche zeichnet statt eines Rechtecks eine freie Lasso-Kontur (Firepixel-Erweiterung, Voreinstellung Firepixel_PointerLasso)")
+            .opt("on", ParamKind::Bool, "ein/aus (Vorgabe: umschalten)")
+            .checked(|s| s.prefs.get_bool(crate::tools::POINTER_LASSO_PREF, false))
+            .run(|s, p| {
+                let key = crate::tools::POINTER_LASSO_PREF;
+                let v = match p.opt_bool("on")? {
+                    Some(v) => v,
+                    None => !s.prefs.get_bool(key, false),
+                };
+                s.prefs.set(key, crate::prefs::PrefValue::Bool(v));
+                s.prefs_changed();
+                Ok(CommandOutput::session_with(json!({ "on": v })))
             }),
     );
     // Leinwand-Kontextmenüs: Einträge mit eigener ID

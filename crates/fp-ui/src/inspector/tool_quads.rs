@@ -43,6 +43,7 @@ pub(super) fn register(r: &mut QuadrantRegistry) {
     r.register(14978, dodge_q3);
     r.register(15006, smudge_q3);
     r.register(super::layouts::SMUDGE_Q5, smudge_q5);
+    r.register(super::layouts::POINTER_Q5, pointer_q5);
     r.register(15082, red_eye_q3);
     r.register(15091, replace_color_q3);
     r.register(14054, freeform_q3);
@@ -1126,6 +1127,42 @@ fn smudge_q5(ui: &mut Ui, _st: &mut AppState, r: Rect) {
         .on_hover_text(tx("pi-tip-confine-bounds"));
     if let Some(v) = v {
         edit_tool_attrs(ui.ctx(), |a| a.confine_bounds = v);
+    }
+}
+
+/// Pointer and Subselection (Firepixel extension): shape of the marquee dragged on empty canvas,
+/// rectangle or free-form lasso (`tool.pointerLasso`, preference `Firepixel_PointerLasso`).
+fn pointer_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
+    let d = Dl::at(r.min);
+    let lasso = st
+        .session
+        .prefs
+        .get_bool(fp_engine::tools::POINTER_LASSO_PREF, false);
+    fields::label(
+        ui,
+        d.r(2.0, 2.0, 58.0, 8.0),
+        &tx("pi-pointer-marquee"),
+        true,
+    );
+    let rect = d.r(60.0, 0.0, 62.0, 13.0);
+    let pick = fields::combo(
+        ui,
+        "pointer-marquee",
+        rect,
+        &refs(&tl(&[
+            "pi-pointer-marquee-rect",
+            "pi-pointer-marquee-lasso",
+        ])),
+        Some(usize::from(lasso)),
+        true,
+    );
+    let _ = ui
+        .interact(rect, Id::new("pointer-marquee-tip"), egui::Sense::hover())
+        .on_hover_text(tx("pi-tip-pointer-marquee"));
+    if let Some(i) = pick
+        && (i == 1) != lasso
+    {
+        st.run("tool.pointerLasso", serde_json::json!({"on": i == 1}));
     }
 }
 

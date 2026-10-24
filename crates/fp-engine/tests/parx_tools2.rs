@@ -362,8 +362,9 @@ fn marquee_draw_and_step_name() {
     assert_eq!(sha16(&hole(&mut s)), "ab14a172833dcb51");
 }
 
-/// 06/03: ohne Rahmen Umschalt = Quadrat, Alt = von der Mitte; mit Rahmen Umschalt→Alt = Schnitt,
-/// Alt→Umschalt = Abziehen (Hashes wie das Original).
+/// 06/03: ohne Rahmen Umschalt = Quadrat, Alt = von der Mitte; mit Rahmen Umschalt+Alt = Schnitt
+/// in both orders (RE spec 69 section 4.2 measured Alt first, then Shift, as intersect too; the
+/// older reading "Alt first = subtract" is replaced), hashes like the original.
 #[test]
 fn marquee_shift_alt_like_original() {
     let Some(mut s) = open_par("p57_t02t.fw.png") else { return };
@@ -374,7 +375,7 @@ fn marquee_shift_alt_like_original() {
     marquee(&mut s);
     drag_mods(&mut s, (200.0, 150.0), (260.0, 190.0), |e| e.alt());
     assert_eq!(sha16(&hole(&mut s)), "7eb9136d3e660763", "von der Mitte");
-    for (alt_first, hash) in [(false, "b1588fc512fd1bf1"), (true, "537fd41babb88cc7")] {
+    for (alt_first, hash) in [(false, "b1588fc512fd1bf1"), (true, "b1588fc512fd1bf1")] {
         let mut s = open_par("p57_t02t.fw.png").expect("Datei");
         marquee(&mut s);
         drag(&mut s, (100.0, 80.0), (200.0, 180.0));

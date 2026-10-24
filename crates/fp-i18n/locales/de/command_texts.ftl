@@ -696,3 +696,4 @@ cmdtext-muster-im-dokument-festhalten-muster-bzw-77ed86 = Muster im Dokument fes
 cmdtext-maske-invertieren-firepixel-erweiterung = Maske invertieren (Firepixel-Erweiterung)
 cmdtext-maske-vorher-anwenden-in-bitmap-umwandeln = Maske vorher anwenden (in Bitmap umwandeln)
 cmdtext-dither-dichte-der-ganzen-fuellung-in-0-a-10df26 = Dither-Dichte der ganzen Füllung in % (0 = aus, 100 = deckend; Firepixel-Erweiterung)
+cmdtext-kontur-x-y-wird-geschlossen = Kontur [[x, y], …] (wird geschlossen)
