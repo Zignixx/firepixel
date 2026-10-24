@@ -1188,7 +1188,11 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   runner reads the switch with `describe_command view.tooltips` (`checked`), runs the command `view.tooltips` when
   it differs from config `fp.view_tooltips` (default false) and reads it back; log line `fp View > Tooltips: switched
   on -> off (view.tooltips, wanted off)` or `… off already`. Not restored at the end: the instance and its profile are
-  private to the unit and the state is not stored in the profile.
+  private to the unit and the state is not stored in the profile. Since FB-41 the tag has its own switch
+  View ▸ Coordinate Tag (`view.coordinateTag`, default on) and View ▸ Tooltips switches Firepixel's widget tooltips
+  (FB-37): the runner now sets `view.coordinateTag` to config `fp.coordinate_tag` (default false) and `view.tooltips`
+  to `fp.view_tooltips` (default true, the reference shows its widget tooltips regardless of its switch), one log
+  line per switch (`fp View > Coordinate Tag: switched on -> off (view.coordinateTag, wanted off)`).
 - **No hover tooltip in flyout shots (TW-190, `toolbox/02_flyouts_*`):** after the press-and-hold that opens a tool
   flyout (`open` of a target with `hold_ms`) the pointer rested on the tool button, and the description tooltip
   (0.6 s delay) lay over the flyout in the shot (+1.2 to +25.7 points). The Firepixel side now sends `pointer_gone`

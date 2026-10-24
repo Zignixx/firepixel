@@ -90,7 +90,7 @@ zweiten Zeile eine kurze Beschreibung, was das Werkzeug tut (die Zeilen eines Fl
 Beschreibung als Tooltip). Knöpfe der Werkzeugleiste zeigen nur den Befehlsnamen. Im Inspektor der
 Retusche-Werkzeuge (Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel) und des
 Radiergummis beschreiben sich die Felder selbst: „Pinselstärke“, „Pinselvorschau“, „Kantenweichheit“,
-„Runde Pinselspitze“, „Druck“ usw.
+„Runde Pinselspitze“, „Druck“ usw. Alle diese QuickInfos schaltet *Ansicht ▸ QuickInfos*.
 
 Häufige Kürzel (Satz „Firepixel“, umschaltbar unter *Bearbeiten ▸ Tastaturkurzbefehle…*; weitere Sätze heißen
 „Bildbearbeitung“, „Vektorzeichnung“ und „Klassische Vektor-Tasten“):
@@ -272,12 +272,16 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   geschlossen, kehrt Firepixel zu Standard zurück.
 - *Ansicht ▸ Gamma 1.8* zeigt die Leinwand heller, wie auf einem Monitor mit Macintosh-Gamma. Dokument und
   Export bleiben unverändert.
-- *Ansicht ▸ QuickInfos* (Vorgabe: aus, wird als Voreinstellung gemerkt) zeigt über der Leinwand dicht unter
-  dem Mauszeiger eine kleine graue Marke: mit Rechteck, Ellipse, Linie, Polygon und automatischen Formen die
+- *Ansicht ▸ QuickInfos* (Vorgabe: ein, wird als Voreinstellung `Tooltips` gemerkt) schaltet die QuickInfos
+  (Tooltips) von Knöpfen, Feldern und Bedienfeldern überall (Werkzeugbedienfeld, Symbolleiste, Inspektor,
+  Bedienfelder, Dialoge). Aus öffnet sich keine QuickInfo mehr; die Änderung wirkt sofort.
+- *Ansicht ▸ Koordinaten-Tag* (Firepixel-Erweiterung, direkt unter QuickInfos; Vorgabe: ein, wird als
+  Voreinstellung `Firepixel_CoordinateTag` gemerkt) schaltet die kleine graue Marke dicht unter dem
+  Mauszeiger über der Leinwand: mit Rechteck, Ellipse, Linie, Polygon und automatischen Formen die
   Zeigerposition („x:53 y:37“) und beim Aufziehen einer Form deren Größe („w:80 h:50“); beim Ziehen von
   Objekten mit dem Zeiger deren neue linke obere Ecke („x:130 y:120“). Der Zeiger zeigt beim bloßen
-  Überfahren nichts, Stift, Text und die übrigen Werkzeuge zeigen keine Marke. Nach dem Loslassen ist die
-  Marke weg. Die Tooltips der Knöpfe und Felder schaltet der Schalter nicht.
+  Überfahren nichts, Stift, Text und die übrigen Werkzeuge zeigen keine Marke; nach dem Loslassen ist die
+  Marke weg. Die beiden Schalter sind voneinander unabhängig.
 - **Farben tauschen** (X oder der Knopf unter den Farbfeldern im Werkzeugbedienfeld): Ohne Auswahl tauschen
   nur Strich- und Füllfarbe. Mit Auswahl tauschen die Farben des obersten gewählten Objekts und gehen an
   alle gewählten Objekte, als eine Verlaufszeile „Strichfarbe“ („Pinselstrich und Füllen“, wenn eine Seite

@@ -493,6 +493,16 @@ pub enum SessionEvent {
     Warning(crate::warnings::TargetWarning),
 }
 
+/// Preference of View ▸ Coordinate Tag (Firepixel extension, FB-41): the tag "x:… y:…" /
+/// "w:… h:…" next to the pointer over the canvas (shape tools on hover and while drawing, Pointer
+/// while dragging objects, re 58 §4). Independent of View ▸ Tooltips; on by default.
+pub const COORDINATE_TAG_PREF: &str = "Firepixel_CoordinateTag";
+
+/// Whether View ▸ Coordinate Tag is on ([`COORDINATE_TAG_PREF`], default on).
+pub fn coordinate_tag(prefs: &crate::prefs::Preferences) -> bool {
+    prefs.get_bool(COORDINATE_TAG_PREF, true)
+}
+
 /// UI-Zustand, den Befehle schalten (Bedienfelder, Bildschirmmodus).
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct UiState {
@@ -502,7 +512,7 @@ pub struct UiState {
     pub panels_hidden: bool,
     /// Bildschirmmodus (0 Standard, 1 Vollbild mit Menüs, 2 Vollbild).
     pub screen_mode: u8,
-    /// QuickInfos.
+    /// View ▸ Tooltips: tooltips of buttons, fields and panels (FB-37).
     pub tooltips: bool,
     /// Beenden angefordert.
     pub quit_requested: bool,
@@ -659,10 +669,10 @@ impl Session {
                 options,
             },
             ui: UiState {
-                // View ▸ Tooltips persists as the preference `Tooltips` (re 58 §4); Firepixel's
-                // default is off like the measured profile (FB-17; the reference's factory
-                // default is not known, Q-61)
-                tooltips: prefs.get_bool("Tooltips", false),
+                // View ▸ Tooltips persists as the preference `Tooltips` (re 58 §4). It switches
+                // the tooltips of buttons and fields (FB-37), on by default; the coordinate tag at
+                // the pointer has its own switch View ▸ Coordinate Tag ([`COORDINATE_TAG_PREF`])
+                tooltips: prefs.get_bool("Tooltips", true),
                 ..UiState::default()
             },
             registry,

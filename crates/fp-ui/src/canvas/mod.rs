@@ -1334,7 +1334,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         });
         cc.feedback = feedback;
     }
-    // View ▸ Tooltips: tag next to the pointer, per tool (re 58 §4)
+    // View ▸ Coordinate Tag: tag next to the pointer, per tool (re 58 §4, FB-41)
     let tag = pointer_tag(ui, st, id, area, &view, pointer_here);
     if let Some((at, text)) = &tag {
         pointer_tag_box(&painter, &theme, *at, text);
@@ -1372,7 +1372,8 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     paint_cursor(ui, st, area, &resp);
 }
 
-/// Tag of *View ▸ Tooltips* next to the pointer (re 58 §4, measured), per tool:
+/// Coordinate tag next to the pointer (re 58 §4, measured: the reference ties it to *View ▸
+/// Tooltips*; Firepixel gives it the own switch *View ▸ Coordinate Tag*, FB-41), per tool:
 /// - shape tools (Rectangle, Ellipse, Line, Polygon, Auto Shape): on hover the pointer position
 ///   "x:53 y:37"; while a shape is drawn its size "w:80 h:50";
 /// - Pointer: nothing on hover or on a press without movement; while objects are dragged the
@@ -1391,7 +1392,7 @@ fn pointer_tag(
     pointer_here: bool,
 ) -> Option<(Pos2, String)> {
     use fp_engine::tools::ToolId;
-    if !st.session.ui.tooltips || st.dialogs.any_open() {
+    if !fp_engine::session::coordinate_tag(&st.session.prefs) || st.dialogs.any_open() {
         return None;
     }
     let cc = st.canvases.get(&id);
@@ -1484,8 +1485,8 @@ fn shape_preview_bounds(feedback: &[Overlay]) -> Option<fp_geom::Rect> {
     (l.is_finite() && (r > l || b > t)).then(|| fp_geom::Rect::new(l, t, r, b))
 }
 
-/// The *View ▸ Tooltips* tag: light grey box with rounded corners and dark text, its top-left
-/// corner at `at` (re 58 §4).
+/// The coordinate tag (*View ▸ Coordinate Tag*): light grey box with rounded corners and dark
+/// text, its top-left corner at `at` (re 58 §4).
 fn pointer_tag_box(painter: &egui::Painter, theme: &Theme, at: Pos2, text: &str) {
     let ink = Color32::from_gray(0x20);
     let galley = painter.layout_no_wrap(text.to_string(), theme.small_font(), ink);

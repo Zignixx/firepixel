@@ -287,14 +287,32 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .checked(|s| s.active().is_some_and(|d| !d.view.hide_slices))
             .run(|s, _| view_cmd(s, |v| v.hide_slices = !v.hide_slices)),
     );
+    // View ▸ Tooltips: the tooltips of buttons, fields and panels, at once (FB-37); stored as
+    // the preference `Tooltips` like the reference (re 58 §4)
     r.add(cmd("view.tooltips").checked(|s| s.ui.tooltips).run(|s, _| {
         s.ui.tooltips = !s.ui.tooltips;
-        // stored as the preference `Tooltips` like the reference (re 58 §4)
         s.prefs
             .set("Tooltips", crate::prefs::PrefValue::Bool(s.ui.tooltips));
         s.prefs_changed();
         Ok(CommandOutput::session())
     }));
+    // Firepixel's own switch (FB-41): the coordinate tag next to the pointer over the canvas
+    // (re 58 §4 per tool), independent of View ▸ Tooltips, on by default
+    r.add(
+        cmd("view.coordinateTag")
+            .label("Koordinaten-Tag")
+            .describe("Zeigt neben dem Mauszeiger über der Leinwand die Position bzw. beim Aufziehen die Größe (Formwerkzeuge) und beim Ziehen mit dem Zeiger die neue Lage")
+            .checked(|s| crate::session::coordinate_tag(&s.prefs))
+            .run(|s, _| {
+                let on = crate::session::coordinate_tag(&s.prefs);
+                s.prefs.set(
+                    crate::session::COORDINATE_TAG_PREF,
+                    crate::prefs::PrefValue::Bool(!on),
+                );
+                s.prefs_changed();
+                Ok(CommandOutput::session())
+            }),
+    );
     r.add(
         cmd("view.hideSelection")
             .requires(&[Requirement::Document, Requirement::Selection])

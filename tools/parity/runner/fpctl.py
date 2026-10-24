@@ -132,34 +132,42 @@ class Firepixel:
         self.place()
         self.view_tooltips_reset()
 
-    def view_tooltips_state(self) -> bool | None:
-        """Check state of View > Tooltips (`view.tooltips`, the coordinate tag "x:.. y:.." at the pointer)."""
-        val, _ = self.call("describe_command", {"name": "view.tooltips"}, timeout=20)
+    # View switches set after every start: (command, menu path for the log, config key, default).
+    # R-28 (TW-190): the reference's View > Tooltips is off during the runs, so no coordinate tag at the
+    # pointer; since FB-41 Firepixel has the tag on its own switch View > Coordinate Tag (default on) and
+    # View > Tooltips switches the widget tooltips (FB-37), which the reference shows regardless.
+    VIEW_SWITCHES = (
+        ("view.coordinateTag", "View > Coordinate Tag", "coordinate_tag", False),
+        ("view.tooltips", "View > Tooltips", "view_tooltips", True),
+    )
+
+    def view_switch_state(self, cmd: str) -> bool | None:
+        """Check state of a View switch (`describe_command` -> `checked`)."""
+        val, _ = self.call("describe_command", {"name": cmd}, timeout=20)
         v = val.get("checked") if isinstance(val, dict) else None
         return None if v is None else bool(v)
 
     def view_tooltips_reset(self):
-        """R-28 (TW-190): the reference's View > Tooltips switch is off during the runs, Firepixel's defaults to on
-        (TW-184) and drew its coordinate tag into the canvas shots. After every start (unit start, restart after a
-        crash) the switch is set to `view_tooltips` (config, default false) with the command `view.tooltips` when its
-        read-back state differs, then read back again. Not restored: the instance and its profile are private to the
-        run and the state is not stored in the profile."""
-        want = bool(self.cfg.get("view_tooltips", False))
-        try:
-            before = self.view_tooltips_state()
-            if before is None:
-                self.log("fp View > Tooltips: state not readable (describe_command gave no `checked`) - left as is")
-                return
-            if before == want:
-                self.log(f"fp View > Tooltips: {'on' if before else 'off'} already (wanted {'on' if want else 'off'})")
-                return
-            self.call("run_command", {"name": "view.tooltips"}, timeout=20)
-            after = self.view_tooltips_state()
-            self.log(f"fp View > Tooltips: switched {'on' if before else 'off'} -> {'on' if after else 'off'} "
-                     f"(view.tooltips, wanted {'on' if want else 'off'})"
-                     + ("" if after == want else " - NOT SWITCHED"))
-        except (BridgeError, OSError, ValueError) as e:
-            self.log(f"fp View > Tooltips: {e}")
+        """R-28 (TW-190): after every start (unit start, restart after a crash) each switch of `VIEW_SWITCHES` is set
+        to its config value with its command when the read-back state differs, then read back again. Not restored:
+        the instance and its profile are private to the run."""
+        for cmd, label, key, default in self.VIEW_SWITCHES:
+            want = bool(self.cfg.get(key, default))
+            try:
+                before = self.view_switch_state(cmd)
+                if before is None:
+                    self.log(f"fp {label}: state not readable (describe_command gave no `checked`) - left as is")
+                    continue
+                if before == want:
+                    self.log(f"fp {label}: {'on' if before else 'off'} already (wanted {'on' if want else 'off'})")
+                    continue
+                self.call("run_command", {"name": cmd}, timeout=20)
+                after = self.view_switch_state(cmd)
+                self.log(f"fp {label}: switched {'on' if before else 'off'} -> {'on' if after else 'off'} "
+                         f"({cmd}, wanted {'on' if want else 'off'})"
+                         + ("" if after == want else " - NOT SWITCHED"))
+            except (BridgeError, OSError, ValueError) as e:
+                self.log(f"fp {label}: {e}")
 
     def hwnd(self) -> int | None:
         if not self.alive():

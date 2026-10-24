@@ -85,7 +85,8 @@ slot remembers the tool used last.
 with a short description of what the tool does (the rows of a flyout show the description as their
 tooltip). Toolbar buttons show only the command name. In the Property Inspector of the retouch tools
 (Blur, Sharpen, Dodge, Burn, Smudge, Rubber Stamp) and the Eraser, the fields describe themselves:
-"Brush size", "Brush preview", "Edge softness", "Round brush tip", "Pressure" and so on.
+"Brush size", "Brush preview", "Edge softness", "Round brush tip", "Pressure" and so on. All these tooltips
+are switched with *View ▸ Tooltips*.
 
 Frequent shortcuts (set "Firepixel", switchable in *Edit ▸ Keyboard Shortcuts...*; further sets are called
 "Image Editing", "Vector Drawing" and "Classic Vector Keys"):
@@ -254,12 +255,15 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   menu; when the last document closes, Firepixel returns to Standard.
 - *View ▸ Gamma 1.8* shows the canvas brighter, as on a monitor with Macintosh gamma. The document and
   the export stay unchanged.
-- *View ▸ Tooltips* (off by default, remembered as a preference) shows a small grey tag just below the
-  pointer over the canvas: with the Rectangle, Ellipse, Line, Polygon and Auto Shape tools the pointer
-  position ("x:53 y:37") and, while a shape is drawn, its size ("w:80 h:50"); while objects are dragged
-  with the Pointer their new top-left corner ("x:130 y:120"). The Pointer shows nothing on plain hover,
-  Pen, Text and the other tools show no tag. The tag disappears on release. The switch does not affect
-  the tooltips of buttons and fields.
+- *View ▸ Tooltips* (on by default, remembered as the preference `Tooltips`) switches the tooltips of
+  buttons, fields and panels everywhere (Tools panel, toolbar, Property Inspector, panels, dialogs). Off,
+  no tooltip opens; the change applies at once.
+- *View ▸ Coordinate Tag* (Firepixel extension, right below Tooltips; on by default, remembered as the
+  preference `Firepixel_CoordinateTag`) switches the small grey tag just below the pointer over the canvas:
+  with the Rectangle, Ellipse, Line, Polygon and Auto Shape tools the pointer position ("x:53 y:37") and,
+  while a shape is drawn, its size ("w:80 h:50"); while objects are dragged with the Pointer their new
+  top-left corner ("x:130 y:120"). The Pointer shows nothing on plain hover, Pen, Text and the other tools
+  show no tag; the tag disappears on release. The two switches are independent of each other.
 - **Swap Colors** (X or the button below the color boxes of the Tools panel): with nothing selected only
   the stroke and fill colors swap. With a selection the colors of the topmost selected object swap and
   are applied to every selected object as one History row "Stroke Color" ("Brush and Fill" when one side

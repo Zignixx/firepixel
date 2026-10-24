@@ -787,6 +787,15 @@ pub fn build_main_menu_where(
                         .unwrap_or(nodes.len());
                     nodes.insert(pos, runtime_item("view.snapToPixels"));
                 }
+                // Firepixel's own switch "Coordinate Tag" right after Tooltips (FB-41)
+                if st.session.registry().get("view.coordinateTag").is_some() {
+                    let pos = nodes
+                        .iter()
+                        .position(|n| matches!(n, Node::Item { action: ItemAction::Command(c), .. } if c == "view.tooltips"))
+                        .map(|i| i + 1)
+                        .unwrap_or(nodes.len());
+                    nodes.insert(pos, runtime_item("view.coordinateTag"));
+                }
                 nodes.push(Node::Separator);
                 let children = ThemeKind::ALL
                     .iter()

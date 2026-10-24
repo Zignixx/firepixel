@@ -3,9 +3,11 @@
 //! - Tools: "Name (shortcut)" plus a second line with a one-sentence description (Firepixel extension).
 //! - Inspector of the retouch tools: descriptive tooltips ("Brush size", "Edge softness", ...), not the labels.
 //! - Text inspector and the shared name, W/H/X/Y, filter and style controls (FB-22, TW-201, RE spec 60 §4).
-//! - View ▸ Tooltips (re 58 §4): a tag next to the pointer over the canvas, only with the switch on:
-//!   shape tools show "x:… y:…" on hover and "w:… h:…" while drawing, a Pointer drag shows the
-//!   dragged object's new top-left corner, Pointer/Pen/Text show nothing on hover.
+//! - Coordinate tag (re 58 §4) next to the pointer over the canvas, on its own switch View ▸
+//!   Coordinate Tag since FB-41 (default on): shape tools show "x:… y:…" on hover and "w:… h:…"
+//!   while drawing, a Pointer drag shows the dragged object's new top-left corner, Pointer/Pen/Text
+//!   show nothing on hover.
+//! - View ▸ Tooltips (FB-37) switches the tooltips of buttons and fields at once (default on).
 
 use egui::{Event, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
@@ -160,28 +162,29 @@ fn tag(h: &H) -> Option<String> {
 }
 
 #[test]
-fn view_tooltips_shows_the_pointer_coordinates_on_the_canvas() {
-    fp_i18n::with_language("de", view_tooltips_body);
+fn coordinate_tag_shows_the_pointer_coordinates_on_the_canvas() {
+    fp_i18n::with_language("de", coordinate_tag_body);
 }
 
 fn press(h: &mut H, p: Pos2, pressed: bool) {
     ev(h, Event::PointerButton { pos: p, button: PointerButton::Primary, pressed, modifiers: Default::default() });
 }
 
-/// View ▸ Tooltips per tool (re 58 §4, measured): no tag on hover with Pointer, Pen and Text;
+fn tag_on(h: &H) -> bool {
+    h.state().state.session.prefs.get_bool(fp_engine::session::COORDINATE_TAG_PREF, true)
+}
+
+/// The coordinate tag per tool (re 58 §4, measured): no tag on hover with Pointer, Pen and Text;
 /// shape tools show the pointer position on hover and the size while drawing; a Pointer drag
-/// shows the dragged object's new top-left corner; the tag goes away on release.
-fn view_tooltips_body() {
+/// shows the dragged object's new top-left corner; the tag goes away on release. Its switch is
+/// View ▸ Coordinate Tag (FB-41, default on), independent of View ▸ Tooltips.
+fn coordinate_tag_body() {
     let mut h = harness();
     let _ = h.state_mut().state.session.set_tool(ToolId::Pointer);
     let _ = h.state_mut().state.session.execute("view.setZoom", json!({"zoom": 1.0}));
     h.run_steps(3);
-    // FB-17: off by default (like the measured profile of the reference); switched on here
-    assert!(!h.state().state.session.ui.tooltips, "default of the switch is off (FB-17)");
-    assert!(!h.state().state.session.prefs.get_bool("Tooltips", true), "preference default off");
-    h.state_mut().state.run("view.tooltips", json!({}));
-    h.run_steps(2);
-    assert!(h.state().state.session.ui.tooltips, "switched on");
+    assert!(tag_on(&h), "View > Coordinate Tag is on by default (FB-41)");
+    assert!(h.state().state.session.ui.tooltips, "View > Tooltips is on by default (FB-37)");
     let o = page_origin(&h);
     // Pointer, Pen, Text: nothing on hover
     for t in [ToolId::Pointer, ToolId::Pen, ToolId::Text] {
@@ -197,6 +200,15 @@ fn view_tooltips_body() {
         h.run_steps(1);
         assert_eq!(tag(&h).as_deref(), Some("x:53 y:37"), "{t:?}: hover");
     }
+    // View > Tooltips off does not hide the tag (own switch since FB-41)
+    h.state_mut().state.run("view.tooltips", json!({}));
+    h.run_steps(2);
+    assert!(!h.state().state.session.ui.tooltips);
+    ev(&mut h, Event::PointerMoved(o + vec2(54.2, 38.2)));
+    h.run_steps(1);
+    assert_eq!(tag(&h).as_deref(), Some("x:54 y:38"), "tag independent of View > Tooltips");
+    h.state_mut().state.run("view.tooltips", json!({}));
+    h.run_steps(2);
     // drawing a rectangle: its size
     let a = o + vec2(100.0, 100.0);
     ev(&mut h, Event::PointerMoved(a));
@@ -224,34 +236,140 @@ fn view_tooltips_body() {
     press(&mut h, g + vec2(30.0, 20.0), false);
     h.run_steps(2);
     assert_eq!(tag(&h), None, "gone after the release");
-    // switched off: no tag; the switch is stored as the preference `Tooltips`
+    // View > Coordinate Tag off: no tag on hover nor while drawing; stored as a preference
     let _ = h.state_mut().state.session.set_tool(ToolId::Rectangle);
-    h.state_mut().state.run("view.tooltips", json!({}));
+    h.state_mut().state.run("view.coordinateTag", json!({}));
     h.run_steps(2);
-    assert!(!h.state().state.session.ui.tooltips);
-    assert!(!h.state().state.session.prefs.get_bool("Tooltips", true), "preference Tooltips off");
+    assert!(!tag_on(&h), "preference Firepixel_CoordinateTag off");
+    assert!(h.state().state.session.ui.tooltips, "View > Tooltips untouched");
     ev(&mut h, Event::PointerMoved(o + vec2(50.2, 40.2)));
     h.run_steps(1);
-    assert_eq!(tag(&h), None, "switch off");
-    // on again
-    h.state_mut().state.run("view.tooltips", json!({}));
+    assert_eq!(tag(&h), None, "switch off: no tag on hover");
+    let b = o + vec2(300.0, 200.0);
+    ev(&mut h, Event::PointerMoved(b));
+    press(&mut h, b, true);
+    ev(&mut h, Event::PointerMoved(b + vec2(30.0, 20.0)));
+    ev(&mut h, Event::PointerMoved(b + vec2(60.0, 40.0)));
+    assert_eq!(tag(&h), None, "switch off: no tag while drawing");
+    press(&mut h, b + vec2(60.0, 40.0), false);
     h.run_steps(2);
-    assert!(h.state().state.session.prefs.get_bool("Tooltips", false), "preference Tooltips on");
+    // on again
+    h.state_mut().state.run("view.coordinateTag", json!({}));
+    h.run_steps(2);
+    assert!(tag_on(&h), "preference Firepixel_CoordinateTag on");
     ev(&mut h, Event::PointerMoved(o + vec2(51.2, 41.2)));
     h.run_steps(1);
     assert_eq!(tag(&h).as_deref(), Some("x:51 y:41"));
+    let c = o + vec2(400.0, 100.0);
+    ev(&mut h, Event::PointerMoved(c));
+    press(&mut h, c, true);
+    ev(&mut h, Event::PointerMoved(c + vec2(20.0, 10.0)));
+    ev(&mut h, Event::PointerMoved(c + vec2(40.0, 30.0)));
+    assert_eq!(tag(&h).as_deref(), Some("w:40 h:30"), "switch on: size while drawing");
+    press(&mut h, c + vec2(40.0, 30.0), false);
+    h.run_steps(2);
     // pointer off the canvas: no tag
     ev(&mut h, Event::PointerMoved(egui::pos2(5.0, 5.0)));
     h.run_steps(1);
     assert_eq!(tag(&h), None, "outside the canvas");
-    // a new session reads the stored preference
+    // a new session reads the stored preferences
     let mut prefs = fp_engine::Preferences::new();
+    prefs.set(fp_engine::session::COORDINATE_TAG_PREF, fp_engine::prefs::PrefValue::Bool(false));
     prefs.set("Tooltips", fp_engine::prefs::PrefValue::Bool(false));
-    assert!(!Session::new(prefs).ui.tooltips, "stored off is read back");
-    assert!(!Session::new(fp_engine::Preferences::new()).ui.tooltips, "Firepixel default off (FB-17)");
-    let mut prefs = fp_engine::Preferences::new();
-    prefs.set("Tooltips", fp_engine::prefs::PrefValue::Bool(true));
-    assert!(Session::new(prefs).ui.tooltips, "stored on is read back");
+    let s = Session::new(prefs);
+    assert!(!fp_engine::session::coordinate_tag(&s.prefs), "stored tag off is read back");
+    assert!(!s.ui.tooltips, "stored tooltips off is read back");
+    assert_eq!(s.command_state("view.coordinateTag").1, Some(false));
+    assert_eq!(s.command_state("view.tooltips").1, Some(false));
+    let s = Session::new(fp_engine::Preferences::new());
+    assert!(s.ui.tooltips && fp_engine::session::coordinate_tag(&s.prefs), "defaults on");
+}
+
+/// Commands of View ▸ Tooltips and View ▸ Coordinate Tag in the built View menu, in menu order,
+/// with their label (current language) and check mark.
+fn view_switches(h: &H) -> Vec<(String, String, Option<bool>)> {
+    use fp_ui::menu::{ItemAction, Node};
+    let menu = fp_ui::menu::build_main_menu(&h.state().state);
+    let view = &menu[2].1;
+    view.iter()
+        .filter_map(|n| match n {
+            Node::Item { label, checked, action: ItemAction::Command(c), .. }
+                if c == "view.tooltips" || c == "view.coordinateTag" =>
+            {
+                Some((c.clone(), label.clone(), *checked))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+fn view_checks(h: &H) -> Vec<(String, Option<bool>)> {
+    view_switches(h).into_iter().map(|(c, _, k)| (c, k)).collect()
+}
+
+/// Rests the pointer on `at` for one second (tooltip delay 0.6 s) and tells whether a tooltip layer
+/// is open.
+fn rest_and_tooltip_open(h: &mut H, at: Pos2) -> bool {
+    ev(h, Event::PointerGone);
+    h.run_steps(2);
+    ev(h, Event::PointerMoved(at));
+    for _ in 0..60 {
+        h.step();
+    }
+    h.ctx.memory(|m| m.areas().visible_layer_ids().iter().any(|l| l.order == egui::Order::Tooltip))
+}
+
+/// FB-37: View ▸ Tooltips switches the tooltips of the toolbox buttons (and every other widget) at
+/// once; stored as the preference `Tooltips`; the menu's check mark follows.
+#[test]
+fn view_tooltips_switches_widget_tooltips_at_once() {
+    fp_i18n::with_language("de", || {
+        let mut h = harness();
+        let tip = fp_ui::tools_panel::tool_tooltip(&h.state().state, ToolId::Pointer);
+        let label = tip.lines().next().unwrap_or_default().to_string();
+        let button = h.query_all_by_label(&label).next().map(|n| n.rect()).expect("Pointer button");
+        let on_on = vec![("view.tooltips".to_string(), Some(true)), ("view.coordinateTag".to_string(), Some(true))];
+        assert_eq!(view_checks(&h), on_on, "both checked by default, Coordinate Tag right after Tooltips");
+        // on (default): resting on the Pointer button shows its tooltip
+        assert!(rest_and_tooltip_open(&mut h, button.center()), "tooltip with the switch on");
+        assert!(h.query_by_label(&tip).is_some(), "the tool's tooltip text: {tip:?}");
+        // off: no tooltip, preference stored, check mark gone; the tag switch stays
+        h.state_mut().state.run("view.tooltips", json!({}));
+        h.run_steps(1);
+        assert!(!h.state().state.session.prefs.get_bool("Tooltips", true), "preference Tooltips off");
+        assert_eq!(
+            view_checks(&h),
+            vec![("view.tooltips".to_string(), Some(false)), ("view.coordinateTag".to_string(), Some(true))]
+        );
+        assert!(!rest_and_tooltip_open(&mut h, button.center()), "no tooltip with the switch off");
+        assert!(h.query_by_label(&tip).is_none(), "no tool tooltip text");
+        // on again: the tooltip comes back with the normal delay
+        h.state_mut().state.run("view.tooltips", json!({}));
+        h.run_steps(1);
+        assert!(h.state().state.session.prefs.get_bool("Tooltips", false), "preference Tooltips on");
+        assert!(h.ctx.global_style().interaction.tooltip_delay.is_finite(), "delay restored");
+        assert!(rest_and_tooltip_open(&mut h, button.center()), "tooltip back");
+        assert!(h.query_by_label(&tip).is_some(), "the tool's tooltip text again");
+        // View > Coordinate Tag off: its check mark follows, Tooltips stays checked
+        h.state_mut().state.run("view.coordinateTag", json!({}));
+        h.run_steps(1);
+        assert_eq!(
+            view_checks(&h),
+            vec![("view.tooltips".to_string(), Some(true)), ("view.coordinateTag".to_string(), Some(false))]
+        );
+        assert!(!h.state().state.session.prefs.get_bool(fp_engine::session::COORDINATE_TAG_PREF, true));
+    });
+}
+
+/// The two menu entries are translated (DE/EN).
+#[test]
+fn view_switch_labels_de_en() {
+    let h = harness();
+    let labels = |lang: &str| {
+        fp_i18n::with_language(lang, || view_switches(&h).into_iter().map(|(_, l, _)| l).collect::<Vec<_>>())
+    };
+    assert_eq!(labels("de"), ["QuickInfos", "Koordinaten-Tag"]);
+    assert_eq!(labels("en"), ["Tooltips", "Coordinate Tag"]);
 }
 
 /// Tooltips of the Property Inspector with a selected text object, in drawing order.
