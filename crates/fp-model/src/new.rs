@@ -145,8 +145,17 @@ impl Document {
     /// Fügt eine neue Seite hinter der aktiven ein (wie `addNewPage`) und liefert ihren Index.
     /// Für geteilte Ebenen mit „auf alle Seiten verteilt“ wird automatisch ein Verweis angelegt (04 §6.1 T2).
     pub fn add_page(&mut self, name: &str) -> usize {
+        self.add_page_after(self.current_page, name)
+    }
+
+    /// Inserts a new page directly after page `after` (RE spec 70 §2.3: index `after + 1`, the end
+    /// when `after` is the last page) with that page's canvas size and background, and returns its
+    /// index. `current_page` keeps pointing at the same page (the stored root copy belongs to it).
+    pub fn add_page_after(&mut self, after: usize, name: &str) -> usize {
         let (w, h, bg) = self
-            .active_page()
+            .pages
+            .get(after)
+            .or_else(|| self.active_page())
             .map(|p| (p.canvas.width, p.canvas.height, p.root.background))
             .unwrap_or((500.0, 500.0, Argb(0xffff_ffff)));
         let mut page = Page::new(&mut self.ids, name, w, h, bg);
@@ -163,8 +172,11 @@ impl Document {
                 );
             }
         }
-        let at = (self.current_page + 1).min(self.pages.len());
+        let at = after.saturating_add(1).min(self.pages.len());
         self.pages.insert(at, Arc::new(page));
+        if at <= self.current_page {
+            self.current_page += 1;
+        }
         at
     }
 
@@ -634,6 +646,27 @@ mod tests {
         let i = d.add_page("Seite 2");
         assert_eq!(i, 1);
         assert_eq!(d.pages.len(), 2);
+    }
+
+    #[test]
+    fn add_page_after_inserts_behind_the_given_page() {
+        // RE spec 70 §2.3: directly after the given page, the end after the last one
+        let mut d = Document::new(200.0, 100.0, Argb(0xffffffff));
+        d.add_page("B");
+        d.add_page_after(1, "C");
+        let names = |d: &Document| d.pages.iter().map(|p| p.display_name().to_string()).collect::<Vec<_>>();
+        assert_eq!(names(&d)[1..], ["B", "C"]);
+        // in front of the model's current page: `current_page` follows its page
+        d.current_page = 2;
+        assert_eq!(d.add_page_after(0, "X"), 1);
+        assert_eq!(names(&d)[1..], ["X", "B", "C"]);
+        assert_eq!(d.current_page, 3, "still page C");
+        assert_eq!(d.add_page_after(3, "Z"), 4, "after the last page: the end");
+        assert_eq!(d.current_page, 3);
+        // the new page takes the canvas size of the page it follows
+        Arc::make_mut(&mut d.pages[1]).canvas.width = 333.0;
+        let i = d.add_page_after(1, "Y");
+        assert_eq!(d.pages[i].canvas.width, 333.0);
     }
 
     #[test]

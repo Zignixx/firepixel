@@ -505,6 +505,13 @@ Wichtige Bedienfelder:
 - **Seiten / Status:** Seiten und Animationsbilder, Masterseite, Zwiebelschicht. Ist eine
   Animationsinstanz gewählt, zeigt die Leinwand ihren Bewegungspfad (grüner Start, rotes Ende), und der
   Auswahlrahmen umschließt nur das aktuelle Bild.
+  *Neue Seite* (Schaltfläche in der Fußleiste, ≡-Menü oder Kontextmenü einer Zeile) fügt die Seite
+  direkt hinter der aktuellen Seite ein und macht sie aktuell; sie heißt „Seite N“ mit der kleinsten
+  noch freien Zahl. *Seite duplizieren* (≡-Menü, Kontextmenü oder eine Zeile auf die Schaltfläche
+  „Neue Seite“ ziehen; Alt+Klick auf die Schaltfläche dupliziert die aktuelle Seite) setzt die Kopie
+  direkt hinter ihre Quelle und macht sie aktuell; sie heißt „<Name> Kopie“, dann „<Name> Kopie 1“,
+  „Kopie 2“ … (die Kopie einer Kopie zählt vom ursprünglichen Namen weiter). Ein Klick oder Rechtsklick
+  auf eine Zeile macht die Seite vorher aktuell, ein eigener Verlaufsschritt „Seitenauswahl ändern“.
 - **Optimieren:** Exportformat und Farben.
 - **Verlauf:** Schritte zurückspulen, wiederholen oder als Befehl speichern.
 - **URL:** URLs für Slices, Hotspots und Schaltflächen. Das Menü ≡ enthält *Verwendete URLs in

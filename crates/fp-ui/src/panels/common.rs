@@ -175,6 +175,23 @@ pub struct FooterButton<'a> {
     pub action: Option<Action>,
 }
 
+/// Rect of footer button `i` of `count` in the footer bar `bar` (right-aligned, 20 px apart).
+fn footer_button_rect(bar: Rect, i: usize, count: usize) -> Rect {
+    let x = bar.right() - 4.0 - 20.0 * (count - i) as f32;
+    Rect::from_min_size(pos2(x, bar.top() + 3.0), vec2(19.0, 16.0))
+}
+
+/// Rect of footer button `i` of `count` that [`footer`] will draw with the current layout state
+/// (e.g. to drop a dragged list row onto a footer button).
+pub fn footer_button_rect_ahead(ui: &Ui, i: usize, count: usize) -> Rect {
+    let rect = ui.available_rect_before_wrap();
+    let bar = Rect::from_min_max(
+        pos2(rect.left(), rect.bottom() - FOOTER_H),
+        rect.right_bottom(),
+    );
+    footer_button_rect(bar, i, count)
+}
+
 /// Fußleiste mit Text links und Knöpfen rechts; liefert die Aktion des geklickten Knopfs.
 pub fn footer(
     ui: &mut Ui,
@@ -200,10 +217,8 @@ pub fn footer(
         theme.colors.text,
         max_w,
     );
-    let mut x = bar.right() - 4.0;
     for (i, b) in buttons.iter().enumerate().rev() {
-        x -= 20.0;
-        let r = Rect::from_min_size(pos2(x, bar.top() + 3.0), vec2(19.0, 16.0));
+        let r = footer_button_rect(bar, i, buttons.len());
         let resp = ui.interact(
             r,
             Id::new(("footer-btn", bar.min.x as i32, bar.min.y as i32, i)),

@@ -1,6 +1,7 @@
 //! Seiten-Bedienfeld (`CPageInspectorPanel`, Vorlage 6306): Seitenliste mit Miniaturen (fp-render),
 //! Nummer und Name, Masterseite (Kennzeichen, als Masterseite festlegen), Umbenennen per
-//! Doppelklick, Zähler „n Seiten“, Neue/Doppelte Seite, Seite löschen.
+//! Doppelklick, Zähler „n Seiten“, Neue/Doppelte Seite, Seite löschen, Kontextmenü der Zeilen (7026),
+//! Zeile auf „Neue Seite“ ziehen = Seite duplizieren (RE spec 70 §2).
 
 use super::common::{self, FooterButton};
 use super::thumbs;
@@ -43,6 +44,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let row_h = (tsize + 10.0).max(24.0);
     let mut row_rects = Vec::with_capacity(n);
     let mut drag_start = None;
+    // a row dragged onto the New Page button duplicates that page (RE spec 70 §2.1)
+    let mut row_drag: Option<usize> = None;
+    let mut row_dropped: Option<usize> = None;
+    let mut menu_rows = Vec::new();
     let list = common::list_frame(ui, "pages-list", common::FOOTER_H, |ui| {
         for (i, pg) in doc.pages.iter().enumerate() {
             let sel = i == current;
@@ -50,6 +55,12 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             row_rects.push(rect);
             if resp.drag_started() && rename != Some(i) {
                 drag_start = Some(i);
+            }
+            if resp.dragged() && rename != Some(i) {
+                row_drag = Some(i);
+            }
+            if resp.drag_stopped() && rename != Some(i) {
+                row_dropped = Some(i);
             }
             ui.painter().vline(
                 rect.left() + 28.5,
@@ -154,13 +165,43 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             if resp.clicked() && i != current {
                 actions.push(Action::SetPage(i));
             }
+            // RE spec 70 §2.3 point 3: a right-click makes the row current first (its own
+            // History row "Change Page Selection"), then the context menu (resource 7026, the
+            // entries of the panel menu) acts on it
+            if resp.secondary_clicked() && i != current {
+                actions.push(Action::SetPage(i));
+            }
+            menu_rows.push(resp.clone());
             if resp.double_clicked() {
                 ui.data_mut(|dd| dd.insert_temp(Id::new(RENAME), i));
             }
         }
     });
+    for r in &menu_rows {
+        common::resource_context_menu(r, st, "7026");
+    }
+    // Dropping a row onto the New Page button: the press made the row current, then Duplicate
+    // Page inserts the copy directly after it (RE spec 70 §2.1/§2.3 point 2)
+    let new_button = common::footer_button_rect_ahead(ui, 0, 2).expand(2.0);
+    let pointer = ui.input(|i| i.pointer.interact_pos().or(i.pointer.latest_pos()));
+    let over_new = pointer.is_some_and(|p| new_button.contains(p));
+    if row_drag.is_some() && over_new {
+        ui.painter().rect_stroke(
+            new_button.shrink(2.0),
+            2.0,
+            Stroke::new(1.0, c.focus),
+            StrokeKind::Inside,
+        );
+    }
+    let dropped_on_new = row_dropped.filter(|_| over_new);
     // Zeilen per Ziehen umordnen (CT-C-03), ein Verlaufsschritt „Seite verschieben“
-    if let Some((from, to)) = common::reorder_rows(ui, "pages", list, &row_rects, drag_start) {
+    let moved = common::reorder_rows(ui, "pages", list, &row_rects, drag_start);
+    if let Some(i) = dropped_on_new {
+        if i != current {
+            actions.push(Action::SetPage(i));
+        }
+        actions.push(Action::Run("page.duplicate".into(), json!({"index": i})));
+    } else if let Some((from, to)) = moved {
         actions.push(Action::Run(
             "page.move".into(),
             json!({"page": from, "index": to}),

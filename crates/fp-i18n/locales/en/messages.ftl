@@ -255,6 +255,7 @@ err-raster-size-mismatch = data length { $got } does not match the expected leng
 
 ## Namen von Verlaufsschritten (Verlauf-Bedienfeld, „Rückgängig …“)
 msg-step-add-popup = Add Pop-up Menu
+msg-step-change-page-selection = Change Page Selection
 msg-step-clear-overrides = Clear Overrides
 msg-step-duplicate-layer = Duplicate Layer
 msg-step-duplicate-state = Duplicate State

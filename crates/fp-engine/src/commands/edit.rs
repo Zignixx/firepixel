@@ -1070,12 +1070,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let name = p.opt_str("name")?;
                 let grid = s.prefs.new_document_grid();
                 with_doc(s, |d| {
-                    let n = d.doc.pages.len() + 1;
-                    let name =
-                        name.unwrap_or_else(|| fp_i18n::tr!("msg-default-page", n = n.to_string()));
+                    // RE spec 70 §2.3 (FB-50): "Page N" with the smallest free N, inserted directly
+                    // after the session's current page (not the model's `current_page`, which only
+                    // names the page of the stored root copy), and the new page becomes current
+                    let name = name.unwrap_or_else(|| docops::next_page_name(&d.doc));
+                    let after = d.page;
                     d.remember_page_layer();
                     let doc = Arc::make_mut(&mut d.doc);
-                    let at = doc.add_page(&name);
+                    let at = doc.add_page_after(after, &name);
                     if let Some(pg) = doc.pages.get_mut(at) {
                         Arc::make_mut(pg).root.grid = Some(grid);
                     }
@@ -1089,7 +1091,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             .or_else(|| docops::top_normal_layer(&d.doc, at)),
                     );
                     d.selection.clear();
-                    Ok(CommandOutput::doc_with(json!({"page": at})))
+                    // one History row "Add Page" on every route (panel button, menus, script)
+                    Ok(CommandOutput::doc_with(json!({"page": at}))
+                        .labeled(fp_i18n::t("cmd-page-add")))
                 })
             }),
     );

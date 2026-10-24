@@ -2553,6 +2553,57 @@ pub fn move_frame(doc: &mut Document, page: usize, from: usize, to: usize) -> Op
     Some(())
 }
 
+/// Default name of a new page (RE spec 70 §2.2, FB-50): "Page N" (`msg-default-page`) with the
+/// smallest free N ≥ 1 among the page names of that form, not the page count + 1.
+pub fn next_page_name(doc: &Document) -> String {
+    let taken: std::collections::HashSet<&str> =
+        doc.pages.iter().filter_map(|p| p.name.as_deref()).collect();
+    (1usize..)
+        .map(|n| fp_i18n::tr!("msg-default-page", n = n.to_string()))
+        .find(|s| !taken.contains(s.as_str()))
+        .unwrap_or_default()
+}
+
+/// Name of a duplicated page (RE spec 70 §2.2): "<name> Copy" (`msg-default-copy`), when taken
+/// "<name> Copy 1", "Copy 2" … (`msg-default-copy-n`). An existing copy suffix is stripped first,
+/// so the duplicate of "P2 Copy 1" is "P2 Copy 2", not "P2 Copy 1 Copy".
+pub fn page_copy_name(doc: &Document, name: &str) -> String {
+    let taken: std::collections::HashSet<&str> =
+        doc.pages.iter().filter_map(|p| p.name.as_deref()).collect();
+    let base = strip_copy_suffix(name);
+    let first = fp_i18n::tr!("msg-default-copy", name = base);
+    if !taken.contains(first.as_str()) {
+        return first;
+    }
+    (1usize..)
+        .map(|k| fp_i18n::tr!("msg-default-copy-n", name = base, n = k.to_string()))
+        .find(|s| !taken.contains(s.as_str()))
+        .unwrap_or(first)
+}
+
+/// `name` without a trailing copy suffix (" Copy" or " Copy <n>" in the interface language).
+fn strip_copy_suffix(name: &str) -> &str {
+    let plain = fp_i18n::tr!("msg-default-copy", name = "");
+    if !plain.trim().is_empty()
+        && let Some(b) = name.strip_suffix(plain.as_str())
+    {
+        return b;
+    }
+    let marker = fp_i18n::tr!("msg-default-copy-n", name = "", n = "\u{1}");
+    if let Some((pre, post)) = marker.split_once('\u{1}')
+        && !pre.trim().is_empty()
+        && let Some(rest) = name.strip_suffix(post)
+    {
+        let head = rest.trim_end_matches(|c: char| c.is_ascii_digit());
+        if head.len() < rest.len()
+            && let Some(b) = head.strip_suffix(pre)
+        {
+            return b;
+        }
+    }
+    name
+}
+
 /// Verschiebt die Seite `from` an die Stelle `to` (Index nach dem Herausnehmen, CT-C-03).
 pub fn move_page(doc: &mut Document, from: usize, to: usize) -> Option<()> {
     let n = doc.pages.len();

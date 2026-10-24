@@ -1867,9 +1867,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                     doc.ids = idg;
                     pg.id = Some(fp_model::Guid::new_random());
-                    pg.name = Some(fp_i18n::tr!("msg-default-copy", name = pg.display_name()));
+                    // RE spec 70 §2.2: "<name> Copy", then "Copy 1", "Copy 2" … (FB-50)
+                    pg.name = Some(docops::page_copy_name(doc, pg.display_name()));
                     pg.is_master = Some(false);
                     doc.pages.insert(i + 1, Arc::new(pg));
+                    // the model's current page (owner of the stored root copy) keeps its page
+                    if i < doc.current_page {
+                        doc.current_page += 1;
+                    }
                     d.page = i + 1;
                     d.frame = 0;
                     d.layer = docops::top_normal_layer(&d.doc, d.page);
@@ -1920,6 +1925,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
             )
             .run(|s, p| {
                 let i = p.usize("index")?;
+                // RE spec 70 §2.1: a page change is a History row of its own in the reference
+                // (also without a selection); inside a script it joins the script's row
+                if s.active().is_some_and(|d| d.page != i) {
+                    s.force_history_step();
+                }
                 with_doc(s, |d| {
                     if i >= d.doc.pages.len() {
                         return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
@@ -1931,7 +1941,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     d.frame = 0;
                     d.enter_page_layer();
                     d.selection.clear();
-                    Ok(CommandOutput::doc())
+                    // History row "Change Page Selection" like the reference (RE spec 70 §2.1)
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-change-page-selection")))
                 })
             }),
     );

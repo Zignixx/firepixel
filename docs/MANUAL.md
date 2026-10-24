@@ -466,6 +466,13 @@ Important panels:
 - **Pages / States:** pages and animation frames, master page, onion skinning. When an animation
   instance is selected, the canvas shows its motion path (green start, red end), and the selection
   frame encloses only the current frame.
+  *New Page* (footer button, ≡ menu or a row's context menu) inserts the page directly after the
+  current page and makes it current; it is named "Page N" with the smallest number not yet used.
+  *Duplicate Page* (≡ menu, context menu, or dragging a row onto the New Page button; Alt+click on
+  the button duplicates the current page) puts the copy directly after its source and makes it
+  current; it is named "<name> copy", then "<name> copy 1", "copy 2" … (the copy of a copy counts on
+  from the original name). Clicking or right-clicking a row makes that page current first, which is a
+  History step "Change Page Selection" of its own.
 - **Optimize:** export format and colors.
 - **History:** step back, replay steps or save them as a command.
 - **URL:** URLs for slices, hotspots and buttons. The ≡ menu has *Add Used URLs to Library* (from the
