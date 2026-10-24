@@ -291,6 +291,7 @@ pub fn resource_menu_nodes(st: &crate::app_state::AppState, id: &str) -> Vec<cra
             match name {
                 Some(n) => {
                     let (enabled, checked) = st.session.command_state(&n);
+                    let label = crate::menu::mask_toggle_label(st, &n, label);
                     out.push(crate::menu::Node::Item {
                         label,
                         shortcut: None,

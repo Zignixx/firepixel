@@ -461,7 +461,8 @@ fn masks() {
     assert!(matches!(&el(&s, g).kind, ElementKind::Group(gr) if gr.kind == fp_model::GroupKind::VectorMask && gr.mask.as_ref().map(|m| m.id) == Some(b)));
     ex(&mut s, "modify.mask.disableMask", json!({}));
     assert!(matches!(&el(&s, g).kind, ElementKind::Group(gr) if !gr.mask_flags.enabled));
-    assert_eq!(s.command_state("modify.mask.disableMask").1, Some(true));
+    // RE spec 68 section 8: no check mark, the menu text swaps to "Enable Mask" instead
+    assert_eq!(s.command_state("modify.mask.disableMask").1, None);
     ex(&mut s, "modify.mask.deleteMask", json!({}));
     assert_eq!(top_elements(&s).iter().map(|e| e.id).collect::<Vec<_>>(), vec![a]);
     select(&mut s, &[a]);

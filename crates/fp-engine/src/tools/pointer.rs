@@ -797,13 +797,29 @@ impl PointerTool {
         } else {
             top_hit(ctx, p, &opt)
         };
+        let mask_child = (self.id == ToolId::Subselection)
+            .then(|| {
+                docops::mask_group_child_hit(
+                    ctx.doc,
+                    ctx.page,
+                    &ctx.selection.elements,
+                    p,
+                    ctx.geometry,
+                    &opt,
+                )
+            })
+            .flatten()
+            .and_then(|id| docops::element_on_page(ctx.doc, ctx.page, id));
         if let Some(path) = hit {
             let path = if self.id == ToolId::Subselection {
-                docops::deep_hit(ctx.doc, &path, p, ctx.geometry, &opt)
+                docops::subselect_hit(ctx.doc, &path, p, ctx.geometry, &opt)
             } else {
                 path
             };
-            if let Some(e) = ctx.doc.element_at(&path) {
+            if let Some(e) = mask_child
+                .as_deref()
+                .or_else(|| ctx.doc.element_at(&path).map(|a| &**a))
+            {
                 let selected = ctx.selection.contains(e.id);
                 let after_click = self.click_pos == Some(p);
                 // over a segment of the selected path the Subselection shows no marker and
@@ -918,12 +934,25 @@ impl PointerTool {
         } else {
             top_hit(ctx, p, &opt)
         };
-        if self.id == ToolId::Subselection
-            && let Some(t) = &target
-        {
-            target = Some(docops::deep_hit(ctx.doc, t, p, ctx.geometry, &opt));
+        // Subselection: a masked element gives its mask (RE spec 68 §3.2, M-7); with a group mask
+        // selected, its children are reachable one by one (Firepixel extension E-1)
+        let mut mask_child = None;
+        if self.id == ToolId::Subselection {
+            mask_child = docops::mask_group_child_hit(
+                ctx.doc,
+                ctx.page,
+                &ctx.selection.elements,
+                p,
+                ctx.geometry,
+                &opt,
+            );
+            if let Some(t) = &target {
+                target = Some(docops::subselect_hit(ctx.doc, t, p, ctx.geometry, &opt));
+            }
         }
-        match target.and_then(|t| ctx.doc.element_at(&t).map(|e| e.id)) {
+        let target_id =
+            mask_child.or_else(|| target.and_then(|t| ctx.doc.element_at(&t).map(|e| e.id)));
+        match target_id {
             Some(id) => {
                 let already = ctx.selection.contains(id);
                 // Shift on a selected object: deselect on release without drag; a drag from there
@@ -941,10 +970,7 @@ impl PointerTool {
                 } else if ev.mods.shift {
                     vec![pick("select.set", json!({"ids": [id.0], "mode": "toggle"}))]
                 } else if !already {
-                    vec![pick(
-                        "select.set",
-                        json!({"ids": [id.0], "mode": "replace"}),
-                    )]
+                    select_cmds(ctx, id)
                 } else {
                     vec![]
                 };
@@ -1447,6 +1473,25 @@ impl PointerTool {
                 "select.set",
                 json!({"ids": [id.0], "mode": "toggle"}),
             )]),
+            // Pointer + Alt-click without a drag acts like the Subselection (RE spec 68 §3.1 c13,
+            // j1): a masked element gives its mask, a group the clicked child; Alt-drag stays the
+            // copy (Duplicate)
+            PState::PressedObject {
+                copy: true,
+                toggle: None,
+                shift: false,
+                ..
+            } if self.id == ToolId::Pointer => {
+                let opt = Self::hit_opts(ctx);
+                let sub = top_hit(ctx, p, &opt)
+                    .map(|t| docops::subselect_hit(ctx.doc, &t, p, ctx.geometry, &opt))
+                    .and_then(|t| ctx.doc.element_at(&t).map(|e| e.id))
+                    .filter(|id| !ctx.selection.contains(*id) || ctx.selection.elements.len() > 1);
+                match sub {
+                    Some(id) => ToolResponse::commit(select_cmds(ctx, id)),
+                    None => ToolResponse::default(),
+                }
+            }
             PState::Rubber { start, cur, add } => {
                 let r = Rect::new(start.x, start.y, cur.x, cur.y).normalized();
                 if self.id == ToolId::Subselection {
@@ -1580,6 +1625,24 @@ impl PointerTool {
     fn double(&mut self, p: Point, ctx: &ToolContext) -> ToolResponse {
         self.state = PState::Idle;
         let opt = Self::hit_opts(ctx);
+        // Firepixel extension E-1 (FB-35): a selected group mask is entered like a normal group;
+        // the double-click selects the child of the mask group under the pointer
+        if self.id == ToolId::Pointer
+            && let Some(c) = docops::mask_group_child_hit(
+                ctx.doc,
+                ctx.page,
+                &ctx.selection.elements,
+                p,
+                ctx.geometry,
+                &opt,
+            )
+            && !ctx.selection.contains(c)
+        {
+            return ToolResponse::commit(vec![pick(
+                "select.set",
+                json!({"ids": [c.0], "mode": "replace"}),
+            )]);
+        }
         let Some(top) = top_hit(ctx, p, &opt) else {
             return ToolResponse::default();
         };
@@ -1631,6 +1694,29 @@ impl PointerTool {
             _ => ToolResponse::default(),
         }
     }
+}
+
+/// Commands that select `id` with a tool click. A bitmap mask is selected like the Layers panel's
+/// Edit Mask (the owner, then `panel.layers.editMask`), which also starts bitmap editing of the mask
+/// (RE spec 68 §4.2 rule 1); everything else is a plain pick without a History row.
+fn select_cmds(ctx: &ToolContext, id: ElementId) -> Vec<Invocation> {
+    if let Some(owner) = docops::mask_owner(ctx.doc, ctx.page, id)
+        && owner
+            .element_mask()
+            .is_some_and(|m| m.element.id == id && matches!(m.element.kind, ElementKind::Bitmap(_)))
+    {
+        return vec![
+            pick(
+                "select.set",
+                json!({"ids": [owner.id.0], "mode": "replace"}),
+            ),
+            Invocation::new("panel.layers.editMask", json!({})),
+        ];
+    }
+    vec![pick(
+        "select.set",
+        json!({"ids": [id.0], "mode": "replace"}),
+    )]
 }
 
 /// Doppelklick auf Text: auswählen, zum Textwerkzeug wechseln und an derselben Stelle klicken.

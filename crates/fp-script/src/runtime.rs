@@ -354,9 +354,36 @@ pub fn proto_for(js: &str, ctx: &mut Context) -> JsResult<JsObject> {
             )?;
         }
     }
+    // Firepixel-own methods (`bindings::EXT_METHODS`), addressed with the class index `EXT_CLASS`
+    for (ei, (cls, m)) in bindings::EXT_METHODS.iter().enumerate() {
+        if *cls != js || seen_m.contains(&m.name) {
+            continue;
+        }
+        seen_m.push(m.name);
+        let f = NativeFunction::from_copy_closure_with_captures(
+            |this, args, caps: &(u32, u32), ctx| method_entry(this, args, *caps, ctx),
+            (EXT_CLASS, ei as u32),
+        );
+        let func = FunctionObjectBuilder::new(ctx.realm(), f)
+            .name(JsString::from(m.name))
+            .length(0)
+            .build();
+        proto.define_property_or_throw(
+            JsString::from(m.name),
+            PropertyDescriptor::builder()
+                .value(func)
+                .writable(true)
+                .enumerable(false)
+                .configurable(true),
+            ctx,
+        )?;
+    }
     holder.create_data_property_or_throw(key, proto.clone(), ctx)?;
     Ok(proto)
 }
+
+/// Class index of a Firepixel-own method (`bindings::EXT_METHODS`) in the method captures.
+const EXT_CLASS: u32 = u32::MAX;
 
 fn wrapper_to_string(this: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let name = match this.as_object() {
@@ -450,13 +477,21 @@ fn method_entry(
     caps: (u32, u32),
     ctx: &mut Context,
 ) -> JsResult<JsValue> {
-    let Some(cls) = CLASSES.get(caps.0 as usize) else {
-        return Ok(JsValue::undefined());
+    let (cls_js, m) = if caps.0 == EXT_CLASS {
+        let Some((c, m)) = bindings::EXT_METHODS.get(caps.1 as usize) else {
+            return Ok(JsValue::undefined());
+        };
+        (*c, m)
+    } else {
+        let Some(cls) = CLASSES.get(caps.0 as usize) else {
+            return Ok(JsValue::undefined());
+        };
+        let Some(m) = cls.methods.get(caps.1 as usize) else {
+            return Ok(JsValue::undefined());
+        };
+        (cls.js, m)
     };
-    let Some(m) = cls.methods.get(caps.1 as usize) else {
-        return Ok(JsValue::undefined());
-    };
-    let member = format!("{}.{}", cls.js, m.name);
+    let member = format!("{}.{}", cls_js, m.name);
     let _ = with_state(|st| {
         st.used.insert(member.clone());
     });
@@ -486,7 +521,7 @@ fn method_entry(
         }
     }
     let h = handle(this, ctx).map(|x| x.1).unwrap_or(Handle::Singleton);
-    imp::call_method(cls.js, m.name, &h, &out, this, ctx).map_err(|e| throw(e, &member))
+    imp::call_method(cls_js, m.name, &h, &out, this, ctx).map_err(|e| throw(e, &member))
 }
 
 fn default_arg(d: DefaultArg) -> Arg {

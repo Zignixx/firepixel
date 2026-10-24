@@ -663,3 +663,12 @@ err-symbol-script-not-graphic = Symbol scripts exist only for graphic symbols (n
 err-screen-capture = The screen could not be captured: { $detail }
 err-screen-capture-status = The capture tool ended with { $status }.
 err-screen-capture-no-tool = No screen capture tool found (grim, import or gnome-screenshot).
+
+# Masks (FB-35, FB-36, RE spec 68): Disable/Enable and Delete Mask
+msg-step-mask-enable = Enable Mask
+msg-step-mask-disable = Disable Mask
+msg-step-mask-delete = Delete Mask
+dlg-mask-delete-bitmap = Apply the mask to the bitmap before removing it?
+dlg-mask-delete-vector = Do you want to apply the mask before removing it? Applying converts the object and its mask into a single bitmap image.
+btn-mask-discard = Discard
+btn-mask-apply = Apply

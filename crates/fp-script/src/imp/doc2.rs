@@ -1816,6 +1816,12 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             edit_mask_groups(doc, |g| g.mask_flags.linked = on)?;
             u()
         }
+        // Firepixel extension (FB-35): inverted mask (`bindings::EXT_METHODS`)
+        "setElementMaskInvert" => {
+            let on = a(0).bool();
+            edit_mask_groups(doc, |g| g.mask_flags.invert = on)?;
+            u()
+        }
         "setElementMaskShowAttrs" => {
             let on = a(0).bool();
             edit_mask_groups(doc, |g| g.mask_flags.hide_attrs = !on)?;

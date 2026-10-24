@@ -693,6 +693,10 @@ pub fn write_element(e: &Element, ctx: &mut WriteCtx) -> RawNode {
             }
             w_dta(&mut w, c);
             w_cache(&mut w, e, ctx);
+            // inverted mask (Firepixel extension, see `MASK_INVERT_EXT`); only when on
+            if g.kind.is_mask() && mf.invert {
+                w.bool(MASK_INVERT_EXT, true);
+            }
             RawNode::list(k!(b"GRPv"), w.finish())
         }
         ElementKind::CompoundShape(cs) => {
@@ -976,6 +980,11 @@ fn write_texture(t: &Texture, ctx: &mut WriteCtx) -> Vec<RawNode> {
 /// [`SPRITE_EXT`] the tag starts with a lower-case letter and cannot clash with a tag of the
 /// reference format; readers that do not know it keep / drop it and show the feather.
 pub const FILL_EDGE_EXT: TagKey = k!(b"fpEi");
+
+/// Firepixel-own mask switch in a mask group `GRPv` (FB-35): `fpIb` = 1 marks an inverted mask
+/// (model `MaskFlags::invert`). Written only when on; like [`FILL_EDGE_EXT`] the tag starts with a
+/// lower-case letter, so other readers ignore it and show the plain mask.
+pub const MASK_INVERT_EXT: TagKey = k!(b"fpIb");
 
 /// Füllung `FPLv` (Kinder).
 pub fn write_fill(f: &Fill, ctx: &mut WriteCtx) -> Vec<RawNode> {

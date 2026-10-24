@@ -1225,3 +1225,6 @@ cmd-ai-clearCache = Clear AI Cache
 # Trace Bitmap (VT-1)
 cmd-modify-traceBitmap = Trac&e Bitmap...
     .description = Traces the selected bitmap as filled, editable vector paths on a new layer
+
+# Modify > Mask > Disable Mask while the mask is off (RE spec 68 section 8)
+menu-modify-mask-enableMask = E&nable Mask

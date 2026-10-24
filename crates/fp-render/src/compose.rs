@@ -1291,6 +1291,7 @@ impl Renderer {
             // Pfadumriss mit „Füllung und Pinselstrich anzeigen“ (Flags 0x01 und 0x10, re 26 §3.1)
             let show = g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs;
             let mask = self.mask_values(doc, e, g, me, show, st, rep);
+            let invert = mask_invert(g, me);
             let b = img.bounds();
             let w = img.width();
             for (i, p) in img.data_mut().iter_mut().enumerate() {
@@ -1306,7 +1307,7 @@ impl Renderer {
                         0
                     }
                 });
-                let m = m.unwrap_or(0);
+                let m = final_mask_value(m.unwrap_or(0), invert);
                 p[3] = ((p[3] as u32 * m as u32 + 127) / 255) as u8;
             }
             if show {
@@ -1596,4 +1597,20 @@ pub fn find_bitmap(
             .find_map(|c| in_list(&c.elements, id.0, &mut path))
             .map(|e| (e, path.clone()))
     })
+}
+
+/// Firepixel extension (FB-35, RE spec 68 §6): strength of an inverted mask, `None` for a normal
+/// mask. The mask object's own opacity scales how strongly the area inside the mask disappears
+/// (the reference has no inverted mask; for normal masks the own opacity keeps having no effect).
+fn mask_invert(g: &fp_model::GroupElem, me: &Element) -> Option<u8> {
+    g.mask_flags.invert.then_some(me.common.opacity.0)
+}
+
+/// Final mask value of one pixel: `m` from `Renderer::mask_values` (0 outside the mask), for
+/// an inverted mask `255 − m · strength` — the only place where the inversion is applied.
+fn final_mask_value(m: u8, invert: Option<u8>) -> u8 {
+    match invert {
+        None => m,
+        Some(k) => 255 - ((m as u32 * k as u32 + 127) / 255) as u8,
+    }
 }

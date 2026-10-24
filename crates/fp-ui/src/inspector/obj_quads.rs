@@ -3980,7 +3980,29 @@ fn text_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
 fn mask_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     fields::label(ui, d.r(2.0, 2.0, 140.0, 10.0), &t("pi-mask-editing"), true);
+    mask_invert_box(ui, st, d.r(2.0, 18.0, 160.0, 12.0));
     opacity_panel(ui, st, d.offset(260.0, 0.0));
+}
+
+/// Firepixel extension (FB-35, RE spec 68 section 6): "Invert" checkbox of the selected mask
+/// (vector and bitmap masks); one History row "Modify Mask" via `modify.mask.options {invert}`.
+fn mask_invert_box(ui: &mut Ui, st: &mut AppState, r: Rect) {
+    let on = st.session.active().and_then(|ds| {
+        let id = ds.selection.elements.first()?;
+        let owner = fp_engine::docops::mask_owner(&ds.doc, ds.page, *id)?;
+        owner.element_mask().map(|m| m.invert)
+    });
+    let Some(on) = on else { return };
+    if let Some(v) = fields::checkbox(
+        ui,
+        egui::Id::new("pi-mask-invert"),
+        r,
+        &t("pi-mask-invert"),
+        on,
+        true,
+    ) {
+        st.run("modify.mask.options", json!({ "invert": v }));
+    }
 }
 
 /// Q6 bei gewählter Vektormaske (re 31 §5.3): „Maske:“ Pfadumriss / Graustufendarstellung und
@@ -4011,7 +4033,7 @@ fn mask_options_q6(ui: &mut Ui, st: &mut AppState, r: Rect) {
     if fields::radio(
         ui,
         egui::Id::new("pi-mask-image"),
-        d.r(44.0, 14.0, 110.0, 12.0),
+        d.r(44.0, 12.0, 110.0, 12.0),
         &t("pi-mask-grayscale"),
         !m.to_path,
         true,
@@ -4022,13 +4044,14 @@ fn mask_options_q6(ui: &mut Ui, st: &mut AppState, r: Rect) {
     if let Some(v) = fields::checkbox(
         ui,
         egui::Id::new("pi-mask-show"),
-        d.r(2.0, 30.0, 160.0, 12.0),
+        d.r(2.0, 24.0, 160.0, 12.0),
         &t("pi-mask-show-attrs"),
         m.show_attrs,
         m.to_path,
     ) {
         st.run("modify.mask.options", json!({"showAttrs": v}));
     }
+    mask_invert_box(ui, st, d.r(2.0, 36.0, 160.0, 12.0));
 }
 
 /// Für Tests: Text einer Elementart im Inspektor (Q1).

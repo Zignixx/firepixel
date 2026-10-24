@@ -1225,3 +1225,6 @@ cmd-ai-clearCache = KI-Zwischenspeicher leeren
 # Bitmap nachzeichnen (VT-1)
 cmd-modify-traceBitmap = Bitmap na&chzeichnen...
     .description = Zeichnet die ausgewählte Bitmap als gefüllte, bearbeitbare Vektorpfade auf einer neuen Ebene nach
+
+# Modify > Mask > Disable Mask while the mask is off (RE spec 68 section 8)
+menu-modify-mask-enableMask = Maske &aktivieren

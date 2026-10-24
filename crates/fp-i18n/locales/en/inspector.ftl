@@ -527,3 +527,6 @@ pi-ai-output-mask = Bitmap mask
 pi-ai-refine-run = Refine Edge Now
 pi-ai-refine-hint = Click inside the selection: refine edge
 pi-ai-need-selection = Create a pixel selection first
+
+# Firepixel extension (FB-35): inverted mask
+pi-mask-invert = Invert

@@ -1698,6 +1698,8 @@ fn read_group(r: &mut Rd, ctx: &mut ReadCtx) -> GroupElem {
         enabled: r.bool(k!(b"MENb")).unwrap_or(true),
         hide_attrs: r.bool(k!(b"MNAb")).unwrap_or(false),
         auto_expand: r.bool(k!(b"MRXb")).unwrap_or(false),
+        // Firepixel-own inverted mask (see `write::MASK_INVERT_EXT`)
+        invert: r.bool(crate::write::MASK_INVERT_EXT).unwrap_or(false),
     };
     let (mut children, children_extra) = match r.list(k!(b"ELMv")) {
         Some(v) => read_elements(v, ctx),

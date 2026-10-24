@@ -524,3 +524,6 @@ pi-ai-output-mask = Bitmapmaske
 pi-ai-refine-run = Kante jetzt verfeinern
 pi-ai-refine-hint = Klick in die Auswahl: Kante verfeinern
 pi-ai-need-selection = Erst eine Pixelauswahl erstellen
+
+# Firepixel extension (FB-35): inverted mask
+pi-mask-invert = Invertieren

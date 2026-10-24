@@ -1011,7 +1011,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     h.first()
                         .map(|f| {
                             if deep {
-                                docops::deep_hit(&d.doc, f, pt, s.geometry(), &opt)
+                                // like the Subselection: a masked element gives its mask (RE spec 68 §3.2)
+                                docops::subselect_hit(&d.doc, f, pt, s.geometry(), &opt)
                             } else {
                                 f.clone()
                             }

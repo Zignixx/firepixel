@@ -265,6 +265,24 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
 - *Modifizieren ▸ Maske ▸ Alles einblenden / Alles ausblenden* legt eine leere Maske über das
   gewählte Objekt. Ebenen-Bedienfeld und Inspektor zeigen weiter das Objekt selbst (z. B. die Bitmap)
   mit der Maske als zweiter Miniatur.
+- **Arbeiten mit Masken:** Ein Klick mit der *Teilauswahl* auf ein maskiertes Objekt wählt dessen Maske,
+  ebenso ein Klick mit dem *Zeiger* bei gedrückter Alt-Taste (auf einer normalen Gruppe wählt Zeiger +
+  Alt-Klick das getroffene Kind; Alt-Ziehen dupliziert weiterhin); *Hintere auswählen* wählt nie eine
+  Maske. Ein Klick auf die Maskenminiatur im Ebenen-Bedienfeld wirkt wie *Maske bearbeiten* im
+  Kontextmenü: Die Maske wird gewählt, ihre Miniatur bekommt einen hellgrünen Rahmen und die Zeile ein
+  Maskensymbol in der zweiten Spalte; eine Bitmapmaske geht in die Bitmap-Bearbeitung. Die Ankerpunkte
+  einer Maske aus einem einzelnen Pfad lassen sich mit der Teilauswahl ziehen, der Inhalt bleibt stehen.
+  *Maske deaktivieren* schaltet die Maske ab; der Menüeintrag heißt dann *Maske aktivieren*, und die
+  Maskenminiatur zeigt ein rotes X. *Maske löschen* fragt zuerst: *Anwenden* (Vorgabe) backt die Maske in
+  das Objekt, das dabei zu einer Bitmap wird; *Verwerfen* entfernt die Maske und behält das Objekt;
+  *Abbrechen* tut nichts. *Gruppierung aufheben* ergibt das Maskenobjekt über dem Inhalt, beide gewählt.
+  Firepixel-Erweiterungen über das Original hinaus: Ist eine **Gruppenmaske** gewählt, wählt ein weiterer
+  Klick mit der Teilauswahl (oder ein Doppelklick mit dem Zeiger) das Kind unter dem Zeiger, sodass sich
+  seine Punkte einzeln bearbeiten lassen und die Maske folgt; der Masken-Inspektor hat ein Kästchen
+  **Invertieren** (Vektor- und Bitmapmasken), das verbirgt, was innerhalb der Maske liegt, und alles
+  außerhalb zeigt (die eigene Deckkraft des Maskenobjekts bzw. ein Grauwert im Graustufenmodus bestimmt,
+  wie stark). Invertierte Masken stehen in einem Firepixel-eigenen Tag der FW-PNG-Datei; andere Programme
+  zeigen die normale Maske.
 - *Auswählen ▸ Auswahl umkehren* kehrt nur eine Pixelauswahl um; ohne sie erscheint eine Warnung, und
   die gewählten Objekte bleiben unverändert.
 - *Text ▸ Größe ▸ Größer / Kleiner* ändern die Größe um genau 1 pt (24 → 25 → 24), bei gewählten Texten

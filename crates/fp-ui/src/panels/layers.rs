@@ -1046,6 +1046,19 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             &theme,
                             true,
                         );
+                    } else if e
+                        .element_mask()
+                        .is_some_and(|m| mask_selected(&selected_set, m.element))
+                    {
+                        // mask editing: mask icon in the second column of the row (RE spec 68
+                        // section 7)
+                        glyphs::paint(
+                            ui.painter(),
+                            lock2.shrink2(vec2(3.0, 7.0)),
+                            Glyph::Mask,
+                            &theme,
+                            true,
+                        );
                     }
                     let thumb = Rect::from_min_size(
                         pos2(
@@ -1135,17 +1148,28 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                         Color32::WHITE,
                                     );
                                 }
-                                // gewählte Maske (Maskenbearbeitung, S5): Rahmen in der Fokusfarbe
-                                let mask_sel = selected_set.contains(&m.id);
+                                // selected mask (mask editing, RE spec 68 section 7): bright
+                                // green frame around the mask thumbnail
+                                let mask_sel = mask_selected(&selected_set, m);
                                 ui.painter().rect_stroke(
                                     mt,
                                     0.0,
                                     Stroke::new(
                                         if mask_sel { 2.0 } else { 1.0 },
-                                        if mask_sel { c.focus } else { c.list_border },
+                                        if mask_sel {
+                                            MASK_EDIT_FRAME
+                                        } else {
+                                            c.list_border
+                                        },
                                     ),
                                     StrokeKind::Inside,
                                 );
+                                // disabled mask: red X over the mask thumbnail (RE spec 68
+                                // section 8, M-10)
+                                if matches!(&e.kind, ElementKind::Group(g) if !g.mask_flags.enabled)
+                                {
+                                    paint_mask_off(ui.painter(), mt);
+                                }
                             }
                             mt
                         }
@@ -1201,12 +1225,20 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         if let Some((mt, chain, mid)) = mask_hit.filter(|(mt, chain, _)| {
                             editable && (mt.contains(p) || chain.contains(p))
                         }) {
-                            // Masken-Miniatur wählt die Maske (re 31 §5.3, RT-3 S5); Kette schaltet die Verknüpfung
+                            // the mask thumbnail works like Edit Mask (RE spec 68 section 7):
+                            // the masked element, then the mask-select command; the chain
+                            // toggles the link
                             if mt.contains(p) {
-                                actions.push(Action::Run(
-                                    "select.set".into(),
-                                    json!({"ids": [mid.0]}),
-                                ));
+                                if !selected_set.contains(&mid) {
+                                    actions.push(Action::Run(
+                                        "select.set".into(),
+                                        json!({"ids": [e.id.0]}),
+                                    ));
+                                    actions.push(Action::Run(
+                                        "panel.layers.editMask".into(),
+                                        json!({}),
+                                    ));
+                                }
                             } else if chain.contains(p) {
                                 actions.push(Action::Run(
                                     "modify.mask.link".into(),
@@ -1389,6 +1421,28 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     for a in actions {
         st.push(a);
     }
+}
+
+/// Frame of the mask thumbnail while the mask is being edited (bright green, RE spec 68 section 7).
+const MASK_EDIT_FRAME: Color32 = Color32::from_rgb(0x33, 0xE0, 0x33);
+
+/// Is the mask `m` (or, for a group mask, one of its descendants) selected?
+fn mask_selected(selected: &std::collections::HashSet<fp_model::ElementId>, m: &Element) -> bool {
+    if selected.contains(&m.id) {
+        return true;
+    }
+    match &m.kind {
+        ElementKind::Group(g) => g.children.iter().any(|c| mask_selected(selected, c)),
+        _ => false,
+    }
+}
+
+/// Red X over the thumbnail of a disabled mask (RE spec 68 section 8).
+fn paint_mask_off(p: &egui::Painter, r: Rect) {
+    let s = Stroke::new(2.0, Color32::from_rgb(0xE0, 0x20, 0x20));
+    let r = r.shrink(2.0);
+    p.line_segment([r.left_top(), r.right_bottom()], s);
+    p.line_segment([r.right_top(), r.left_bottom()], s);
 }
 
 /// Einrückung einer Unterebene (Aufklapper/Ordner) bzw. ihrer Objekt-Miniaturen je Stufe, gemessen am

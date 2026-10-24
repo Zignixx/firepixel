@@ -369,6 +369,8 @@ pub struct ElementMask<'a> {
     pub show_attrs: bool,
     pub auto_expand: bool,
     pub single: bool,
+    /// Firepixel extension (FB-35): inverted mask (what lies inside the mask is hidden).
+    pub invert: bool,
 }
 
 /// Maskenflags einer Maskengruppe.
@@ -382,6 +384,12 @@ pub struct MaskFlags {
     pub hide_attrs: bool,
     /// `MRXb`: A: `autoExpandImages` (nur 1 wird geschrieben).
     pub auto_expand: bool,
+    /// Firepixel extension (FB-35, RE spec 68 §6): inverted mask. The final mask value per pixel
+    /// becomes `255 − m` (scaled by the mask object's own opacity), so what lies inside the mask
+    /// disappears and everything outside stays. FW-PNG: the Firepixel-own tag `fpIb` in `GRPv`;
+    /// default off, files of the reference format are unchanged.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub invert: bool,
 }
 
 impl Default for MaskFlags {
@@ -391,6 +399,7 @@ impl Default for MaskFlags {
             enabled: true,
             hide_attrs: false,
             auto_expand: false,
+            invert: false,
         }
     }
 }
@@ -859,6 +868,7 @@ impl Element {
             show_attrs: !g.mask_flags.hide_attrs,
             auto_expand: g.mask_flags.auto_expand,
             single: self.masked_single().is_some(),
+            invert: g.mask_flags.invert,
         })
     }
 

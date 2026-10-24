@@ -109,6 +109,25 @@ pub struct ErrorSpec {
     pub hresult: u32,
 }
 
+/// Firepixel-own script methods beyond the reference API (class JS name, method). They are not
+/// part of the generated binding table (`CLASSES`, counts and coverage stay those of the
+/// reference); the runtime adds them to the class prototype after the table's members.
+pub static EXT_METHODS: &[(&str, MethodSpec)] = &[
+    // inverted mask of the selected masked elements (FB-35, RE spec 68 section 6)
+    (
+        "Document",
+        MethodSpec {
+            name: "setElementMaskInvert",
+            params: &[ParamSpec {
+                name: "invert",
+                code: TypeCode::Bool,
+                default: DefaultArg::Req,
+            }],
+            ret: TypeCode::Void,
+        },
+    ),
+];
+
 /// Index einer Klasse zum JS-Namen.
 pub fn class_index(js: &str) -> Option<usize> {
     CLASSES.iter().position(|c| c.js == js)

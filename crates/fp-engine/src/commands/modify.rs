@@ -1901,26 +1901,35 @@ pub(super) fn register(r: &mut CommandRegistry) {
     );
     r.add(
         cmd("modify.mask.disableMask")
-            .requires(&[Requirement::Document, Requirement::AnyOf(ObjectKind::MaskGroup)])
-            .checked(|s| {
-                s.active().is_some_and(|d| {
-                    super::any_selected(d, |e| matches!(&e.kind, ElementKind::Group(g) if g.kind.is_mask() && !g.mask_flags.enabled))
-                })
-            })
+            .requires(&[
+                Requirement::Document,
+                Requirement::AnyOf(ObjectKind::MaskGroup),
+            ])
+            // RE spec 68 section 8 (M-10): no check mark; the menu text swaps to "Enable Mask"
+            // while the mask is off (the menus ask the selection, fp-ui `menu::mask_toggle_label`)
             .run(|s, _| {
                 with_doc(s, |d| {
-                    let (page, ids) = (d.page, d.selection.elements.clone());
+                    let (page, ids) = (d.page, mask_targets(d));
                     let doc = Arc::make_mut(&mut d.doc);
+                    let mut now = None;
                     for id in ids {
                         docops::edit_by_id(doc, page, id, |e| {
                             if let ElementKind::Group(g) = &mut e.kind
                                 && g.kind.is_mask()
                             {
                                 g.mask_flags.enabled = !g.mask_flags.enabled;
+                                now = Some(g.mask_flags.enabled);
+                                e.cache = None;
                             }
                         });
                     }
-                    Ok(CommandOutput::doc())
+                    // History rows "Disable Mask" / "Enable Mask" (RE spec 68 section 8)
+                    let label = if now == Some(true) {
+                        fp_i18n::t("msg-step-mask-enable")
+                    } else {
+                        fp_i18n::t("msg-step-mask-disable")
+                    };
+                    Ok(CommandOutput::doc().labeled(label))
                 })
             }),
     );
@@ -1982,6 +1991,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 "path = Pfadumriss, image = Graustufendarstellung",
             )
             .opt(
+                "invert",
+                ParamKind::Bool,
+                "Maske invertieren (Firepixel-Erweiterung)",
+            )
+            .opt(
                 "ids",
                 ParamKind::Ids,
                 "maskierte Elemente (Vorgabe: Auswahl bzw. Besitzer der gewählten Maske)",
@@ -1989,6 +2003,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let show = p.opt_bool("showAttrs")?;
                 let mode = p.opt_str("mode")?;
+                let invert = p.opt_bool("invert")?;
                 let given = p.opt_ids("ids")?;
                 with_doc(s, |d| {
                     let (page, ids) = (d.page, given.unwrap_or_else(|| mask_targets(d)));
@@ -2000,6 +2015,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             {
                                 if let Some(v) = show {
                                     g.mask_flags.hide_attrs = !v;
+                                }
+                                if let Some(v) = invert {
+                                    g.mask_flags.invert = v;
                                 }
                                 match mode.as_deref() {
                                     Some("path") => g.kind = fp_model::GroupKind::VectorMask,
@@ -2020,10 +2038,26 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 Requirement::Document,
                 Requirement::AnyOf(ObjectKind::MaskGroup),
             ])
-            .run(|s, _| {
+            // RE spec 68 section 8 (M-11): the UI asks first (Discard / Cancel / Apply); scripts
+            // and agents choose with `apply` (default: discard, as before)
+            .opt(
+                "apply",
+                ParamKind::Bool,
+                "Maske vorher anwenden (in Bitmap umwandeln)",
+            )
+            .run(|s, p| {
+                let apply = p.opt_bool("apply")?.unwrap_or(false);
+                if apply {
+                    let ids = delete_mask_apply(s)?;
+                    let ids: Vec<u64> = ids.iter().map(|i| i.0).collect();
+                    return Ok(CommandOutput::doc_with(json!({ "ids": ids }))
+                        .labeled(fp_i18n::t("msg-step-mask-delete")));
+                }
                 with_doc(s, |d| {
+                    let targets = mask_targets(d);
+                    d.selection.set(targets);
                     ungroup(d, true)?;
-                    Ok(CommandOutput::doc())
+                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-mask-delete")))
                 })
             }),
     );
@@ -3190,6 +3224,60 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 })
             }),
     );
+}
+
+/// Delete Mask, Apply (RE spec 68 section 8): every masked element of the selection becomes one
+/// bitmap of its composed look (mask baked in, vector content rasterised), at its place in the
+/// stack, with the content's name; the mask object is gone. Returns the new bitmaps (selected).
+fn delete_mask_apply(s: &mut Session) -> Result<Vec<ElementId>> {
+    let targets: Vec<ElementId> = {
+        let d = s.doc()?;
+        mask_targets(d)
+            .into_iter()
+            .filter(|id| {
+                docops::element_on_page(&d.doc, d.page, *id)
+                    .is_some_and(|e| matches!(&e.kind, ElementKind::Group(g) if g.kind.is_mask()))
+            })
+            .collect()
+    };
+    let trim = s
+        .prefs
+        .get_int("PixelTrimThreshold", docops::PIXEL_TRIM_THRESHOLD);
+    let mut out = Vec::new();
+    for id in targets {
+        let (el, path) = {
+            let d = s.doc()?;
+            let path = docops::find_on_page(&d.doc, d.page, id)
+                .ok_or(EngineError::ElementNotFound(id.0))?;
+            let el = d
+                .doc
+                .element_at(&path)
+                .cloned()
+                .ok_or(EngineError::ElementNotFound(id.0))?;
+            (el, path)
+        };
+        let mut img = flatten_elements(s, std::slice::from_ref(&el))?;
+        if let Some(t) = docops::trim_to_alpha(&img, trim) {
+            img = t;
+        }
+        let name = el.masked_content().common.name.clone();
+        let new_id = with_doc(s, |d| {
+            let nid = replace_with_bitmap(d, &[id], &img, &path)?;
+            if name.is_some() {
+                let page = d.page;
+                docops::edit_by_id(Arc::make_mut(&mut d.doc), page, nid, |e| {
+                    e.common.name = name.clone()
+                });
+            }
+            Ok(nid)
+        })?;
+        out.push(new_id);
+    }
+    with_doc(s, |d| {
+        d.selection.set(out.clone());
+        Ok(())
+    })?;
+    Ok(out)
 }
 
 /// Maskierte Elemente der Auswahl: gewählte Maskengruppen/-elemente und die Besitzer gewählter Masken

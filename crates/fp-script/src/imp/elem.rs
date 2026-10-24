@@ -962,6 +962,8 @@ fn element_get(
                         ("mode", conv::s(mode)),
                         ("showAttrs", JsValue::from(!g.mask_flags.hide_attrs)),
                         ("autoExpandImages", JsValue::from(g.mask_flags.auto_expand)),
+                        // Firepixel extension (FB-35): inverted mask
+                        ("invert", JsValue::from(g.mask_flags.invert)),
                     ],
                     ctx,
                 )
@@ -1871,6 +1873,9 @@ fn element_set(
                     }
                     if let Some(v) = b("autoExpandImages") {
                         g.mask_flags.auto_expand = v;
+                    }
+                    if let Some(v) = b("invert") {
+                        g.mask_flags.invert = v;
                     }
                     match mode.as_deref() {
                         Some("mask to path") => g.kind = fp_model::element::GroupKind::VectorMask,

@@ -339,6 +339,30 @@ fn with_redo_step(st: &AppState, label: String) -> String {
     }
 }
 
+/// Modify > Mask > Disable Mask and the Layers context menu entry read "Enable Mask" while the
+/// mask of the selection (masked element or its selected mask) is off; no check mark (RE spec 68
+/// section 8, M-10).
+pub(crate) fn mask_toggle_label(st: &AppState, name: &str, label: String) -> String {
+    if !matches!(name, "modify.mask.disableMask" | "panel.layers.disableMask") {
+        return label;
+    }
+    let off = st.session.active().is_some_and(|d| {
+        d.selection.elements.iter().any(|id| {
+            fp_engine::docops::mask_owner(&d.doc, d.page, *id)
+                .or_else(|| fp_engine::docops::element_on_page(&d.doc, d.page, *id))
+                .is_some_and(|e| {
+                    matches!(&e.kind, fp_model::ElementKind::Group(g)
+                        if g.kind.is_mask() && !g.mask_flags.enabled)
+                })
+        })
+    });
+    if off {
+        clean_label(&t("menu-modify-mask-enableMask")).0
+    } else {
+        label
+    }
+}
+
 /// Datei ▸ Vorschau im Browser wie im Original mit dem Programmnamen des Browsers
 /// („Vorschau in iexplore.exe“); ohne Sekundärbrowser nur „Vorschau in“ (gesperrt).
 fn browser_label(st: &AppState, name: &str, label: String, enabled: bool) -> (String, bool) {
@@ -411,6 +435,7 @@ fn convert(st: &AppState, entries: &[MenuEntry]) -> Vec<Node> {
             Some(n) => {
                 let (enabled, checked, shortcut) = command_state(st, &n, sc);
                 let label = with_step_name(st, &n, label);
+                let label = mask_toggle_label(st, &n, label);
                 let (label, enabled) = browser_label(st, &n, label, enabled);
                 out.push(Node::Item {
                     label,

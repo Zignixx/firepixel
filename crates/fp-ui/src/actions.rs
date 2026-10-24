@@ -273,6 +273,14 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
             );
             return;
         }
+        // Delete Mask from the menu, the Layers panel or a shortcut asks first (RE spec 68
+        // section 8, M-11): Discard / Cancel / Apply; with `apply` given it runs directly
+        "modify.mask.deleteMask" | "panel.layers.deleteMask" if !has_param(&params, "apply") => {
+            if let Some(vector) = delete_mask_prompt(st) {
+                st.dialogs.choice = Some(crate::dialogs::misc::ChoiceDialog::delete_mask(vector));
+                return;
+            }
+        }
         // Ebenen-Bedienfeld ▸ „Ebene statusübergreifend freigeben“ (re 40 §2b): bei mehr als einem
         // Status Rückfrage OK/Abbrechen (Inhalte der anderen Status werden gelöscht), bei einem
         // Status sofort (Schritt „Ebenenoptionen“); Aufheben fragt „Aktuell / Alle“
@@ -787,6 +795,33 @@ pub fn sentence_case(text: &str) -> String {
 /// Ablauf von „Ebene statusübergreifend freigeben“ für die aktive Ebene (re 40 §2b): `Ok` =
 /// Rückfrage zeigen, `Err` = Befehl sofort ausführen; `None` = keine aktive Ebene (der Befehl
 /// meldet den Fehler selbst).
+/// Delete Mask prompt (RE spec 68 section 8): `Some(vector)` when the command applies to the
+/// selection (a masked element, or the selected mask of one); `vector` = the masked content is
+/// not a bitmap, so applying converts it. `None`: no prompt (the command reports its own state).
+pub(crate) fn delete_mask_prompt(st: &AppState) -> Option<bool> {
+    if !st.session.command_state("modify.mask.deleteMask").0 {
+        return None;
+    }
+    let d = st.session.active()?;
+    let owners: Vec<_> = d
+        .selection
+        .elements
+        .iter()
+        .filter_map(|id| {
+            fp_engine::docops::mask_owner(&d.doc, d.page, *id)
+                .or_else(|| fp_engine::docops::element_on_page(&d.doc, d.page, *id))
+        })
+        .filter(|e| e.element_mask().is_some())
+        .collect();
+    if owners.is_empty() {
+        return None;
+    }
+    Some(owners.iter().any(|e| {
+        let content = e.masked_content();
+        !matches!(content.kind, fp_model::ElementKind::Bitmap(_)) || content.id == e.id
+    }))
+}
+
 pub(crate) fn share_layer_flow(
     st: &AppState,
 ) -> Option<Result<crate::dialogs::misc::ChoiceDialog, (String, serde_json::Value)>> {

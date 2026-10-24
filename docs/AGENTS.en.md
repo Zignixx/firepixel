@@ -187,7 +187,15 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     selected text, which the Scale tool and Free Transform pass, like `setQuadrangle(…, "rememberQuad")`;
     `setQuadrangle` takes its points relative to the unit square of the selection bounds, side
     max(width, height) about their centre),
-    `modify.mask.revealAll` / `modify.mask.hideAll` (empty mask over the selected object)
+    `modify.mask.revealAll` / `modify.mask.hideAll` (empty mask over the selected object),
+    `modify.mask.disableMask` (toggles; History row "Disable Mask" / "Enable Mask"),
+    `modify.mask.deleteMask {apply?}` (`apply: true` bakes the mask into the object, which becomes one
+    bitmap; without it the mask is discarded and the object kept; the user interface asks Discard / Cancel /
+    Apply first), `modify.mask.options {invert?}` (Firepixel extension: inverted mask, what lies inside the
+    mask is hidden; the mask object's own opacity sets the strength; stored as the Firepixel-own FW-PNG
+    tag `fpIb`), `select.pointAt {point, deep: true}` (like the Subselection: a masked element gives its
+    mask). Scripting: `dom.setElementMaskInvert(bool)` (Firepixel-own method beside the reference API)
+    and the field `invert` of an element's `mask` object
   * Text and selection: `text.detachFromPath` (the text becomes a fixed-width block again, width = width
     before attaching, centered on the path bounds; the path goes to the top of the layer, selection
     afterwards [path, text]), `select.similar {tolerance?}` (same fill, stroke, opacity and blending mode),

@@ -246,6 +246,22 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
 - *Modify ▸ Mask ▸ Reveal All / Hide All* puts an empty mask over the selected object. The Layers
   panel and the inspector still show the object itself (e.g. the bitmap) with the mask as a second
   thumbnail.
+- **Working with masks:** a *Subselection* click on a masked object selects its mask, and so does a
+  *Pointer* click with Alt held (on a normal group, Pointer + Alt-click selects the clicked child;
+  Alt-drag still duplicates); *Select Behind* never picks a mask. A click on the mask thumbnail in the
+  Layers panel works like the context menu's *Edit Mask*: the mask is selected, its thumbnail gets a
+  bright green frame and the row shows a mask icon in its second column; a bitmap mask goes into
+  bitmap editing. The anchors of a single-path mask move with the Subselection while the content stays.
+  *Disable Mask* turns the mask off; the menu entry then reads *Enable Mask* and the mask thumbnail
+  shows a red X. *Delete Mask* asks first: *Apply* (the default) bakes the mask into the object, which
+  becomes one bitmap; *Discard* removes the mask and keeps the object; *Cancel* does nothing.
+  *Ungroup* gives the mask object on top of the content, both selected.
+  Firepixel extensions beyond the original: with a **group mask** selected, a further Subselection
+  click (or a Pointer double-click) selects the child under the pointer, so its anchors can be edited
+  one by one and the mask follows; the mask inspector has an **Invert** checkbox (vector and bitmap
+  masks) that hides what lies inside the mask and keeps everything outside (the mask object's own
+  opacity, or a grey value in grayscale mode, sets how strongly). Inverted masks are stored in a
+  Firepixel-own tag of the FW-PNG file; other programs show the plain mask.
 - *Select ▸ Select Inverse* inverts a pixel selection only; without one it shows a warning and leaves
   the selected objects alone.
 - *Text ▸ Size ▸ Larger / Smaller* change the size by exactly 1 pt (24 → 25 → 24), on selected texts

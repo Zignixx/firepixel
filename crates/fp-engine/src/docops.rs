@@ -1079,8 +1079,10 @@ fn bounds_depth(doc: &Document, e: &Element, depth: u32) -> Option<Rect> {
             for c in &g.children {
                 r = union_opt(r, bounds_depth(doc, c, depth + 1));
             }
+            // an inverted mask (Firepixel extension) cuts a hole, the content bounds stay
             if g.kind.is_mask()
                 && g.mask_flags.enabled
+                && !g.mask_flags.invert
                 && let (Some(cr), Some(m)) = (r, g.effective_mask())
                 && let Some(mr) = bounds_depth(doc, m, depth + 1)
             {
@@ -2218,6 +2220,7 @@ fn hit_depth(
         ElementKind::Group(g) => {
             if g.kind.is_mask()
                 && g.mask_flags.enabled
+                && !g.mask_flags.invert
                 && let Some(m) = g.effective_mask()
                 && let Some(mb) = element_bounds(doc, m)
                 && !mb
@@ -2322,6 +2325,78 @@ pub fn deep_hit(
         cur.steps.push(PathStep::Child(i));
     }
     cur
+}
+
+/// Subselection target (RE spec 68 §3.2 rule 1, M-7): descends into groups like [`deep_hit`], but
+/// a masked element (mask group) gives its **mask** (path step `Mask`) instead of its content —
+/// the Subselection "enters" the element and the child it reaches is the mask. Pointer + Alt-click
+/// uses the same target; Select Behind never does (whole objects only).
+pub fn subselect_hit(
+    doc: &Document,
+    path: &ElementPath,
+    p: Point,
+    geo: &dyn GeometryOps,
+    opt: &HitOptions,
+) -> ElementPath {
+    let mut cur = path.clone();
+    for _ in 0..32 {
+        let Some(e) = doc.element_at(&cur) else { break };
+        let ElementKind::Group(g) = &e.kind else {
+            break;
+        };
+        if g.kind.is_mask() && g.mask.is_some() {
+            cur.steps.push(PathStep::Mask);
+            break;
+        }
+        let Some(i) = g
+            .children
+            .iter()
+            .position(|c| hit_element(doc, c, p, geo, opt))
+        else {
+            break;
+        };
+        cur.steps.push(PathStep::Child(i));
+    }
+    cur
+}
+
+/// Firepixel extension (FB-35, E-1): with a **group mask** (or one of its descendants) selected,
+/// the deepest descendant of that mask group under `p` — so the children of a group mask can be
+/// picked and edited one by one (the reference only selects the whole group). Normal groups are
+/// not affected. `None` when nothing selected belongs to a group mask or `p` hits none of its
+/// children.
+pub fn mask_group_child_hit(
+    doc: &Document,
+    page: usize,
+    selection: &[ElementId],
+    p: Point,
+    geo: &dyn GeometryOps,
+    opt: &HitOptions,
+) -> Option<ElementId> {
+    for id in selection {
+        let Some(path) = find_on_page(doc, page, *id) else {
+            continue;
+        };
+        // innermost `Mask` step of the selected element's address: its mask object
+        let Some(k) = path.steps.iter().rposition(|s| *s == PathStep::Mask) else {
+            continue;
+        };
+        let mut mask = path.clone();
+        mask.steps.truncate(k + 1);
+        let Some(m) = doc.element_at(&mask) else {
+            continue;
+        };
+        let ElementKind::Group(_) = &m.kind else {
+            continue;
+        };
+        let deep = deep_hit(doc, &mask, p, geo, opt);
+        if deep.steps.len() > mask.steps.len()
+            && let Some(c) = doc.element_at(&deep)
+        {
+            return Some(c.id);
+        }
+    }
+    None
 }
 
 /// IDs aller obersten Elemente des Status `frame` (sichtbar, nicht gesperrt), oben zuerst.

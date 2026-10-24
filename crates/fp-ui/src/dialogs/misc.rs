@@ -97,8 +97,10 @@ pub struct ChoiceDialog {
     pub text: String,
     /// Warnsymbol links (Meldungsfenster); ohne Symbol z. B. „Aktuell / Alle“.
     pub warning: bool,
-    /// Knöpfe von links nach rechts; der erste ist der Standard.
+    /// Knöpfe von links nach rechts.
     pub buttons: Vec<(String, Option<(String, Value)>)>,
+    /// Index of the default button (frame, Enter); usually the first.
+    pub default: usize,
 }
 
 impl ChoiceDialog {
@@ -119,6 +121,7 @@ impl ChoiceDialog {
                 ),
                 (t("btn-cancel"), None),
             ],
+            default: 0,
         }
     }
 
@@ -138,6 +141,30 @@ impl ChoiceDialog {
                 (t("dlg-layer-unshare-current"), run("current")),
                 (t("dlg-layer-unshare-all"), run("all")),
             ],
+            default: 0,
+        }
+    }
+
+    /// Modify > Mask > Delete Mask (RE spec 68 section 8, M-11): "Apply the mask before removing
+    /// it?" with Discard / Cancel / Apply, Apply the default. Apply bakes the mask into a bitmap,
+    /// Discard drops the mask and keeps the content, Cancel does nothing. `vector`: the masked
+    /// content is not a bitmap (the text says that it becomes one).
+    pub fn delete_mask(vector: bool) -> ChoiceDialog {
+        let run = |apply: bool| Some(("modify.mask.deleteMask".into(), json!({ "apply": apply })));
+        ChoiceDialog {
+            title: "Firepixel".into(),
+            text: t(if vector {
+                "dlg-mask-delete-vector"
+            } else {
+                "dlg-mask-delete-bitmap"
+            }),
+            warning: true,
+            buttons: vec![
+                (t("btn-mask-discard"), run(false)),
+                (t("btn-cancel"), None),
+                (t("btn-mask-apply"), run(true)),
+            ],
+            default: 2,
         }
     }
 }
@@ -153,7 +180,7 @@ pub fn show_choice(ctx: &egui::Context, st: &mut AppState) {
         .iter()
         .enumerate()
         .map(|(i, (l, _))| {
-            if i == 0 {
+            if i == c.default {
                 BarButton::default_button(l)
             } else {
                 BarButton::new(l)
