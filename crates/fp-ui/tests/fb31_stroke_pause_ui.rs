@@ -44,7 +44,7 @@ fn steps(h: &H) -> usize {
 }
 
 fn status(h: &H) -> String {
-    fp_ui::canvas::footer_status(st(h), h.ctx.input(|i| i.time))
+    fp_ui::canvas::footer_status(st(h), h.ctx.input(|i| i.time), false)
 }
 
 /// Document point → screen (page placement from the last frame).

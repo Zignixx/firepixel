@@ -638,7 +638,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("edit.redo")
             .requires(&[Requirement::Document])
-            .available(|s| s.active().is_some_and(|d| d.history.can_redo()) || s.can_repeat())
+            .available(|s| {
+                s.active().is_some_and(|d| d.history.can_redo())
+                    || s.can_repeat()
+                    || s.tool_takes_history()
+            })
             .run(|s, _| {
                 if s.active().is_some_and(|d| d.history.can_redo()) {
                     s.redo()?;

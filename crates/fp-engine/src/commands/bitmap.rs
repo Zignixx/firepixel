@@ -571,6 +571,9 @@ fn points_size(p: &Params, s: &Session) -> Result<(Vec<Point>, f32)> {
 /// `bitmap.retouch` (FB-31, Firepixel extension).
 pub(crate) const BREAKS_PARAM_TEXT: &str = "Fortsetzungen eines angehaltenen Strichs: Indizes in `points`, an denen ein neues, nicht verbundenes Stück desselben Strichs beginnt (Firepixel-Erweiterung)";
 
+/// German source text of the `subtract` parameter of `bitmap.paint` (FB-69, Firepixel extension).
+pub(crate) const SUBTRACT_PARAM_TEXT: &str = "Abzug im eigenen Strich (Alt, Firepixel-Erweiterung): [{at, size, round, points}, …]; die Spitze löscht nur, was die Punkte vor `at` gemalt haben";
+
 pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("bitmap.paint")
@@ -594,6 +597,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("tool", ParamKind::Enum { values: vec!["brush".into(), "pencil".into()] }, "Werkzeug (Vorgabe: Pinsel)")
             .opt("draw", ParamKind::Json, "älterer Aufruf: Strich als Zeichenbefehl {command: tool.shape, params} – der Pinsel wird daraus gebildet")
             .opt("breaks", ParamKind::Json, BREAKS_PARAM_TEXT)
+            .opt("subtract", ParamKind::Json, SUBTRACT_PARAM_TEXT)
             .run(|s, p| {
                 let (_pts, _size) = points_size(p, s)?;
                 let mut v = if p.value.is_object() { p.value.clone() } else { json!({}) };

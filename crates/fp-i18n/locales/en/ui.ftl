@@ -67,6 +67,9 @@ ui-preview-failed = Preview not possible: { $error }
 ui-sel-bitmap-mode = Bitmap mode
 # FB-31 (Firepixel extension): pausing a running bitmap stroke with P
 ui-stroke-pause-hint = Press P on the keyboard to pause the current brush stroke.
+# FB-69 (Firepixel extension): Alt held during a running or paused stroke
+ui-stroke-subtract = Subtraction mode (Alt): the brush erases only what this stroke has painted. Release Alt to paint again.
+ui-stroke-subtract-paused = Stroke paused, subtraction mode (Alt): drag to erase only what this stroke has painted. Release Alt to paint again, hit Enter to apply the stroke.
 ui-stroke-paused = Stroke paused. It is safe to let go of mouse button or lift stylus. Click anywhere on the screen to resume current stroke. Hit Enter to apply paused stroke.
 ui-sel-document = { $format } (Document)
 ui-sel-objects = { $n } objects

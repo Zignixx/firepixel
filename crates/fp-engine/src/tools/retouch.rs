@@ -128,6 +128,9 @@ pub struct RetouchTool {
     paused: bool,
     /// FB-31: indices into `points` where the stroke was resumed after a pause.
     breaks: Vec<usize>,
+    /// FB-71: index in `points` the Shift line starts from (segment start when Shift was held at
+    /// the press or resume, otherwise the point reached when Shift went down); `None` = Shift up.
+    line_anchor: Option<usize>,
 }
 
 /// Running retouch stroke: original image of the target bitmap and the last computed preview.
@@ -264,12 +267,20 @@ impl RetouchTool {
             live: None,
             paused: false,
             breaks: Vec::new(),
+            line_anchor: None,
         }
     }
 
     /// First point of the running segment (FB-31: of the part after the last resume).
     fn segment_start(&self) -> usize {
         self.breaks.last().copied().unwrap_or(0)
+    }
+
+    /// FB-71: first point of the Shift line: the anchor set when Shift went down (the points
+    /// before it stay), never before the running segment.
+    fn line_start(&mut self) -> usize {
+        let last = self.points.len().saturating_sub(1);
+        (*self.line_anchor.get_or_insert(last)).max(self.segment_start())
     }
 
     /// Ends the running stroke without applying it.
@@ -279,6 +290,7 @@ impl RetouchTool {
         self.active = false;
         self.paused = false;
         self.live = None;
+        self.line_anchor = None;
     }
 
     /// Applies the running stroke (`bitmap.retouch` with all points and, after a pause, the
@@ -298,7 +310,8 @@ impl RetouchTool {
         }
         if let Some((pos, shift)) = end {
             if shift {
-                self.points.truncate(self.segment_start() + 1);
+                let a = self.line_start();
+                self.points.truncate(a + 1);
             }
             if self.points.last().is_none_or(|l| dist(*l, pos) > 0.0) {
                 self.points.push(pos);
@@ -594,6 +607,7 @@ impl ToolMachine for RetouchTool {
             PointerKind::Down if self.paused && !ev.mods.space => {
                 self.paused = false;
                 self.breaks.push(self.points.len());
+                self.line_anchor = ev.mods.shift.then_some(self.points.len());
                 self.points.push(*pos);
                 self.update_live(ctx, false);
             }
@@ -641,6 +655,7 @@ impl ToolMachine for RetouchTool {
                     self.offset = Some((s.x - pos.x, s.y - pos.y));
                 }
                 self.points = vec![*pos];
+                self.line_anchor = ev.mods.shift.then_some(0);
                 self.active = true;
                 if self.id != ToolId::RedEyeRemoval {
                     self.begin_live(ctx, *pos);
@@ -649,11 +664,15 @@ impl ToolMachine for RetouchTool {
             }
             PointerKind::Move if self.active && self.id == ToolId::RedEyeRemoval => {}
             PointerKind::Move if self.active => {
-                // Shift: a straight line from the start point of the running part replaces its
-                // points (the engine recomputes the stroke)
+                // Shift: a straight line from the anchor replaces the points after it (the
+                // engine recomputes the stroke); Shift pressed mid-stroke keeps what is painted
+                // and draws the line from the point reached (FB-71)
                 let restart = ev.mods.shift;
                 if restart {
-                    self.points.truncate(self.segment_start() + 1);
+                    let a = self.line_start();
+                    self.points.truncate(a + 1);
+                } else {
+                    self.line_anchor = None;
                 }
                 if self.points.last().is_none_or(|l| dist(*l, *pos) >= 0.5) {
                     self.points.push(*pos);
@@ -717,6 +736,24 @@ impl ToolMachine for RetouchTool {
             return self.commit(ctx, None);
         }
         ToolResponse::default()
+    }
+
+    fn takes_history(&self) -> bool {
+        self.active
+    }
+
+    fn history_key(&mut self, redo: bool, ctx: &ToolContext) -> ToolResponse {
+        // FB-70: with the button held Undo and Redo are ignored, the stroke goes on (measured,
+        // RE spec 71 section 5); while paused (Firepixel extension) Undo discards the stroke (no
+        // history row) and Redo applies it like Enter
+        if !self.active || !self.paused {
+            return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
+        }
+        if redo {
+            return self.commit(ctx, None);
+        }
+        self.drop_stroke();
+        ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor())
     }
 
     fn stroke_pause(&self) -> StrokePause {

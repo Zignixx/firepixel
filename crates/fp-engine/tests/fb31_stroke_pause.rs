@@ -2,7 +2,8 @@
 //! paused with P. While paused the button may be released and the pointer moves freely without
 //! painting; the next press resumes the SAME stroke as a new, unconnected segment, so a
 //! semi-transparent stroke does not get darker where the parts overlap. Enter applies the paused
-//! stroke as one History row; Escape, a tool change, a menu command and undo apply it first.
+//! stroke as one History row; Escape, a tool change and a menu command apply it first (Undo discards
+//! it and Redo applies it, FB-70).
 
 use crate::common;
 use common::*;
@@ -175,19 +176,22 @@ fn tool_change_while_paused_applies_the_stroke() {
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle);
 }
 
+/// FB-70: Undo while paused discards the stroke (no row, nothing painted); Redo applies it.
 #[test]
-fn undo_while_paused_applies_then_undoes() {
+fn undo_while_paused_discards_and_redo_applies() {
     let mut s = new_session();
     hard_brush(&mut s, 50);
     let n0 = steps(&s);
     let elements = top_elements(&s).len();
     paint_and_pause(&mut s, (50.0, 100.0), (250.0, 100.0));
     s.undo().expect("undo");
-    assert_eq!(steps(&s), n0, "the applied stroke is undone");
-    assert_eq!(top_elements(&s).len(), elements, "no bitmap after undo");
+    assert_eq!(steps(&s), n0, "the paused stroke is discarded, no row");
+    assert_eq!(top_elements(&s).len(), elements, "no bitmap");
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle, "no stroke left behind");
+    paint_and_pause(&mut s, (50.0, 100.0), (250.0, 100.0));
     s.redo().expect("redo");
-    assert_eq!(steps(&s), n0 + 1, "redo brings the stroke back");
+    assert_eq!(steps(&s), n0 + 1, "Redo applies the paused stroke");
+    assert_eq!(s.tool_stroke_pause(), StrokePause::Idle);
     let img = image(&s, top_elements(&s)[0].id);
     assert!(alpha(&img, 150, 100) > 0);
     // the tool keeps working normally afterwards

@@ -615,6 +615,22 @@ pub trait ToolMachine: Send {
     fn stroke_pause(&self) -> StrokePause {
         StrokePause::Idle
     }
+    /// FB-70 (Firepixel extension): does the tool take Undo and Redo itself right now (a bitmap
+    /// stroke running or paused)? The session then calls [`ToolMachine::history_key`] instead of
+    /// moving in the History.
+    fn takes_history(&self) -> bool {
+        false
+    }
+    /// FB-70: Undo (`redo` = false) or Redo while [`ToolMachine::takes_history`]: the tool handles
+    /// it (a bitmap stroke: both are ignored while the button is held; while paused Undo discards
+    /// the stroke and Redo applies it); the session runs the response like that of an event.
+    fn history_key(&mut self, _redo: bool, _ctx: &ToolContext) -> ToolResponse {
+        ToolResponse::default()
+    }
+    /// FB-69 (Firepixel extension): is the running bitmap stroke subtracting its own paint (Alt)?
+    fn stroke_subtracting(&self) -> bool {
+        false
+    }
 }
 
 // ------------------------------------------------------------------ Optionen

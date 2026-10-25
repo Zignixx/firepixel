@@ -954,7 +954,10 @@ impl Session {
                 hit
             }),
             Requirement::Clipboard => !self.clipboard.is_empty(),
-            Requirement::CanUndo => d.is_some_and(|d| d.history.can_undo()),
+            // FB-70: Undo is taken by a running bitmap stroke (ignored while held)
+            Requirement::CanUndo => {
+                d.is_some_and(|d| d.history.can_undo()) || self.tool_takes_history()
+            }
             Requirement::CanRedo => d.is_some_and(|d| d.history.can_redo()),
             Requirement::HasPath => d.is_some_and(|d| d.path.is_some()),
             Requirement::MultiplePages => d.is_some_and(|d| d.doc.pages.len() > 1),
@@ -997,6 +1000,14 @@ impl Session {
     /// Führt einen Befehl aus (siehe Moduldoku).
     pub fn execute(&mut self, name: &str, params: Value) -> Result<CommandOutput> {
         self.end_live_text_view();
+        // FB-70 (Firepixel extension): Undo and Redo go to a running or paused bitmap stroke
+        // first (before the History requirements: the History may still be empty)
+        if matches!(name, "edit.undo" | "edit.redo")
+            && self.tool_history_key(name == "edit.redo")?
+        {
+            self.events.push(SessionEvent::CommandExecuted(name.into()));
+            return Ok(CommandOutput::session());
+        }
         // FB-31: a menu command applies a paused bitmap stroke first; zooming and scrolling keep
         // the pause
         if !PAUSE_KEEPING_COMMANDS.contains(&name) {
@@ -1444,6 +1455,33 @@ impl Session {
         self.tools.machine.stroke_pause()
     }
 
+    /// FB-69 (Firepixel extension): is the running bitmap stroke of the active tool subtracting
+    /// its own paint (Alt held)?
+    pub fn tool_stroke_subtracting(&self) -> bool {
+        self.tools.machine.stroke_subtracting()
+    }
+
+    /// FB-70 (Firepixel extension): does a running or paused bitmap stroke take Undo and Redo
+    /// (active tool, or the tool that finishes its gesture after a tool change)?
+    pub fn tool_takes_history(&self) -> bool {
+        self.tools.machine.takes_history()
+            || self.tools.held.as_ref().is_some_and(|h| h.takes_history())
+    }
+
+    /// FB-70: gives Undo (`redo` = false) or Redo to a running or paused bitmap stroke: with the
+    /// button held both are ignored (measured), while paused Undo discards the stroke (no history
+    /// row) and Redo applies it (one row). Returns whether the tool took it (the History is then
+    /// untouched).
+    pub fn tool_history_key(&mut self, redo: bool) -> Result<bool> {
+        let held = self.tools.held.as_ref().is_some_and(|h| h.takes_history());
+        if !held && !self.tools.machine.takes_history() {
+            return Ok(false);
+        }
+        let resp = self.with_machine_ctx(held, |m, ctx| m.history_key(redo, ctx));
+        self.run_tool_response(resp)?;
+        Ok(true)
+    }
+
     /// FB-31: applies a paused bitmap stroke (one history row, as on release); no-op otherwise.
     pub fn apply_paused_stroke(&mut self) -> Result<()> {
         if self.tools.machine.stroke_pause() == tools::StrokePause::Paused {
@@ -1455,8 +1493,11 @@ impl Session {
     /// Rückgängig im aktiven Dokument.
     pub fn undo(&mut self) -> Result<()> {
         self.end_live_text_view();
-        // FB-31: a paused stroke is applied first, then undone like any stroke
-        self.apply_paused_stroke()?;
+        // FB-70: a running or paused bitmap stroke takes Undo itself (ignored while held,
+        // discards a paused stroke)
+        if self.tool_history_key(false)? {
+            return Ok(());
+        }
         // a Vector Path stroke with the mouse button held ignores Ctrl+Z (FB-07)
         if self.tools.machine.blocks_history() {
             return Ok(());
@@ -1637,7 +1678,10 @@ impl Session {
     /// Wiederholen im aktiven Dokument.
     pub fn redo(&mut self) -> Result<()> {
         self.end_live_text_view();
-        self.apply_paused_stroke()?;
+        // FB-70: a paused bitmap stroke is applied by Redo; a running one ignores it
+        if self.tool_history_key(true)? {
+            return Ok(());
+        }
         if self.tools.machine.blocks_history() {
             return Ok(());
         }

@@ -758,6 +758,17 @@ pub struct BrushTool {
     paused: bool,
     /// FB-31: indices into `points` where the stroke was resumed after a pause.
     breaks: Vec<usize>,
+    /// FB-71: index in `points` the Shift line starts from: the segment start when Shift was held
+    /// at the press (or the resume), the point reached when Shift went down mid-stroke (the part
+    /// painted before stays); `None` while Shift is up.
+    line_anchor: Option<usize>,
+    /// FB-69 (Firepixel extension): subtraction passes of the stroke (Alt), for the command.
+    subtract: Vec<crate::paint::SubtractPass>,
+    /// FB-69: a subtraction pass is running (Alt held with the button down).
+    subtracting: bool,
+    /// FB-69: Alt was held at the press that began the stroke (the Brush has no Alt function at
+    /// the press, so it paints); it starts subtracting only after Alt was released once.
+    alt_latch: bool,
 }
 
 /// Distance (px) of the stroke start from the selected bitmap from which the brush paints a new
@@ -823,6 +834,10 @@ impl BrushTool {
             frozen: None,
             paused: false,
             breaks: Vec::new(),
+            line_anchor: None,
+            subtract: Vec::new(),
+            subtracting: false,
+            alt_latch: false,
         }
     }
 
@@ -1044,8 +1059,14 @@ impl BrushTool {
         };
         let pos = Point::new(pos.x + self.offset, pos.y + self.offset);
         if line {
-            // straight line from the first point of the running segment (FB-31: of the resumed part)
-            let seg = self.breaks.last().copied().unwrap_or(0);
+            // straight line from the anchor: the first point of the running segment when Shift was
+            // held at the press (FB-31: of the resumed part), otherwise the point reached when Shift
+            // went down; everything painted before it stays (FB-71)
+            let start = self.breaks.last().copied().unwrap_or(0);
+            let seg = *self
+                .line_anchor
+                .get_or_insert(self.points.len().saturating_sub(1));
+            let seg = seg.max(start);
             let Some(&first) = self.points.get(seg) else {
                 return;
             };
@@ -1067,6 +1088,7 @@ impl BrushTool {
                 l.set_points(self.points.clone());
             }
         } else if self.points.last().is_none_or(|l| *l != pos) {
+            self.line_anchor = None;
             self.points.push(pos);
             if let Some(v) = vel {
                 self.vels.push(v);
@@ -1079,8 +1101,9 @@ impl BrushTool {
 
     /// FB-31: resumes the paused stroke at `pos` – a new segment of the same stroke, not joined to
     /// the last point by a line.
-    fn resume(&mut self, pos: Point, time_ms: u64) {
+    fn resume(&mut self, pos: Point, time_ms: u64, shift: bool) {
         self.paused = false;
+        self.subtracting = false;
         let p = Point::new(pos.x + self.offset, pos.y + self.offset);
         // the speed starts at 0 like at a press (no jump from the last point)
         let vel = (!self.vels.is_empty()).then_some(0.0);
@@ -1093,9 +1116,50 @@ impl BrushTool {
             self.vels.push(v);
         }
         self.breaks.push(self.points.len());
+        // Shift held at the resume: the line starts at the new segment's first point
+        self.line_anchor = shift.then_some(self.points.len());
         self.points.push(p);
         if let Some(l) = self.live.as_mut() {
             l.start_segment(p, vel);
+        }
+    }
+
+    /// FB-69: can the running stroke subtract its own paint (Brush and Pencil; not a stroke that
+    /// paints nothing, not after Escape)?
+    fn can_subtract(&self) -> bool {
+        matches!(self.id, ToolId::Brush | ToolId::Pencil)
+            && self.active
+            && !self.deselect_only
+            && !self.escaped
+            && !self.points.is_empty()
+    }
+
+    /// FB-69: one subtraction step at `pos` (Alt held): starts a pass or extends the running one.
+    fn subtract_at(&mut self, pos: Point) {
+        let p = Point::new(pos.x + self.offset, pos.y + self.offset);
+        if !self.subtracting {
+            let (size, round) = match self.live.as_ref() {
+                Some(l) => (l.job.brush.diameter.max(1) as f32, l.job.brush.shape != 0),
+                None => (1.0, true),
+            };
+            self.subtracting = true;
+            self.line_anchor = None;
+            self.subtract.push(crate::paint::SubtractPass {
+                at: self.points.len(),
+                size,
+                round,
+                points: vec![p],
+            });
+            if let Some(l) = self.live.as_mut() {
+                l.start_subtract(p, size, round);
+            }
+        } else if let Some(pass) = self.subtract.last_mut()
+            && pass.points.last() != Some(&p)
+        {
+            pass.points.push(p);
+            if let Some(l) = self.live.as_mut() {
+                l.push_subtract(p);
+            }
         }
     }
 
@@ -1109,6 +1173,9 @@ impl BrushTool {
         }
         if !self.breaks.is_empty() {
             params["breaks"] = json!(self.breaks);
+        }
+        if !self.subtract.is_empty() {
+            params["subtract"] = Value::Array(self.subtract.iter().map(|p| p.to_json()).collect());
         }
         let escaped = self.escaped;
         self.cancel();
@@ -1233,10 +1300,47 @@ impl ToolMachine for BrushTool {
             return ToolResponse::default();
         };
         self.hover = Some(*pos);
+        if !ev.mods.alt {
+            self.alt_latch = false;
+        }
+        // FB-69 (Firepixel extension): Alt while painting or while paused subtracts: the brush tip
+        // erases only what this stroke has painted; releasing Alt paints again (a new segment)
+        let alt = ev.mods.alt && !self.alt_latch && !ev.mods.space && self.can_subtract();
         match kind {
+            PointerKind::Down if self.paused && alt => self.subtract_at(*pos),
+            PointerKind::Move if self.paused && self.subtracting => {
+                if alt {
+                    self.subtract_at(*pos);
+                } else {
+                    // Alt released with the button held: painting resumes here
+                    self.resume(*pos, ev.time_ms, ev.mods.shift);
+                }
+            }
+            PointerKind::Up if self.paused && self.subtracting => {
+                if alt {
+                    self.subtract_at(*pos);
+                }
+                // the stroke stays paused
+                self.subtracting = false;
+            }
+            PointerKind::Move | PointerKind::Up if self.active && !self.paused && alt => {
+                self.subtract_at(*pos);
+                if *kind == PointerKind::Up {
+                    return self.commit(ctx);
+                }
+            }
+            PointerKind::Move if self.active && !self.paused && self.subtracting => {
+                // Alt released: painting goes on from here as a new segment of the stroke
+                self.resume(*pos, ev.time_ms, ev.mods.shift);
+            }
+            PointerKind::Up if self.active && !self.paused && self.subtracting => {
+                return self.commit(ctx);
+            }
             // FB-31: a paused stroke resumes with the next press; moves and the release only move
             // the brush outline, nothing is painted (a press with Space held pans the view)
-            PointerKind::Down if self.paused && !ev.mods.space => self.resume(*pos, ev.time_ms),
+            PointerKind::Down if self.paused && !ev.mods.space => {
+                self.resume(*pos, ev.time_ms, ev.mods.shift)
+            }
             _ if self.paused => {}
             PointerKind::Down if self.id == ToolId::Eraser && !bitmap_target(ctx) => {
                 // Radiergummi ohne Bitmap: das Original hebt nur die Auswahl auf (gemessen, R1 gewählt)
@@ -1252,7 +1356,12 @@ impl ToolMachine for BrushTool {
                     };
                 }
             }
-            PointerKind::Down => self.begin(ctx, *pos, ev.time_ms),
+            PointerKind::Down => {
+                self.begin(ctx, *pos, ev.time_ms);
+                // FB-71: Shift held at the press draws the line from the press point
+                self.line_anchor = ev.mods.shift.then_some(0);
+                self.alt_latch = ev.mods.alt;
+            }
             PointerKind::Move if self.active => self.extend(*pos, ev.mods.shift, ev.time_ms),
             PointerKind::Up if self.active && self.deselect_only => {
                 self.cancel();
@@ -1284,6 +1393,28 @@ impl ToolMachine for BrushTool {
         // Werkzeugwechsel oder Menübefehl mitten im Zug: Zug verwerfen
         self.cancel();
         ToolResponse::default()
+    }
+
+    fn takes_history(&self) -> bool {
+        self.active
+    }
+
+    fn history_key(&mut self, redo: bool, ctx: &ToolContext) -> ToolResponse {
+        // FB-70: with the button held Undo and Redo are ignored, the stroke goes on (measured,
+        // RE spec 71 section 5); while paused (Firepixel extension) Undo discards the stroke (no
+        // history row) and Redo applies it like Enter
+        if !self.active || !self.paused {
+            return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
+        }
+        if redo {
+            return self.commit(ctx);
+        }
+        self.cancel();
+        ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor())
+    }
+
+    fn stroke_subtracting(&self) -> bool {
+        self.subtracting
     }
 
     fn stroke_pause(&self) -> StrokePause {
@@ -1321,6 +1452,10 @@ impl BrushTool {
         self.frozen = None;
         self.paused = false;
         self.breaks.clear();
+        self.line_anchor = None;
+        self.subtract.clear();
+        self.subtracting = false;
+        self.alt_latch = false;
     }
 
     /// Laufender Malvorgang (Tests, Vorschau).

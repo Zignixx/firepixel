@@ -124,6 +124,69 @@ pub struct PaintJob {
     /// segments form ONE stroke: they are rendered into one stroke layer and composited once, so
     /// the overlap of a semi-transparent stroke does not get darker. Empty = one segment.
     pub breaks: Vec<usize>,
+    /// FB-69 (Firepixel extension): subtraction passes of the stroke (Alt held while painting or
+    /// while paused). Each pass erases the stroke's OWN coverage of the points before its `at`; the
+    /// pixels under the stroke are never touched. Empty = no subtraction.
+    pub subtract: Vec<SubtractPass>,
+}
+
+/// FB-69 (Firepixel extension): one subtraction pass of a stroke: the brush tip (`size`, round or
+/// square) runs along `points` and removes the coverage the stroke has painted with its points
+/// before index `at` (points painted later are not affected).
+#[derive(Clone, Debug, PartialEq)]
+pub struct SubtractPass {
+    pub at: usize,
+    pub size: f32,
+    pub round: bool,
+    pub points: Vec<Point>,
+}
+
+impl SubtractPass {
+    /// JSON form for the `subtract` parameter of `bitmap.paint`.
+    pub fn to_json(&self) -> Value {
+        json!({
+            "at": self.at,
+            "size": self.size,
+            "round": self.round,
+            "points": self.points.iter().map(|p| json!([p.x, p.y])).collect::<Vec<_>>(),
+        })
+    }
+
+    /// Erases the pass from the stroke layer `layer` (only its coverage, fully).
+    fn apply(&self, layer: &mut RgbaImage) {
+        let dab = crate::commands::bitmap::Dab::stroke(self.size.max(1.0), self.round, 0.0);
+        let region = layer.bounds();
+        let stamps: Vec<Point> =
+            crate::commands::bitmap::dab_points(&self.points, crate::commands::bitmap::ERASER_STEP)
+                .into_iter()
+                .filter(|s| !dab.bounds(*s).intersect(&region).is_empty())
+                .collect();
+        if !stamps.is_empty() {
+            crate::commands::bitmap::erase_dabs(layer, &dab, &stamps, 1.0, None);
+        }
+    }
+}
+
+/// FB-69: `subtract` parameter of `bitmap.paint` (`[{at, size, round, points}, …]`).
+pub fn parse_subtract(v: Option<&Value>) -> Vec<SubtractPass> {
+    let Some(Value::Array(a)) = v else {
+        return Vec::new();
+    };
+    a.iter()
+        .filter_map(|s| {
+            let points = parse_points(s.get("points"));
+            (!points.is_empty()).then(|| SubtractPass {
+                at: s.get("at").and_then(|v| v.as_u64()).unwrap_or(0) as usize,
+                size: s
+                    .get("size")
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(1.0)
+                    .clamp(1.0, 5000.0) as f32,
+                round: s.get("round").and_then(|v| v.as_bool()).unwrap_or(true),
+                points,
+            })
+        })
+        .collect()
 }
 
 /// FB-31: the segments of a stroke whose points are split at `breaks` (indices where a new segment
@@ -287,6 +350,7 @@ impl PaintJob {
                 seed: 1,
                 velocities: Vec::new(),
                 breaks,
+                subtract: Vec::new(),
             };
         }
         let mut brush = p
@@ -356,6 +420,7 @@ impl PaintJob {
             },
             points,
             breaks,
+            subtract: parse_subtract(p.get("subtract")),
         }
     }
 
@@ -465,7 +530,7 @@ impl PaintJob {
         if self.color.a() == 0 || self.mix.opacity == 0 {
             return dst;
         }
-        let mut layer = self.stroke_layer(region);
+        let mut layer = self.stroke_layer_subtracted(region);
         if let Some(m) = sel {
             let (l, t) = layer.origin();
             let w = layer.width().max(1);
@@ -495,9 +560,34 @@ impl PaintJob {
         dst
     }
 
-    /// Strichebene (Farbe mit Deckung) über `region`.
+    /// FB-69: the stroke layer over `region` with the subtraction passes applied: the points
+    /// before the first pass are rendered, the pass erases from that layer, the following points
+    /// are rendered and merged (the higher coverage wins, as in one stroke layer), and so on.
+    /// Without passes exactly [`Self::stroke_layer`] of the whole stroke.
+    fn stroke_layer_subtracted(&self, region: IRect) -> RgbaImage {
+        if self.subtract.is_empty() {
+            return self.stroke_layer(region, 0..usize::MAX);
+        }
+        let mut acc: Option<RgbaImage> = None;
+        let mut lo = 0;
+        for pass in &self.subtract {
+            if pass.at > lo {
+                let part = self.stroke_layer(region, lo..pass.at);
+                acc = Some(merge_layers(acc, part));
+                lo = pass.at;
+            }
+            if let Some(a) = acc.as_mut() {
+                pass.apply(a);
+            }
+        }
+        let rest = self.stroke_layer(region, lo..usize::MAX);
+        merge_layers(acc, rest)
+    }
+
+    /// Strichebene (Farbe mit Deckung) über `region`; only the segments whose first point lies in
+    /// `range` (FB-69, all segments: `0..usize::MAX`).
     #[cfg(all(feature = "vector", feature = "render"))]
-    fn stroke_layer(&self, region: IRect) -> RgbaImage {
+    fn stroke_layer(&self, region: IRect, range: std::ops::Range<usize>) -> RgbaImage {
         use fp_vector as fv;
         // Stiftdaten je Punkt wie ein echter Zug im Original: eigener Zufalls-Startwert je Punkt
         // (sonst wiederholt jedes Segment dieselbe Streuung), Druck 1, Geschwindigkeit wie bei
@@ -510,9 +600,10 @@ impl PaintJob {
                 .unwrap_or(PAINT_VELOCITY)
         };
         // FB-31: one contour per segment of a resumed stroke, all in the one stroke layer
-        let contours = self
+        let contours: Vec<fv::PathContour> = self
             .stroke_segments()
             .into_iter()
+            .filter(|(start, _)| range.contains(start))
             .map(|(start, pts)| {
                 let mut contour = fv::PathContour::from_points(&pts, false);
                 contour.dynamics = (0..pts.len())
@@ -525,6 +616,10 @@ impl PaintJob {
                 contour
             })
             .collect();
+        if contours.is_empty() {
+            return RgbaImage::new(region)
+                .unwrap_or_else(|_| RgbaImage::empty_at(region.left, region.top));
+        }
         let mut path = fv::VectorPath::new(contours);
         path.random_seed = self.seed;
         let mut stroke = fv::Stroke::new(fp_render::convert::brush_params(&self.brush), self.color);
@@ -539,12 +634,16 @@ impl PaintJob {
 
     /// Ohne fp-vector/fp-render: runde Abdrücke.
     #[cfg(not(all(feature = "vector", feature = "render")))]
-    fn stroke_layer(&self, region: IRect) -> RgbaImage {
+    fn stroke_layer(&self, region: IRect, range: std::ops::Range<usize>) -> RgbaImage {
         let mut out =
             RgbaImage::new(region).unwrap_or_else(|_| RgbaImage::empty_at(region.left, region.top));
         // FB-31: the segments of a resumed stroke share one layer (the higher coverage wins)
         let c = self.color.to_rgba8();
-        for (_, pts) in self.stroke_segments() {
+        for (_, pts) in self
+            .stroke_segments()
+            .into_iter()
+            .filter(|(start, _)| range.contains(start))
+        {
             let Some(m) = crate::commands::bitmap::stroke_mask(
                 &pts,
                 self.brush.diameter as f32,
@@ -565,6 +664,20 @@ impl PaintJob {
         }
         out
     }
+}
+
+/// FB-69: merges two stroke layers of the same region: per pixel the one with the higher
+/// coverage (pieces of one stroke do not add up).
+fn merge_layers(acc: Option<RgbaImage>, part: RgbaImage) -> RgbaImage {
+    let Some(mut acc) = acc else {
+        return part;
+    };
+    for (a, p) in acc.data_mut().iter_mut().zip(part.data()) {
+        if p[3] > a[3] {
+            *a = *p;
+        }
+    }
+    acc
 }
 
 /// Umgebendes Rechteck der Punkte, um `margin` vergrößert.
@@ -937,6 +1050,38 @@ impl LivePaint {
         self.render_rects(&[all]);
     }
 
+    /// FB-69: starts a subtraction pass at `p` (Alt held): from now on the brush tip erases the
+    /// stroke's own coverage of the points painted so far.
+    pub fn start_subtract(&mut self, p: Point, size: f32, round: bool) {
+        self.job.subtract.push(SubtractPass {
+            at: self.job.points.len(),
+            size,
+            round,
+            points: vec![p],
+        });
+        let r = points_cover(&[p], (size / 2.0).ceil() as i32 + 3);
+        self.render_rects(&[r.intersect(&self.painted)]);
+    }
+
+    /// FB-69: extends the running subtraction pass to `p` and recomputes the area it touches.
+    pub fn push_subtract(&mut self, p: Point) {
+        let Some(pass) = self.job.subtract.last_mut() else {
+            return;
+        };
+        pass.points.push(p);
+        let n = pass.points.len();
+        let r = points_cover(
+            &pass.points[n.saturating_sub(2)..],
+            (pass.size / 2.0).ceil() as i32 + 3,
+        );
+        self.render_rects(&[r.intersect(&self.painted)]);
+    }
+
+    /// FB-69: the subtraction passes of the stroke.
+    pub fn subtract(&self) -> &[SubtractPass] {
+        &self.job.subtract
+    }
+
     /// Indices where the segments of a resumed stroke start (FB-31; empty = one segment).
     pub fn breaks(&self) -> &[usize] {
         &self.job.breaks
@@ -1260,6 +1405,7 @@ mod tests {
             seed: 7,
             velocities: Vec::new(),
             breaks: Vec::new(),
+            subtract: Vec::new(),
         }
     }
 

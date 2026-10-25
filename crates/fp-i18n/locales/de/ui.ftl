@@ -67,6 +67,9 @@ ui-preview-failed = Vorschau nicht möglich: { $error }
 ui-sel-bitmap-mode = Bitmapmodus
 # FB-31 (Firepixel extension): pausing a running bitmap stroke with P
 ui-stroke-pause-hint = P auf der Tastatur hält den aktuellen Pinselstrich an.
+# FB-69 (Firepixel extension): Alt held during a running or paused stroke
+ui-stroke-subtract = Abzugsmodus (Alt): Der Pinsel löscht nur, was dieser Strich gemalt hat. Alt loslassen malt wieder.
+ui-stroke-subtract-paused = Strich angehalten, Abzugsmodus (Alt): Ziehen löscht nur, was dieser Strich gemalt hat. Alt loslassen malt wieder, Enter wendet den Strich an.
 ui-stroke-paused = Strich angehalten. Maustaste loslassen oder Stift abheben ist jetzt sicher. Klick auf die Leinwand setzt den Strich fort, Enter wendet ihn an.
 ui-sel-document = { $format } (Dokument)
 ui-sel-objects = { $n } Objekte

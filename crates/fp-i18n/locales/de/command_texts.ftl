@@ -694,6 +694,7 @@ cmdtext-ziel-ebenen-id-ebene-oder-unterebene = Ziel-Ebenen-ID (Ebene oder Untere
 cmdtext-kopien-statt-verschieben-alt = Kopien statt Verschieben (Alt)
 cmdtext-wie-das-skalieren-werkzeug-eine-reine-ac-1789a5 = wie das Skalieren-Werkzeug: eine reine Achsenskalierung eines einzeln gewählten Texts wird in Schriftgröße und horizontale Skalierung umgerechnet statt als Matrix gespeichert
 cmdtext-fortsetzungen-eines-angehaltenen-strichs-0b4f66 = Fortsetzungen eines angehaltenen Strichs: Indizes in `points`, an denen ein neues, nicht verbundenes Stück desselben Strichs beginnt (Firepixel-Erweiterung)
+cmdtext-abzug-im-eigenen-strich-alt-firepixel-er-b2b123 = Abzug im eigenen Strich (Alt, Firepixel-Erweiterung): [{"{"}at, size, round, points{"}"}, …]; die Spitze löscht nur, was die Punkte vor `at` gemalt haben
 cmdtext-muster-im-dokument-festhalten-muster-bzw-77ed86 = Muster im Dokument festhalten: Muster bzw. Verlauf bleibt beim Verschieben und Transformieren des Objekts im Dokument stehen (Firepixel-Erweiterung)
 cmdtext-maske-invertieren-firepixel-erweiterung = Maske invertieren (Firepixel-Erweiterung)
 cmdtext-maske-vorher-anwenden-in-bitmap-umwandeln = Maske vorher anwenden (in Bitmap umwandeln)

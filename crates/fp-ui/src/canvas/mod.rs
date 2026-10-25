@@ -4085,19 +4085,27 @@ fn selection_info(st: &AppState) -> String {
 }
 
 /// FB-31 (Firepixel extension): status text of a pausable bitmap stroke – the hint "press P"
-/// while a stroke is painted, the instructions while it is paused; `None` without a stroke.
-pub fn stroke_pause_status(st: &AppState) -> Option<String> {
+/// while a stroke is painted, the instructions while it is paused; `None` without a stroke. With
+/// `alt` held a Brush or Pencil stroke announces its subtraction mode (FB-69).
+pub fn stroke_pause_status(st: &AppState, alt: bool) -> Option<String> {
+    let subtract = (alt || st.session.tool_stroke_subtracting())
+        && matches!(
+            st.session.tools.active,
+            fp_engine::tools::ToolId::Brush | fp_engine::tools::ToolId::Pencil
+        );
     match st.session.tool_stroke_pause() {
+        fp_engine::StrokePause::Painting if subtract => Some(fp_i18n::t("ui-stroke-subtract")),
+        fp_engine::StrokePause::Paused if subtract => Some(fp_i18n::t("ui-stroke-subtract-paused")),
         fp_engine::StrokePause::Painting => Some(fp_i18n::t("ui-stroke-pause-hint")),
         fp_engine::StrokePause::Paused => Some(fp_i18n::t("ui-stroke-paused")),
         fp_engine::StrokePause::Idle => None,
     }
 }
 
-/// Text on the left of the status line at time `now`: the stroke pause text (FB-31), otherwise a
-/// recent message, the canvas info or the selection info.
-pub fn footer_status(st: &AppState, now: f64) -> String {
-    if let Some(s) = stroke_pause_status(st) {
+/// Text on the left of the status line at time `now` (`alt` = Alt held): the stroke pause text
+/// (FB-31, FB-69), otherwise a recent message, the canvas info or the selection info.
+pub fn footer_status(st: &AppState, now: f64, alt: bool) -> String {
+    if let Some(s) = stroke_pause_status(st, alt) {
         return s;
     }
     let info = st
@@ -4117,7 +4125,8 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let c = &theme.colors;
     ui.painter().rect_filled(rect, 0.0, c.frame_bg);
     let now = ui.input(|i| i.time);
-    let status = footer_status(st, now);
+    let alt = ui.input(|i| i.modifiers.alt);
+    let status = footer_status(st, now, alt);
     let Some(d) = st.session.active() else { return };
     let (frames, frame) = (d.frame_count(), d.frame);
     let (w, h) = d
