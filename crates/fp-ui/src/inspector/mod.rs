@@ -118,11 +118,15 @@ impl InspectorState {
 }
 
 /// Höhe des Inspektors (Kopf + zwei Zeilen bzw. eine Zeile im Halbhöhenmodus).
+/// A dragged height (`inspector_height`) replaces the discrete size until the next
+/// diamond click or tab double-click.
 pub fn height(theme: &Theme, st: &AppState) -> f32 {
     let ws = &st.settings.workspace;
     let header = theme.metrics.inspector_header_height;
     if ws.inspector_collapsed {
         header + 2.0
+    } else if ws.inspector_height >= header + 2.0 {
+        ws.inspector_height
     } else if ws.inspector_half {
         header + theme.metrics.inspector_row_height + 6.0
     } else {
@@ -130,9 +134,28 @@ pub fn height(theme: &Theme, st: &AppState) -> f32 {
     }
 }
 
+/// Apply a drag of the Properties top edge. `h` is the content height in pixels.
+/// Dragging down to the tab row collapses the panel and forgets the custom height.
+/// At or below one row the second row stays hidden; above that both rows show, and
+/// the panel may grow past the two-row size.
+pub fn apply_dragged_height(ws: &mut crate::workspace::Workspace, header: f32, row: f32, h: f32) {
+    let collapsed_h = header + 2.0;
+    let half_h = header + row + 6.0;
+    if h <= collapsed_h + 4.0 {
+        ws.inspector_collapsed = true;
+        ws.inspector_half = false;
+        ws.inspector_height = 0.0;
+        return;
+    }
+    ws.inspector_collapsed = false;
+    ws.inspector_half = h <= half_h + 4.0;
+    ws.inspector_height = h;
+}
+
 /// ◊-Symbol im Reiter (BA-027): volle ↔ halbe Höhe; ein auf den Reiter eingeklappter Inspektor
 /// öffnet in voller Höhe.
 pub fn toggle_half(ws: &mut crate::workspace::Workspace) {
+    ws.inspector_height = 0.0;
     if ws.inspector_collapsed {
         ws.inspector_collapsed = false;
         ws.inspector_half = false;
@@ -143,6 +166,7 @@ pub fn toggle_half(ws: &mut crate::workspace::Workspace) {
 
 /// Nächste Höhe des Inspektors beim Doppelklick auf den Reiter: voll → halb → nur Reiter → voll.
 pub fn cycle_height(ws: &mut crate::workspace::Workspace) {
+    ws.inspector_height = 0.0;
     if ws.inspector_collapsed {
         ws.inspector_collapsed = false;
         ws.inspector_half = false;
@@ -486,5 +510,31 @@ fn quadrants(
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod height_drag {
+    use super::apply_dragged_height;
+
+    #[test]
+    fn drag_grows_past_two_rows_and_collapse_forgets_it() {
+        let mut ws = crate::workspace::Workspace::default();
+        let header = 18.0;
+        let row = 48.0;
+        let full = header + 2.0 * row + 8.0;
+        apply_dragged_height(&mut ws, header, row, full + 40.0);
+        assert!(!ws.inspector_collapsed);
+        assert!(!ws.inspector_half);
+        assert!((ws.inspector_height - (full + 40.0)).abs() < 0.01);
+        apply_dragged_height(&mut ws, header, row, header + row);
+        assert!(!ws.inspector_collapsed);
+        assert!(ws.inspector_half, "one row hides the second");
+        apply_dragged_height(&mut ws, header, row, header + 2.0);
+        assert!(ws.inspector_collapsed);
+        assert_eq!(ws.inspector_height, 0.0);
+        super::cycle_height(&mut ws);
+        assert_eq!(ws.inspector_height, 0.0);
+        assert!(!ws.inspector_collapsed);
     }
 }

@@ -360,8 +360,9 @@ impl FirepixelApp {
             }
         }
         if st.settings.workspace.show_inspector && !hidden && !studio && chrome.inspector {
+            let room = ui.max_rect().height();
             let h = inspector::height(&theme, st);
-            egui::Panel::bottom("fp-inspector")
+            let resp = egui::Panel::bottom("fp-inspector")
                 .exact_size(h + m.splitter)
                 .frame(no_frame)
                 .resizable(false)
@@ -373,6 +374,25 @@ impl FirepixelApp {
                     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
                     inspector::show(&mut child, st);
                 });
+            // Drag the top edge up or down. The dock splitter is interactive; this one was only painted.
+            let r = resp.response.rect;
+            let grip_h = (m.splitter + 4.0).min(r.height().max(1.0));
+            let grip = Rect::from_min_size(r.min, vec2(r.width(), grip_h));
+            let g = ui.interact(grip, egui::Id::new("inspector-height"), egui::Sense::drag());
+            if g.hovered() || g.dragged() {
+                ctx.set_cursor_icon(egui::CursorIcon::ResizeVertical);
+            }
+            if g.dragged() {
+                let max_h = (room - 120.0 - m.splitter).max(h);
+                let new_h = (h - g.drag_delta().y)
+                    .clamp(theme.metrics.inspector_header_height + 2.0, max_h);
+                inspector::apply_dragged_height(
+                    &mut st.settings.workspace,
+                    theme.metrics.inspector_header_height,
+                    theme.metrics.inspector_row_height,
+                    new_h,
+                );
+            }
         }
         let doc_area = egui::CentralPanel::no_frame()
             .show(ui, |ui| {
