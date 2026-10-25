@@ -587,7 +587,9 @@ Wichtige Bedienfelder:
   Klick ist ein Schritt „Seitenauswahl ändern“. *Seite löschen* (Schaltfläche, Menüs oder Entf in der
   Liste) entfernt alle ausgewählten Seiten in einem Schritt, *Seite duplizieren* kopiert jede
   ausgewählte Seite direkt hinter sich; *Seite umbenennen* und *Als Masterseite festlegen* sind bei
-  Mehrfachauswahl grau, Ziehen verschiebt nur die gezogene Seite. Wird die einzige Seite gelöscht,
+  Mehrfachauswahl grau. Wer eine der ausgewählten Seiten zieht, verschiebt alle ausgewählten Seiten
+  als Block in ihrer Reihenfolge (ein Schritt „Seiten verschieben“, am Zeiger steht die Anzahl); eine
+  nicht ausgewählte Seite wird allein verschoben. Wird die einzige Seite gelöscht,
   bleibt eine leere „Seite 1“. Sind alle Seiten ausgewählt, fragt Firepixel „Alle Seiten löschen?“ und
   lässt die Seite wählen, die bleibt (Skripte behalten die erste Seite oder die mit `keep` genannte).
 - **Optimieren:** Exportformat und Farben.

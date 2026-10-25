@@ -2716,6 +2716,34 @@ pub fn move_page(doc: &mut Document, from: usize, to: usize) -> Option<()> {
     Some(())
 }
 
+/// Firepixel extension (FB-89): moves the pages `block` (sorted, distinct, valid) as one block so
+/// that the first of them lands at index `to` of the new order (clamped to `n - block.len()`);
+/// their relative order is kept. Returns the new index of every old index (`map[old] = new`).
+pub fn move_pages(doc: &mut Document, block: &[usize], to: usize) -> Option<Vec<usize>> {
+    let n = doc.pages.len();
+    if block.is_empty() || block.iter().any(|&i| i >= n) || block.windows(2).any(|w| w[0] >= w[1]) {
+        return None;
+    }
+    let to = to.min(n - block.len());
+    let mut order: Vec<usize> = (0..n).filter(|i| !block.contains(i)).collect();
+    order.splice(to..to, block.iter().copied());
+    let mut map = vec![0; n];
+    for (new, &old) in order.iter().enumerate() {
+        map[old] = new;
+    }
+    if order.iter().enumerate().all(|(k, &o)| k == o) {
+        return Some(map);
+    }
+    let old = std::mem::take(&mut doc.pages);
+    doc.pages = order.iter().map(|&o| Arc::clone(&old[o])).collect();
+    doc.current_page = map
+        .get(doc.current_page)
+        .copied()
+        .unwrap_or(doc.current_page);
+    doc.invalidate_root_copy();
+    Some(map)
+}
+
 /// Neue Lage des Eintrags `i`, wenn `from` nach `to` verschoben wird.
 pub fn moved_index(i: usize, from: usize, to: usize) -> usize {
     if i == from {

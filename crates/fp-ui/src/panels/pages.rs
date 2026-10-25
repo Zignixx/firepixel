@@ -2,7 +2,8 @@
 //! Nummer und Name, Masterseite (Kennzeichen, als Masterseite festlegen), Umbenennen per
 //! Doppelklick, Zähler „n Seiten“, Neue/Doppelte Seite, Seite löschen, Kontextmenü der Zeilen (7026),
 //! Zeile auf „Neue Seite“ ziehen = Seite duplizieren (RE spec 70 §2). Mehrfachauswahl mit
-//! Umschalt/Strg, Löschen und Duplizieren aller gewählten Seiten (FB-68, RE spec 71 §4).
+//! Umschalt/Strg, Löschen und Duplizieren aller gewählten Seiten (FB-68, RE spec 71 §4); eine
+//! gewählte Seite ziehen verschiebt alle gewählten Seiten als Block (FB-89).
 
 use super::common::{self, FooterButton};
 use super::thumbs;
@@ -258,16 +259,29 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     }
     let dropped_on_new = row_dropped.filter(|_| over_new);
     // Zeilen per Ziehen umordnen (CT-C-03), ein Verlaufsschritt „Seite verschieben“
-    let moved = common::reorder_rows(ui, "pages", list, &row_rects, drag_start);
+    // FB-89 (Firepixel extension): dragging one of several selected pages moves all of them as
+    // a block in their order (one History row "Move Pages"); an unselected page moves alone
+    let moved = common::reorder_rows_block(ui, "pages", list, &row_rects, drag_start, &selected);
+    if multi
+        && row_drag.is_some_and(|i| selected.contains(&i))
+        && !over_new
+        && let Some(p) = pointer
+    {
+        drag_ghost(ui, p, selected.len(), &theme);
+    }
     if let Some(i) = dropped_on_new {
         if i != current {
             actions.push(Action::SetPage(i));
         }
         actions.push(Action::Run("page.duplicate".into(), json!({"index": i})));
-    } else if let Some((from, to)) = moved {
+    } else if let Some((pages, to)) = moved {
         actions.push(Action::Run(
             "page.move".into(),
-            json!({"page": from, "index": to}),
+            if pages.len() > 1 {
+                json!({"pages": pages, "index": to})
+            } else {
+                json!({"page": pages[0], "index": to})
+            },
         ));
     }
     let text = fp_i18n::tr!("panel-pages-count", n = n);
@@ -302,6 +316,21 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     for a in actions {
         st.push(a);
     }
+}
+
+/// FB-89: the label beside the pointer while a block of `n` selected pages is dragged ("3 pages").
+fn drag_ghost(ui: &Ui, p: egui::Pos2, n: usize, theme: &Theme) {
+    let c = &theme.colors;
+    let text = fp_i18n::tr!("panel-pages-count", n = n);
+    let painter = ui.ctx().layer_painter(egui::LayerId::new(
+        egui::Order::Tooltip,
+        Id::new("pages-drag-ghost"),
+    ));
+    let galley = painter.layout_no_wrap(text, theme.ui_font(), c.text);
+    let rect = Rect::from_min_size(p + vec2(14.0, 10.0), galley.size() + vec2(12.0, 6.0));
+    painter.rect_filled(rect, 2.0, c.list_selected_bg);
+    painter.rect_stroke(rect, 2.0, Stroke::new(1.0, c.focus), StrokeKind::Inside);
+    painter.galley(rect.min + vec2(6.0, 3.0), galley, c.text);
 }
 
 #[cfg(test)]

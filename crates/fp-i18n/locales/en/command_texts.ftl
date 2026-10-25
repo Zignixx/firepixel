@@ -709,3 +709,4 @@ cmdtext-seitenindex-vorgabe-gewaehlte-seiten = Page index (default: the selected
 cmdtext-seitenindizes-0-2-vorgabe-gewaehlte-seiten = Page indices [0, 2, …] (default: the selected pages)
 cmdtext-seite-die-bleibt-wenn-alle-seiten-geloes-a6c88f = Page that stays when all pages would be deleted (default: the first)
 cmdtext-single-nur-diese-seite-wird-aktuell-rang-713897 = single = only this page (becomes current), range = range from the current page, toggle = add or remove the page
+cmdtext-seitenindizes-0-2-als-block = Page indices [0, 2, …] as a block

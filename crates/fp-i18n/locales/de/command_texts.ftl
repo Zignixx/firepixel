@@ -709,3 +709,4 @@ cmdtext-seitenindex-vorgabe-gewaehlte-seiten = Seitenindex (Vorgabe: gewählte S
 cmdtext-seitenindizes-0-2-vorgabe-gewaehlte-seiten = Seitenindizes [0, 2, …] (Vorgabe: gewählte Seiten)
 cmdtext-seite-die-bleibt-wenn-alle-seiten-geloes-a6c88f = Seite, die bleibt, wenn alle Seiten gelöscht würden (Vorgabe: erste)
 cmdtext-single-nur-diese-seite-wird-aktuell-rang-713897 = single = nur diese Seite (wird aktuell), range = Bereich ab der aktuellen Seite, toggle = Seite hinzu oder weg
+cmdtext-seitenindizes-0-2-als-block = Seitenindizes [0, 2, …] als Block

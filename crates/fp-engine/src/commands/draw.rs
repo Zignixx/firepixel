@@ -2174,6 +2174,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 },
                 "Seitenindex",
             )
+            .opt(
+                "pages",
+                ParamKind::Json,
+                "Seitenindizes [0, 2, …] als Block",
+            )
             .param(
                 "index",
                 ParamKind::Integer {
@@ -2184,6 +2189,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
             )
             .run(|s, p| {
                 let to = p.usize("index")?;
+                if let Some(v) = p.parse::<Vec<i64>>("pages")? {
+                    let block: Vec<usize> = v.into_iter().map(|i| i.max(0) as usize).collect();
+                    return with_doc(s, |d| move_pages(d, block, to));
+                }
                 let from = p.opt_i64("page")?.map(|v| v.max(0) as usize);
                 with_doc(s, |d| {
                     let from = from.unwrap_or(d.page);
@@ -2512,6 +2521,29 @@ fn delete_pages(
     d.layer_choice = None;
     d.selection.clear();
     Ok(CommandOutput::doc_with(json!({"page": d.page})))
+}
+
+/// `page.move` with `pages` (Firepixel extension, FB-89): the listed pages move as one block, in
+/// their order, so that the first lands at `to` (index in the new order); one History row "Move
+/// Pages". The current page stays current and the moved pages stay selected. A list of one page
+/// behaves like the single form (row "Move Page", selection = the current page alone).
+fn move_pages(d: &mut DocumentState, mut block: Vec<usize>, to: usize) -> Result<CommandOutput> {
+    let n = d.doc.pages.len();
+    block.sort_unstable();
+    block.dedup();
+    if block.is_empty() || block.iter().any(|&i| i >= n) {
+        return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
+    }
+    let map = docops::move_pages(Arc::make_mut(&mut d.doc), &block, to)
+        .ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
+    d.page = map[d.page.min(n - 1)];
+    let moved: Vec<usize> = block.iter().map(|&i| map[i]).collect();
+    if moved.len() == 1 {
+        d.page_selection.clear();
+        return Ok(CommandOutput::doc_with(json!({"pages": moved})));
+    }
+    d.set_page_selection(moved.iter().copied());
+    Ok(CommandOutput::doc_with(json!({"pages": moved})).labeled(fp_i18n::t("msg-step-move-pages")))
 }
 
 /// `page.duplicate` (FB-68, RE spec 71 §4.3): every page of `list` (default: the selected pages)

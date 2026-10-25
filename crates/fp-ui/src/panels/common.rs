@@ -66,6 +66,21 @@ pub fn reorder_rows(
     rows: &[Rect],
     started: Option<usize>,
 ) -> Option<(usize, usize)> {
+    reorder_rows_block(ui, key, list, rows, started, &[]).map(|(b, to)| (b[0], to))
+}
+
+/// Like [`reorder_rows`], for a list with a multi-selection (Pages panel, FB-89): when the dragged
+/// row is one of `block` (sorted indices, at least two), all of them move as one block in their
+/// order; otherwise only the dragged row. Returns the moved rows and the index of the first of
+/// them in the new order, only when the order changes.
+pub fn reorder_rows_block(
+    ui: &Ui,
+    key: &str,
+    list: Rect,
+    rows: &[Rect],
+    started: Option<usize>,
+    block: &[usize],
+) -> Option<(Vec<usize>, usize)> {
     let id = Id::new(("reorder-rows", key));
     if let Some(i) = started {
         ui.data_mut(|d| d.insert_temp(id, i));
@@ -75,6 +90,11 @@ pub fn reorder_rows(
         ui.data_mut(|d| d.remove::<usize>(id));
         return None;
     }
+    let moving: Vec<usize> = if block.len() > 1 && block.contains(&from) {
+        block.iter().copied().filter(|&i| i < rows.len()).collect()
+    } else {
+        vec![from]
+    };
     let pointer = ui.input(|i| i.pointer.latest_pos());
     let released = ui.input(|i| i.pointer.any_released() || !i.pointer.any_down());
     // Einfügestelle 0..=n aus der Zeigerhöhe (über der ersten Zeile = 0, unter der letzten = n)
@@ -87,7 +107,12 @@ pub fn reorder_rows(
                 .position(|r| p.y < r.center().y)
                 .unwrap_or(rows.len())
         });
-    let target = slot.filter(|&s| s != from && s != from + 1);
+    // index of the first moved row in the new order; no change = no target
+    let contiguous = moving.windows(2).all(|w| w[1] == w[0] + 1);
+    let target = slot.filter(|&s| {
+        let to = s - moving.iter().filter(|&&i| i < s).count();
+        !(contiguous && to == moving[0])
+    });
     if let Some(s) = target {
         let y = if s < rows.len() {
             rows[s].top()
@@ -105,7 +130,10 @@ pub fn reorder_rows(
     }
     if released {
         ui.data_mut(|d| d.remove::<usize>(id));
-        return target.map(|s| (from, if s > from { s - 1 } else { s }));
+        return target.map(|s| {
+            let to = s - moving.iter().filter(|&&i| i < s).count();
+            (moving, to)
+        });
     }
     None
 }

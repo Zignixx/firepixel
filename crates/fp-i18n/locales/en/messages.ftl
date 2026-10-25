@@ -272,6 +272,7 @@ msg-step-cut = Cut
 msg-step-command-script = Command script
 msg-step-move = Move
 msg-step-move-copy = Move Copy
+msg-step-move-pages = Move Pages
 msg-step-duplicate = Duplicate
 msg-step-move-point = Move Point
 msg-step-mask-link = Link Mask

@@ -272,6 +272,7 @@ msg-step-cut = Ausschneiden
 msg-step-command-script = Befehlsskript
 msg-step-move = Verschieben
 msg-step-move-copy = Kopie verschieben
+msg-step-move-pages = Seiten verschieben
 msg-step-duplicate = Duplizieren
 msg-step-move-point = Punkt verschieben
 msg-step-mask-link = Maske verknüpfen
