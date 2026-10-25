@@ -556,9 +556,15 @@ mod height_drag {
         assert!(ws.inspector_half, "one row hides the second");
         // near the discrete heights the drag snaps to them
         apply_dragged_height(&mut ws, header, row, full + 3.0);
-        assert!(!ws.inspector_half && ws.inspector_height == 0.0, "snaps to full");
+        assert!(
+            !ws.inspector_half && ws.inspector_height == 0.0,
+            "snaps to full"
+        );
         apply_dragged_height(&mut ws, header, row, header + row + 6.0 - 2.0);
-        assert!(ws.inspector_half && ws.inspector_height == 0.0, "snaps to half");
+        assert!(
+            ws.inspector_half && ws.inspector_height == 0.0,
+            "snaps to half"
+        );
         apply_dragged_height(&mut ws, header, row, header + 2.0);
         assert!(ws.inspector_collapsed);
         assert_eq!(ws.inspector_height, 0.0);

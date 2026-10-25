@@ -977,7 +977,12 @@ fn preview_slider(
 /// (contributor PR #3), switchable with View ▸ Live Font Preview (preference `LiveFontPreview`,
 /// default on). In the text editor dialog the preview shows on the selected text objects, not
 /// on the dialog's own draft text.
-pub(crate) fn preview_marked_font(ctx: &egui::Context, st: &mut AppState, family: &str, style: &str) {
+pub(crate) fn preview_marked_font(
+    ctx: &egui::Context,
+    st: &mut AppState,
+    family: &str,
+    style: &str,
+) {
     if !fp_engine::session::live_font_preview(&st.session.prefs)
         || st.session.text_edit_attrs().is_some()
     {
