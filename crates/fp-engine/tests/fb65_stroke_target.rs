@@ -27,7 +27,9 @@ fn count(s: &Session) -> usize {
 }
 
 fn sel(s: &Session) -> Vec<ElementId> {
-    s.active().map(|d| d.selection.elements.clone()).unwrap_or_default()
+    s.active()
+        .map(|d| d.selection.elements.clone())
+        .unwrap_or_default()
 }
 
 /// Two blue bitmaps A (50,50 100×100) and B (300,50 100×100) on layer 1, nothing selected.
@@ -75,7 +77,10 @@ fn a_stroke_on_a_bitmap_wins_over_the_selected_bitmap_and_a_selected_vector() {
     stroke(&mut s, (320.0, 100.0));
     assert_eq!(count(&s), n);
     assert!(red(&image(&s, b), 330, 100));
-    assert!(!image(&s, a).data().iter().any(|p| p[0] == 0xC0), "A unchanged");
+    assert!(
+        !image(&s, a).data().iter().any(|p| p[0] == 0xC0),
+        "A unchanged"
+    );
     assert_eq!(sel(&s), vec![b]);
     // a vector selected
     let (mut s, _, b) = mk();
@@ -92,18 +97,38 @@ fn a_stroke_with_the_brush_tool_on_an_unselected_bitmap_paints_into_it() {
     let (mut s, _, b) = mk();
     s.set_tool(ToolId::Pencil).expect("pencil");
     let n = count(&s);
-    events(&mut s, &[ToolEvent::down(320.0, 100.0), ToolEvent::drag(350.0, 100.0), ToolEvent::up(350.0, 100.0)]);
+    events(
+        &mut s,
+        &[
+            ToolEvent::down(320.0, 100.0),
+            ToolEvent::drag(350.0, 100.0),
+            ToolEvent::up(350.0, 100.0),
+        ],
+    );
     assert_eq!(count(&s), n, "no new bitmap");
     assert_eq!(sel(&s), vec![b]);
-    assert!(image(&s, b).get(335, 100).is_some_and(|p| p[2] != 255 || p[0] != 0), "B painted");
+    assert!(
+        image(&s, b)
+            .get(335, 100)
+            .is_some_and(|p| p[2] != 255 || p[0] != 0),
+        "B painted"
+    );
 }
 
 #[test]
 fn a_bitmap_on_a_locked_or_hidden_layer_is_skipped() {
     let (mut s, _, b) = mk();
     let l1 = s.active().and_then(|d| d.layer).expect("layer");
-    let l2 = LayerId(ex(&mut s, "layer.add", json!({"name": "L2"}))["layer"].as_u64().unwrap_or(0));
-    ex(&mut s, "layer.setLocked", json!({"layer": l1.0, "locked": true}));
+    let l2 = LayerId(
+        ex(&mut s, "layer.add", json!({"name": "L2"}))["layer"]
+            .as_u64()
+            .unwrap_or(0),
+    );
+    ex(
+        &mut s,
+        "layer.setLocked",
+        json!({"layer": l1.0, "locked": true}),
+    );
     let before = image(&s, b);
     let n = count(&s);
     stroke(&mut s, (320.0, 100.0));
@@ -165,7 +190,10 @@ fn d_retouch_takes_the_selected_bitmap_else_the_one_under_the_press_point() {
     let (mut s, _, _) = mk();
     let (n, h) = (count(&s), s.active().map(|d| d.history.len()).unwrap_or(0));
     assert!(blur(&mut s, 220.0).is_err());
-    assert_eq!((count(&s), s.active().map(|d| d.history.len()).unwrap_or(0)), (n, h));
+    assert_eq!(
+        (count(&s), s.active().map(|d| d.history.len()).unwrap_or(0)),
+        (n, h)
+    );
     let _ = a;
 }
 
@@ -173,7 +201,11 @@ fn d_retouch_takes_the_selected_bitmap_else_the_one_under_the_press_point() {
 fn d_red_eye_on_empty_space_inserts_an_empty_bitmap() {
     let (mut s, _, _) = mk();
     let n = count(&s);
-    ex(&mut s, "bitmap.retouch", json!({"mode": "redEye", "points": [[200.0, 250.0], [260.0, 300.0]]}));
+    ex(
+        &mut s,
+        "bitmap.retouch",
+        json!({"mode": "redEye", "points": [[200.0, 250.0], [260.0, 300.0]]}),
+    );
     assert_eq!(count(&s), n + 1, "an empty bitmap");
     let d = s.active().expect("doc");
     assert!(d.bitmap_mode, "bitmap mode starts");

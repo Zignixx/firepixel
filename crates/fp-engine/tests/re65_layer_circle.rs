@@ -26,11 +26,16 @@ fn flat(s: &Session) -> Vec<LayerId> {
 
 fn cur_idx(s: &Session) -> usize {
     let c = cur(s);
-    flat(s).iter().position(|l| *l == c).expect("current layer in the flat list")
+    flat(s)
+        .iter()
+        .position(|l| *l == c)
+        .expect("current layer in the flat list")
 }
 
 fn sel(s: &Session) -> Vec<ElementId> {
-    s.active().map(|d| d.selection.elements.clone()).unwrap_or_default()
+    s.active()
+        .map(|d| d.selection.elements.clone())
+        .unwrap_or_default()
 }
 
 fn rows(s: &Session) -> usize {
@@ -43,7 +48,11 @@ fn named(s: &mut Session, id: ElementId, n: &str) -> ElementId {
 }
 
 fn add_layer(s: &mut Session, name: &str) -> LayerId {
-    LayerId(ex(s, "layer.add", json!({"name": name}))["layer"].as_u64().expect("layer"))
+    LayerId(
+        ex(s, "layer.add", json!({"name": name}))["layer"]
+            .as_u64()
+            .expect("layer"),
+    )
 }
 
 fn set_cur(s: &mut Session, l: LayerId) {
@@ -55,7 +64,11 @@ fn lock(s: &mut Session, l: LayerId, v: bool) {
 }
 
 fn move_to(s: &mut Session, l: LayerId, copy: bool) {
-    ex(s, "selection.moveToLayer", json!({"layer": l.0, "copy": copy}));
+    ex(
+        s,
+        "selection.moveToLayer",
+        json!({"layer": l.0, "copy": copy}),
+    );
 }
 
 fn web(s: &Session) -> LayerId {
@@ -125,7 +138,14 @@ fn mka() -> Mka {
     ex(&mut s, "select.none", json!({}));
     assert_eq!(cur(&s), l3);
     assert_eq!(objs(&s, l3), ["r3b", "r3a"]);
-    Mka { s, l: [l1, l2, l3], r1, r2, r3a, r3b }
+    Mka {
+        s,
+        l: [l1, l2, l3],
+        r1,
+        r2,
+        r3a,
+        r3b,
+    }
 }
 
 #[test]
@@ -216,7 +236,10 @@ fn c4c_alt_copies_and_selects_the_copy() {
     let s1 = sel(&m.s);
     assert_eq!(s1.len(), 1);
     assert_ne!(s1[0], m.r1, "the copy is selected");
-    assert!(rect_approx(bounds(&m.s, s1[0]), b), "the copy is not offset");
+    assert!(
+        rect_approx(bounds(&m.s, s1[0]), b),
+        "the copy is not offset"
+    );
     assert_eq!(cur(&m.s), m.l[2]);
     assert_eq!(rows(&m.s), n + 1);
     let d = m.s.active().expect("doc");
@@ -273,7 +296,11 @@ fn circle_no_op_cases() {
     // E3: a selected slice and a normal layer
     let mut m = mka();
     let sl = ElementId(
-        ex(&mut m.s, "web.addSlice", json!({"shape": "rect", "rect": [500, 300, 560, 360]}))["id"]
+        ex(
+            &mut m.s,
+            "web.addSlice",
+            json!({"shape": "rect", "rect": [500, 300, 560, 360]}),
+        )["id"]
             .as_u64()
             .expect("slice"),
     );
@@ -290,7 +317,11 @@ fn circle_no_op_cases() {
 fn hidden_and_new_empty_layers_take_the_selection() {
     // B8: a hidden target layer
     let mut m = mka();
-    ex(&mut m.s, "layer.setVisible", json!({"layer": m.l[2].0, "visible": false}));
+    ex(
+        &mut m.s,
+        "layer.setVisible",
+        json!({"layer": m.l[2].0, "visible": false}),
+    );
     select(&mut m.s, &[m.r1]);
     move_to(&mut m.s, m.l[2], false);
     assert_eq!(objs(&m.s, m.l[2]), ["r1", "r3b", "r3a"]);
@@ -354,7 +385,17 @@ fn mkb() -> Mkb {
     assert_eq!(objs(&s, sub), ["s1"]);
     assert_eq!(objs(&s, l2), ["g{gb/ga}", "r2"]);
     assert_eq!(flat(&s)[..4], [l1, sub, l2, l3]);
-    Mkb { s, l1, sub, l2, l3, r1, s1, g, ga }
+    Mkb {
+        s,
+        l1,
+        sub,
+        l2,
+        l3,
+        r1,
+        s1,
+        g,
+        ga,
+    }
 }
 
 #[test]
@@ -444,12 +485,20 @@ fn run_u(steps: &[U]) -> Vec<usize> {
             U::Lock(i) => lock(&mut s, f[i], true),
             U::Unlock(i) => lock(&mut s, f[i], false),
             U::Hide(i) => {
-                ex(&mut s, "layer.setVisible", json!({"layer": f[i].0, "visible": false}));
+                ex(
+                    &mut s,
+                    "layer.setVisible",
+                    json!({"layer": f[i].0, "visible": false}),
+                );
             }
             U::LockSubElement(v) => {
                 let d = s.active().expect("doc");
                 let el = docops::sublayer_element(&d.doc, d.page, f[1]).expect("S1 element");
-                ex(&mut s, "element.setLocked", json!({"ids": [el.0], "locked": v}));
+                ex(
+                    &mut s,
+                    "element.setLocked",
+                    json!({"ids": [el.0], "locked": v}),
+                );
             }
             U::SelectR1 => select(&mut s, &[r1]),
         }
@@ -466,14 +515,22 @@ fn u_lock_rule_cases() {
         ("U2", &[Cur(2), Hide(3), Lock(2)], 3),
         ("U3", &[Cur(2), Lock(3), Lock(2)], 4),
         ("U4", &[Cur(2), Lock(3), Lock(4), Lock(5), Lock(2)], 0), // FB-64: not the web layer
-        ("U5", &[Cur(2), Lock(3), Lock(4), Lock(5), Lock(6), Lock(2)], 0),
+        (
+            "U5",
+            &[Cur(2), Lock(3), Lock(4), Lock(5), Lock(6), Lock(2)],
+            0,
+        ),
         ("U6", &[Cur(5), Lock(5)], 0), // FB-64: not the web layer
         ("U7", &[Cur(5), Lock(6), Lock(5)], 0),
         ("U8", &[Cur(0), Lock(0)], 2),
         ("U9", &[Cur(1), Lock(1)], 2),
         ("U9 panel", &[Cur(1), LockSubElement(true)], 2),
         ("U10", &[Cur(4), Lock(0), Lock(5), Lock(6), Lock(4)], 2),
-        ("U11", &[Cur(5), Lock(0), Lock(2), Lock(3), Lock(4), Lock(6), Lock(5)], 0),
+        (
+            "U11",
+            &[Cur(5), Lock(0), Lock(2), Lock(3), Lock(4), Lock(6), Lock(5)],
+            0,
+        ),
         ("U14", &[Cur(6), Lock(6)], 0),
         ("U13", &[Cur(2), Lock(4)], 2),
         ("U15", &[Lock(4), Cur(2), Unlock(4)], 2),
@@ -487,11 +544,31 @@ fn u_lock_rule_cases() {
     }
     // the sequences with the value after each step
     assert_eq!(run_u(&[Cur(3), Lock(3), Unlock(3)]), [3, 4, 3], "U12");
-    assert_eq!(run_u(&[Cur(3), Lock(3), Cur(5), Unlock(3)]), [3, 4, 5, 5], "U16");
-    assert_eq!(run_u(&[Cur(2), Lock(2), Lock(3), Unlock(2), Unlock(3)]), [2, 3, 4, 2, 2], "U19");
-    assert_eq!(run_u(&[Cur(2), Lock(2), Lock(3), Unlock(3), Unlock(2)]), [2, 3, 4, 3, 2], "U20");
-    assert_eq!(run_u(&[Cur(5), Lock(5), Lock(6), Unlock(6)]), [5, 0, 0, 0], "U22 (FB-64)");
-    assert_eq!(run_u(&[Cur(1), LockSubElement(true), LockSubElement(false)]), [1, 2, 1], "S1 in the panel");
+    assert_eq!(
+        run_u(&[Cur(3), Lock(3), Cur(5), Unlock(3)]),
+        [3, 4, 5, 5],
+        "U16"
+    );
+    assert_eq!(
+        run_u(&[Cur(2), Lock(2), Lock(3), Unlock(2), Unlock(3)]),
+        [2, 3, 4, 2, 2],
+        "U19"
+    );
+    assert_eq!(
+        run_u(&[Cur(2), Lock(2), Lock(3), Unlock(3), Unlock(2)]),
+        [2, 3, 4, 3, 2],
+        "U20"
+    );
+    assert_eq!(
+        run_u(&[Cur(5), Lock(5), Lock(6), Unlock(6)]),
+        [5, 0, 0, 0],
+        "U22 (FB-64)"
+    );
+    assert_eq!(
+        run_u(&[Cur(1), LockSubElement(true), LockSubElement(false)]),
+        [1, 2, 1],
+        "S1 in the panel"
+    );
 }
 
 #[test]
@@ -548,7 +625,11 @@ fn p_every_page_keeps_its_chosen_layer() {
     page(&mut s, 1);
     assert_eq!(cur(&s), p[2], "P3");
     page(&mut s, 0);
-    assert_eq!(cur(&s), l[1], "P4: remembered, neither the top nor the bottom layer");
+    assert_eq!(
+        cur(&s),
+        l[1],
+        "P4: remembered, neither the top nor the bottom layer"
+    );
     // P5: the menu steps alike
     ex(&mut s, "view.page.next", json!({}));
     assert_eq!(cur(&s), p[2]);
@@ -572,11 +653,19 @@ fn p7_first_visit_after_opening_takes_the_bottom_unlocked_layer() {
     lock(&mut s, p[0], true);
     set_cur(&mut s, p[2]);
     let path = tmp("p7");
-    ex(&mut s, "file.saveAs", json!({"path": path.to_string_lossy()}));
+    ex(
+        &mut s,
+        "file.saveAs",
+        json!({"path": path.to_string_lossy()}),
+    );
     ex(&mut s, "file.open", json!({"path": path.to_string_lossy()}));
     let _ = std::fs::remove_file(&path);
     page(&mut s, 1);
-    assert_eq!(cur_idx(&s), 1, "P2: the bottom-most unlocked layer, not the saved P3");
+    assert_eq!(
+        cur_idx(&s),
+        1,
+        "P2: the bottom-most unlocked layer, not the saved P3"
+    );
     let opened = flat(&s);
     set_cur(&mut s, opened[2]);
     page(&mut s, 0);

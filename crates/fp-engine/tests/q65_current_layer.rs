@@ -23,13 +23,25 @@ fn mkn() -> Mkn {
     let mut s = doc_session(600.0, 400.0);
     let l1 = cur(&s);
     let r1 = rect(&mut s, 50.0, 50.0, 130.0, 110.0);
-    let l2 = LayerId(ex(&mut s, "layer.add", json!({"name": "L2"}))["layer"].as_u64().unwrap_or(0));
+    let l2 = LayerId(
+        ex(&mut s, "layer.add", json!({"name": "L2"}))["layer"]
+            .as_u64()
+            .unwrap_or(0),
+    );
     let r2 = rect(&mut s, 200.0, 100.0, 280.0, 160.0);
-    let l3 = LayerId(ex(&mut s, "layer.add", json!({"name": "L3"}))["layer"].as_u64().unwrap_or(0));
+    let l3 = LayerId(
+        ex(&mut s, "layer.add", json!({"name": "L3"}))["layer"]
+            .as_u64()
+            .unwrap_or(0),
+    );
     let r3 = rect(&mut s, 350.0, 150.0, 430.0, 210.0);
     ex(&mut s, "select.none", json!({}));
     assert_eq!(cur(&s), l3);
-    Mkn { s, l: [l1, l2, l3], r: [r1, r2, r3] }
+    Mkn {
+        s,
+        l: [l1, l2, l3],
+        r: [r1, r2, r3],
+    }
 }
 
 fn cur(s: &Session) -> LayerId {
@@ -37,7 +49,9 @@ fn cur(s: &Session) -> LayerId {
 }
 
 fn sel(s: &Session) -> Vec<ElementId> {
-    s.active().map(|d| d.selection.elements.clone()).unwrap_or_default()
+    s.active()
+        .map(|d| d.selection.elements.clone())
+        .unwrap_or_default()
 }
 
 fn rows(s: &Session) -> usize {
@@ -88,7 +102,10 @@ fn reopen(s: &mut Session, name: &str) -> (usize, usize, usize, usize) {
 fn state_of(s: &Session) -> (usize, usize, usize, usize) {
     let d = s.active().expect("doc");
     let flat = docops::flat_layers(&d.doc, d.page, d.frame);
-    let i = flat.iter().position(|l| Some(l.id) == d.layer).expect("current layer in the list");
+    let i = flat
+        .iter()
+        .position(|l| Some(l.id) == d.layer)
+        .expect("current layer in the list");
     (i, d.page, d.frame, d.selection.elements.len())
 }
 
@@ -96,7 +113,9 @@ fn state_of(s: &Session) -> (usize, usize, usize, usize) {
 
 #[test]
 fn o1_t07_opens_with_layer_1_current() {
-    let src = std::path::Path::new(r"C:\Users\Administrator\Desktop\REA\re\_testdateien\par\par_layers.fw.png");
+    let src = std::path::Path::new(
+        r"C:\Users\Administrator\Desktop\REA\re\_testdateien\par\par_layers.fw.png",
+    );
     if !src.is_file() {
         eprintln!("skipped: {src:?} missing");
         return;
@@ -107,7 +126,11 @@ fn o1_t07_opens_with_layer_1_current() {
     let mut s = doc_session(10.0, 10.0);
     ex(&mut s, "file.open", json!({"path": p.to_string_lossy()}));
     let _ = std::fs::remove_file(&p);
-    assert_eq!(state_of(&s), (0, 0, 0, 0), "Q-65: flat index 0, page 0, state 0, nothing selected");
+    assert_eq!(
+        state_of(&s),
+        (0, 0, 0, 0),
+        "Q-65: flat index 0, page 0, state 0, nothing selected"
+    );
     let d = s.active().expect("doc");
     let name = docops::layer_by_id(&d.doc, 0, cur(&s)).map(|l| l.name.clone());
     assert_eq!(name.as_deref(), Some("Ebene 1"));
@@ -115,10 +138,16 @@ fn o1_t07_opens_with_layer_1_current() {
     let flat = docops::flat_layers(&d.doc, 0, 0);
     let e2 = flat[1].id;
     let l1obj = d.doc.pages[0].root.layers.iter().find_map(|sl| match sl {
-        fp_model::LayerSlot::Own(l) if l.id == flat[0].id => l.cel(0).and_then(|c| c.elements.first()).map(|e| e.id),
+        fp_model::LayerSlot::Own(l) if l.id == flat[0].id => {
+            l.cel(0).and_then(|c| c.elements.first()).map(|e| e.id)
+        }
         _ => None,
     });
-    ex(&mut s, "layer.setActive", json!({"layer": e2.0, "select": []}));
+    ex(
+        &mut s,
+        "layer.setActive",
+        json!({"layer": e2.0, "select": []}),
+    );
     assert_eq!(state_of(&s).0, 1);
     if let Some(o) = l1obj {
         select(&mut s, &[o]);
@@ -140,7 +169,11 @@ fn o2_o7_current_layer_page_and_state_are_not_stored() {
     // O5: an object of L3 selected
     let mut m = mkn();
     select(&mut m.s, &[m.r[2]]);
-    assert_eq!(reopen(&mut m.s, "o5"), (0, 0, 0, 0), "nothing selected after opening");
+    assert_eq!(
+        reopen(&mut m.s, "o5"),
+        (0, 0, 0, 0),
+        "nothing selected after opening"
+    );
     // O6: page 1 current when saving
     let mut m = mkn();
     ex(&mut m.s, "page.add", json!({}));
@@ -161,11 +194,19 @@ fn o8_o12_lock_decides_not_visibility() {
     // O8: L1 locked → L2
     let mut m = mkn();
     lock(&mut m.s, m.l[0], true);
-    assert_eq!(cur(&m.s), m.l[2], "locking another layer keeps the current layer");
+    assert_eq!(
+        cur(&m.s),
+        m.l[2],
+        "locking another layer keeps the current layer"
+    );
     assert_eq!(reopen(&mut m.s, "o8").0, 1);
     // O9: L1 hidden → L1
     let mut m = mkn();
-    ex(&mut m.s, "layer.setVisible", json!({"layer": m.l[0].0, "visible": false}));
+    ex(
+        &mut m.s,
+        "layer.setVisible",
+        json!({"layer": m.l[0].0, "visible": false}),
+    );
     assert_eq!(reopen(&mut m.s, "o9").0, 0);
     // O10: L1, L2 locked → L3
     let mut m = mkn();
@@ -197,7 +238,10 @@ fn o13_sublayer_inherits_the_lock_of_its_parent() {
     {
         let d = m.s.active().expect("doc");
         let flat = docops::flat_layers(&d.doc, d.page, d.frame);
-        assert_eq!(flat[1].id, s1, "a sublayer follows its parent in flat order");
+        assert_eq!(
+            flat[1].id, s1,
+            "a sublayer follows its parent in flat order"
+        );
     }
     lock(&mut m.s, m.l[0], true);
     assert_eq!(reopen(&mut m.s, "o13").0, 2, "L2 (flat index 2)");
@@ -208,13 +252,21 @@ fn revert_uses_the_open_rule() {
     let mut m = mkn();
     lock(&mut m.s, m.l[0], true);
     let p = tmp("revert");
-    ex(&mut m.s, "file.saveAs", json!({"path": p.to_string_lossy()}));
+    ex(
+        &mut m.s,
+        "file.saveAs",
+        json!({"path": p.to_string_lossy()}),
+    );
     set_cur(&mut m.s, m.l[2]);
     select(&mut m.s, &[m.r[2]]);
     rect(&mut m.s, 10.0, 10.0, 20.0, 20.0);
     ex(&mut m.s, "file.revert", json!({}));
     let _ = std::fs::remove_file(&p);
-    assert_eq!(state_of(&m.s), (1, 0, 0, 0), "bottom-most unlocked layer (L2) after revert");
+    assert_eq!(
+        state_of(&m.s),
+        (1, 0, 0, 0),
+        "bottom-most unlocked layer (L2) after revert"
+    );
 }
 
 #[test]
@@ -237,7 +289,11 @@ fn new_document_and_new_layers_become_current() {
     let sub = cur(&s);
     // the panel's New Layer button with the current sublayer: a sibling above it in the same
     // parent at flat index 2, current
-    let new = LayerId(ex(&mut s, "layer.add", json!({"sibling": true}))["layer"].as_u64().unwrap_or(0));
+    let new = LayerId(
+        ex(&mut s, "layer.add", json!({"sibling": true}))["layer"]
+            .as_u64()
+            .unwrap_or(0),
+    );
     assert_eq!(cur(&s), new);
     assert_eq!(state_of(&s).0, 2);
     let d = s.active().expect("doc");
@@ -257,13 +313,24 @@ fn new_document_and_new_layers_become_current() {
                 .collect()
         })
         .unwrap_or_default();
-    assert_eq!(subs, [new, sub], "the new sublayer lies above the current one in the same parent");
+    assert_eq!(
+        subs,
+        [new, sub],
+        "the new sublayer lies above the current one in the same parent"
+    );
     // the button on a top-level layer: a new top-level layer directly above it
     let mut m = mkn();
     set_cur(&mut m.s, m.l[0]);
-    let n = LayerId(ex(&mut m.s, "layer.add", json!({"sibling": true}))["layer"].as_u64().unwrap_or(0));
+    let n = LayerId(
+        ex(&mut m.s, "layer.add", json!({"sibling": true}))["layer"]
+            .as_u64()
+            .unwrap_or(0),
+    );
     let d = m.s.active().expect("doc");
-    let ids: Vec<LayerId> = docops::own_layers(&d.doc, 0).iter().map(|(_, l)| l.id).collect();
+    let ids: Vec<LayerId> = docops::own_layers(&d.doc, 0)
+        .iter()
+        .map(|(_, l)| l.id)
+        .collect();
     assert_eq!(&ids[..4], &[m.l[0], n, m.l[1], m.l[2]]);
     assert_eq!(cur(&m.s), n);
 }
@@ -282,7 +349,11 @@ fn s1_s23_panel_row_and_script_selection_of_one_object() {
     assert_eq!(cur(&m.s), m.l[0]);
     select(&mut m.s, &[m.r[1]]);
     assert_eq!(cur(&m.s), m.l[1]);
-    assert_eq!(rows(&m.s), h, "selection changes and the layer change write no History row");
+    assert_eq!(
+        rows(&m.s),
+        h,
+        "selection changes and the layer change write no History row"
+    );
 }
 
 #[test]
@@ -290,24 +361,44 @@ fn s8_s21_two_or_more_objects_keep_the_current_layer() {
     let mut m = mkn();
     // S8: row r1, Ctrl+row r3 → [r3, r1], L1 stays
     select(&mut m.s, &[m.r[0]]);
-    ex(&mut m.s, "select.set", json!({"ids": [m.r[2].0], "mode": "toggle"}));
+    ex(
+        &mut m.s,
+        "select.set",
+        json!({"ids": [m.r[2].0], "mode": "toggle"}),
+    );
     assert_eq!(sel(&m.s).len(), 2);
     assert_eq!(cur(&m.s), m.l[0]);
     // S9b: row r3, Ctrl+row r1 → L3 stays
     select(&mut m.s, &[m.r[2]]);
-    ex(&mut m.s, "select.set", json!({"ids": [m.r[0].0], "mode": "toggle"}));
+    ex(
+        &mut m.s,
+        "select.set",
+        json!({"ids": [m.r[0].0], "mode": "toggle"}),
+    );
     assert_eq!(cur(&m.s), m.l[2]);
     // S16: r1, Shift r3, Shift r1 off → [r3] → L3
     select(&mut m.s, &[m.r[0]]);
-    ex(&mut m.s, "select.set", json!({"ids": [m.r[2].0], "mode": "toggle"}));
+    ex(
+        &mut m.s,
+        "select.set",
+        json!({"ids": [m.r[2].0], "mode": "toggle"}),
+    );
     assert_eq!(cur(&m.s), m.l[0]);
-    ex(&mut m.s, "select.set", json!({"ids": [m.r[0].0], "mode": "toggle"}));
+    ex(
+        &mut m.s,
+        "select.set",
+        json!({"ids": [m.r[0].0], "mode": "toggle"}),
+    );
     assert_eq!(sel(&m.s), [m.r[2]]);
     assert_eq!(cur(&m.s), m.l[2]);
     // S18: r1, Shift r2, Shift r3, Shift r1 off → [r3, r2]: L1 stays without a selected object
     select(&mut m.s, &[m.r[0]]);
     for r in [m.r[1], m.r[2], m.r[0]] {
-        ex(&mut m.s, "select.set", json!({"ids": [r.0], "mode": "toggle"}));
+        ex(
+            &mut m.s,
+            "select.set",
+            json!({"ids": [r.0], "mode": "toggle"}),
+        );
     }
     assert_eq!(sel(&m.s).len(), 2);
     assert_eq!(cur(&m.s), m.l[0]);
@@ -319,14 +410,19 @@ fn s8_s21_two_or_more_objects_keep_the_current_layer() {
     // S14/S15: from nothing, Shift/Ctrl adds one → its layer
     set_cur(&mut m.s, m.l[2]);
     ex(&mut m.s, "select.none", json!({}));
-    ex(&mut m.s, "select.set", json!({"ids": [m.r[0].0], "mode": "add"}));
+    ex(
+        &mut m.s,
+        "select.set",
+        json!({"ids": [m.r[0].0], "mode": "add"}),
+    );
     assert_eq!(cur(&m.s), m.l[0]);
 }
 
 #[test]
 fn s3_s4_s12_s14_canvas_clicks_with_the_pointer() {
     let mut m = mkn();
-    m.s.set_tool(ToolId::Pointer).unwrap_or_else(|e| panic!("{e}"));
+    m.s.set_tool(ToolId::Pointer)
+        .unwrap_or_else(|e| panic!("{e}"));
     let h = rows(&m.s);
     // S3: click r2 → L2
     click(&mut m.s, 240.0, 130.0, |e| e);
@@ -355,16 +451,27 @@ fn s17_s22_marquee_over_one_or_two_objects() {
     let mut m = mkn();
     let h = rows(&m.s);
     // S17: marquee over r1 and r2 → L3 stays
-    ex(&mut m.s, "select.inRect", json!({"rect": [40, 40, 290, 170]}));
+    ex(
+        &mut m.s,
+        "select.inRect",
+        json!({"rect": [40, 40, 290, 170]}),
+    );
     assert_eq!(sel(&m.s).len(), 2);
     assert_eq!(cur(&m.s), m.l[2]);
     // S22: marquee over r1 only → L1
     ex(&mut m.s, "select.none", json!({}));
     let h2 = rows(&m.s);
-    ex(&mut m.s, "select.inRect", json!({"rect": [40, 40, 140, 120]}));
+    ex(
+        &mut m.s,
+        "select.inRect",
+        json!({"rect": [40, 40, 140, 120]}),
+    );
     assert_eq!(sel(&m.s), [m.r[0]]);
     assert_eq!(cur(&m.s), m.l[0]);
-    assert!(rows(&m.s) == h2 && h2 >= h, "the marquee writes no History row");
+    assert!(
+        rows(&m.s) == h2 && h2 >= h,
+        "the marquee writes no History row"
+    );
 }
 
 #[test]
@@ -418,11 +525,19 @@ fn s31_sublayer_hidden_layer_and_group_objects() {
     select(&mut m.s, &[o]);
     assert_eq!(cur(&m.s), sub);
     // an object in a hidden layer makes that layer current
-    ex(&mut m.s, "layer.setVisible", json!({"layer": m.l[1].0, "visible": false}));
+    ex(
+        &mut m.s,
+        "layer.setVisible",
+        json!({"layer": m.l[1].0, "visible": false}),
+    );
     select(&mut m.s, &[m.r[1]]);
     assert_eq!(cur(&m.s), m.l[1]);
     // a child of a group: the group's layer
-    ex(&mut m.s, "layer.setVisible", json!({"layer": m.l[1].0, "visible": true}));
+    ex(
+        &mut m.s,
+        "layer.setVisible",
+        json!({"layer": m.l[1].0, "visible": true}),
+    );
     set_cur(&mut m.s, m.l[2]);
     let a = rect(&mut m.s, 450.0, 300.0, 470.0, 320.0);
     let b = rect(&mut m.s, 480.0, 300.0, 500.0, 320.0);
@@ -441,18 +556,32 @@ fn new_objects_land_at_the_top_of_the_current_layer() {
     let n = rect(&mut m.s, 420.0, 300.0, 500.0, 370.0);
     let d = m.s.active().expect("doc");
     let l1 = docops::layer_by_id(&d.doc, 0, m.l[0]).expect("L1");
-    let ids: Vec<ElementId> = l1.cel(0).map(|c| c.elements.iter().map(|e| e.id).collect()).unwrap_or_default();
+    let ids: Vec<ElementId> = l1
+        .cel(0)
+        .map(|c| c.elements.iter().map(|e| e.id).collect())
+        .unwrap_or_default();
     assert_eq!(ids, [n, m.r[0]]);
     // S26: two objects of other layers selected, current L1 → the new object lands in L1
     let mut m = mkn();
     select(&mut m.s, &[m.r[0]]);
-    ex(&mut m.s, "select.set", json!({"ids": [m.r[1].0, m.r[2].0], "mode": "add"}));
-    ex(&mut m.s, "select.set", json!({"ids": [m.r[0].0], "mode": "subtract"}));
+    ex(
+        &mut m.s,
+        "select.set",
+        json!({"ids": [m.r[1].0, m.r[2].0], "mode": "add"}),
+    );
+    ex(
+        &mut m.s,
+        "select.set",
+        json!({"ids": [m.r[0].0], "mode": "subtract"}),
+    );
     assert_eq!(cur(&m.s), m.l[0]);
     let n = rect(&mut m.s, 420.0, 300.0, 500.0, 370.0);
     let d = m.s.active().expect("doc");
     let l1 = docops::layer_by_id(&d.doc, 0, m.l[0]).expect("L1");
-    assert_eq!(l1.cel(0).and_then(|c| c.elements.first()).map(|e| e.id), Some(n));
+    assert_eq!(
+        l1.cel(0).and_then(|c| c.elements.first()).map(|e| e.id),
+        Some(n)
+    );
 }
 
 #[test]
@@ -461,7 +590,11 @@ fn layer_row_click_writes_one_layer_change_row() {
     // nothing selected; redo → L2 with r2
     let mut m = mkn();
     let h = rows(&m.s);
-    ex(&mut m.s, "layer.setActive", json!({"layer": m.l[1].0, "select": [m.r[1].0]}));
+    ex(
+        &mut m.s,
+        "layer.setActive",
+        json!({"layer": m.l[1].0, "select": [m.r[1].0]}),
+    );
     assert_eq!(cur(&m.s), m.l[1]);
     assert_eq!(sel(&m.s), [m.r[1]]);
     assert_eq!(rows(&m.s), h + 1);
@@ -479,15 +612,27 @@ fn layer_row_click_writes_one_layer_change_row() {
     assert_eq!(sel(&m.s), [m.r[1]]);
     // a hidden layer without objects: the row still writes a row (it changes the current layer)
     let mut m = mkn();
-    ex(&mut m.s, "layer.setVisible", json!({"layer": m.l[1].0, "visible": false}));
+    ex(
+        &mut m.s,
+        "layer.setVisible",
+        json!({"layer": m.l[1].0, "visible": false}),
+    );
     select(&mut m.s, &[m.r[1]]);
     ex(&mut m.s, "edit.clear", json!({}));
     set_cur(&mut m.s, m.l[2]);
     let h = rows(&m.s);
-    ex(&mut m.s, "layer.setActive", json!({"layer": m.l[1].0, "select": []}));
+    ex(
+        &mut m.s,
+        "layer.setActive",
+        json!({"layer": m.l[1].0, "select": []}),
+    );
     assert_eq!(rows(&m.s), h + 1);
     // a click on the current layer that changes nothing writes no row
-    ex(&mut m.s, "layer.setActive", json!({"layer": m.l[1].0, "select": []}));
+    ex(
+        &mut m.s,
+        "layer.setActive",
+        json!({"layer": m.l[1].0, "select": []}),
+    );
     assert_eq!(rows(&m.s), h + 1);
     // without `select` (right-click, scripts) only the current layer changes, no row
     ex(&mut m.s, "layer.setActive", json!({"layer": m.l[0].0}));
@@ -495,7 +640,11 @@ fn layer_row_click_writes_one_layer_change_row() {
     assert_eq!(rows(&m.s), h + 1);
     let mut e = mkn();
     fp_i18n::set_language("en");
-    ex(&mut e.s, "layer.setActive", json!({"layer": e.l[0].0, "select": [e.r[0].0]}));
+    ex(
+        &mut e.s,
+        "layer.setActive",
+        json!({"layer": e.l[0].0, "select": [e.r[0].0]}),
+    );
     let labels = e.s.active().map(|d| d.history.labels()).unwrap_or_default();
     fp_i18n::set_language("de");
     assert_eq!(labels.last().map(String::as_str), Some("Layer Change"));

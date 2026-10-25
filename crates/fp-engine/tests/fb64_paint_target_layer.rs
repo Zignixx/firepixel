@@ -16,9 +16,17 @@ fn mk() -> (Session, [LayerId; 3]) {
     let mut s = doc_session(600.0, 400.0);
     let l1 = cur(&s);
     rect(&mut s, 50.0, 50.0, 130.0, 110.0);
-    let l2 = LayerId(ex(&mut s, "layer.add", json!({"name": "L2"}))["layer"].as_u64().unwrap_or(0));
+    let l2 = LayerId(
+        ex(&mut s, "layer.add", json!({"name": "L2"}))["layer"]
+            .as_u64()
+            .unwrap_or(0),
+    );
     rect(&mut s, 200.0, 100.0, 280.0, 160.0);
-    let l3 = LayerId(ex(&mut s, "layer.add", json!({"name": "L3"}))["layer"].as_u64().unwrap_or(0));
+    let l3 = LayerId(
+        ex(&mut s, "layer.add", json!({"name": "L3"}))["layer"]
+            .as_u64()
+            .unwrap_or(0),
+    );
     rect(&mut s, 350.0, 150.0, 430.0, 210.0);
     ex(&mut s, "select.none", json!({}));
     assert_eq!(cur(&s), l3);
@@ -43,7 +51,11 @@ fn lock(s: &mut Session, l: LayerId) {
 }
 
 fn hide(s: &mut Session, l: LayerId) {
-    ex(s, "layer.setVisible", json!({"layer": l.0, "visible": false}));
+    ex(
+        s,
+        "layer.setVisible",
+        json!({"layer": l.0, "visible": false}),
+    );
 }
 
 fn set_cur(s: &mut Session, l: LayerId) {
@@ -68,9 +80,16 @@ fn stroke(s: &mut Session) -> fp_engine::Result<fp_engine::CommandOutput> {
 fn paint(s: &mut Session) -> (ElementId, LayerId) {
     stroke(s).expect("stroke");
     let d = s.active().expect("doc");
-    let id = *d.selection.elements.first().expect("painted bitmap selected");
+    let id = *d
+        .selection
+        .elements
+        .first()
+        .expect("painted bitmap selected");
     let path = docops::find_on_page(&d.doc, d.page, id).expect("path");
-    (id, docops::owning_layer(&d.doc, d.page, &path).expect("layer"))
+    (
+        id,
+        docops::owning_layer(&d.doc, d.page, &path).expect("layer"),
+    )
 }
 
 fn count(s: &Session) -> usize {
@@ -90,7 +109,11 @@ fn ok_current_normal_layer_takes_the_bitmap() {
     assert_eq!(paint(&mut s).1, l[1]);
     // an empty layer as well
     let (mut s, _) = mk();
-    let l4 = LayerId(ex(&mut s, "layer.add", json!({"name": "L4"}))["layer"].as_u64().unwrap_or(0));
+    let l4 = LayerId(
+        ex(&mut s, "layer.add", json!({"name": "L4"}))["layer"]
+            .as_u64()
+            .unwrap_or(0),
+    );
     assert_eq!(paint(&mut s).1, l4);
 }
 
@@ -150,7 +173,11 @@ fn locking_the_top_layers_does_not_make_the_web_layer_current() {
     lock(&mut s, l[1]);
     assert_eq!(cur(&s), l[2]);
     lock(&mut s, l[2]);
-    assert_eq!(cur(&s), l[0], "wraps to the unlocked L1 instead of the web layer");
+    assert_eq!(
+        cur(&s),
+        l[0],
+        "wraps to the unlocked L1 instead of the web layer"
+    );
     assert_eq!(paint(&mut s).1, l[0]);
     // every normal layer locked → still the web layer (nothing else is unlocked)
     lock(&mut s, l[0]);
@@ -191,7 +218,10 @@ fn no_paintable_layer_refuses_without_change_or_history_row() {
     let _ = s.tool_event(&ToolEvent::down(100.0, 300.0));
     let _ = s.tool_event(&ToolEvent::drag(200.0, 300.0));
     let live = s.tool_feedback().into_iter().any(|o| match o {
-        Overlay::Paint(p) => p.tiles.iter().any(|t| t.image.data().iter().any(|q| q[3] > 0)),
+        Overlay::Paint(p) => p
+            .tiles
+            .iter()
+            .any(|t| t.image.data().iter().any(|q| q[3] > 0)),
         _ => false,
     });
     assert!(!live, "no live stroke");
@@ -220,8 +250,14 @@ fn brush_live_preview_shows_the_stroke_on_a_paintable_layer() {
     hide(&mut s, l[2]);
     s.set_tool(ToolId::Brush).expect("brush");
     s.tools.options.brush_size = 10.0;
-    events(&mut s, &[ToolEvent::down(100.0, 300.0), ToolEvent::drag(200.0, 300.0)]);
-    let live = s.tool_feedback().into_iter().any(|o| matches!(o, Overlay::Paint(_)));
+    events(
+        &mut s,
+        &[ToolEvent::down(100.0, 300.0), ToolEvent::drag(200.0, 300.0)],
+    );
+    let live = s
+        .tool_feedback()
+        .into_iter()
+        .any(|o| matches!(o, Overlay::Paint(_)));
     assert!(live, "the stroke is previewed (it lands in L2)");
     events(&mut s, &[ToolEvent::up(200.0, 300.0)]);
     let d = s.active().expect("doc");

@@ -14,11 +14,15 @@ use fp_engine::{Session, ToolEvent, ToolKey};
 use fp_geom::IRect;
 use fp_model::{ElementId, ElementKind};
 use fp_raster::RgbaImage;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::path::PathBuf;
 
 fn data(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("data").join("parx-tools1").join(name)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("data")
+        .join("parx-tools1")
+        .join(name)
 }
 
 fn load(name: &str) -> RgbaImage {
@@ -64,7 +68,10 @@ fn flat(img: &RgbaImage) -> Vec<[u8; 3]> {
 
 fn flat_ref(name: &str) -> Vec<[u8; 3]> {
     let r = load(name);
-    (0..600).flat_map(|y| (0..800).map(move |x| (x, y))).map(|(x, y)| r.get(x, y).map(|p| [p[0], p[1], p[2]]).unwrap_or([255; 3])).collect()
+    (0..600)
+        .flat_map(|y| (0..800).map(move |x| (x, y)))
+        .map(|(x, y)| r.get(x, y).map(|p| [p[0], p[1], p[2]]).unwrap_or([255; 3]))
+        .collect()
 }
 
 #[derive(Debug)]
@@ -92,19 +99,37 @@ fn compare(res: &[[u8; 3]], refname: &str) -> Cmp {
         }
         max = max.max(d);
     }
-    let c = Cmp { changed, bbox: bb, over16, max };
+    let c = Cmp {
+        changed,
+        bbox: bb,
+        over16,
+        max,
+    };
     eprintln!("{refname}: {c:?}");
     c
 }
 
 /// Zug wie im Original: 30 Mausschritte, ganzzahlige Punkte.
 fn line(a: (f32, f32), b: (f32, f32)) -> Value {
-    Value::Array((0..=30).map(|k| json!([(a.0 + (b.0 - a.0) * k as f32 / 30.0).round(), (a.1 + (b.1 - a.1) * k as f32 / 30.0).round()])).collect())
+    Value::Array(
+        (0..=30)
+            .map(|k| {
+                json!([
+                    (a.0 + (b.0 - a.0) * k as f32 / 30.0).round(),
+                    (a.1 + (b.1 - a.1) * k as f32 / 30.0).round()
+                ])
+            })
+            .collect(),
+    )
 }
 
 fn erase(edge: f64, round: bool, opacity: f64) -> Vec<[u8; 3]> {
     let (mut s, id) = t02();
-    ex(&mut s, "bitmap.erase", json!({"points": line((60.0, 150.0), (500.0, 150.0)), "size": 13, "round": round, "edge": edge, "opacity": opacity}));
+    ex(
+        &mut s,
+        "bitmap.erase",
+        json!({"points": line((60.0, 150.0), (500.0, 150.0)), "size": 13, "round": round, "edge": edge, "opacity": opacity}),
+    );
     flat(&image(&s, id))
 }
 
@@ -138,17 +163,28 @@ fn eraser_round_edge2_like_original() {
 fn eraser_square_is_hard_with_13_rows() {
     // 03/09: eckig, Rand bleibt ohne Wirkung – pixelgleich mit dem Original
     let c = compare(&erase(2.0, false, 100.0), "e09_t02_square13.png");
-    assert_eq!((c.changed, c.bbox, c.max), (5369, (54, 144, 507, 157), 0), "{c:?}");
+    assert_eq!(
+        (c.changed, c.bbox, c.max),
+        (5369, (54, 144, 507, 157), 0),
+        "{c:?}"
+    );
 }
 
 #[test]
 fn eraser_edge0_is_hard_and_edge50_soft() {
     // 03/10: Rand 0 hart, pixelgleich
     let c = compare(&erase(0.0, true, 100.0), "e10_t02_edge0.png");
-    assert_eq!((c.changed, c.bbox, c.max), (5337, (54, 144, 507, 157), 0), "{c:?}");
+    assert_eq!(
+        (c.changed, c.bbox, c.max),
+        (5337, (54, 144, 507, 157), 0),
+        "{c:?}"
+    );
     let c = compare(&erase(50.0, true, 100.0), "e10_t02_edge50.png");
     assert_eq!(c.bbox, (53, 143, 507, 157));
-    assert!(c.over16 <= 40, "Rand 50 wie Original (vorher 843 Pixel > 16): {c:?}");
+    assert!(
+        c.over16 <= 40,
+        "Rand 50 wie Original (vorher 843 Pixel > 16): {c:?}"
+    );
 }
 
 #[test]
@@ -159,10 +195,17 @@ fn eraser_opacity_50_erases_half_once() {
     // derselbe Zug zweimal halbiert den Rest noch einmal (zweiter Zug wirkt wie im Original weiter)
     let (mut s, id) = t02();
     for _ in 0..2 {
-        ex(&mut s, "bitmap.erase", json!({"points": line((60.0, 150.0), (500.0, 150.0)), "size": 13, "edge": 2, "opacity": 50}));
+        ex(
+            &mut s,
+            "bitmap.erase",
+            json!({"points": line((60.0, 150.0), (500.0, 150.0)), "size": 13, "edge": 2, "opacity": 50}),
+        );
     }
     let a = image(&s, id).get(200, 150).expect("px")[3];
-    assert!((60..=68).contains(&a), "zwei Züge à 50 % → ≈ 25 % Deckung: {a}");
+    assert!(
+        (60..=68).contains(&a),
+        "zwei Züge à 50 % → ≈ 25 % Deckung: {a}"
+    );
 }
 
 // ------------------------------------------------------------------ 03 Buntstift
@@ -170,23 +213,41 @@ fn eraser_opacity_50_erases_half_once() {
 #[test]
 fn pencil_antialias_horizontal_stays_one_row() {
     let (mut s, id) = t02();
-    s.set_colors(Some(fp_color::Argb(0xffc0_4040)), Some(fp_color::Argb(0xff80_8080)));
+    s.set_colors(
+        Some(fp_color::Argb(0xffc0_4040)),
+        Some(fp_color::Argb(0xff80_8080)),
+    );
     let mut brush = fp_model::Brush::basic(1);
     brush.antialiased = true;
     let b = serde_json::to_value(&brush).expect("Pinsel");
-    ex(&mut s, "bitmap.paint", json!({"tool": "pencil", "brush": b, "color": "#C04040", "trimEnd": false, "points": line((60.0, 150.0), (500.0, 150.0))}));
-    ex(&mut s, "bitmap.paint", json!({"tool": "pencil", "brush": b, "color": "#C04040", "trimEnd": false, "points": line((60.0, 220.0), (260.0, 330.0))}));
+    ex(
+        &mut s,
+        "bitmap.paint",
+        json!({"tool": "pencil", "brush": b, "color": "#C04040", "trimEnd": false, "points": line((60.0, 150.0), (500.0, 150.0))}),
+    );
+    ex(
+        &mut s,
+        "bitmap.paint",
+        json!({"tool": "pencil", "brush": b, "color": "#C04040", "trimEnd": false, "points": line((60.0, 220.0), (260.0, 330.0))}),
+    );
     let img = image(&s, id);
     // 03/03: Waagrechte als eine volle Zeile #C04040, darüber/darunter unverändert
     for x in [61, 100, 300, 498] {
-        assert_eq!(img.get(x, 150).map(|p| [p[0], p[1], p[2]]), Some([0xC0, 0x40, 0x40]), "x {x}");
+        assert_eq!(
+            img.get(x, 150).map(|p| [p[0], p[1], p[2]]),
+            Some([0xC0, 0x40, 0x40]),
+            "x {x}"
+        );
     }
     let base = load("base_t02.png");
     for y in [149, 151] {
         assert_eq!(img.get(200, y), base.get(200, y), "Zeile {y} unverändert");
     }
     let c = compare(&flat(&img), "p03_t02_pencil_aa.png");
-    assert!(c.over16 <= 260, "Diagonale ähnlich dem Original (vorher 1 435 Pixel abweichend): {c:?}");
+    assert!(
+        c.over16 <= 260,
+        "Diagonale ähnlich dem Original (vorher 1 435 Pixel abweichend): {c:?}"
+    );
 }
 
 #[test]
@@ -194,8 +255,15 @@ fn pencil_without_antialias_unchanged() {
     let (mut s, id) = t02();
     let brush = fp_model::Brush::basic(1);
     let b = serde_json::to_value(&brush).expect("Pinsel");
-    for (a, z) in [((60.0, 150.0), (500.0, 150.0)), ((60.0, 220.0), (260.0, 330.0))] {
-        ex(&mut s, "bitmap.paint", json!({"tool": "pencil", "brush": b, "color": "#C04040", "trimEnd": false, "points": line(a, z)}));
+    for (a, z) in [
+        ((60.0, 150.0), (500.0, 150.0)),
+        ((60.0, 220.0), (260.0, 330.0)),
+    ] {
+        ex(
+            &mut s,
+            "bitmap.paint",
+            json!({"tool": "pencil", "brush": b, "color": "#C04040", "trimEnd": false, "points": line(a, z)}),
+        );
     }
     let c = compare(&flat(&image(&s, id)), "p02_t02_pencil_noaa.png");
     assert!(c.over16 <= 60, "{c:?}");
@@ -207,23 +275,42 @@ fn pencil_without_antialias_unchanged() {
 fn blur_strength_edge_and_shape_like_original() {
     // 04/02: Vorgabe nur an harten Kanten, Verlauf bleibt
     let c = compare(&retouch_flat("blur", json!({})), "b02_blur_default.png");
-    assert!(c.over16 == 0 && c.max <= 16 && c.bbox.1 == 113 && c.bbox.3 == 127, "{c:?}");
+    assert!(
+        c.over16 == 0 && c.max <= 16 && c.bbox.1 == 113 && c.bbox.3 == 127,
+        "{c:?}"
+    );
     // 04/03: Intensität 10 schwach, 100 deutlich stärker (Kanten ±16 zum Original)
-    let c = compare(&retouch_flat("blur", json!({"strength": 10})), "b03_blur_int10.png");
+    let c = compare(
+        &retouch_flat("blur", json!({"strength": 10})),
+        "b03_blur_int10.png",
+    );
     assert!(c.over16 == 0, "{c:?}");
-    let c = compare(&retouch_flat("blur", json!({"strength": 100})), "b03_blur_int100.png");
+    let c = compare(
+        &retouch_flat("blur", json!({"strength": 100})),
+        "b03_blur_int100.png",
+    );
     // das Original trifft eine Kante je nach Mauspunkten ein- oder zweimal (31 bzw. 52 Stufen),
     // Firepixel rechnet anderthalbmal; ±1-Änderungen im Verlauf (Rundung des Originals) fehlen
     assert!(c.over16 <= 5 && c.max <= 20, "{c:?}");
     // 04/13: eckig = hart, 13 Zeilen 114–126
-    let c = compare(&retouch_flat("blur", json!({"round": false})), "b13_blur_square.png");
+    let c = compare(
+        &retouch_flat("blur", json!({"round": false})),
+        "b13_blur_square.png",
+    );
     assert!(c.over16 == 0 && (c.bbox.1, c.bbox.3) == (114, 127), "{c:?}");
     // 04/14: Rand 0 kaum anders als Rand 100 (vorher 348 Pixel, max 61)
-    let c = compare(&retouch_flat("blur", json!({"soft": 0.0})), "b14_blur_edge0.png");
+    let c = compare(
+        &retouch_flat("blur", json!({"soft": 0.0})),
+        "b14_blur_edge0.png",
+    );
     assert!(c.over16 == 0 && (c.bbox.1, c.bbox.3) == (114, 127), "{c:?}");
     // 04/12: zweiter Zug verstärkt
     let (mut s, id) = retouch("blur", json!({}));
-    ex(&mut s, "bitmap.retouch", json!({"mode": "blur", "points": line((50.0, 120.0), (510.0, 120.0)), "size": 13, "soft": 1.0, "strength": 50}));
+    ex(
+        &mut s,
+        "bitmap.retouch",
+        json!({"mode": "blur", "points": line((50.0, 120.0), (510.0, 120.0)), "size": 13, "soft": 1.0, "strength": 50}),
+    );
     let c = compare(&flat(&image(&s, id)), "b12_blur_twice.png");
     assert!(c.over16 <= 5 && c.max <= 20, "{c:?}");
 }
@@ -231,7 +318,10 @@ fn blur_strength_edge_and_shape_like_original() {
 #[test]
 fn sharpen_only_at_edges() {
     // 04/04: 40 Pixel nur an Kanten, max 12 (vorher 1 521 Pixel auch im Verlauf, max 95)
-    let c = compare(&retouch_flat("sharpen", json!({})), "b04_sharpen_default.png");
+    let c = compare(
+        &retouch_flat("sharpen", json!({})),
+        "b04_sharpen_default.png",
+    );
     assert!(c.changed <= 80 && c.over16 == 0 && c.bbox.0 >= 270, "{c:?}");
 }
 
@@ -252,7 +342,10 @@ fn dodge_and_burn_ranges_like_original_without_color_shift() {
         let rf = flat_ref(file);
         for x in [150, 300, 340, 380] {
             let (a, b) = (res[120 * 800 + x], rf[120 * 800 + x]);
-            assert!((0..3).all(|i| a[i].abs_diff(b[i]) <= 4), "{mode} {k} x {x}: {a:?} statt {b:?}");
+            assert!(
+                (0..3).all(|i| a[i].abs_diff(b[i]) <= 4),
+                "{mode} {k} x {x}: {a:?} statt {b:?}"
+            );
         }
     }
 }
@@ -265,40 +358,85 @@ fn smudge_drags_edges_and_keeps_gradient() {
     let base = flat_ref("base_t02.png");
     for x in [100, 150, 200, 250] {
         let (a, b) = (res[120 * 800 + x], base[120 * 800 + x]);
-        assert!((0..3).all(|i| a[i].abs_diff(b[i]) <= 1), "Verlauf x {x}: {a:?} statt {b:?}");
+        assert!(
+            (0..3).all(|i| a[i].abs_diff(b[i]) <= 1),
+            "Verlauf x {x}: {a:?} statt {b:?}"
+        );
     }
-    assert!(c.over16 <= 900 && c.bbox.1 == 109 && c.bbox.3 <= 132, "{c:?}");
+    assert!(
+        c.over16 <= 900 && c.bbox.1 == 109 && c.bbox.3 <= 132,
+        "{c:?}"
+    );
     let p = |x: usize| res[120 * 800 + x];
-    assert!(p(322)[0] < 40 && p(300)[0] > 10 && p(380)[1] > 10, "Kanten mitgezogen: {:?} {:?} {:?}", p(300), p(322), p(380));
+    assert!(
+        p(322)[0] < 40 && p(300)[0] > 10 && p(380)[1] > 10,
+        "Kanten mitgezogen: {:?} {:?} {:?}",
+        p(300),
+        p(322),
+        p(380)
+    );
 }
 
 #[test]
 fn smudge_options_take_effect() {
     // 04/10: „Farbe verwischen“ mischt die Farbe am Zuganfang ein
     let plain = retouch_flat("smudge", json!({"size": 22, "soft": 0.5}));
-    let col = retouch_flat("smudge", json!({"size": 22, "soft": 0.5, "fingerPaint": true, "color": "#00900D"}));
-    let d = (40..120).filter(|x| plain[120 * 800 + x] != col[120 * 800 + x]).count();
+    let col = retouch_flat(
+        "smudge",
+        json!({"size": 22, "soft": 0.5, "fingerPaint": true, "color": "#00900D"}),
+    );
+    let d = (40..120)
+        .filter(|x| plain[120 * 800 + x] != col[120 * 800 + x])
+        .count();
     assert!(d > 30, "Farbe wirkt am Anfang: {d}");
-    assert!(col[120 * 800 + 50][1] > plain[120 * 800 + 50][1] + 20, "grün eingemischt");
+    assert!(
+        col[120 * 800 + 50][1] > plain[120 * 800 + 50][1] + 20,
+        "grün eingemischt"
+    );
     // 04/11: „Gesamtes Dokument“ nimmt die weiße Leinwand am Bitmaprand auf
     let (mut s, id) = t02();
     let pts = json!([[30, 200], [45, 200], [60, 200], [75, 200], [90, 200]]);
-    ex(&mut s, "bitmap.retouch", json!({"mode": "smudge", "points": pts, "size": 22, "soft": 0.5, "strength": 50}));
+    ex(
+        &mut s,
+        "bitmap.retouch",
+        json!({"mode": "smudge", "points": pts, "size": 22, "soft": 0.5, "strength": 50}),
+    );
     let without = image(&s, id);
     let (mut s2, id2) = t02();
-    ex(&mut s2, "bitmap.retouch", json!({"mode": "smudge", "points": pts, "size": 22, "soft": 0.5, "strength": 50, "wholeDocument": true}));
+    ex(
+        &mut s2,
+        "bitmap.retouch",
+        json!({"mode": "smudge", "points": pts, "size": 22, "soft": 0.5, "strength": 50, "wholeDocument": true}),
+    );
     let with = image(&s2, id2);
-    assert_ne!(without.get(48, 200), with.get(48, 200), "Leinwand wird mitgezogen");
+    assert_ne!(
+        without.get(48, 200),
+        with.get(48, 200),
+        "Leinwand wird mitgezogen"
+    );
     let p = with.get(48, 200).expect("px");
-    assert!(p[0] > 60 && p[1] > 80, "Weiß der Leinwand eingemischt: {p:?}");
+    assert!(
+        p[0] > 60 && p[1] > 80,
+        "Weiß der Leinwand eingemischt: {p:?}"
+    );
 }
 
 #[test]
 fn retouch_history_names_per_tool() {
     // 04/18: Name des Verlaufsschritts = Werkzeug
-    for (mode, de) in [("blur", "Weichzeichner"), ("sharpen", "Scharfzeichner"), ("dodge", "Abwedler"), ("burn", "Nachbelichter"), ("smudge", "Verwischen")] {
+    for (mode, de) in [
+        ("blur", "Weichzeichner"),
+        ("sharpen", "Scharfzeichner"),
+        ("dodge", "Abwedler"),
+        ("burn", "Nachbelichter"),
+        ("smudge", "Verwischen"),
+    ] {
         let (s, _) = retouch(mode, json!({}));
-        assert_eq!(s.active().expect("d").history.undo_label(), Some(de), "{mode}");
+        assert_eq!(
+            s.active().expect("d").history.undo_label(),
+            Some(de),
+            "{mode}"
+        );
     }
 }
 
@@ -307,12 +445,25 @@ fn retouch_on_vector_does_nothing_and_clears_selection() {
     // 04/15: Vektor gewählt → keine Wirkung, keine Meldung, Auswahl leer, kein Schritt
     let mut s = doc_session(400.0, 300.0);
     let r = rect(&mut s, 50.0, 50.0, 150.0, 120.0);
-    for t in [ToolId::Blur, ToolId::Sharpen, ToolId::Dodge, ToolId::Burn, ToolId::Smudge] {
+    for t in [
+        ToolId::Blur,
+        ToolId::Sharpen,
+        ToolId::Dodge,
+        ToolId::Burn,
+        ToolId::Smudge,
+    ] {
         select(&mut s, &[r]);
         let h = s.active().expect("d").history.undo_count();
         let before = (*s.active().expect("d").doc).clone();
         s.set_tool(t).expect("Werkzeug");
-        events(&mut s, &[ToolEvent::down(30.0, 85.0), ToolEvent::drag(100.0, 85.0), ToolEvent::up(200.0, 85.0)]);
+        events(
+            &mut s,
+            &[
+                ToolEvent::down(30.0, 85.0),
+                ToolEvent::drag(100.0, 85.0),
+                ToolEvent::up(200.0, 85.0),
+            ],
+        );
         let d = s.active().expect("d");
         assert!(d.selection.elements.is_empty(), "{t:?}: Auswahl leer");
         assert_eq!(*d.doc, before, "{t:?}: keine Wirkung");
@@ -326,14 +477,25 @@ fn escape_after_stroke_ends_bitmap_mode_with_step() {
     for t in [ToolId::Eraser, ToolId::Pencil, ToolId::Blur] {
         let (mut s, id) = t02();
         s.set_tool(t).expect("Werkzeug");
-        events(&mut s, &[ToolEvent::down(100.0, 150.0), ToolEvent::drag(150.0, 150.0), ToolEvent::up(200.0, 150.0)]);
+        events(
+            &mut s,
+            &[
+                ToolEvent::down(100.0, 150.0),
+                ToolEvent::drag(150.0, 150.0),
+                ToolEvent::up(200.0, 150.0),
+            ],
+        );
         let n = s.active().expect("d").history.undo_count();
         events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
         let d = s.active().expect("d");
         // two rows "Exit Bitmap Mode" without a pixel selection (RE spec 71 §1.4)
         assert_eq!(d.history.undo_count(), n + 2, "{t:?}: two rows");
         assert_eq!(d.history.undo_label(), Some("Bitmapmodus beenden"), "{t:?}");
-        assert_eq!(d.selection.elements, vec![id], "{t:?}: Bitmap bleibt gewählt");
+        assert_eq!(
+            d.selection.elements,
+            vec![id],
+            "{t:?}: Bitmap bleibt gewählt"
+        );
         assert_eq!(s.tools.active, ToolId::Pointer);
     }
 }
@@ -343,12 +505,24 @@ fn repeated_and_undo_sequences_are_exact() {
     // §4b: Rückgängig stellt exakt her; A, B, Rückgängig, C, Wiederholen …
     let (mut s, id) = t02();
     let start = image(&s, id);
-    ex(&mut s, "bitmap.retouch", json!({"mode": "dodge", "points": line((50.0, 120.0), (510.0, 120.0)), "range": 0}));
+    ex(
+        &mut s,
+        "bitmap.retouch",
+        json!({"mode": "dodge", "points": line((50.0, 120.0), (510.0, 120.0)), "range": 0}),
+    );
     let a = image(&s, id);
-    ex(&mut s, "bitmap.erase", json!({"points": line((60.0, 150.0), (500.0, 150.0)), "size": 13, "edge": 0}));
+    ex(
+        &mut s,
+        "bitmap.erase",
+        json!({"points": line((60.0, 150.0), (500.0, 150.0)), "size": 13, "edge": 0}),
+    );
     s.undo().expect("undo");
     assert_eq!(image(&s, id), a);
-    ex(&mut s, "bitmap.retouch", json!({"mode": "smudge", "points": line((50.0, 120.0), (510.0, 120.0)), "size": 22}));
+    ex(
+        &mut s,
+        "bitmap.retouch",
+        json!({"mode": "smudge", "points": line((50.0, 120.0), (510.0, 120.0)), "size": 22}),
+    );
     let c = image(&s, id);
     s.undo().expect("undo");
     s.undo().expect("undo");
@@ -360,7 +534,11 @@ fn repeated_and_undo_sequences_are_exact() {
     let (mut s1, i1) = t02();
     let (mut s2, i2) = t02();
     for s in [&mut s1, &mut s2] {
-        ex(s, "bitmap.retouch", json!({"mode": "burn", "points": line((50.0, 120.0), (510.0, 120.0)), "range": 2}));
+        ex(
+            s,
+            "bitmap.retouch",
+            json!({"mode": "burn", "points": line((50.0, 120.0), (510.0, 120.0)), "range": 2}),
+        );
     }
     assert_eq!(image(&s1, i1), image(&s2, i2));
 }

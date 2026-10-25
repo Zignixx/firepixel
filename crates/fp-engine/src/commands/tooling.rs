@@ -1287,9 +1287,7 @@ fn retouch(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_ra
     // bitmap, which grows to what was painted (also a separate strip, the gap transparent); the
     // Firepixel option "Confine to boundaries" keeps it inside (FB-52)
     let stamp_grows = prm.mode == "stamp" && !prm.confine && !orig.is_empty();
-    if stamp_grows
-        && let Ok(e) = img.extended_to(orig.union(&reach))
-    {
+    if stamp_grows && let Ok(e) = img.extended_to(orig.union(&reach)) {
         *img = e;
     }
     let ib = img.bounds();

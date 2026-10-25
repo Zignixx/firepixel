@@ -703,8 +703,10 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
                 {
                     // lief ohne Dokument ins Leere (z. B. „Als Großbuchstaben“): im Original ein
                     // Skriptfehler (re 29 §2)
-                    st.dialogs.message =
-                        Some((fp_i18n::DISPLAY_NAME.into(), script_failed("ui-script-error")));
+                    st.dialogs.message = Some((
+                        fp_i18n::DISPLAY_NAME.into(),
+                        script_failed("ui-script-error"),
+                    ));
                 }
             }
         }
@@ -717,7 +719,10 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
         }
         Err(e) if script_file.is_some() && no_doc_before && st.session.active().is_none() => {
             log::info!("Befehlsskript ohne Dokument: {e}");
-            st.dialogs.message = Some((fp_i18n::DISPLAY_NAME.into(), script_failed("ui-script-error")));
+            st.dialogs.message = Some((
+                fp_i18n::DISPLAY_NAME.into(),
+                script_failed("ui-script-error"),
+            ));
         }
         // mit Dokument, aber unpassender Auswahl: im Original weder Meldung noch Statuszeile
         Err(EngineError::Unavailable { reason, .. }) if script_file.is_some() => {

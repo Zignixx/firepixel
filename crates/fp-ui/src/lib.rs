@@ -767,7 +767,9 @@ fn apply_widget_tooltips(ctx: &egui::Context, on: bool) {
     }
     let key = egui::Id::new(TOOLTIP_TIMING_KEY);
     if on {
-        let (delay, grace) = ctx.data(|d| d.get_temp::<(f32, f32)>(key)).unwrap_or((0.6, 0.2));
+        let (delay, grace) = ctx
+            .data(|d| d.get_temp::<(f32, f32)>(key))
+            .unwrap_or((0.6, 0.2));
         ctx.all_styles_mut(|s| {
             s.interaction.tooltip_delay = delay;
             s.interaction.tooltip_grace_time = grace;

@@ -27,13 +27,22 @@ const HH: f32 = 1130.0;
 
 fn harness(setup: impl FnOnce(&mut fp_engine::Session)) -> H {
     let mut s = fp_engine::Session::default();
-    s.execute("file.new", json!({"width": 500, "height": 300, "background": "#ffffff"})).expect("doc");
+    s.execute(
+        "file.new",
+        json!({"width": 500, "height": 300, "background": "#ffffff"}),
+    )
+    .expect("doc");
     setup(&mut s);
     let ctx = egui::Context::default();
     let mut app = FirepixelApp::with_session(&ctx, s, UiSettings::default(), false);
     app.state.sync_render = true;
     app.state.os_clipboard = false;
-    let mut h = Harness::builder().with_size(egui::vec2(W, HH)).with_pixels_per_point(1.0).with_max_steps(20).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(W, HH))
+        .with_pixels_per_point(1.0)
+        .with_max_steps(20)
+        .with_step_dt(1.0 / 60.0)
+        .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
     h.run_steps(4);
     h
 }
@@ -48,8 +57,26 @@ fn ev(h: &mut H, e: Event) {
 }
 
 fn key(h: &mut H, k: Key, m: Modifiers) {
-    ev(h, Event::Key { key: k, physical_key: Some(k), pressed: true, repeat: false, modifiers: m });
-    ev(h, Event::Key { key: k, physical_key: Some(k), pressed: false, repeat: false, modifiers: m });
+    ev(
+        h,
+        Event::Key {
+            key: k,
+            physical_key: Some(k),
+            pressed: true,
+            repeat: false,
+            modifiers: m,
+        },
+    );
+    ev(
+        h,
+        Event::Key {
+            key: k,
+            physical_key: Some(k),
+            pressed: false,
+            repeat: false,
+            modifiers: m,
+        },
+    );
 }
 
 fn text(h: &mut H, t: &str) {
@@ -59,7 +86,15 @@ fn text(h: &mut H, t: &str) {
 }
 
 fn press(h: &mut H, p: Pos2, down: bool) {
-    ev(h, Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: down, modifiers: Modifiers::NONE });
+    ev(
+        h,
+        Event::PointerButton {
+            pos: p,
+            button: PointerButton::Primary,
+            pressed: down,
+            modifiers: Modifiers::NONE,
+        },
+    );
 }
 
 fn click(h: &mut H, p: Pos2) {
@@ -70,7 +105,11 @@ fn click(h: &mut H, p: Pos2) {
 }
 
 fn undo_count(h: &H) -> usize {
-    st(h).session.active().map(|d| d.history.undo_count()).unwrap_or(0)
+    st(h)
+        .session
+        .active()
+        .map(|d| d.history.undo_count())
+        .unwrap_or(0)
 }
 
 fn dirty(h: &H) -> bool {
@@ -90,22 +129,40 @@ fn element(h: &H, id: u64) -> Arc<fp_model::Element> {
 }
 
 fn feather_of(e: &fp_model::Element) -> (i32, i32) {
-    fp_engine::docops::path_attrs_of(e).and_then(|a| a.fill.as_ref().map(|f| (f.edge, f.feather))).expect("fill")
+    fp_engine::docops::path_attrs_of(e)
+        .and_then(|a| a.fill.as_ref().map(|f| (f.edge, f.feather)))
+        .expect("fill")
 }
 
 fn softness_of(e: &fp_model::Element) -> i32 {
-    fp_engine::docops::path_attrs_of(e).and_then(|a| a.brush.as_ref().map(|b| b.softness)).expect("brush")
+    fp_engine::docops::path_attrs_of(e)
+        .and_then(|a| a.brush.as_ref().map(|b| b.softness))
+        .expect("brush")
 }
 
 /// A text attribute of the first run (or the initial attributes).
 fn text_attr(e: &fp_model::Element, f: impl Fn(&fp_model::text::TextAttrs) -> Option<f32>) -> f32 {
-    let fp_model::element::ElementKind::Text(t) = &e.kind else { panic!("not a text") };
-    t.runs.first().and_then(|r| f(&r.attrs)).or_else(|| f(&t.initial)).expect("attribute")
+    let fp_model::element::ElementKind::Text(t) = &e.kind else {
+        panic!("not a text")
+    };
+    t.runs
+        .first()
+        .and_then(|r| f(&r.attrs))
+        .or_else(|| f(&t.initial))
+        .expect("attribute")
 }
 
 fn inputs(h: &H) -> Vec<(egui::Rect, String)> {
-    let mut v: Vec<(egui::Rect, String)> = h.get_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::TextInput)).map(|n| (n.rect(), n.value().unwrap_or_default())).filter(|(r, _)| r.top() > HH - 160.0).collect();
-    v.sort_by(|a, b| a.0.top().total_cmp(&b.0.top()).then(a.0.left().total_cmp(&b.0.left())));
+    let mut v: Vec<(egui::Rect, String)> = h
+        .get_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::TextInput))
+        .map(|n| (n.rect(), n.value().unwrap_or_default()))
+        .filter(|(r, _)| r.top() > HH - 160.0)
+        .collect();
+    v.sort_by(|a, b| {
+        a.0.top()
+            .total_cmp(&b.0.top())
+            .then(a.0.left().total_cmp(&b.0.left()))
+    });
     v
 }
 
@@ -117,16 +174,26 @@ fn input_with(h: &H, value: &str) -> egui::Rect {
 }
 
 fn field_at(h: &H, f: egui::Rect) -> String {
-    inputs(h).into_iter().find(|(r, _)| (r.center().y - f.center().y).abs() < 1.0 && (r.left() - f.left()).abs() < 1.0).map(|x| x.1).unwrap_or_default()
+    inputs(h)
+        .into_iter()
+        .find(|(r, _)| {
+            (r.center().y - f.center().y).abs() < 1.0 && (r.left() - f.left()).abs() < 1.0
+        })
+        .map(|x| x.1)
+        .unwrap_or_default()
 }
 
 fn field_num(h: &H, f: egui::Rect) -> f64 {
     let s = field_at(h, f);
-    s.trim_end_matches('%').parse().unwrap_or_else(|_| panic!("number in the field: {s:?}"))
+    s.trim_end_matches('%')
+        .parse()
+        .unwrap_or_else(|_| panic!("number in the field: {s:?}"))
 }
 
 fn sliders(h: &H) -> Vec<egui::Rect> {
-    h.query_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::Slider)).map(|n| n.rect()).collect()
+    h.query_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::Slider))
+        .map(|n| n.rect())
+        .collect()
 }
 
 /// Arrow ▾ right of a number field (1 DLU gap, 9 DLU wide).
@@ -150,7 +217,11 @@ fn preview(h: &H) -> Option<PreviewValue> {
 fn shown_preview_key(h: &H) -> u64 {
     let s = st(h);
     let id = s.session.active().expect("doc").id;
-    s.canvases.get(&id).and_then(|c| c.shown).map(|k| k.preview).unwrap_or(0)
+    s.canvases
+        .get(&id)
+        .and_then(|c| c.shown)
+        .map(|k| k.preview)
+        .unwrap_or(0)
 }
 
 /// The preview copy the canvas renders right now.
@@ -174,14 +245,26 @@ fn drag_arrow(h: &mut H, field: egui::Rect, dy: f32) -> Pos2 {
 
 /// Drag from the arrow: the field follows, the canvas previews, nothing is applied; release
 /// applies exactly one History row. Returns the dragged value.
-fn drag_previews_then_applies(h: &mut H, field: egui::Rect, dy: f32, expect: impl Fn(f64) -> PreviewValue) -> f64 {
+fn drag_previews_then_applies(
+    h: &mut H,
+    field: egui::Rect,
+    dy: f32,
+    expect: impl Fn(f64) -> PreviewValue,
+) -> f64 {
     let (n0, d0, dirty0) = (undo_count(h), doc(h), dirty(h));
     let to = drag_arrow(h, field, dy);
     assert_eq!(sliders(h).len(), 1, "pop-up open while dragging");
     let live = field_num(h, field);
     assert_eq!(preview(h), Some(expect(live)), "live preview of {live}");
-    assert_ne!(shown_preview_key(h), 0, "canvas image rendered from the preview");
-    assert!(Arc::ptr_eq(&doc(h), &d0), "document untouched while dragging");
+    assert_ne!(
+        shown_preview_key(h),
+        0,
+        "canvas image rendered from the preview"
+    );
+    assert!(
+        Arc::ptr_eq(&doc(h), &d0),
+        "document untouched while dragging"
+    );
     assert_eq!(undo_count(h), n0, "no History row while dragging");
     assert_eq!(dirty(h), dirty0, "dirty flag untouched while dragging");
     press(h, to, false);
@@ -206,11 +289,22 @@ fn enter_applies(h: &mut H, field: egui::Rect, typed: &str) {
 fn rect_feathered() -> (H, u64) {
     let mut id = 0;
     let h = harness(|s| {
-        let v = s.execute("draw.rectangle", json!({"rect": [40, 40, 160, 130], "fillColor": "#cc3333", "strokeWidth": 0})).expect("rect");
+        let v = s
+            .execute(
+                "draw.rectangle",
+                json!({"rect": [40, 40, 160, 130], "fillColor": "#cc3333", "strokeWidth": 0}),
+            )
+            .expect("rect");
         id = v.value.get("id").and_then(|x| x.as_u64()).expect("id");
-        s.execute("select.set", json!({"ids": [id]})).expect("select");
-        s.execute("pi.stroke", json!({"width": 7, "color": "#000000", "softness": 33})).expect("stroke");
-        s.execute("pi.fill", json!({"edge": 2, "feather": 23})).expect("feather");
+        s.execute("select.set", json!({"ids": [id]}))
+            .expect("select");
+        s.execute(
+            "pi.stroke",
+            json!({"width": 7, "color": "#000000", "softness": 33}),
+        )
+        .expect("stroke");
+        s.execute("pi.fill", json!({"edge": 2, "feather": 23}))
+            .expect("feather");
     });
     (h, id)
 }
@@ -219,9 +313,15 @@ fn rect_feathered() -> (H, u64) {
 fn text_object() -> (H, u64) {
     let mut id = 0;
     let h = harness(|s| {
-        let v = s.execute("draw.text", json!({"text": "Hallo", "anchor": [40, 150], "size": 24})).expect("text");
+        let v = s
+            .execute(
+                "draw.text",
+                json!({"text": "Hallo", "anchor": [40, 150], "size": 24}),
+            )
+            .expect("text");
         id = v.value.get("id").and_then(|x| x.as_u64()).expect("id");
-        s.execute("select.set", json!({"ids": [id]})).expect("select");
+        s.execute("select.set", json!({"ids": [id]}))
+            .expect("select");
         s.execute("text.setAttributes", json!({"tracking": 3, "leading": 1.17, "leadingMode": 0, "indent": 4, "spaceBefore": 5, "spaceAfter": 6, "horizontalScale": 1.1})).expect("attributes");
     });
     (h, id)
@@ -233,13 +333,25 @@ fn feather_slider_previews_live_and_applies_once() {
     let f = input_with(&h, "23");
     let v = drag_previews_then_applies(&mut h, f, -40.0, PreviewValue::Feather);
     assert!(v > 23.0, "dragged up: {v}");
-    assert_eq!(feather_of(&element(&h, r)), (2, v as i32), "release applies");
+    assert_eq!(
+        feather_of(&element(&h, r)),
+        (2, v as i32),
+        "release applies"
+    );
     // the preview copy carries the value while the thumb moves (checked on a second drag)
     let f = input_with(&h, &format!("{v}"));
     let to = drag_arrow(&mut h, f, 30.0);
     let live = field_num(&h, f);
-    assert_eq!(feather_of(&element_in(&preview_doc(&h), r)), (2, live as i32), "canvas copy");
-    assert_eq!(feather_of(&element(&h, r)), (2, v as i32), "document still at the old value");
+    assert_eq!(
+        feather_of(&element_in(&preview_doc(&h), r)),
+        (2, live as i32),
+        "canvas copy"
+    );
+    assert_eq!(
+        feather_of(&element(&h, r)),
+        (2, v as i32),
+        "document still at the old value"
+    );
     // Esc discards the dragged value
     let n0 = undo_count(&h);
     // Esc while the thumb is still dragged from the arrow (egui ends the drag on Esc: that must not
@@ -262,7 +374,11 @@ fn edge_softness_slider_previews_live_and_applies_once() {
     let f = input_with(&h, "33");
     let v = drag_previews_then_applies(&mut h, f, -40.0, PreviewValue::StrokeSoftness);
     assert!(v > 33.0, "dragged up: {v}");
-    assert_eq!(softness_of(&element(&h, r)), v as i32 * 10, "release applies");
+    assert_eq!(
+        softness_of(&element(&h, r)),
+        v as i32 * 10,
+        "release applies"
+    );
     let f = input_with(&h, &format!("{v}"));
     enter_applies(&mut h, f, "8");
     assert_eq!(softness_of(&element(&h, r)), 80, "Enter applies");
@@ -276,41 +392,75 @@ fn font_size_slider_previews_live_and_applies_once() {
     let live = field_num(&h, f);
     assert!(live > 24.0, "dragged up: {live}");
     assert_eq!(preview(&h), Some(PreviewValue::Text(json!({"size": live}))));
-    assert_eq!(text_attr(&element_in(&preview_doc(&h), r), |a| a.size), live as f32, "canvas copy");
-    assert_eq!(text_attr(&element(&h, r), |a| a.size), 24.0, "document untouched");
+    assert_eq!(
+        text_attr(&element_in(&preview_doc(&h), r), |a| a.size),
+        live as f32,
+        "canvas copy"
+    );
+    assert_eq!(
+        text_attr(&element(&h, r), |a| a.size),
+        24.0,
+        "document untouched"
+    );
     let n0 = undo_count(&h);
     press(&mut h, to, false);
     h.run_steps(2);
     assert_eq!(undo_count(&h), n0 + 1, "one row");
-    assert_eq!(text_attr(&element(&h, r), |a| a.size), live as f32, "release applies");
+    assert_eq!(
+        text_attr(&element(&h, r), |a| a.size),
+        live as f32,
+        "release applies"
+    );
     assert_eq!(preview(&h), None);
     let f = input_with(&h, &format!("{live}"));
     enter_applies(&mut h, f, "30");
-    assert_eq!(text_attr(&element(&h, r), |a| a.size), 30.0, "Enter applies");
+    assert_eq!(
+        text_attr(&element(&h, r), |a| a.size),
+        30.0,
+        "Enter applies"
+    );
 }
 
 #[test]
 fn tracking_slider_previews_live_and_applies_once() {
     let (mut h, r) = text_object();
     let f = input_with(&h, "3");
-    let v = drag_previews_then_applies(&mut h, f, -40.0, |x| PreviewValue::Text(json!({"tracking": x})));
+    let v = drag_previews_then_applies(&mut h, f, -40.0, |x| {
+        PreviewValue::Text(json!({"tracking": x}))
+    });
     assert!(v > 3.0, "dragged up: {v}");
-    assert_eq!(text_attr(&element(&h, r), |a| a.tracking), v as f32, "release applies");
+    assert_eq!(
+        text_attr(&element(&h, r), |a| a.tracking),
+        v as f32,
+        "release applies"
+    );
     let f = input_with(&h, &format!("{v}"));
     enter_applies(&mut h, f, "-7");
-    assert_eq!(text_attr(&element(&h, r), |a| a.tracking), -7.0, "Enter applies");
+    assert_eq!(
+        text_attr(&element(&h, r), |a| a.tracking),
+        -7.0,
+        "Enter applies"
+    );
 }
 
 #[test]
 fn horizontal_scale_slider_previews_live_and_applies_once() {
     let (mut h, r) = text_object();
     let f = input_with(&h, "110%");
-    let v = drag_previews_then_applies(&mut h, f, -40.0, |x| PreviewValue::Text(json!({"horizontalScale": x / 100.0})));
+    let v = drag_previews_then_applies(&mut h, f, -40.0, |x| {
+        PreviewValue::Text(json!({"horizontalScale": x / 100.0}))
+    });
     assert!(v > 110.0, "dragged up: {v}");
-    assert!((text_attr(&element(&h, r), |a| a.horizontal_scale) - (v / 100.0) as f32).abs() < 1e-6, "release applies");
+    assert!(
+        (text_attr(&element(&h, r), |a| a.horizontal_scale) - (v / 100.0) as f32).abs() < 1e-6,
+        "release applies"
+    );
     let f = input_with(&h, &format!("{v}%"));
     enter_applies(&mut h, f, "150");
-    assert!((text_attr(&element(&h, r), |a| a.horizontal_scale) - 1.5).abs() < 1e-6, "Enter applies");
+    assert!(
+        (text_attr(&element(&h, r), |a| a.horizontal_scale) - 1.5).abs() < 1e-6,
+        "Enter applies"
+    );
 }
 
 /// Reads one optional paragraph attribute.
@@ -335,8 +485,15 @@ fn paragraph_sliders_preview_live() {
             PreviewValue::Text(p)
         });
         // (near the window bottom the pop-up is moved up, so the value need not grow)
-        assert_ne!(v, shown.parse::<f64>().expect("number"), "{name}: the drag changed the value");
-        assert!((text_attr(&element(&h, r), get) - (v / div) as f32).abs() < 1e-5, "{name}: release applies");
+        assert_ne!(
+            v,
+            shown.parse::<f64>().expect("number"),
+            "{name}: the drag changed the value"
+        );
+        assert!(
+            (text_attr(&element(&h, r), get) - (v / div) as f32).abs() < 1e-5,
+            "{name}: release applies"
+        );
     }
 }
 
@@ -349,7 +506,11 @@ fn paragraph_sliders_preview_live() {
 fn slider_popup_is_anchored_to_its_arrow() {
     for opacity in [100.0, 30.0] {
         let (mut h, _) = rect_feathered();
-        h.state_mut().state.session.execute("element.setOpacity", json!({"opacity": opacity})).expect("opacity");
+        h.state_mut()
+            .state
+            .session
+            .execute("element.setOpacity", json!({"opacity": opacity}))
+            .expect("opacity");
         h.run_steps(3);
         let f = input_with(&h, &format!("{opacity}"));
         let a = arrow_of(f);
@@ -358,32 +519,70 @@ fn slider_popup_is_anchored_to_its_arrow() {
         ev(&mut h, Event::PointerMoved(a));
         press(&mut h, a, true);
         press(&mut h, a, false);
-        assert!(area(&h).is_some(), "{opacity}: pop-up opened by the click (sizing pass)");
+        assert!(
+            area(&h).is_some(),
+            "{opacity}: pop-up opened by the click (sizing pass)"
+        );
         h.run_steps(1);
         let first = area(&h).expect("first painted frame");
         h.run_steps(1);
         let second = area(&h).expect("pop-up still open");
         h.run_steps(3);
         let later = area(&h).expect("pop-up still open");
-        assert_eq!(first, second, "{opacity}: same rect on the first and second painted frame");
+        assert_eq!(
+            first, second,
+            "{opacity}: same rect on the first and second painted frame"
+        );
         assert_eq!(second, later, "{opacity}: and later");
         assert_eq!(sliders(&h).len(), 1, "{opacity}: one pop-up slider");
         // the place computed for the arrow (the arrow rect is 9 DLU = 13.5 px wide)
         let arrow_rect = egui::Rect::from_center_size(a, egui::vec2(13.5, 19.5));
-        let expected = fp_ui::inspector::fields::vslider_popup_pos_on(&h.ctx, arrow_rect, a.y, opacity as f32 / 100.0, VTrack::PERCENT);
-        assert!((first.min - expected).length() <= 1.0, "{opacity}: at the computed place {first:?} / {expected:?}");
-        assert!((first.size() - VSLIDER_POPUP).length() < 0.5, "{opacity}: size {:?}", first.size());
+        let expected = fp_ui::inspector::fields::vslider_popup_pos_on(
+            &h.ctx,
+            arrow_rect,
+            a.y,
+            opacity as f32 / 100.0,
+            VTrack::PERCENT,
+        );
+        assert!(
+            (first.min - expected).length() <= 1.0,
+            "{opacity}: at the computed place {first:?} / {expected:?}"
+        );
+        assert!(
+            (first.size() - VSLIDER_POPUP).length() < 0.5,
+            "{opacity}: size {:?}",
+            first.size()
+        );
         let screen = h.ctx.content_rect();
-        assert!(screen.contains_rect(first), "{opacity}: inside the window {first:?}");
-        assert!((first.left() - arrow_rect.left()).abs() <= 1.0, "{opacity}: flush left with the arrow {first:?} / {arrow_rect:?}");
-        let thumb = first.top() + 2.0 + VSLIDER_PERCENT_PAD + (1.0 - opacity as f32 / 100.0) * VSLIDER_PERCENT_TRACK;
+        assert!(
+            screen.contains_rect(first),
+            "{opacity}: inside the window {first:?}"
+        );
+        assert!(
+            (first.left() - arrow_rect.left()).abs() <= 1.0,
+            "{opacity}: flush left with the arrow {first:?} / {arrow_rect:?}"
+        );
+        let thumb = first.top()
+            + 2.0
+            + VSLIDER_PERCENT_PAD
+            + (1.0 - opacity as f32 / 100.0) * VSLIDER_PERCENT_TRACK;
         if opacity == 100.0 {
             // the thumb would be level with the arrow, the pop-up would leave the window at the
             // bottom: it is moved up just enough (before: flipped entirely above the arrow)
-            assert!((first.bottom() - screen.bottom()).abs() <= 1.0, "moved up to the window edge: {first:?}");
-            assert!(first.top() < a.y && first.bottom() > a.y, "the arrow stays beside the pop-up: {first:?}");
+            assert!(
+                (first.bottom() - screen.bottom()).abs() <= 1.0,
+                "moved up to the window edge: {first:?}"
+            );
+            assert!(
+                first.top() < a.y && first.bottom() > a.y,
+                "the arrow stays beside the pop-up: {first:?}"
+            );
         } else {
-            assert!((thumb - a.y).abs() <= 1.0, "{opacity}: thumb {thumb} level with the arrow {}", a.y);
+            assert!(
+                (thumb - a.y).abs() <= 1.0,
+                "{opacity}: thumb {thumb} level with the arrow {}",
+                a.y
+            );
         }
         key(&mut h, Key::Escape, Modifiers::NONE);
         h.run_steps(2);
@@ -396,7 +595,10 @@ fn slider_popup_is_anchored_to_its_arrow() {
             press(&mut h, low, false);
             h.run_steps(2);
             let lower = area(&h).expect("pop-up open");
-            assert!((lower.top() - first.top() - 6.0).abs() <= 1.0, "follows the press point: {lower:?} / {first:?}");
+            assert!(
+                (lower.top() - first.top() - 6.0).abs() <= 1.0,
+                "follows the press point: {lower:?} / {first:?}"
+            );
             key(&mut h, Key::Escape, Modifiers::NONE);
             h.run_steps(2);
             assert!(sliders(&h).is_empty());
@@ -406,11 +608,18 @@ fn slider_popup_is_anchored_to_its_arrow() {
             press(&mut h, a, true);
             let mut seen = Vec::new();
             for i in 1..=8 {
-                ev(&mut h, Event::PointerMoved(a + egui::vec2(2.0 * i as f32, 0.0)));
+                ev(
+                    &mut h,
+                    Event::PointerMoved(a + egui::vec2(2.0 * i as f32, 0.0)),
+                );
                 seen.push((field_at(&h, f), preview(&h)));
             }
             assert_eq!(sliders(&h).len(), 1, "drag opened the pop-up");
-            assert!(seen.iter().all(|(t, p)| t == "30" && p.as_ref().is_none_or(|p| *p == PreviewValue::Opacity(30.0))), "{seen:?}");
+            assert!(
+                seen.iter().all(|(t, p)| t == "30"
+                    && p.as_ref().is_none_or(|p| *p == PreviewValue::Opacity(30.0))),
+                "{seen:?}"
+            );
             press(&mut h, a + egui::vec2(16.0, 0.0), false);
             h.run_steps(2);
         }

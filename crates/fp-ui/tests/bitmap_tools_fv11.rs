@@ -15,8 +15,8 @@ use fp_engine::tools::ToolId;
 use fp_engine::{Session, ToolEvent, ToolKey};
 use fp_geom::IRect;
 use fp_model::{ElementId, ElementKind};
-use fp_ui::app_state::UiSettings;
 use fp_ui::FirepixelApp;
+use fp_ui::app_state::UiSettings;
 use serde_json::json;
 
 struct T {
@@ -27,15 +27,31 @@ struct T {
 
 fn app() -> T {
     let mut s = Session::default();
-    s.execute("file.new", json!({"width": 600, "height": 400, "background": "#ffffff"})).expect("Dokument");
+    s.execute(
+        "file.new",
+        json!({"width": 600, "height": 400, "background": "#ffffff"}),
+    )
+    .expect("Dokument");
     let ctx = egui::Context::default();
     let mut a = FirepixelApp::with_session(&ctx, s, UiSettings::default(), false);
     a.state.sync_render = true;
     let s = &mut a.state.session;
-    let r = s.execute("draw.rectangle", json!({"rect": [50, 50, 150, 120], "fillColor": "#ff0000", "strokeWidth": 0})).expect("R1");
+    let r = s
+        .execute(
+            "draw.rectangle",
+            json!({"rect": [50, 50, 150, 120], "fillColor": "#ff0000", "strokeWidth": 0}),
+        )
+        .expect("R1");
     let r1 = ElementId(r.value["id"].as_u64().expect("id R1"));
-    let mut img = fp_raster::RgbaImage::filled(IRect::new(150, 340, 270, 395), fp_color::Rgba8::new(255, 0, 0, 255)).expect("Bild");
-    img.fill_rect(IRect::new(210, 340, 270, 395), fp_color::Rgba8::new(0, 0, 255, 255));
+    let mut img = fp_raster::RgbaImage::filled(
+        IRect::new(150, 340, 270, 395),
+        fp_color::Rgba8::new(255, 0, 0, 255),
+    )
+    .expect("Bild");
+    img.fill_rect(
+        IRect::new(210, 340, 270, 395),
+        fp_color::Rgba8::new(0, 0, 255, 255),
+    );
     s.clipboard.clear();
     s.clipboard.pixels = Some(img);
     let v = s.execute("edit.paste", json!({})).expect("B2");
@@ -51,16 +67,25 @@ fn ses(t: &mut T) -> &mut Session {
 
 fn ids(s: &Session) -> Vec<ElementId> {
     let d = s.active().expect("Dokument");
-    fp_engine::docops::own_layers(&d.doc, d.page).into_iter().rev().flat_map(|(_, l)| l.cels[0].elements.iter().map(|e| e.id).collect::<Vec<_>>()).collect()
+    fp_engine::docops::own_layers(&d.doc, d.page)
+        .into_iter()
+        .rev()
+        .flat_map(|(_, l)| l.cels[0].elements.iter().map(|e| e.id).collect::<Vec<_>>())
+        .collect()
 }
 
 fn sel(s: &Session) -> Vec<ElementId> {
-    s.active().map(|d| d.selection.elements.clone()).unwrap_or_default()
+    s.active()
+        .map(|d| d.selection.elements.clone())
+        .unwrap_or_default()
 }
 
 fn image(s: &Session, id: ElementId) -> fp_raster::RgbaImage {
     let d = s.active().expect("Dokument");
-    match &fp_engine::docops::element_on_page(&d.doc, d.page, id).expect("Element").kind {
+    match &fp_engine::docops::element_on_page(&d.doc, d.page, id)
+        .expect("Element")
+        .kind
+    {
         ElementKind::Bitmap(b) => fp_engine::docops::bitmap_image(b).expect("Bild"),
         _ => panic!("keine Bitmap"),
     }
@@ -68,7 +93,8 @@ fn image(s: &Session, id: ElementId) -> fp_raster::RgbaImage {
 
 fn is_bitmap(s: &Session, id: ElementId) -> bool {
     let d = s.active().expect("Dokument");
-    fp_engine::docops::element_on_page(&d.doc, d.page, id).is_some_and(|e| matches!(e.kind, ElementKind::Bitmap(_)))
+    fp_engine::docops::element_on_page(&d.doc, d.page, id)
+        .is_some_and(|e| matches!(e.kind, ElementKind::Bitmap(_)))
 }
 
 fn px(s: &Session, id: ElementId, x: i32, y: i32) -> [u8; 4] {
@@ -88,7 +114,11 @@ fn drag(s: &mut Session, a: (f32, f32), b: (f32, f32)) {
     s.tool_event(&ToolEvent::down(a.0, a.1)).expect("down");
     for i in 1..=20 {
         let f = i as f32 / 20.0;
-        s.tool_event(&ToolEvent::drag((a.0 + (b.0 - a.0) * f).round(), (a.1 + (b.1 - a.1) * f).round())).expect("drag");
+        s.tool_event(&ToolEvent::drag(
+            (a.0 + (b.0 - a.0) * f).round(),
+            (a.1 + (b.1 - a.1) * f).round(),
+        ))
+        .expect("drag");
     }
     s.tool_event(&ToolEvent::up(b.0, b.1)).expect("up");
 }
@@ -103,11 +133,15 @@ fn esc(s: &mut Session) {
 }
 
 fn select(s: &mut Session, id: ElementId) {
-    s.execute("select.set", json!({"ids": [id.0]})).expect("Auswahl");
+    s.execute("select.set", json!({"ids": [id.0]}))
+        .expect("Auswahl");
 }
 
 fn near(v: u8, want: i32, tol: i32, what: &str) {
-    assert!((v as i32 - want).abs() <= tol, "{what}: {v}, erwartet {want} ± {tol}");
+    assert!(
+        (v as i32 - want).abs() <= tol,
+        "{what}: {v}, erwartet {want} ± {tol}"
+    );
 }
 
 // ------------------------------------------------------------------ L36 Pinsel
@@ -130,8 +164,16 @@ fn brush_without_selection_creates_new_bitmap_and_keeps_painting_into_it() {
     assert!(is_bitmap(s, nb), "Pinsel legt eine Bitmap an, keinen Pfad");
     // Endpunkt eingeschlossen wie die echten Züge des Originals (PAR-X-BRUSH-1, real_strokes r03:
     // 60→500 = 60–501); FV-11 hatte 300,20–400,21 gemessen (Nachprüfung im Original offen)
-    assert_eq!(image(s, nb).alpha_bounds(), IRect::new(300, 20, 401, 21), "Strichgröße (300,20–401,21)");
-    assert_eq!(px(s, nb, 350, 20), [0xc0, 0x40, 0x40, 255], "mit der Strichfarbe");
+    assert_eq!(
+        image(s, nb).alpha_bounds(),
+        IRect::new(300, 20, 401, 21),
+        "Strichgröße (300,20–401,21)"
+    );
+    assert_eq!(
+        px(s, nb, 350, 20),
+        [0xc0, 0x40, 0x40, 255],
+        "mit der Strichfarbe"
+    );
     assert_eq!(sel(s), vec![nb], "neue Bitmap ausgewählt");
     assert_eq!(s.tools.active, ToolId::Brush, "Werkzeug bleibt Pinsel");
     // "Edit Bitmap" (bitmap mode starts, RE spec 71 §1.3) and the stroke row
@@ -145,7 +187,11 @@ fn brush_without_selection_creates_new_bitmap_and_keeps_painting_into_it() {
     assert_eq!(s.tools.active, ToolId::Pointer);
     assert_eq!(sel(s), vec![nb]);
     // Escape without a pixel selection writes "Exit Bitmap Mode" twice (RE spec 71 §1.4)
-    assert_eq!(undo_count(s), h0 + 5, "Edit Bitmap, two strokes, Exit Bitmap Mode twice");
+    assert_eq!(
+        undo_count(s),
+        h0 + 5,
+        "Edit Bitmap, two strokes, Exit Bitmap Mode twice"
+    );
     s.undo().expect("undo");
     s.undo().expect("undo");
     // Rückgängig: erst der zweite Strich, dann die neue Bitmap
@@ -161,16 +207,26 @@ fn brush_with_selected_vector_creates_new_bitmap() {
     let (r1, b) = (t.r1, t.b2);
     let s = ses(&mut t);
     select(s, r1);
-    let before = s.active().map(|d| fp_engine::docops::element_on_page(&d.doc, d.page, r1)).expect("R1");
+    let before = s
+        .active()
+        .map(|d| fp_engine::docops::element_on_page(&d.doc, d.page, r1))
+        .expect("R1");
     let n0 = ids(s).len();
     tool(s, ToolId::Brush);
     drag(s, (60.0, 100.0), (140.0, 100.0));
     let all = ids(s);
     assert_eq!(all.len(), n0 + 1);
     assert!(is_bitmap(s, all[0]));
-    assert_eq!(image(s, all[0]).alpha_bounds(), IRect::new(60, 100, 141, 101), "Original T0 60,100–140,101; Endpunkt eingeschlossen (PAR-X-BRUSH-1)");
+    assert_eq!(
+        image(s, all[0]).alpha_bounds(),
+        IRect::new(60, 100, 141, 101),
+        "Original T0 60,100–140,101; Endpunkt eingeschlossen (PAR-X-BRUSH-1)"
+    );
     assert_eq!(sel(s), vec![all[0]]);
-    let after = s.active().map(|d| fp_engine::docops::element_on_page(&d.doc, d.page, r1)).expect("R1");
+    let after = s
+        .active()
+        .map(|d| fp_engine::docops::element_on_page(&d.doc, d.page, r1))
+        .expect("R1");
     assert_eq!(before, after, "R1 unverändert");
 }
 
@@ -184,7 +240,11 @@ fn brush_paints_into_selected_bitmap_and_extends_it() {
     tool(s, ToolId::Brush);
     drag(s, (160.0, 330.0), (260.0, 330.0));
     assert_eq!(ids(s).len(), n0, "kein neues Objekt");
-    assert_eq!(image(s, b).bounds().top, 330, "B2 wächst bis 330 (Original 150,330–270,395)");
+    assert_eq!(
+        image(s, b).bounds().top,
+        330,
+        "B2 wächst bis 330 (Original 150,330–270,395)"
+    );
     assert_eq!(px(s, b, 200, 330), [0xc0, 0x40, 0x40, 255]);
     drag(s, (160.0, 360.0), (260.0, 360.0));
     assert_eq!(px(s, b, 200, 360), [0xc0, 0x40, 0x40, 255]);
@@ -209,9 +269,16 @@ fn brush_many_times_without_duplicates() {
     }
     assert_eq!(ids(s).len(), n0 + 1);
     assert!(undo_count(s) > h0, "Verlaufsschritte");
-    assert_eq!(image(s, ids(s)[0]).alpha_bounds(), IRect::new(300, 100, 401, 130));
+    assert_eq!(
+        image(s, ids(s)[0]).alpha_bounds(),
+        IRect::new(300, 100, 401, 130)
+    );
     s.undo().expect("undo");
-    assert_eq!(image(s, ids(s)[0]).alpha_bounds(), IRect::new(300, 100, 401, 129), "Rückgängig nimmt genau den letzten Strich");
+    assert_eq!(
+        image(s, ids(s)[0]).alpha_bounds(),
+        IRect::new(300, 100, 401, 129),
+        "Rückgängig nimmt genau den letzten Strich"
+    );
 }
 
 // ------------------------------------------------------------------ L37 Radiergummi
@@ -240,7 +307,11 @@ fn eraser_dab_and_stroke_like_original() {
     near(px(s, b, 184, 373)[3], 255 - 9, 6, "184,373");
     assert_eq!(px(s, b, 184, 359)[3], 255);
     esc(s);
-    assert_eq!(s.tools.active, ToolId::Pointer, "Esc nach dem Radieren: Zeiger");
+    assert_eq!(
+        s.tools.active,
+        ToolId::Pointer,
+        "Esc nach dem Radieren: Zeiger"
+    );
     assert_eq!(sel(s), vec![b]);
     // Esc nach dem Radieren legt „Bitmapmodus beenden“ zweimal an (RE spec 71 §1.4)
     s.undo().expect("undo");
@@ -260,8 +331,14 @@ fn eraser_dab_and_stroke_like_original() {
     for x in 154..=264 {
         assert_eq!(px(s, b, x, 367)[3], 0, "{x},367 voll gelöscht");
     }
-    assert!(px(s, b, 153, 367)[3] < 255 && px(s, b, 153, 367)[3] > 0, "153 Übergang");
-    assert!(px(s, b, 265, 367)[3] < 255 && px(s, b, 266, 367)[3] < 255, "265/266 Übergang");
+    assert!(
+        px(s, b, 153, 367)[3] < 255 && px(s, b, 153, 367)[3] > 0,
+        "153 Übergang"
+    );
+    assert!(
+        px(s, b, 265, 367)[3] < 255 && px(s, b, 266, 367)[3] < 255,
+        "265/266 Übergang"
+    );
     assert_eq!(px(s, b, 152, 367)[3], 255);
 }
 
@@ -275,9 +352,17 @@ fn eraser_without_bitmap_clears_selection() {
     tool(s, ToolId::Eraser);
     drag(s, (60.0, 85.0), (140.0, 85.0));
     assert!(sel(s).is_empty(), "Original T4: Auswahl aufgehoben");
-    assert_eq!(s.active().map(|d| d.doc.clone()).expect("Dokument"), doc0, "R1 unverändert");
+    assert_eq!(
+        s.active().map(|d| d.doc.clone()).expect("Dokument"),
+        doc0,
+        "R1 unverändert"
+    );
     esc(s);
-    assert_eq!(s.tools.active, ToolId::Eraser, "Esc ohne Bitmap: Werkzeug bleibt");
+    assert_eq!(
+        s.tools.active,
+        ToolId::Eraser,
+        "Esc ohne Bitmap: Werkzeug bleibt"
+    );
 }
 
 // ------------------------------------------------------------------ L38 Weichzeichner
@@ -303,13 +388,22 @@ fn blur_strength_and_growth_like_original() {
     near(px(s, b, 208, 367)[2], 2, 6, "208 Blau");
     near(px(s, b, 211, 367)[0], 2, 6, "211 Rot");
     let r = image(s, b).bounds();
-    assert_eq!((r.left, r.top, r.right, r.bottom), (150, 339, 270, 395), "Original 150,339–270,395");
+    assert_eq!(
+        (r.left, r.top, r.right, r.bottom),
+        (150, 339, 270, 395),
+        "Original 150,339–270,395"
+    );
     s.undo().expect("undo");
     assert_eq!(image(s, b).bounds(), IRect::new(150, 340, 270, 395));
     // Klick an der Oberkante: Bitmap wächst um 1 px (Original M7b), Kante hellt auf (30/255)
     click(s, 180.0, 341.0);
     assert_eq!(image(s, b).bounds().top, 339);
-    near(255 - px(s, b, 179, 340)[3], 20, 12, "Deckkraftverlust 179,340");
+    near(
+        255 - px(s, b, 179, 340)[3],
+        20,
+        12,
+        "Deckkraftverlust 179,340",
+    );
     esc(s);
     assert_eq!(s.tools.active, ToolId::Pointer);
     assert_eq!(sel(s), vec![b]);
@@ -324,8 +418,10 @@ fn stamp_edge_and_esc_like_original() {
     let s = ses(&mut t);
     select(s, b);
     tool(s, ToolId::RubberStamp);
-    s.tool_event(&ToolEvent::down(180.0, 367.0).alt()).expect("Quelle");
-    s.tool_event(&ToolEvent::up(180.0, 367.0).alt()).expect("Quelle");
+    s.tool_event(&ToolEvent::down(180.0, 367.0).alt())
+        .expect("Quelle");
+    s.tool_event(&ToolEvent::up(180.0, 367.0).alt())
+        .expect("Quelle");
     click(s, 240.0, 367.0);
     // Einzelabdruck 16 / Rand 50 (Original M8): 232 ≈ 20, 233 ≈ 61, 234 ≈ 158, ab 235 voll rot
     near(px(s, b, 232, 366)[0], 20, 10, "232");
@@ -337,7 +433,11 @@ fn stamp_edge_and_esc_like_original() {
     // Strich 240,350 → 240,385 (PM-3): Kern 235–244, Übergang 232–234 (40, A1, F5)
     drag(s, (240.0, 350.0), (240.0, 385.0));
     for x in 235..=244 {
-        assert!(px(s, b, x, 367)[0] >= 240, "{x} Kern rot: {:?}", px(s, b, x, 367));
+        assert!(
+            px(s, b, x, 367)[0] >= 240,
+            "{x} Kern rot: {:?}",
+            px(s, b, x, 367)
+        );
     }
     near(px(s, b, 234, 367)[0], 0xF5, 25, "234");
     near(px(s, b, 233, 367)[0], 0xA1, 35, "233");
@@ -345,28 +445,48 @@ fn stamp_edge_and_esc_like_original() {
     near(px(s, b, 245, 367)[0], 0xF5, 25, "245");
     assert_eq!(px(s, b, 231, 367), [0, 0, 255, 255]);
     esc(s);
-    assert_eq!(s.tools.active, ToolId::Pointer, "Esc beendet den Bitmapmodus: Zeiger (Original)");
+    assert_eq!(
+        s.tools.active,
+        ToolId::Pointer,
+        "Esc beendet den Bitmapmodus: Zeiger (Original)"
+    );
     assert_eq!(sel(s), vec![b], "B2 bleibt gewählt");
 }
 
 #[test]
 fn esc_in_paint_tools_with_and_without_bitmap() {
-    for t in [ToolId::Brush, ToolId::Pencil, ToolId::Eraser, ToolId::Blur, ToolId::Sharpen, ToolId::Dodge, ToolId::Burn, ToolId::Smudge, ToolId::RubberStamp, ToolId::ReplaceColor, ToolId::RedEyeRemoval] {
+    for t in [
+        ToolId::Brush,
+        ToolId::Pencil,
+        ToolId::Eraser,
+        ToolId::Blur,
+        ToolId::Sharpen,
+        ToolId::Dodge,
+        ToolId::Burn,
+        ToolId::Smudge,
+        ToolId::RubberStamp,
+        ToolId::ReplaceColor,
+        ToolId::RedEyeRemoval,
+    ] {
         let mut tt = app();
         let (r1, b) = (tt.r1, tt.b2);
         let s = ses(&mut tt);
         tool(s, t);
         esc(s);
         assert_eq!(s.tools.active, t, "{t:?} ohne Auswahl: Werkzeug bleibt");
-            select(s, r1);
+        select(s, r1);
         esc(s);
         assert_eq!(s.tools.active, t, "{t:?} mit Vektor: Werkzeug bleibt");
-            select(s, b);
+        select(s, b);
         let h0 = undo_count(s);
         esc(s);
         assert_eq!(s.tools.active, ToolId::Pointer, "{t:?} mit Bitmap: Zeiger");
         assert_eq!(sel(s), vec![b], "{t:?}: Bitmap bleibt gewählt");
-        assert_eq!(undo_count(s), h0, "{t:?}: Esc ohne Bitmapmodus ist kein Verlaufsschritt");
+        assert_eq!(
+            undo_count(s),
+            h0,
+            "{t:?}: Esc ohne Bitmapmodus ist kein Verlaufsschritt"
+        );
     }
 }
 
@@ -383,21 +503,50 @@ fn paint_tool_shows_no_selection_frame_around_bitmap() {
         .with_pixels_per_point(1.0)
         .with_max_steps(16)
         .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), t.a);
-    let frames = |h: &egui_kittest::Harness<'_, FirepixelApp>| h.state().state.canvases.values().next().map(|c| c.sel_frames.len()).unwrap_or(0);
-    h.state_mut().state.session.execute("select.set", json!({"ids": [b.0]})).expect("Auswahl");
+    let frames = |h: &egui_kittest::Harness<'_, FirepixelApp>| {
+        h.state()
+            .state
+            .canvases
+            .values()
+            .next()
+            .map(|c| c.sel_frames.len())
+            .unwrap_or(0)
+    };
+    h.state_mut()
+        .state
+        .session
+        .execute("select.set", json!({"ids": [b.0]}))
+        .expect("Auswahl");
     h.run_steps(2);
     assert_eq!(frames(&h), 1, "Zeiger: Rahmen um B2");
-    for tl in [ToolId::Brush, ToolId::Eraser, ToolId::Blur, ToolId::RubberStamp] {
+    for tl in [
+        ToolId::Brush,
+        ToolId::Eraser,
+        ToolId::Blur,
+        ToolId::RubberStamp,
+    ] {
         h.state_mut().state.session.set_tool(tl).expect("Werkzeug");
         h.run_steps(2);
         assert_eq!(frames(&h), 0, "{tl:?}: kein Rahmen um die Bitmap");
     }
     // Vektor bleibt mit Rahmen (im Original nicht gemessen, Verhalten unverändert)
-    h.state_mut().state.session.execute("select.set", json!({"ids": [r1.0]})).expect("Auswahl");
+    h.state_mut()
+        .state
+        .session
+        .execute("select.set", json!({"ids": [r1.0]}))
+        .expect("Auswahl");
     h.run_steps(2);
     assert_eq!(frames(&h), 1);
-    h.state_mut().state.session.set_tool(ToolId::Pointer).expect("Werkzeug");
-    h.state_mut().state.session.execute("select.set", json!({"ids": [b.0]})).expect("Auswahl");
+    h.state_mut()
+        .state
+        .session
+        .set_tool(ToolId::Pointer)
+        .expect("Werkzeug");
+    h.state_mut()
+        .state
+        .session
+        .execute("select.set", json!({"ids": [b.0]}))
+        .expect("Auswahl");
     h.run_steps(2);
     assert_eq!(frames(&h), 1, "zurück beim Zeiger: Rahmen wieder da");
 }
