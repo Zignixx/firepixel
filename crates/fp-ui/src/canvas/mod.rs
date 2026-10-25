@@ -1112,6 +1112,14 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         (d.generation, d.page, d.frame, std::sync::Arc::clone(&d.doc));
     // pending inspector slider value (FB-09/FB-10): rendered from a preview copy of the document
     let preview = crate::inspector::preview::preview_key(st, id, generation, page);
+    // FB-67: live point drag (View ▸ Live Preview While Dragging Points), from a copy as well
+    let live_path = crate::inspector::preview::live_path(&feedback);
+    let preview = crate::inspector::preview::combined_key(
+        preview,
+        live_path.map_or(0, |(t, cs)| {
+            crate::inspector::preview::live_path_key(generation, page, t, cs)
+        }),
+    );
     let cc = st.canvases.entry(id).or_default();
     // Ergebnisse des Threads übernehmen
     let gamma = view.gamma_preview;
@@ -1184,8 +1192,12 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         };
         cc.requested = Some(key);
         let docarc = if preview != 0 {
-            crate::inspector::preview::preview_doc(st, id, generation, page, &docarc)
-                .unwrap_or(docarc)
+            let base = crate::inspector::preview::preview_doc(st, id, generation, page, &docarc)
+                .unwrap_or(docarc);
+            match live_path {
+                Some((t, cs)) => crate::inspector::preview::apply_live_path(&base, page, t, cs),
+                None => base,
+            }
         } else {
             docarc
         };
@@ -2395,6 +2407,30 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
                 cc.last_pos = Some(dp);
                 events.push(mk(PointerKind::Up, dp));
             }
+            // FB-72: Shift/Alt/Ctrl pressed or released over the canvas without mouse motion:
+            // one move at the same place re-evaluates the tool's hover cursor (selection badges,
+            // Alt-duplicate, Pen variants, ...); only on a change, never while a press is held
+            let now_mods = tm(cur, cur_space);
+            let keys = |m: Modifiers| (m.shift, m.alt, m.ctrl);
+            if events.is_empty()
+                && !cc.pointer_down
+                && free
+                && area.contains(p)
+                && cc.tool_mods.is_some_and(|m| keys(m) != keys(now_mods))
+            {
+                events.push(ToolEvent {
+                    input: ToolInput::Pointer {
+                        kind: PointerKind::Move,
+                        pos: dp,
+                    },
+                    mods: now_mods,
+                    pressure: 1.0,
+                    time_ms: t_ms,
+                });
+            }
+            if let Some(last) = events.last() {
+                cc.tool_mods = Some(last.mods);
+            }
         }
     }
     if let Some(cc) = st.canvases.get_mut(&id) {
@@ -3168,6 +3204,8 @@ fn overlays(
                 painter.rect_filled(r, 0.0, c.handle_fill);
                 painter.rect_stroke(r, 0.0, line, StrokeKind::Inside);
             }
+            // FB-67: the page itself renders the live point drag (preview copy), nothing on top
+            Overlay::PathLive { .. } => {}
             Overlay::PenPath { target } => {
                 // the open path being drawn without its fill (RE spec 60 section 1.2); the page
                 // render hides the element itself

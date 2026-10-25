@@ -6,7 +6,9 @@ use crate::command::{CommandOutput, CommandRegistry, ParamKind, Requirement, cmd
 use crate::docops;
 use crate::error::{EngineError, Result};
 use crate::session::{DocumentState, Session};
-use crate::tools::snap::{SNAP_TO_PIXELS_PREF, snap_to_pixels};
+use crate::tools::snap::{
+    LIVE_POINT_PREVIEW_PREF, SNAP_TO_PIXELS_PREF, live_point_preview, snap_to_pixels,
+};
 use crate::view::ViewState;
 use fp_model::{Grid, Guides};
 use std::sync::Arc;
@@ -267,6 +269,22 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let on = snap_to_pixels(&s.prefs);
                 s.prefs
                     .set(SNAP_TO_PIXELS_PREF, crate::prefs::PrefValue::Bool(!on));
+                s.prefs_changed();
+                Ok(CommandOutput::session())
+            }),
+    );
+    // Firepixel's own switch (FB-67): point and handle drags render the object live (fill,
+    // stroke, effects) instead of only the outline; default off. The release is the same single
+    // step either way.
+    r.add(
+        cmd("view.livePointPreview")
+            .label("Live-Vorschau beim Ziehen von Punkten")
+            .describe("Zeichnet das Objekt beim Ziehen von Ankern und Griffen live mit Füllung, Strich und Effekten (ab Werk aus: nur der Umriss folgt, das Objekt ändert sich beim Loslassen)")
+            .checked(|s| live_point_preview(&s.prefs))
+            .run(|s, _| {
+                let on = live_point_preview(&s.prefs);
+                s.prefs
+                    .set(LIVE_POINT_PREVIEW_PREF, crate::prefs::PrefValue::Bool(!on));
                 s.prefs_changed();
                 Ok(CommandOutput::session())
             }),

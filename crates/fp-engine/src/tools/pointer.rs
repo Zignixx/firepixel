@@ -1624,16 +1624,24 @@ impl PointerTool {
         let Some(cs) = self.dragged_contours(ctx, hit, dx, dy, pull, alt) else {
             return Vec::new();
         };
-        vec![
-            Overlay::Path {
+        let mut out = Vec::with_capacity(3);
+        // FB-67: with View ▸ Live Preview While Dragging Points the object renders live with the
+        // dragged geometry; the outline stays on top
+        if snap::live_point_preview(ctx.prefs) {
+            out.push(Overlay::PathLive {
+                target: hit.id.0,
                 contours: cs.clone(),
-            },
-            Overlay::PathPoints {
-                contours: cs,
-                selected: vec![(hit.contour, hit.node)],
-                handles: self.id == ToolId::Subselection || pull,
-            },
-        ]
+            });
+        }
+        out.push(Overlay::Path {
+            contours: cs.clone(),
+        });
+        out.push(Overlay::PathPoints {
+            contours: cs,
+            selected: vec![(hit.contour, hit.node)],
+            handles: self.id == ToolId::Subselection || pull,
+        });
+        out
     }
 
     fn up(&mut self, p: Point, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {

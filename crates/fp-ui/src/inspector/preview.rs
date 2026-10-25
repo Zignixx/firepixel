@@ -232,6 +232,67 @@ pub fn preview_key(st: &AppState, id: DocId, generation: u64, page: usize) -> u6
         .unwrap_or(0)
 }
 
+// ------------------------------------------------------------------ FB-67: live point drags
+
+/// The live point drag in the tool feedback (`Overlay::PathLive`, sent only while View ▸ Live
+/// Preview While Dragging Points is on): the dragged path and its contours.
+pub fn live_path(
+    feedback: &[fp_engine::tools::Overlay],
+) -> Option<(ElementId, &[fp_model::Contour])> {
+    feedback.iter().find_map(|o| match o {
+        fp_engine::tools::Overlay::PathLive { target, contours } => {
+            Some((ElementId(*target), contours.as_slice()))
+        }
+        _ => None,
+    })
+}
+
+/// Non-zero render key of a live point drag (generation, page, path, contours).
+pub fn live_path_key(
+    generation: u64,
+    page: usize,
+    target: ElementId,
+    contours: &[fp_model::Contour],
+) -> u64 {
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    (10u8, generation, page, target.0).hash(&mut h);
+    for c in contours {
+        c.closed.hash(&mut h);
+        for n in &c.nodes {
+            for p in [n.pred, n.anchor, n.succ] {
+                (p.x.to_bits(), p.y.to_bits()).hash(&mut h);
+            }
+            n.curve.hash(&mut h);
+        }
+    }
+    h.finish() | 1
+}
+
+/// Render key of everything previewed on this canvas (0 = none): the inspector preview
+/// ([`preview_key`]) and the live point drag ([`live_path`]).
+pub fn combined_key(inspector: u64, live: u64) -> u64 {
+    if live == 0 {
+        inspector
+    } else {
+        (inspector.rotate_left(17) ^ live) | 1
+    }
+}
+
+/// `doc` with the live point drag applied (a copy; the session's document is not touched).
+pub fn apply_live_path(
+    doc: &Arc<Document>,
+    page: usize,
+    target: ElementId,
+    contours: &[fp_model::Contour],
+) -> Arc<Document> {
+    let mut out = (**doc).clone();
+    if fp_engine::commands::preview_set_contours(&mut out, page, target, contours.to_vec()) {
+        Arc::new(out)
+    } else {
+        Arc::clone(doc)
+    }
+}
+
 // ------------------------------------------------------------------ FB-46: preview targets
 
 /// The objects a pending slider or colour pop-up value was started for (FB-46): document, page

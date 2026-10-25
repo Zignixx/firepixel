@@ -141,7 +141,8 @@ fn fb32_cursor_badges_per_tool_modifier_and_selection() {
     }
 }
 
-/// The cursor follows a modifier on the next mouse move (RE spec 69 section 4.2).
+/// The cursor follows a modifier on the next mouse move (RE spec 69 section 4.2) and, since FB-72
+/// (Firepixel fix), already when the modifier changes without motion.
 #[test]
 fn fb32_cursor_changes_on_the_next_mouse_move() {
     let mut s = session();
@@ -154,7 +155,7 @@ fn fb32_cursor_changes_on_the_next_mouse_move() {
     run(&mut h, "select.pixels", json!({"shape": "rect", "rect": [300, 200, 400, 300]}));
     assert_eq!(hover(&mut h, 60.0, 60.0, Modifiers::NONE), Cursor::Crosshair);
     hold(&mut h, Modifiers::SHIFT);
-    assert_eq!(cursor(&h), Cursor::Crosshair, "no change before the mouse moves");
+    assert_eq!(cursor(&h), Cursor::CrosshairAdd, "FB-72: follows the modifier without motion");
     assert_eq!(hover(&mut h, 61.0, 60.0, Modifiers::SHIFT), Cursor::CrosshairAdd, "after the move");
 }
 

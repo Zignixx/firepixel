@@ -26,6 +26,20 @@ pub fn snap_to_pixels(prefs: &crate::prefs::Preferences) -> bool {
     prefs.get_bool(SNAP_TO_PIXELS_PREF, SNAP_TO_PIXELS_DEFAULT)
 }
 
+/// Preference behind View ▸ Live Preview While Dragging Points (Firepixel's own switch, FB-67):
+/// point and handle drags of the Subselection tool (and the Pointer/Pen point drags sharing that
+/// code) render the object live ([`super::Overlay::PathLive`]). Off (default) = only the outline
+/// follows the drag, the object updates on release.
+pub const LIVE_POINT_PREVIEW_PREF: &str = "LivePointPreview";
+
+/// Default of [`LIVE_POINT_PREVIEW_PREF`]: off, outline preview only.
+pub const LIVE_POINT_PREVIEW_DEFAULT: bool = false;
+
+/// State of View ▸ Live Preview While Dragging Points.
+pub fn live_point_preview(prefs: &crate::prefs::Preferences) -> bool {
+    prefs.get_bool(LIVE_POINT_PREVIEW_PREF, LIVE_POINT_PREVIEW_DEFAULT)
+}
+
 /// Herkunft einer Fanglinie.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Source {

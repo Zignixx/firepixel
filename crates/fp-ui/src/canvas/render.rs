@@ -236,6 +236,9 @@ pub struct CanvasCache {
     pub pinch_acc: f32,
     /// Umschalttasten am Ende des letzten Bildes (Startzustand für die Ereignisfolge des nächsten).
     pub frame_mods: Option<egui::Modifiers>,
+    /// Modifiers (Shift/Alt/Ctrl) of the last pointer event the tool got: a change without mouse
+    /// motion sends one move at the same place so the hover cursor follows (FB-72).
+    pub tool_mods: Option<fp_engine::tools::Modifiers>,
     /// Zeit (s) des letzten Bildes: Zeigerereignisse eines Bildes werden gleichmäßig auf die Zeit
     /// seitdem verteilt (K-8, FP1-06: egui liefert keine Zeitstempel je Ereignis).
     pub last_input_time: Option<f64>,

@@ -69,7 +69,8 @@ fn badge_cursor(base: Cursor, mode: SelectMode) -> Cursor {
 /// pixel selection exists Shift shows "+", Alt "-" and Shift+Alt (either order) "x"; inside the
 /// selection without Shift/Alt the move cursor (Ctrl: move the pixels). Without a pixel selection
 /// always the plain glyph. `can_move`: a press inside would move the marquee. Like every hover
-/// cursor it follows the next mouse move.
+/// cursor it follows the next mouse move and, since FB-72, a modifier change without motion (the
+/// canvas then sends a move at the same place).
 pub(crate) fn selection_hover_cursor(
     base: Cursor,
     ev: &ToolEvent,

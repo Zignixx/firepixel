@@ -812,6 +812,16 @@ pub fn build_main_menu_where(
                         .unwrap_or(nodes.len());
                     nodes.insert(pos, runtime_item("view.snapToPixels"));
                 }
+                // Firepixel's own switch "Live Preview While Dragging Points" right after Snap to
+                // Pixels (FB-67)
+                if st.session.registry().get("view.livePointPreview").is_some() {
+                    let pos = nodes
+                        .iter()
+                        .position(|n| matches!(n, Node::Item { action: ItemAction::Command(c), .. } if c == "view.snapToPixels"))
+                        .map(|i| i + 1)
+                        .unwrap_or(nodes.len());
+                    nodes.insert(pos, runtime_item("view.livePointPreview"));
+                }
                 // Firepixel's own switch "Coordinate Tag" right after Tooltips (FB-41)
                 if st.session.registry().get("view.coordinateTag").is_some() {
                     let pos = nodes

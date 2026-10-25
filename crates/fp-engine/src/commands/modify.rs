@@ -569,6 +569,18 @@ fn selected_path_shapes(d: &DocumentState) -> Vec<(ElementPath, Arc<Element>, Pa
         .collect()
 }
 
+/// Render-only copy edit for the live point-drag preview (FB-67): sets the contours of the path
+/// `id` on `page` of `doc` like `path.setContours` does. Returns whether the path was found. The
+/// caller works on a copy of the document; no history, no dirty flag.
+pub fn preview_set_contours(
+    doc: &mut fp_model::Document,
+    page: usize,
+    id: ElementId,
+    contours: Vec<Contour>,
+) -> bool {
+    docops::edit_by_id(doc, page, id, |e| set_contours(e, contours, None)).is_some()
+}
+
 fn set_contours(e: &mut Element, contours: Vec<Contour>, even_odd: Option<bool>) {
     if let ElementKind::Path(p) = &mut e.kind {
         p.contours = contours;

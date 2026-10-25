@@ -237,6 +237,8 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   Subselection tool to whole pixels; off, they move freely in steps of 1/zoom like in the original. Pointer moves
   and Pen points always land on whole pixels. Dragged anchors do not snap to smart guides. *Modify ▸ Snap to
   Pixel* (Ctrl+K) still snaps the selection once.
+  *View ▸ Live Preview While Dragging Points* (Firepixel's own switch, off by default) redraws the object with its
+  fill, stroke and effects while you drag anchors or handles, instead of only its outline.
 - **Select, Modify, Text, Filters:** act on the selection. If a command is grayed out, running it
   via its shortcut shows the reason in the status bar. Commands that can always be chosen but find
   no suitable target (e.g. *Simplify...* without a path) report this with a warning, like the

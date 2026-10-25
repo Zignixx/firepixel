@@ -350,6 +350,12 @@ pub enum Overlay {
     /// its fill and without a selection outline of its own (the pen's `Path`/`PathPoints` overlays
     /// show it); the fill appears once the path is closed or finished.
     PenPath { target: u64 },
+    /// View ▸ Live Preview While Dragging Points (Firepixel's own switch, FB-67): a point or
+    /// handle drag of the path `target` with the dragged geometry `contours`. The UI renders the
+    /// page from a copy of the document with these contours (fill, stroke and effects live); the
+    /// session's document is not touched, the release commits one step as without the switch.
+    /// Only sent while the switch is on, together with the `Path` outline.
+    PathLive { target: u64, contours: Vec<Contour> },
     /// Steuerpunkt einer automatischen Form (gelbe Raute); `hot` = gerade gezogen/überfahren.
     ControlPoint {
         at: Point,

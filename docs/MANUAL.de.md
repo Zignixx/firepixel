@@ -254,6 +254,8 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Schritten von 1/Zoom wie im Original. Verschiebungen mit dem Zeiger und die Punkte des Stifts liegen immer auf
   ganzen Pixeln. Gezogene Anker rasten nicht an intelligenten Hilfslinien ein. *Modifizieren ▸ An Pixeln
   ausrichten* (Strg+K) richtet die Auswahl weiterhin einmalig aus.
+  *Ansicht ▸ Live-Vorschau beim Ziehen von Punkten* (ein eigener Schalter von Firepixel, ab Werk aus) zeichnet das
+  Objekt beim Ziehen von Ankern oder Griffen live mit Füllung, Strich und Effekten statt nur seines Umrisses.
 - **Auswählen, Modifizieren, Text, Filter:** wirken auf die Auswahl. Ist ein Befehl grau, nennt die
   Statuszeile beim Ausführen über das Kürzel den Grund. Befehle, die immer anwählbar sind, aber
   kein passendes Ziel finden (z. B. *Vereinfachen…* ohne Pfad), melden das wie im Original mit einer
