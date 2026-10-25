@@ -1103,7 +1103,7 @@ preview on bitmaps below 100 % opacity or with live effects. Not done: the keybo
 toggles Brush and Pencil), the row "Insert Empty Bitmap" before a new bitmap (FB-65 rest), the reference's quirk that
 a direct Brush → Pencil switch keeps the Brush stroke (not copied, spec 72 §1.5), a real large .fw.png for the
 playback (FB-63). Hands-on checks [VERIFICATION.md](VERIFICATION.md) A4-99 to A4-110. Workspace tests for the merged
-tree: pending (GT-2d). The 105 rows: new are TW-257 to TW-261 and TW-265, all fixed or done, pending the click-test;
+tree: 3489 passed, 0 real failures (one wgpu render flake green on rerun), 142 ignored (GT-2d, `df412989`). The 105 rows: new are TW-257 to TW-261 and TW-265, all fixed or done, pending the click-test;
 TW-262 to TW-264 and TW-266 are recorded in `[N]` only; the other rows as listed above.
 
 | ID | Area | What is open (expected vs. current) |
