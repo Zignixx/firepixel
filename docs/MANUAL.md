@@ -160,7 +160,11 @@ move).
 double-clicking a bitmap with the Pointer starts bitmap mode (History row "Edit Bitmap"); the bitmap's
 object handles disappear. The small round button right of the state controls in the status bar then
 turns red; click it (or choose the Pointer, or press Esc) to leave bitmap mode (row "Exit Bitmap
-Mode"). Outside bitmap mode the button is grey. The **Gradient** tool
+Mode"). Outside bitmap mode the button is grey. Undo of "Edit Bitmap" ends bitmap mode, Redo enters it again,
+and undoing "Exit Bitmap Mode" turns it back on; undoing a stroke keeps it. Choosing the **Brush** or **Pencil**
+writes one History row, "Brush Stroke" when the tool's stroke differs from the current stroke, otherwise "Stroke
+Color" (never a second "Stroke Color" in a row); Edit ▸ Undo and Redo pass over it together with the step before
+it. A selected vector object is deselected and stays unchanged. The **Gradient** tool
 has its own colors (default black → white, a click on the swatch opens the gradient editor);
 "Fill selection" and tolerance are separate from the Paint Bucket. **Replace Color** has its own
 "From" and "To" colors (default green → red).
@@ -522,15 +526,20 @@ Important panels:
   A masked object additionally shows a circled arrow after its name: it lists the objects that make
   up the mask (the mask path, the objects of a group mask, or one row *Bitmap mask*). A click on
   such a row selects the mask for editing like a click on the mask thumbnail; on an object of a
-  group mask it then selects that object (Shift+click adds or removes it). The open/closed state
+  group mask it then selects that object (Shift+click adds or removes it). The mask rows come first
+  and are marked by a double line; below them, with the single line, follow the content objects, also
+  the one content of a masked single path or bitmap. A click on a content row selects the content
+  alone, so it moves and changes without its mask. A masked object inside a group has the same
+  thumbnail pair and chain as a masked object directly on the layer. The open/closed state
   belongs to each object, lasts while Firepixel runs and is neither saved nor part of History. Rows
   inside a group cannot be dragged (reorder the group itself, or use *Modify ▸ Arrange*). The
   panel menu entry *Show Group Contents* (on by default) switches all of this off; the panel then
   looks and works like the original.
 - **Pages / States:** pages and animation frames, master page, onion skinning. The Play button in the
-  status bar (or *View ▸ Play/Stop*) plays the states on the canvas with each state's delay and the
-  document's loop setting; it shows a Stop square while playing. *File ▸ Image Preview* plays large
-  documents too, rendering the states ahead. When an animation
+  status bar (or *View ▸ Play/Stop*) plays the states on the canvas with each state's delay; states excluded from export (*Include when
+  exporting* off) are skipped, and playback loops until you press Stop (the document's loop setting is
+  for the GIF and APNG export). It shows a Stop square while playing. *File ▸ Image Preview* plays the
+  same way, large documents too, rendering the states ahead. When an animation
   instance is selected, the canvas shows its motion path (green start, red end), and the selection
   frame encloses only the current frame.
   *New Page* (footer button, ≡ menu or a row's context menu) inserts the page directly after the

@@ -166,7 +166,12 @@ auf die nächste Bewegung).
 Doppelklick mit dem Zeiger auf eine Bitmap beginnt den Bitmapmodus (Verlaufszeile „Bitmap bearbeiten“);
 die Objektgriffe der Bitmap verschwinden. Der kleine runde Knopf rechts neben den Status-Steuerelementen
 in der Statusleiste wird dann rot; ein Klick darauf (oder der Zeiger, oder Esc) beendet den Bitmapmodus
-(Zeile „Bitmapmodus beenden“). Außerhalb des Bitmapmodus ist der Knopf grau. Das Werkzeug
+(Zeile „Bitmapmodus beenden“). Außerhalb des Bitmapmodus ist der Knopf grau. Rückgängig von „Bitmap
+bearbeiten“ beendet den Bitmapmodus, Wiederholen beginnt ihn erneut, und Rückgängig von „Bitmapmodus beenden“
+schaltet ihn wieder ein; Rückgängig eines Strichs lässt ihn an. Die Wahl von **Pinsel** oder **Bleistift**
+schreibt eine Verlaufszeile, „Pinselstrich“, wenn der Strich des Werkzeugs vom aktuellen Strich abweicht, sonst
+„Strichfarbe“ (nie zweimal „Strichfarbe“ hintereinander); Bearbeiten ▸ Rückgängig und Wiederholen überspringen
+sie zusammen mit dem Schritt davor. Ein gewähltes Vektorobjekt wird abgewählt und bleibt unverändert. Das Werkzeug
 **Verlauf** hat eigene Farben (Vorgabe Schwarz → Weiß, Klick aufs Farbfeld öffnet den
 Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
 hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
@@ -566,15 +571,22 @@ Wichtige Bedienfelder:
   aus denen die Maske besteht (den Maskenpfad, die Objekte einer Gruppenmaske oder eine Zeile
   *Bitmap-Maske*). Ein Klick auf eine solche Zeile wählt die Maske zum Bearbeiten wie ein Klick auf
   die Maskenminiatur; bei einem Objekt einer Gruppenmaske wird danach dieses Objekt gewählt
-  (Umschalt+Klick nimmt es hinzu oder heraus). Auf- oder Zugeklappt gehört zu jedem Objekt, gilt,
+  (Umschalt+Klick nimmt es hinzu oder heraus). Die Maskenzeilen stehen zuerst und sind mit einer
+  Doppellinie markiert; darunter folgen mit der einfachen Linie die Inhaltsobjekte, auch der eine
+  Inhalt eines maskierten einzelnen Pfads oder einer Bitmap. Ein Klick auf eine Inhaltszeile wählt nur
+  den Inhalt, er lässt sich dann ohne seine Maske verschieben und ändern. Ein maskiertes Objekt in
+  einer Gruppe zeigt dasselbe Miniaturenpaar und dieselbe Kette wie ein maskiertes Objekt direkt auf
+  der Ebene. Auf- oder Zugeklappt gehört zu jedem Objekt, gilt,
   solange Firepixel läuft, und wird weder gespeichert noch im Verlauf geführt. Zeilen innerhalb
   einer Gruppe lassen sich nicht ziehen (die Gruppe selbst umordnen oder *Ändern ▸ Anordnen*
   verwenden). Der Eintrag *Gruppeninhalte anzeigen* im Bedienfeldmenü (Vorgabe: ein) schaltet all
   das ab; das Bedienfeld sieht dann aus und arbeitet wie im Original.
 - **Seiten / Status:** Seiten und Animationsbilder, Masterseite, Zwiebelschicht. Der Abspielknopf in
   der Statusleiste (oder *Ansicht ▸ Abspielen/Stopp*) spielt die Status auf der Leinwand mit der
-  Verzögerung jedes Status und der Schleifeneinstellung des Dokuments ab; währenddessen zeigt er ein
-  Stopp-Quadrat. *Datei ▸ Bildvorschau* spielt auch große Dokumente ab und berechnet die Status
+  Verzögerung jedes Status ab; vom Export ausgeschlossene Status (*Beim Exportieren einschließen* aus)
+  werden übersprungen, und die Wiedergabe läuft in einer Schleife, bis Sie Stopp drücken (die
+  Schleifeneinstellung des Dokuments gilt für den GIF- und APNG-Export); währenddessen zeigt er ein
+  Stopp-Quadrat. *Datei ▸ Bildvorschau* spielt ebenso ab, auch große Dokumente, und berechnet die Status
   vorab. Ist eine
   Animationsinstanz gewählt, zeigt die Leinwand ihren Bewegungspfad (grüner Start, rotes Ende), und der
   Auswahlrahmen umschließt nur das aktuelle Bild.

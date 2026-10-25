@@ -27,10 +27,10 @@ every UI tweak). They are attached to [releases](../../releases) and to issues i
 | | |
 |---|---|
 | Stage | feature-complete preview; parity polishing |
-| Parity (scripted comparison, 49 units) | **49 units equal except for design**, 0 real deviations, 0 unclear, 0 under-measured (run 29, 20 Oct 2026) |
-| Proven 1:1 | **100 %** (49 / 49 units); measurement quota 87.3 %; canvas image pairs within 1 %: 185 / 212 |
-| Tests | **2818 passed, 1 flaky timing failure, 136 ignored** (full workspace run on the merged tree, 20 Oct 2026, GT-1h); batch and export tests also run on macOS and Linux in CI |
-| Open findings | 11 fixable rows (none open; 9 fixed and waiting for the click-test or the macOS re-test), 2 deferred items open, 20 informational (850+ closed) — see [docs/FINDINGS.md](docs/FINDINGS.md) |
+| Parity (scripted comparison, 49 units) | **49 units equal except for design**, 0 real deviations, 0 unclear, 0 under-measured (follow-up run 44 on top of full run 43, 24 Oct 2026) |
+| Proven 1:1 | **100 %** (49 / 49 units); measurement quota 88.0 %; canvas image pairs within 1 %: 195 / 224 |
+| Tests | **3445 passed** (full workspace run on the code of v0.2.16, 25 Oct 2026, GT-2c); the run on the tree with tester feedback batch 10 is pending (GT-2d); batch and export tests also run on macOS and Linux in CI |
+| Open findings | 105 fixable rows (mostly fixed or done and waiting for the click-test or the macOS re-test), 5 deferred items, 49 informational rows (850+ closed) — see [docs/FINDINGS.md](docs/FINDINGS.md) |
 
 Details and method: [docs/STATUS.md](docs/STATUS.md), [docs/PARITY.md](docs/PARITY.md),
 [ROADMAP.md](ROADMAP.md). The German working notes, run reports and screenshots of the development phase are
@@ -92,7 +92,7 @@ Contributions are welcome — please read [CONTRIBUTING.md](CONTRIBUTING.md) and
 
 Thanks to the people who contributed testing feedback:
 
-- **E-Man** – hands-on testing feedback on the pen tool, Select Behind, macOS and the Subselection display, the Pen undo steps, redo, the inspector sliders and the Subselection snapping, and batch 9: the bitmap mode button, painting into bitmaps, keys during a brush stroke, page multi-selection and moving pixel selections (October 2026)
+- **E-Man** – hands-on testing feedback on the pen tool, Select Behind, macOS and the Subselection display, the Pen undo steps, redo, the inspector sliders and the Subselection snapping, and batch 9: the bitmap mode button, painting into bitmaps, keys during a brush stroke, page multi-selection and moving pixel selections, and batch 10: the Layers mask rows, the mask inspector, the idea of a separate mask selection tool, Ctrl-drag, Shift-marquee and Shift + wheel options, the dither slider, screentone anti-alias, Undo of bitmap mode and dragging several pages (October 2026)
 - **Hunter** – for the animation playback and brush layer reports (October 2026)
 
 Code contributions:

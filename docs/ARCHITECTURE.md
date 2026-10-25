@@ -93,6 +93,19 @@ turn into a refused stroke without a History row. `bitmap.paint`, the new bitmap
 and Pencil live preview (`BrushTool::begin`) all use it, so the preview and the result always agree; which existing
 bitmap a stroke paints into is decided separately by `paint::stroke_target` from the press point (FB-65).
 
+Bitmap mode is part of the History: every `history::Snapshot` carries `bitmap_mode` and the bitmaps worked on in it
+(`bitmap_worked`), so undoing "Edit Bitmap" ends the mode, Redo enters it again and undoing "Exit Bitmap Mode" turns
+it back on (FB-87, RE spec 72 §2). Choosing the Brush or Pencil writes the measured row "Brush Stroke" or "Stroke
+Color" as the command `tool.strokeRow` (`history::TOOL_STROKE_ROW`); such a row is bound to the step before it, and
+`History::undo_step` / `redo_step` (Edit ▸ Undo and Redo, the Edit menu label) move over both together, while the
+History panel still goes row by row.
+
+The Mask Element Selection tool (`fp-engine/src/tools/mask_select.rs`, FB-80, Firepixel extension) is a thin
+wrapper around the Subselection machine: `MaskElementTool` holds a `PointerTool::mask_elements()` and only changes
+the tool id and the cursor (`Cursor::MaskSelect`). The Subselection itself now resolves a click on a masked object
+to its content, the wrapped machine to its mask (`select.pointAt {deep: true}` and `{deep: true, mask: true}`), so
+both tools share hit testing, point editing and the marquee.
+
 Commands that reach outside the document (screen capture through the system's capture tool, the symbol-script
 generator, the shared palette over all open documents) live in `fp-engine/src/commands/extras.rs`.
 
@@ -119,7 +132,11 @@ tools) reports `Overlay::Ghost` with `pixels: true` instead of a whole-object gh
 (`fp-ui/src/canvas/ghost.rs`) then draws two sprites, both limited to the view like BA-097: the bitmap in place
 with the selected pixels cut out, and only the selected pixels at the drag offset. The cut is
 `docops::cut_selected_pixels`, the same function `select.movePixels` uses on release, so the preview shows exactly
-what the release leaves behind; it lingers until the new background tiles are rendered. Pixel buffers are RGBA8 in
+what the release leaves behind; it lingers until the new background tiles are rendered. When the bitmap has an
+opacity below 100 %, another blend mode or live effects, two sprites would apply them twice, so
+(`ghost::pixel_move_needs_pipeline`) the canvas instead renders a render-only copy of the document with the pixels
+moved (`ghost::apply_live_pixels`, own render key `live_pixels_key`) through the element pipeline; the preview then
+equals the committed result (FB-87, TW-241). Pixel buffers are RGBA8 in
 128 × 128 copy-on-write tiles (cheap undo). `rayon` parallelises filters and large areas; long operations run
 in the background with progress so the UI never blocks.
 
@@ -181,10 +198,20 @@ modifiers, double-click) follow measurements of the original. Three themes — N
 (pure black, colourful accents) — come from one central `Theme` structure; widgets contain no hard-coded colours.
 All icons are our own vector drawings. Design rules: [UI_DESIGN.md](UI_DESIGN.md).
 
+The Layers panel's group and mask tree (Firepixel extension, FB-59 to FB-61, FB-78 to FB-84) follows one rule for
+every masked object row, top level or inside a group: the row has only the mask toggle, and open it lists the mask
+element(s) first with a double tree line, then the content objects from `docops::mask_content` (also the one
+content of a masked single object) with the single line. Masked rows inside groups use the same painter as top-level
+ones (`mask_thumb_pair`: thumbnail pair, chain, mask-thumbnail click targets). A content row selects the content
+alone through `tool.pick` and `select.set`, so it moves and changes without its mask. List panels drawn by
+`panels::common::list_frame` scroll horizontally when their rows report more width (`common::want_width`) than the
+panel has (FB-77).
+
 Animation playback on the canvas is a small driver in the UI frame loop, `fp-ui/src/playback.rs` (FB-63). While
 `ui.playing` is set (View ▸ Play/Stop or the status-bar Play button) `playback::frame` advances the active
 document to the next state after the shown state's own delay (1/100 s), asks egui for a repaint at that time and
-follows the document's loop setting like the APNG/GIF export. Switching the state is a view change
+loops endlessly (the document's loop setting applies to the APNG/GIF export only), skipping the states excluded
+from export (FB-87, RE spec 72 §3). Switching the state is a view change
 (`Session::show_state`), so no History rows are written; the driver stops on toggle, when another document becomes
 active and when the state list changes. The Image Preview has its own player that renders the states ahead, one
 job at a time, and shows the next state only when it is rendered in every visible pane.
