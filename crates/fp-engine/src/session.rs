@@ -371,6 +371,22 @@ impl DocumentState {
         self.generation != self.saved_generation
     }
 
+    /// The bitmap mask in bitmap editing, if any: a selected mask whose object is a bitmap while
+    /// bitmap editing lasts (the stop button shows; same condition as `modify.exitBitmapMode`).
+    /// The canvas draws its mask group without the "Show fill and stroke" underlay then (RE spec
+    /// 68 §4.2 rule 5, §4.1 `e9`/`e10`, §7); after leaving the edit the underlay is back, the
+    /// option itself stays on.
+    pub fn bitmap_mask_edit(&self) -> Option<fp_model::ElementId> {
+        if !(self.bitmap_mode || self.selection.has_pixels() || !self.bitmap_worked.is_empty()) {
+            return None;
+        }
+        self.selection.elements.iter().copied().find(|id| {
+            crate::docops::mask_owner(&self.doc, self.page, *id).is_some()
+                && crate::docops::element_on_page(&self.doc, self.page, *id)
+                    .is_some_and(|e| matches!(e.kind, fp_model::ElementKind::Bitmap(_)))
+        })
+    }
+
     /// Gemeldete Grenzen einer gewählten Bitmap im Bitmap-Bearbeitungsmodus: wie im Original die
     /// Leinwandgrenzen (Eigenschaften und Skript, re 28 L3); sonst `None` (gespeicherte Grenzen).
     pub fn bitmap_mode_bounds(&self, id: fp_model::ElementId) -> Option<fp_geom::Rect> {

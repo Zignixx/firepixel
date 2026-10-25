@@ -57,6 +57,7 @@ impl Renderer {
             frame,
             symbols: Vec::new(),
             over: None,
+            edit: None,
         };
         for (slot, s) in p.root.layers.iter().enumerate().rev() {
             let (layer, root, slot_i, state) = match s {

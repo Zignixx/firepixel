@@ -130,6 +130,16 @@ pub(crate) struct State {
     pub symbols: Vec<fp_model::SymbolId>,
     /// Replaced pixels of one bitmap (live paint preview, BA-039).
     pub over: Option<Arc<Override>>,
+    /// Bitmap mask in bitmap editing (RE spec 68 §4.2 rule 5, §7): its mask group draws no
+    /// "Show fill and stroke" underlay while it is being edited.
+    pub edit: Option<Arc<MaskEdit>>,
+}
+
+/// A bitmap mask being edited plus the containers that hold it (their looks are not cached while
+/// the edit lasts, so the look with and without the underlay never mix in the caches).
+pub(crate) struct MaskEdit {
+    pub id: u64,
+    pub ancestors: std::collections::HashSet<u64>,
 }
 
 /// Replaced pixels of one bitmap element plus the containers that hold it (their caches are
@@ -141,11 +151,16 @@ pub(crate) struct Override {
 }
 
 impl State {
-    /// Is `e` the overridden bitmap or one of its containers (no cached look then)?
+    /// Is `e` the overridden bitmap or one of its containers, or a container of the bitmap mask
+    /// being edited (no cached look then)?
     fn overridden(&self, e: &Element) -> bool {
         self.over
             .as_ref()
             .is_some_and(|o| o.id == e.id.0 || o.ancestors.contains(&e.id.0))
+            || self
+                .edit
+                .as_ref()
+                .is_some_and(|m| m.ancestors.contains(&e.id.0))
     }
 }
 
@@ -266,7 +281,7 @@ impl Renderer {
         frame: usize,
         rect: IRect,
     ) -> RenderOutput {
-        let (grid, image, report) = self.compose_rect(doc, page, frame, rect, None);
+        let (grid, image, report) = self.compose_rect(doc, page, frame, rect, None, None);
         match grid {
             Some(g) => RenderOutput {
                 image: g.assemble(rect),
@@ -284,6 +299,7 @@ impl Renderer {
         frame: usize,
         rect: IRect,
         over: Option<Arc<Override>>,
+        edit: Option<fp_model::ElementId>,
     ) -> (Option<crate::tiles::TileGrid>, RgbaImage, RenderReport) {
         let mut report = RenderReport::default();
         let Some(p) = doc.pages.get(page) else {
@@ -318,6 +334,13 @@ impl Renderer {
             frame,
             symbols: Vec::new(),
             over,
+            edit: edit.and_then(|id| {
+                let (_, ancestors) = find_bitmap(doc, page, id)?;
+                Some(Arc::new(MaskEdit {
+                    id: id.0,
+                    ancestors: ancestors.into_iter().collect(),
+                }))
+            }),
         };
         let underlay = if mode == BackgroundMode::UnderlayLast && bg.a > 0 {
             Some(bg)
@@ -403,6 +426,25 @@ impl Renderer {
         zoom: f64,
         dev: IRect,
     ) -> RenderOutput {
+        self.render_device_editing(doc, page, frame, clip, anchor, zoom, dev, None)
+    }
+
+    /// Like [`Self::render_device`] while the bitmap mask `edit` is in bitmap editing: its mask
+    /// group then draws no "Show fill and stroke" underlay (RE spec 68 §4.2 rule 5, §4.1
+    /// `e9`/`e10`: hidden for the whole edit, back after leaving it). `None` = no mask edit; an id
+    /// that is no bitmap drawn on the page changes nothing.
+    #[allow(clippy::too_many_arguments)] // Dokument, Lage, Gitter, Ausschnitt, Maske
+    pub fn render_device_editing(
+        &self,
+        doc: &Document,
+        page: usize,
+        frame: usize,
+        clip: IRect,
+        anchor: (i32, i32),
+        zoom: f64,
+        dev: IRect,
+        edit: Option<fp_model::ElementId>,
+    ) -> RenderOutput {
         let zoom = if zoom.is_finite() && zoom > 0.0 {
             zoom.clamp(1.0 / 256.0, 256.0)
         } else {
@@ -430,7 +472,7 @@ impl Renderer {
                 report: RenderReport::default(),
             };
         }
-        let (grid, base_img, report) = self.compose_rect(doc, page, frame, region, None);
+        let (grid, base_img, report) = self.compose_rect(doc, page, frame, region, None, edit);
         let ow = out.width();
         let xs: Vec<i32> = (0..w).map(|i| sample(anchor.0, dev.left + i)).collect();
         let ys: Vec<i32> = (0..h).map(|j| sample(anchor.1, dev.top + j)).collect();
@@ -491,7 +533,7 @@ impl Renderer {
         } else {
             1.0
         };
-        let (grid, base_img, report) = self.compose_rect(doc, page, frame, region, over);
+        let (grid, base_img, report) = self.compose_rect(doc, page, frame, region, over, None);
         if (zoom - 1.0).abs() < 1e-12 {
             let mut img = match &grid {
                 Some(g) => g.assemble(region),
@@ -555,6 +597,7 @@ impl Renderer {
             frame,
             symbols: vec![symbol.id],
             over: None,
+            edit: None,
         };
         let mut cv = Canvas::growable();
         self.draw_symbol_layers(doc, &mut cv, symbol, &st, &mut report);
@@ -579,6 +622,7 @@ impl Renderer {
             frame,
             symbols: Vec::new(),
             over: None,
+            edit: None,
         };
         let image = match self.look(doc, e, &st, &mut report) {
             Some(l) => (*l.image).clone(),
@@ -1289,10 +1333,14 @@ impl Renderer {
         let masked = g.kind.is_mask() && g.mask_flags.enabled;
         if masked && let Some(me) = g.effective_mask() {
             // Pfadumriss mit „Füllung und Pinselstrich anzeigen“ (Flags 0x01 und 0x10, re 26 §3.1);
-            // not while the mask bitmap is being painted (live preview, RE spec 68 §4.2 rule 5)
+            // not while the mask bitmap is being edited (bitmap editing, RE spec 68 §4.2 rule 5,
+            // §4.1 `e9`/`e10`) nor while it is painted (live preview); the flag itself stays on
             let painting_mask = st.over.as_ref().is_some_and(|o| o.id == me.id.0);
-            let show =
-                g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs && !painting_mask;
+            let editing_mask = st.edit.as_ref().is_some_and(|m| m.id == me.id.0);
+            let show = g.kind == GroupKind::VectorMask
+                && !g.mask_flags.hide_attrs
+                && !painting_mask
+                && !editing_mask;
             let mask = self.mask_values(doc, e, g, me, show, st, rep);
             let invert = mask_invert(g, me);
             let b = img.bounds();
@@ -1492,6 +1540,7 @@ impl Renderer {
             frame,
             symbols: syms,
             over: None,
+            edit: None,
         };
         let mut cv = Canvas::growable();
         self.draw_symbol_layers(doc, &mut cv, sym, &st2, rep);
@@ -1514,6 +1563,7 @@ impl Renderer {
             frame: 0,
             symbols: vec![sym.id],
             over: None,
+            edit: None,
         };
         let mut r = RenderReport::default();
         self.draw_symbol_layers(doc, &mut cv, sym, &st, &mut r);

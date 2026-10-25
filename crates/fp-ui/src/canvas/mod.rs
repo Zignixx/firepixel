@@ -1110,6 +1110,8 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     };
     let (generation, page, frame, docarc) =
         (d.generation, d.page, d.frame, std::sync::Arc::clone(&d.doc));
+    // bitmap mask in bitmap editing: no fill/stroke underlay (RE spec 68 §4.2 rule 5, TW-225)
+    let mask_edit = d.bitmap_mask_edit().map_or(0, |m| m.0);
     // pending inspector slider value (FB-09/FB-10): rendered from a preview copy of the document
     let preview = crate::inspector::preview::preview_key(st, id, generation, page);
     // FB-67: live point drag (View ▸ Live Preview While Dragging Points), from a copy as well
@@ -1126,6 +1128,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let fresh = |k: &RenderKey| {
         k.doc == id
             && k.preview == preview
+            && k.mask_edit == mask_edit
             && k.generation == generation
             && k.epoch == cc.epoch
             && k.page == page
@@ -1189,6 +1192,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             variant,
             gamma,
             preview,
+            mask_edit,
         };
         cc.requested = Some(key);
         let docarc = if preview != 0 {
