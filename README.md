@@ -95,6 +95,10 @@ Thanks to the people who contributed testing feedback:
 - **E-Man** – hands-on testing feedback on the pen tool, Select Behind, macOS and the Subselection display, the Pen undo steps, redo, the inspector sliders and the Subselection snapping, and batch 9: the bitmap mode button, painting into bitmaps, keys during a brush stroke, page multi-selection and moving pixel selections (October 2026)
 - **Hunter** – for the animation playback and brush layer reports (October 2026)
 
+Code contributions:
+
+- **jeremiahsherrill** – Properties panel height, live font preview, point editing option (PR #3)
+
 ## License
 
 [Apache License 2.0](LICENSE).

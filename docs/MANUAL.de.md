@@ -274,6 +274,13 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   ausrichten* (Strg+K) richtet die Auswahl weiterhin einmalig aus.
   *Ansicht ▸ Live-Vorschau beim Ziehen von Punkten* (ein eigener Schalter von Firepixel, ab Werk aus) zeichnet das
   Objekt beim Ziehen von Ankern oder Griffen live mit Füllung, Strich und Effekten statt nur seines Umrisses.
+  *Ansicht ▸ Zeiger bearbeitet Punkte* (ein eigener Schalter von Firepixel, ab Werk aus) lässt den Zeiger die Anker
+  ausgewählter Pfade bearbeiten: Ein Klick wählt einen Anker (Strg- oder Umschalt-Klick fügt einen hinzu oder
+  entfernt ihn), Ziehen verschiebt nur die ausgewählten Punkte, Entf löscht sie, die Pfeiltasten verschieben sie;
+  ein Rechteck wird beim ersten Punktziehen zum gewöhnlichen Pfad. Ausgeschaltet arbeitet der Zeiger wie im
+  Original: Der Eckgriff skaliert das Rechteck, und das Ziehen eines Punkts verschiebt das ganze Objekt.
+  *Ansicht ▸ Live-Schriftvorschau* (ein eigener Schalter von Firepixel, ab Werk an) zeigt die in einer offenen
+  Schriftliste markierte Schrift sofort am ausgewählten Text, siehe Schriftsuche.
 - **Auswählen, Modifizieren, Text, Filter:** wirken auf die Auswahl. Ist ein Befehl grau, nennt die
   Statuszeile beim Ausführen über das Kürzel den Grund. Befehle, die immer anwählbar sind, aber
   kein passendes Ziel finden (z. B. *Vereinfachen…* ohne Pfad), melden das wie im Original mit einer
@@ -587,7 +594,10 @@ Wichtige Bedienfelder:
   der Kommandozeile und MCP nicht zur Verfügung.
 
 Der **Eigenschaften-Inspektor** unten zeigt je nach Auswahl Füllung, Strich, Deckkraft,
-Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
+Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen. Die Linie darüber lässt sich ziehen, um ihn höher
+oder niedriger zu machen (Firepixel-Erweiterung; er rastet bei voller und halber Höhe ein, und mindestens 120 Pixel
+des Dokuments bleiben sichtbar); die Raute im Reiter und ein Doppelklick auf den Reiter stellen wieder volle, halbe
+und eingeklappte Höhe her.
 
 - **Popup-Schieber (▾):** Während Sie den Regler bewegen, zeigt die Arbeitsfläche den Wert live als Vorschau – bei
   Deckkraft (auch beim Deckkraft-Schieber im Ebenen-Bedienfeld, der wie dessen Mischmodus-Liste auf die gewählten
@@ -705,7 +715,10 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen.
   Inspektors ist ein eigener Schritt „Textänderung“ im Verlauf.
 - **Schriftsuche:** Die aufgeklappte Schriftliste (Text-Inspektor, Textwerkzeug, Texteditor) hat oben
   ein Suchfeld. Tippen filtert (Teilwort, ohne Groß-/Kleinschreibung), ↑/↓ wählen, Eingabe
-  übernimmt, Esc schließt ohne Änderung.
+  übernimmt, Esc schließt ohne Änderung. Solange die Liste offen ist, zeigt die Arbeitsfläche die markierte Schrift
+  als Vorschau an den ausgewählten Textobjekten (Firepixel-Erweiterung, *Ansicht ▸ Live-Schriftvorschau*, ab Werk
+  an); erst Eingabe oder ein Klick ändert das Dokument. Im Texteditor-Dialog erscheint die Vorschau an den
+  ausgewählten Textobjekten, nicht am Text im Dialog.
 - **Texturen und Muster:** Die Listen zeigen alle Texturen bzw. Muster aus den Ressourcenordnern;
   „Andere…“ unter der Liste wählt eine eigene Bilddatei.
 - **Farbwähler:** Ein Klick auf ein Farbfeld öffnet das Popup mit Farbfeldern, HEX-Feld und Pipette. Die

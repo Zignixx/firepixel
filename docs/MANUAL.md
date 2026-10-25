@@ -256,6 +256,13 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   Pixel* (Ctrl+K) still snaps the selection once.
   *View ▸ Live Preview While Dragging Points* (Firepixel's own switch, off by default) redraws the object with its
   fill, stroke and effects while you drag anchors or handles, instead of only its outline.
+  *View ▸ Pointer Edits Points* (Firepixel's own switch, off by default) lets the Pointer edit the anchors of the
+  selected paths: a click selects an anchor (Ctrl or Shift+click adds or removes one), a drag moves only the
+  selected points, Delete removes them and the arrow keys nudge them; a rectangle becomes an ordinary path on the
+  first point drag. Off, the Pointer works like in the original: a corner handle scales the rectangle and dragging a
+  point moves the whole object.
+  *View ▸ Live Font Preview* (Firepixel's own switch, on by default) shows the font highlighted in an open font list
+  on the selected text right away; see Font search.
 - **Select, Modify, Text, Filters:** act on the selection. If a command is grayed out, running it
   via its shortcut shows the reason in the status bar. Commands that can always be chosen but find
   no suitable target (e.g. *Simplify...* without a path) report this with a warning, like the
@@ -541,7 +548,9 @@ Important panels:
   Ctrl+Z, and these menu commands are not available to scripts, the command line or MCP.
 
 The **Properties inspector** at the bottom shows, depending on the selection, fill, stroke,
-opacity, blending mode, Live Filters (+/−) and text or symbol settings.
+opacity, blending mode, Live Filters (+/−) and text or symbol settings. Drag the line above it to make it taller
+or lower (Firepixel extension; it snaps to the full and half height, and at least 120 pixels of the document stay
+visible); the diamond on the tab and a double-click on the tab return to the full, half and collapsed sizes.
 
 - **Pop-up sliders (▾):** while you move the thumb, the canvas previews the value live (preview only) for
   opacity (also the Opacity slider in the Layers panel, which like its Blend mode list acts on the selected objects
@@ -648,7 +657,9 @@ opacity, blending mode, Live Filters (+/−) and text or symbol settings.
   tracking 0, and every change in a text field of the inspector is its own "Text Change" step in the History.
 - **Font search:** the opened font list (text inspector, Text tool, text editor) has a search field
   at the top. Typing filters (part of a word, case-insensitive), ↑/↓ select, Enter applies, Esc
-  closes without a change.
+  closes without a change. While the list is open the highlighted font is previewed on the selected text
+  objects (Firepixel extension, *View ▸ Live Font Preview*, on by default); only Enter or a click changes the
+  document. In the text editor dialog the preview shows on the selected text objects, not on the dialog's text.
 - **Textures and patterns:** the lists show all textures or patterns from the resource folders;
   "Other..." below the list picks an image file of your own.
 - **Color picker:** a click on a color box opens the popup with swatches, HEX field and eyedropper.
