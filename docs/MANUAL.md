@@ -129,22 +129,35 @@ row is written, an Alt-click without a drag keeps the selection, the lasso outli
 the cursor shows the arrow with "−" instead of "+". Alt-dragging an object still drags a copy, and
 Shift+Alt with the Pointer still toggles.
 
-**Bitmap tools:** the **Brush** paints pixels: with no bitmap selected it creates a new one,
-otherwise it paints into the selected one. **Eraser**, **Blur** and **Rubber Stamp** work with a
+**Bitmap tools:** the **Brush** paints pixels: a stroke that starts on a bitmap paints into that
+bitmap (no modifier key needed, selected or not) and selects it; a stroke that starts on empty space
+paints into the selected bitmap, or creates a new one on the current layer. A locked or hidden layer
+is skipped (the nearest shown, unlocked layer below, else above, is used); with none the status bar
+says that no layer can be painted on. **Eraser**, **Blur** and **Rubber Stamp** work with a
 soft edge as in the original; Esc ends painting and switches to the Pointer. After a Marquee, Lasso
 or Magic Wand selection on a bitmap, Esc exits bitmap mode (History row "Exit Bitmap Mode"), removes the
 pixel selection and switches to the Pointer; the bitmap stays selected. Esc while you are still
 dragging a new marquee or lasso outline cancels the drag and also exits bitmap mode (an older pixel
 selection is removed too) and switches to the Pointer; releasing the mouse then does nothing. Esc in
 the middle of a Brush stroke switches to the Pointer at once and freezes the preview, but the whole
-stroke is still painted when you release the mouse; the next Esc exits bitmap mode. With the
-Marquee or Lasso and a pixel selection the arrow keys move only the marquee (1 px, Shift 10 px);
+stroke is still painted when you release the mouse; the next Esc exits bitmap mode. With a
+pixel selection (Pointer, Marquee or Lasso) the arrow keys move only the marquee, not the pixels (1 px, Shift 10 px);
 consecutive presses are one History row "Move". While a pixel selection exists, the Marquee, Lasso and
 Magic Wand cursors show the combine mode of the next selection: Shift "+" (add), Alt "−" (subtract),
 Shift+Alt "×" (intersect, in either order of pressing); without a pixel selection the cursor has no mark.
 Inside the pixel selection the cursor becomes an arrow with a dashed rectangle — dragging moves the
 marquee (also with the Lasso and the Magic Wand) — and with Ctrl an arrow with scissors (dragging moves
-the pixels). The cursor follows a changed modifier with the next mouse move. The **Gradient** tool
+the pixels). Dragging inside a pixel selection with the Pointer, or with Ctrl and the Marquee, Lasso
+or Magic Wand, shows only the selected pixels moving live (a transparent hole stays behind); with the
+Subselection tool the drag moves a copy and leaves the original (History row "Duplicate"). The cursor
+follows a changed modifier at once, without a mouse move (Firepixel; the original waits for the next
+move).
+
+**Bitmap mode:** choosing a bitmap tool with a bitmap selected, painting a bitmap stroke or
+double-clicking a bitmap with the Pointer starts bitmap mode (History row "Edit Bitmap"); the bitmap's
+object handles disappear. The small round button right of the state controls in the status bar then
+turns red; click it (or choose the Pointer, or press Esc) to leave bitmap mode (row "Exit Bitmap
+Mode"). Outside bitmap mode the button is grey. The **Gradient** tool
 has its own colors (default black → white, a click on the swatch opens the gradient editor);
 "Fill selection" and tolerance are separate from the Paint Bucket. **Replace Color** has its own
 "From" and "To" colors (default green → red).
@@ -186,9 +199,13 @@ scroll. The next press on the canvas continues the **same** stroke from that poi
 joined by a line); **P** pauses again. Because it stays one stroke, a semi-transparent brush does not
 get darker where the parts overlap, unlike two separate strokes (the eraser removes the overlap once,
 Dodge/Burn/Blur/Sharpen work it once; Smudge and Rubber Stamp start afresh at each press). **Enter**
-applies the paused stroke as one History row named after the tool. **Esc**, a tool change, a menu
-command, Undo or Redo also apply the paused stroke first, so nothing is lost; Undo then takes the whole
-stroke back. Without a running stroke, P keeps its toolbox shortcut. Scripts and MCP send the key
+applies the paused stroke as one History row named after the tool. **Esc**, a tool change or a menu
+command also apply the paused stroke first, so nothing is lost. **Undo** while the stroke is paused
+discards it without a History row, **Redo** applies it like Enter. With the mouse button held, Undo and
+Redo are ignored (as in the original). Holding **Alt** while a Brush or Pencil stroke is painted or
+paused switches to subtraction: the tip erases only what this stroke has painted, the pixels below
+stay; releasing Alt paints again (Firepixel extension). Shift pressed in the middle of a stroke draws
+a straight line from the point reached; what was painted before stays. Without a running stroke, P keeps its toolbox shortcut. Scripts and MCP send the key
 `pause` to `tool_event`; the commands `bitmap.paint`, `bitmap.erase` and `bitmap.retouch` take the
 resumed parts as `breaks` (indices into `points`).
 
@@ -492,7 +509,10 @@ Important panels:
   inside a group cannot be dragged (reorder the group itself, or use *Modify ▸ Arrange*). The
   panel menu entry *Show Group Contents* (on by default) switches all of this off; the panel then
   looks and works like the original.
-- **Pages / States:** pages and animation frames, master page, onion skinning. When an animation
+- **Pages / States:** pages and animation frames, master page, onion skinning. The Play button in the
+  status bar (or *View ▸ Play/Stop*) plays the states on the canvas with each state's delay and the
+  document's loop setting; it shows a Stop square while playing. *File ▸ Image Preview* plays large
+  documents too, rendering the states ahead. When an animation
   instance is selected, the canvas shows its motion path (green start, red end), and the selection
   frame encloses only the current frame.
   *New Page* (footer button, ≡ menu or a row's context menu) inserts the page directly after the

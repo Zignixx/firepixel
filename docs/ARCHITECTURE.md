@@ -79,6 +79,20 @@ reports a running stroke during which undo and redo are ignored (Vector Path wit
 `ToolResponse.group` runs the response's commands as one named History step (for example the Pen closing a path it
 started, or joining another open path).
 
+Tools can also take Undo and Redo themselves: `ToolMachine::takes_history` reports that the running tool wants the
+keys, and `ToolMachine::history_key(redo, ctx)` handles them and returns a normal `ToolResponse`. `Session::undo`,
+`Session::redo` and the commands `edit.undo` / `edit.redo` ask the tool first, before the History requirements are
+checked, so the keys are taken even during the first stroke of a new document. The bitmap strokes use it (FB-70):
+with the button held both keys are ignored, while a stroke is paused Undo discards it and Redo applies it as one row.
+
+New paint bitmaps go through one rule, `docops::paint_target_layer` (FB-64): the current layer when it is a normal
+layer or sublayer that is shown and unlocked in the current state (sublayers inherit their parent's lock and
+visibility), otherwise the nearest such layer below it in the flat layer order, else above it; it returns
+`Ok(None)` when the page has no normal layer (one is created) and an error when none qualifies, which the commands
+turn into a refused stroke without a History row. `bitmap.paint`, the new bitmap of `bitmap.floodFill` and the Brush
+and Pencil live preview (`BrushTool::begin`) all use it, so the preview and the result always agree; which existing
+bitmap a stroke paints into is decided separately by `paint::stroke_target` from the press point (FB-65).
+
 Commands that reach outside the document (screen capture through the system's capture tool, the symbol-script
 generator, the shared palette over all open documents) live in `fp-engine/src/commands/extras.rs`.
 
@@ -97,7 +111,15 @@ mode, effects and masks. The inspector's opacity and stroke width sliders previe
 render-only way: the inspector stores it in `AppState::inspector_preview` (`fp-ui/src/inspector/preview.rs`), the
 canvas renders a copy of the document with the value applied to the selection under its own `RenderKey.preview`, and
 the session's document, history and dirty flag are never touched; the preview is reset every frame, and the single
-real apply goes through the normal command on release or when the pop-up closes. Pixel buffers are RGBA8 in
+real apply goes through the normal command on release or when the pop-up closes. The same document-copy path serves
+the optional live point preview (`Overlay::PathLive`, FB-67).
+
+A drag of the selected pixels of a bitmap (Pointer inside a pixel selection, Ctrl+drag of the bitmap selection
+tools) reports `Overlay::Ghost` with `pixels: true` instead of a whole-object ghost (FB-73). The canvas
+(`fp-ui/src/canvas/ghost.rs`) then draws two sprites, both limited to the view like BA-097: the bitmap in place
+with the selected pixels cut out, and only the selected pixels at the drag offset. The cut is
+`docops::cut_selected_pixels`, the same function `select.movePixels` uses on release, so the preview shows exactly
+what the release leaves behind; it lingers until the new background tiles are rendered. Pixel buffers are RGBA8 in
 128 × 128 copy-on-write tiles (cheap undo). `rayon` parallelises filters and large areas; long operations run
 in the background with progress so the UI never blocks.
 
@@ -158,6 +180,14 @@ selection), dockable panel groups on the right, status bar. Shortcuts and mouse 
 modifiers, double-click) follow measurements of the original. Three themes — Normal (light grey), Dark and OLED
 (pure black, colourful accents) — come from one central `Theme` structure; widgets contain no hard-coded colours.
 All icons are our own vector drawings. Design rules: [UI_DESIGN.md](UI_DESIGN.md).
+
+Animation playback on the canvas is a small driver in the UI frame loop, `fp-ui/src/playback.rs` (FB-63). While
+`ui.playing` is set (View ▸ Play/Stop or the status-bar Play button) `playback::frame` advances the active
+document to the next state after the shown state's own delay (1/100 s), asks egui for a repaint at that time and
+follows the document's loop setting like the APNG/GIF export. Switching the state is a view change
+(`Session::show_state`), so no History rows are written; the driver stops on toggle, when another document becomes
+active and when the state list changes. The Image Preview has its own player that renders the states ahead, one
+job at a time, and shows the next state only when it is rendered in every visible pane.
 
 ## 9. Profiles and files
 

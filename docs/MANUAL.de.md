@@ -134,8 +134,11 @@ keine Verlaufszeile, ein Alt-Klick ohne Ziehen lässt die Auswahl stehen, die La
 und der Zeiger zeigt den Pfeil mit „−“ statt „+“. Alt-Ziehen an einem Objekt zieht weiterhin eine Kopie,
 Umschalt+Alt schaltet beim Zeiger weiterhin um.
 
-**Bitmap-Werkzeuge:** Der **Pinsel** malt Pixel: Ist keine Bitmap gewählt, legt er eine neue an,
-sonst malt er in die gewählte. **Radiergummi**, **Weichzeichner** und **Stempel** arbeiten mit
+**Bitmap-Werkzeuge:** Der **Pinsel** malt Pixel: Ein Strich, der auf einer Bitmap beginnt, malt in
+diese Bitmap (ohne Zusatztaste, gewählt oder nicht) und wählt sie; ein Strich, der auf leerer Fläche
+beginnt, malt in die gewählte Bitmap oder legt auf der aktuellen Ebene eine neue an. Eine gesperrte
+oder ausgeblendete Ebene wird übersprungen (es gilt die nächste sichtbare, nicht gesperrte Ebene
+darunter, sonst darüber); gibt es keine, meldet die Statusleiste, dass keine Ebene bemalbar ist. **Radiergummi**, **Weichzeichner** und **Stempel** arbeiten mit
 weichem Rand wie im Original; Esc beendet das Malen und wechselt zum Zeiger. Nach einer Auswahl mit
 Auswahlrahmen, Lasso oder Zauberstab auf einer Bitmap beendet Esc den Bitmapmodus (Verlaufszeile
 „Bitmapmodus beenden“), hebt die Pixelauswahl auf und wechselt zum Zeiger; die Bitmap bleibt gewählt. Esc
@@ -143,14 +146,24 @@ während Sie einen neuen Auswahlrahmen oder ein Freihand-Lasso noch aufziehen, b
 beendet ebenfalls den Bitmapmodus (auch eine ältere Pixelauswahl ist weg) und wechselt zum Zeiger; das
 Loslassen bewirkt danach nichts. Esc mitten in einem Pinselstrich wechselt sofort zum Zeiger und lässt
 die Vorschau stehen, beim Loslassen wird der Strich trotzdem ganz gemalt; das nächste Esc beendet den
-Bitmapmodus. Mit Auswahlrahmen oder Lasso und einer Pixelauswahl verschieben die Pfeiltasten nur den
-Auswahlrahmen (1 px, mit Umschalt 10 px); aufeinanderfolgende Tasten sind eine Verlaufszeile
+Bitmapmodus. Mit einer Pixelauswahl (Zeiger, Auswahlrahmen oder Lasso) verschieben die Pfeiltasten nur den
+Auswahlrahmen, nicht die Pixel (1 px, mit Umschalt 10 px); aufeinanderfolgende Tasten sind eine Verlaufszeile
 „Verschieben“. Solange eine Pixelauswahl besteht, zeigen Auswahlrahmen, Lasso und Zauberstab am
 Mauszeiger die Verknüpfung der nächsten Auswahl: Umschalt „+“ (hinzufügen), Alt „−“ (abziehen),
 Umschalt+Alt „×“ (Schnittmenge, in beiden Reihenfolgen gedrückt); ohne Pixelauswahl trägt der Zeiger kein
 Zeichen. In der Pixelauswahl wird der Zeiger zum Pfeil mit gestricheltem Rechteck – Ziehen verschiebt den
 Auswahlrahmen (auch mit Lasso und Zauberstab) – und mit Strg zum Pfeil mit Schere (Ziehen verschiebt die
-Pixel). Der Zeiger folgt einer geänderten Umschalttaste mit der nächsten Mausbewegung. Das Werkzeug
+Pixel). Ziehen in einer Pixelauswahl mit dem Zeiger oder mit Strg und Auswahlrahmen, Lasso oder
+Zauberstab zeigt nur die gewählten Pixel live in Bewegung (zurück bleibt ein transparentes Loch); mit
+dem Unterauswahl-Werkzeug zieht eine Kopie und das Original bleibt (Verlaufszeile „Duplizieren“). Der
+Zeiger folgt einer geänderten Umschalttaste sofort, ohne Mausbewegung (Firepixel; das Original wartet
+auf die nächste Bewegung).
+
+**Bitmapmodus:** Wählen eines Bitmap-Werkzeugs bei gewählter Bitmap, ein Bitmap-Strich oder ein
+Doppelklick mit dem Zeiger auf eine Bitmap beginnt den Bitmapmodus (Verlaufszeile „Bitmap bearbeiten“);
+die Objektgriffe der Bitmap verschwinden. Der kleine runde Knopf rechts neben den Status-Steuerelementen
+in der Statusleiste wird dann rot; ein Klick darauf (oder der Zeiger, oder Esc) beendet den Bitmapmodus
+(Zeile „Bitmapmodus beenden“). Außerhalb des Bitmapmodus ist der Knopf grau. Das Werkzeug
 **Verlauf** hat eigene Farben (Vorgabe Schwarz → Weiß, Klick aufs Farbfeld öffnet den
 Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
 hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
@@ -198,9 +211,14 @@ verbunden); **P** hält erneut an. Weil es ein Strich bleibt, wird ein halbtrans
 sich die Teile überlappen, nicht dunkler – anders als bei zwei getrennten Strichen (der Radiergummi
 radiert die Überlappung einmal, Abwedler/Nachbelichter/Weich- und Scharfzeichner bearbeiten sie
 einmal; Verwischen und Stempel beginnen bei jedem Klick neu). **Enter** wendet den angehaltenen Strich
-als eine Verlaufszeile mit dem Namen des Werkzeugs an. Auch **Esc**, ein Werkzeugwechsel, ein
-Menübefehl, Rückgängig oder Wiederholen wenden den angehaltenen Strich zuerst an, es geht also nichts
-verloren; Rückgängig nimmt danach den ganzen Strich zurück. Ohne laufenden Strich bleibt P das
+als eine Verlaufszeile mit dem Namen des Werkzeugs an. Auch **Esc**, ein Werkzeugwechsel oder ein
+Menübefehl wenden den angehaltenen Strich zuerst an, es geht also nichts verloren. **Rückgängig**
+verwirft den angehaltenen Strich ohne Verlaufszeile, **Wiederholen** wendet ihn wie Enter an. Bei
+gedrückter Maustaste werden Rückgängig und Wiederholen ignoriert (wie im Original). Mit gehaltener
+**Alt**-Taste während eines Pinsel- oder Bleistiftstrichs (laufend oder angehalten) wird abgezogen: Die
+Spitze entfernt nur, was dieser Strich gemalt hat, die Pixel darunter bleiben; nach dem Loslassen von
+Alt wird wieder gemalt (Firepixel-Erweiterung). Umschalt mitten im Strich zieht eine gerade Linie vom
+erreichten Punkt; was vorher gemalt wurde, bleibt. Ohne laufenden Strich bleibt P das
 Werkzeugkürzel. Skripte und MCP senden die Taste `pause` an `tool_event`; die Befehle `bitmap.paint`,
 `bitmap.erase` und `bitmap.retouch` erhalten die fortgesetzten Teile als `breaks` (Indizes in
 `points`).
@@ -534,7 +552,11 @@ Wichtige Bedienfelder:
   einer Gruppe lassen sich nicht ziehen (die Gruppe selbst umordnen oder *Ändern ▸ Anordnen*
   verwenden). Der Eintrag *Gruppeninhalte anzeigen* im Bedienfeldmenü (Vorgabe: ein) schaltet all
   das ab; das Bedienfeld sieht dann aus und arbeitet wie im Original.
-- **Seiten / Status:** Seiten und Animationsbilder, Masterseite, Zwiebelschicht. Ist eine
+- **Seiten / Status:** Seiten und Animationsbilder, Masterseite, Zwiebelschicht. Der Abspielknopf in
+  der Statusleiste (oder *Ansicht ▸ Abspielen/Stopp*) spielt die Status auf der Leinwand mit der
+  Verzögerung jedes Status und der Schleifeneinstellung des Dokuments ab; währenddessen zeigt er ein
+  Stopp-Quadrat. *Datei ▸ Bildvorschau* spielt auch große Dokumente ab und berechnet die Status
+  vorab. Ist eine
   Animationsinstanz gewählt, zeigt die Leinwand ihren Bewegungspfad (grüner Start, rotes Ende), und der
   Auswahlrahmen umschließt nur das aktuelle Bild.
   *Neue Seite* (Schaltfläche in der Fußleiste, ≡-Menü oder Kontextmenü einer Zeile) fügt die Seite
