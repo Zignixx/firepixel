@@ -190,7 +190,11 @@ fn undo_while_paused_discards_and_redo_applies() {
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle, "no stroke left behind");
     paint_and_pause(&mut s, (50.0, 100.0), (250.0, 100.0));
     s.redo().expect("redo");
-    assert_eq!(steps(&s), n0 + 1, "Redo applies the paused stroke");
+    assert_eq!(
+        steps(&s),
+        n0 + 2,
+        "Redo applies the paused stroke (after the row \"Edit Bitmap\" that starts bitmap mode, RE spec 71)"
+    );
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle);
     let img = image(&s, top_elements(&s)[0].id);
     assert!(alpha(&img, 150, 100) > 0);
