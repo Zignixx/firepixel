@@ -76,6 +76,10 @@ pub struct Workspace {
     pub inspector_collapsed: bool,
     /// Inspektor in halber Höhe (eine Zeile).
     pub inspector_half: bool,
+    /// Dragged Properties height in pixels (content, without the splitter).
+    /// `0` keeps the discrete full / half / collapsed height.
+    #[serde(default)]
+    pub inspector_height: f32,
     /// Aktiver Reiter unten (0 Eigenschaften, 1 Symboleigenschaften).
     pub bottom_active: usize,
     /// „Bedienfelder ausblenden“ (Tab/F4).
@@ -139,6 +143,7 @@ impl Workspace {
             show_inspector: true,
             inspector_collapsed: false,
             inspector_half: false,
+            inspector_height: 0.0,
             bottom_active: 0,
             panels_hidden: false,
         }
@@ -421,6 +426,9 @@ impl Workspace {
         }
         if !self.dock_width.is_finite() || self.dock_width < 120.0 {
             self.dock_width = 268.0;
+        }
+        if !self.inspector_height.is_finite() || self.inspector_height < 0.0 {
+            self.inspector_height = 0.0;
         }
         for g in &mut self.dock {
             if !g.weight.is_finite() || g.weight <= 0.05 {
@@ -870,6 +878,13 @@ mod tests {
         let json = serde_json::to_string(&w).unwrap_or_default();
         let back: Workspace = serde_json::from_str(&json).unwrap_or_default();
         assert_eq!(back, w);
+        let old: serde_json::Value = serde_json::from_str(&json).expect("json");
+        let mut old = old;
+        old.as_object_mut()
+            .expect("object")
+            .remove("inspector_height");
+        let legacy: Workspace = serde_json::from_value(old).expect("legacy workspace");
+        assert_eq!(legacy.inspector_height, 0.0);
     }
 
     #[test]
