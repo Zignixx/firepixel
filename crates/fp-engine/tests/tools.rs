@@ -208,10 +208,51 @@ fn select_behind_and_subselection() {
     tool(&mut s, ToolId::Subselection);
     events(&mut s, &[ToolEvent::down(5.0, 5.0), ToolEvent::up(5.0, 5.0)]);
     assert_eq!(sel(&s), vec![a]);
-    // Eckpunkt einer Rechteck-Grundform ziehen verschiebt wie im Original das ganze Rechteck
-    // (PAR 10/06; −7: außerhalb des Fangabstands 5 zur Seitenkante 0)
+    // Dragging a corner of a rectangle primitive resizes it (the opposite corner stays).
     drag(&mut s, (0.0, 0.0), (-10.0, -7.0));
-    assert!(rect_approx(bounds(&s, a), Rect::new(-10.0, -7.0, 40.0, 43.0)), "{:?}", bounds(&s, a));
+    assert!(rect_approx(bounds(&s, a), Rect::new(-10.0, -7.0, 50.0, 50.0)), "{:?}", bounds(&s, a));
+}
+
+#[test]
+fn rectangle_points_move_alone_and_ctrl_selects_more() {
+    let mut s = doc_session(300.0, 200.0);
+    let a = rect(&mut s, 10.0, 20.0, 110.0, 80.0);
+    select(&mut s, &[a]);
+    tool(&mut s, ToolId::Pointer);
+    // top-right corner moves; the other three stay
+    drag(&mut s, (110.0, 20.0), (140.0, 10.0));
+    let ElementKind::Path(p) = &el(&s, a).kind else {
+        panic!("Pfad")
+    };
+    let xy = |i: usize| {
+        let q = p.contours[0].nodes[i].anchor;
+        (q.x, q.y)
+    };
+    assert_eq!(xy(0), (10.0, 20.0));
+    assert_eq!(xy(1), (140.0, 10.0));
+    assert_eq!(xy(2), (110.0, 80.0));
+    assert_eq!(xy(3), (10.0, 80.0));
+    assert!(p.primitive.is_none());
+    // Ctrl+click the bottom-right, then drag it: both selected points move
+    events(
+        &mut s,
+        &[
+            ToolEvent::down(110.0, 80.0).ctrl(),
+            ToolEvent::up(110.0, 80.0).ctrl(),
+        ],
+    );
+    drag(&mut s, (110.0, 80.0), (110.0, 100.0));
+    let ElementKind::Path(p) = &el(&s, a).kind else {
+        panic!("Pfad")
+    };
+    let xy = |i: usize| {
+        let q = p.contours[0].nodes[i].anchor;
+        (q.x, q.y)
+    };
+    assert_eq!(xy(0), (10.0, 20.0), "unselected corner stays");
+    assert_eq!(xy(1), (140.0, 30.0), "selected top-right moves with the drag");
+    assert_eq!(xy(2), (110.0, 100.0), "dragged point");
+    assert_eq!(xy(3), (10.0, 80.0), "unselected corner stays");
 }
 
 #[test]

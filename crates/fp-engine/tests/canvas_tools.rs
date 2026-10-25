@@ -124,16 +124,14 @@ fn pointer_select_move_copy_and_corner_handle_scales() {
     let fb = s.tool_feedback();
     assert!(fb.iter().any(|o| matches!(o, Overlay::Ghost { ids, copy: false, .. } if ids == &vec![a.0])), "{fb:?}");
     events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
-    // Eckgriff einer Rechteck-Grundform ziehen = Skalieren wie bei allen Objekten, die Rundung
-    // bleibt 0 (Original live: R1 50,50–150,120, Eckgriff +40/+30 → größer, PARITAET_A L26)
+    // Dragging one corner of a rectangle moves only that point. The shape stops being
+    // a rectangle primitive, so the other corners stay where they were.
     let a = rect(&mut s, 150.0, 100.0, 250.0, 170.0);
     tool(&mut s, ToolId::Pointer);
     let fb = s.tool_feedback();
     assert!(fb.iter().any(|o| matches!(o, Overlay::PathPoints { contours, .. } if contours[0].nodes.len() == 4)), "Eckpunkte der Grundform");
-    // Überfahren des Eckgriffs: Pfeil ohne Zusatz, weiß mit schwarzem Rand (K2, PM-1 im echten
-    // Fenster); Kantengriff: schwarzer Pfeil (K3)
     let r = s.tool_event(&ToolEvent::drag(250.0, 170.0)).expect("hover");
-    assert_eq!(r.cursor, fp_engine::tools::Cursor::Subselect, "Eckgriff");
+    assert_eq!(r.cursor, fp_engine::tools::Cursor::PointerPoint, "Eckpunkt");
     let r = s.tool_event(&ToolEvent::drag(250.0, 135.0)).expect("hover");
     assert_eq!(r.cursor, fp_engine::tools::Cursor::Arrow, "Kantengriff");
     let before = doc(&s);
@@ -145,22 +143,35 @@ fn pointer_select_move_copy_and_corner_handle_scales() {
     seq.push(ToolEvent::up(290.0, 200.0));
     events(&mut s, &seq);
     let p = path_of(&s, a);
-    let r = p.primitive.as_ref().map(|x| x.roundness).unwrap_or(0.0);
-    assert_eq!(r, 0.0, "Rundung bleibt 0");
-    assert!(rect_approx(bounds(&s, a), Rect::new(150.0, 100.0, 290.0, 200.0)), "größer: {:?}", bounds(&s, a));
+    assert!(p.primitive.is_none(), "kein Rechteck mehr");
+    let xy = |p: &fp_model::element::PathElem, i: usize| {
+        let a = p.contours[0].nodes[i].anchor;
+        (a.x, a.y)
+    };
+    assert_eq!(xy(&p, 0), (150.0, 100.0));
+    assert_eq!(xy(&p, 1), (250.0, 100.0));
+    assert_eq!(xy(&p, 2), (290.0, 200.0));
+    assert_eq!(xy(&p, 3), (150.0, 170.0));
     undo_redo(&mut s, &before);
-    // jede Ecke: die gegenüberliegende bleibt stehen
-    for (from, to, want) in [
-        ((150.0, 100.0), (130.0, 90.0), Rect::new(130.0, 90.0, 250.0, 170.0)),
-        ((250.0, 100.0), (260.0, 80.0), Rect::new(150.0, 80.0, 260.0, 170.0)),
-        ((150.0, 170.0), (140.0, 190.0), Rect::new(140.0, 100.0, 250.0, 190.0)),
+    for (from, to, stayed) in [
+        ((150.0, 100.0), (130.0, 90.0), (250.0, 170.0)),
+        ((250.0, 100.0), (260.0, 80.0), (150.0, 170.0)),
+        ((150.0, 170.0), (140.0, 190.0), (250.0, 100.0)),
     ] {
         s.undo().expect("undo");
         select(&mut s, &[a]);
         tool(&mut s, ToolId::Pointer);
         drag(&mut s, from, to);
-        assert!(rect_approx(bounds(&s, a), want), "{from:?}: {:?}", bounds(&s, a));
-        assert_eq!(path_of(&s, a).primitive.as_ref().map(|x| x.roundness), Some(0.0));
+        let p = path_of(&s, a);
+        assert!(p.primitive.is_none(), "{from:?}");
+        let hit = p.contours[0]
+            .nodes
+            .iter()
+            .any(|n| (n.anchor.x - to.0).abs() < 0.01 && (n.anchor.y - to.1).abs() < 0.01);
+        let keep = p.contours[0].nodes.iter().any(|n| {
+            (n.anchor.x - stayed.0).abs() < 0.01 && (n.anchor.y - stayed.1).abs() < 0.01
+        });
+        assert!(hit && keep, "{from:?} -> {to:?}: {:?}", p.contours[0].nodes);
     }
 }
 
@@ -1418,15 +1429,18 @@ fn repeated_drags_no_duplicates_and_undo_chain() {
     let a = rect(&mut s, 50.0, 50.0, 150.0, 120.0);
     let start = doc(&s);
     tool(&mut s, ToolId::Pointer);
-    // Eckgriff mehrmals ziehen (skaliert, PARITAET_A L26): Kontur bleibt eine, Rundung 0
+    // Dragging the bottom-right point repeatedly moves only that point.
     let mut from = (150.0, 120.0);
     for (i, to) in [(160.0, 130.0), (140.0, 110.0), (150.0, 120.0)].into_iter().enumerate() {
         events(&mut s, &[ToolEvent::down(from.0, from.1), ToolEvent::drag((from.0 + to.0) / 2.0, (from.1 + to.1) / 2.0), ToolEvent::drag(to.0, to.1), ToolEvent::up(to.0, to.1)]);
         from = to;
         let p = path_of(&s, a);
         assert_eq!(p.contours.len(), 1, "Durchgang {i}");
-        assert_eq!(p.primitive.as_ref().map(|r| r.roundness), Some(0.0), "Durchgang {i}");
-        assert!(rect_approx(bounds(&s, a), Rect::new(50.0, 50.0, to.0, to.1)), "Durchgang {i}: {:?}", bounds(&s, a));
+        assert!(p.primitive.is_none(), "Durchgang {i}");
+        let br = p.contours[0].nodes[2].anchor;
+        let tl = p.contours[0].nodes[0].anchor;
+        assert!((br.x - to.0).abs() < 0.01 && (br.y - to.1).abs() < 0.01, "Durchgang {i}: {br:?}");
+        assert_eq!((tl.x, tl.y), (50.0, 50.0), "Durchgang {i}");
     }
     assert_eq!(top_elements(&s).len(), 1);
     // Skalieren und 9-Slice mehrmals
@@ -1612,11 +1626,15 @@ fn shared_layer_elements_are_editable() {
     drag(&mut s, (100.0, 80.0), (120.0, 90.0));
     assert!(rect_approx(bounds(&s, a), Rect::new(70.0, 65.0, 170.0, 135.0)), "{:?}", bounds(&s, a));
     undo_redo(&mut s, &before);
-    // Eckgriff skaliert (auch auf der geteilten Ebene), die Rundung bleibt
+    // Dragging the top-left point moves only that point; the opposite corner stays.
     let before = doc(&s);
     events(&mut s, &[ToolEvent::down(70.0, 65.0), ToolEvent::drag(75.0, 66.0), ToolEvent::drag(80.0, 67.0), ToolEvent::up(80.0, 67.0)]);
-    assert!(rect_approx(bounds(&s, a), Rect::new(80.0, 67.0, 170.0, 135.0)), "{:?}", bounds(&s, a));
-    assert!(path_of(&s, a).primitive.as_ref().is_some_and(|p| p.roundness == 0.0));
+    let p = path_of(&s, a);
+    let tl = p.contours[0].nodes[0].anchor;
+    let br = p.contours[0].nodes[2].anchor;
+    assert!((tl.x - 80.0).abs() < 0.01 && (tl.y - 67.0).abs() < 0.01, "{tl:?}");
+    assert_eq!((br.x, br.y), (170.0, 135.0));
+    assert!(p.primitive.is_none());
     undo_redo(&mut s, &before);
     s.undo().expect("undo");
     // Skalieren und Teilauswahl-Punkt
