@@ -313,10 +313,13 @@ fn horizontal_scale_slider_previews_live_and_applies_once() {
     assert!((text_attr(&element(&h, r), |a| a.horizontal_scale) - 1.5).abs() < 1e-6, "Enter applies");
 }
 
+/// Reads one optional paragraph attribute.
+type ParagraphAttr = fn(&fp_model::text::TextAttrs) -> Option<f32>;
+
 #[test]
 fn paragraph_sliders_preview_live() {
     let (mut h, r) = text_object();
-    let cases: [(&str, &str, fn(&fp_model::text::TextAttrs) -> Option<f32>, f64); 4] = [
+    let cases: [(&str, &str, ParagraphAttr, f64); 4] = [
         ("117", "leading", |a| a.leading, 100.0),
         ("4", "indent", |a| a.indent, 1.0),
         ("5", "spaceBefore", |a| a.space_before, 1.0),
