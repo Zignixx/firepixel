@@ -1502,3 +1502,45 @@ Self test: `python -I runner.py --units _selftest_menu,_selftest_inspector`.
   88/184 x 88/182 = shown - 1), but drawn in the selection blue (0,153,255), with the pointer's bounds frame and handles
   (96-100 ...) inside it; the reference's shot shows neither (Edges off). Other non-ok steps unchanged from run 41 (12 fp,
   15 and 19 both, 17 unmapped both).
+
+## R-37 additions (25 Oct 2026)
+
+- **Menu buttons in `choose` (TW-232, full run 43 `filters-adjust-color/02, 05, 06, 09`: "choose: target opened no menu
+  and is no Win32 combo box" on the live-filter "+" button `inspector.fx_add`, `ok` in run 33, in step 19 of the same
+  unit and in three probes on 25 Oct 2026):** the button's position was not the cause - the ui_map point (Properties
+  palette + 564,40 = 634,930) lies inside the button (a 21 x 21 px `Button` at 625,920-646,941 in the filter row's child
+  dialog), with the dock groups of run 43 and of today alike. `choose` used the `open` verb, which clicks a second time
+  when nothing appeared within ~2.4 s; the failing steps spent ~11.9 s in `choose` (a successful one 7.4 s), i.e. the
+  second click happened, and it closes a menu that opens late. Now `choose_open_menu` (every `choose` on a target that
+  is no Win32 combo box and no press-and-hold flyout): `menu_button_at` checks the window under the point (a `Button`
+  -> its rect is logged; otherwise, for a panel-relative locator, the nearest untitled Button of at most 32 x 32 px among
+  the panel's child windows within `orig.choose_button_radius_px`, default 40, is clicked at its centre), one click,
+  the popup menu is waited for (`orig.choose_menu_wait_s`, default 3.5 s, polled every 0.1 s); no menu -> foreground,
+  window under the point and new top-level windows are recorded, the point is measured again (panel origin and button),
+  the pointer rests on the button 0.35 s (hover state), one more click, at most `orig.choose_retries` (default 2) times.
+  A menu that is open before a retry click is used, never clicked away. Value `choose_menu` {target, check {ui_map_point,
+  at, button, palette, moved_to_button}, tries [{at, button, menu_after_s, fg, under_now, new_windows}]}; a log line
+  `orig choose <target>: ...` only when more than one click was needed or the point was moved; the error of a step that
+  still fails carries the tries.
+- **Context menus (TW-231 rest):** after a right-click a text target is looked up only in the opened menu on both
+  sides. Reference: `label_point` polls the open popup menus for the exact entry (`orig.menu_label_wait_s`, default
+  1.5 s, for a sub menu opened by the step's `hover`); after a right-click a missing entry is `unmapped` ("menu item not
+  in the open context menu: ... (entries: ...)") instead of a window-text lookup. Firepixel: the right-click sets
+  `popup_rect` from the window images before and after (as `panel_menu` does, log `fp context menu area [...]`), and
+  `find_in_popup` then searches only that area and a sub menu right of it, with exact entry texts (ellipsis and `&`
+  ignored), polled up to 4 times; a missing entry is `unmapped` ("not in the open context menu") instead of the
+  window-wide non-exact fallback that clicked "Auswahl löschen" / "Stil löschen". A click or a key ends the context
+  mode on both sides.
+- **Re-specified steps of `xs-context-menus` (probe of 25 Oct 2026: the reference's canvas context menu of a selected
+  line has no Delete entry, neither in the menu nor in its Bearbeiten sub menu, whose entries are Ausschneiden, Kopieren,
+  Pfadumriss kopieren, HTML-Code kopieren, Einfügen, Als Maske einfügen, Innen einfügen, Attribute einfügen, Duplizieren,
+  Klonen, Gewählte Bitmap zuschneiden, Dokument zuschneiden - the same as Firepixel's):** `15_effect_delete_result`
+  records both menu levels (`log_menu_items`, hover Bearbeiten, 800 ms, `log_menu_items`), closes the menu and reads
+  the object count; `15_effect_duplicate_result` hovers Bearbeiten before clicking Duplizieren;
+  `15_effect_arrange_back_result` clicks "In den Hintergrund" (the Anordnen sub menu has no "Nach ganz hinten" in either
+  program).
+- **Run 45** (25 Oct 2026, `filters-adjust-color`, `xs-context-menus`, preview 2026-10-24_16-54): every `choose` on
+  `inspector.fx_add` opened the menu with the first click (button verified at 625,920-646,941, menu after 0.40-0.87 s);
+  `02`, `05`, `06`, `09` `ok` on the reference side again (unit 16 / 23, `09_color_fill_result` 0.35 %). The five
+  `15_effect_*` steps `ok` on both sides with equal values (arrange order `L1|ST|PG|P1|E1|R2|R1`, flip `PG:465,165,535,245`,
+  group `1:[object Group]`, duplicate 8, delete 7 with no Delete entry on either side); unit 23 / 27.

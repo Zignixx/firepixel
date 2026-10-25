@@ -778,7 +778,7 @@
      "hover": "Anordnen"
     },
     {
-     "click": "Nach ganz hinten"
+     "click": "In den Hintergrund"
     },
     {
      "log_value": "(function(){var __a=fw.getDocumentDOM().layers[0].frames[0].elements,__o=[];for(var __i=0;__i<__a.length;__i++)__o.push((function(e){return e.name})(__a[__i]));return __o.join('|');})()"
@@ -790,7 +790,7 @@
      "key": "Escape"
     }
    ],
-   "note": "sample of 5 entries"
+   "note": "sample of 5 entries. R-37: the Anordnen sub menu's entry is 'In den Hintergrund' in both programs (was 'Nach ganz hinten', no entry)"
   },
   {
    "id": "15_effect_flip_h_result",
@@ -895,6 +895,9 @@
      }
     },
     {
+     "hover": "Bearbeiten"
+    },
+    {
      "click": "Duplizieren"
     },
     {
@@ -907,7 +910,7 @@
      "key": "Escape"
     }
    ],
-   "note": "sample of 5 entries"
+   "note": "sample of 5 entries. R-37: 'Duplizieren' is an entry of the context menu's 'Bearbeiten' sub menu (both programs), not of the menu itself"
   },
   {
    "id": "15_effect_delete_result",
@@ -932,7 +935,22 @@
      }
     },
     {
-     "click": "Löschen"
+     "log_menu_items": true
+    },
+    {
+     "hover": "Bearbeiten"
+    },
+    {
+     "wait": 800
+    },
+    {
+     "log_menu_items": true
+    },
+    {
+     "key": "Escape"
+    },
+    {
+     "key": "Escape"
     },
     {
      "log_value": "fw.getDocumentDOM().layers[0].frames[0].elements.length"
@@ -944,7 +962,7 @@
      "key": "Escape"
     }
    ],
-   "note": "sample of 5 entries"
+   "note": "sample of 5 entries. R-37 (TW-231): the canvas context menu of a selected object has no Delete entry, neither in the menu nor in its 'Bearbeiten' sub menu (reference probe 25 Oct 2026; Firepixel hand check CHK-1); the step records both menu levels and checks that the object count stays 7 after closing the menu"
   },
   {
    "id": "16_esc_result",

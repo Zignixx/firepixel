@@ -2312,6 +2312,7 @@ class OrigSide(Side):
         self.o.focus()
 
     def reset_light(self):
+        self.context_menu = False  # R-37: set by a right-click, label lookups then stay inside the open menus
         try:
             self.ensure_foreground()  # R-5: the reset clicks (pointer tool, panels) need the foreground too
         except OrigError as e:
@@ -5657,11 +5658,24 @@ class OrigSide(Side):
     def label_point(self, label):
         lab = clean_label(label)
         menus = self.h.call("menus")
-        for m in menus.get("menus") or []:
-            for it in m.get("items") or []:
-                if not it.get("separator") and it.get("text") == lab:
-                    r = it["rect"]
-                    return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), {"menu_item": it}
+        # R-37 (TW-231, `xs-context-menus/15_*`: "label not found as window text" for 'Nach ganz hinten',
+        # 'Horizontal spiegeln', 'Duplizieren', 'Löschen'): a sub menu opened by the step's `hover` appears ~0.4 s
+        # later, so the open menus are polled (`orig.menu_label_wait_s`, default 1.5 s); after a right-click the
+        # lookup stays inside the open menus (a window text elsewhere would only close the menu)
+        end = time.time() + (float(self.r.cfg["orig"].get("menu_label_wait_s", 1.5)) if menus.get("menus") else 0)
+        while True:
+            for m in menus.get("menus") or []:
+                for it in m.get("items") or []:
+                    if not it.get("separator") and it.get("text") == lab:
+                        r = it["rect"]
+                        return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), {"menu_item": it}
+            if time.time() >= end:
+                break
+            time.sleep(0.15)
+            menus = self.h.call("menus")
+        if menus.get("menus") and getattr(self, "context_menu", False):
+            entries = [it.get("text") for m in menus["menus"] for it in m.get("items") or [] if it.get("text")]
+            raise Unmapped(f"menu item not in the open context menu: {label} (entries: {' | '.join(entries[:40])})")
         for scope in ("dialog", "main"):
             try:
                 ch = self.h.call("find_child", scope=scope, title=lab, index=0)
@@ -5794,6 +5808,7 @@ class OrigSide(Side):
         self.h.call("click", x=pt[0], y=pt[1], button=button, mods=list(mods), count=count)
 
     def key(self, combo, log_tool=True):
+        self.context_menu = False  # R-37: a key closes / leaves the context menu
         mods, k = parse_combo(combo)
         if set(mods) >= {"ctrl", "alt"} and k == "space":
             raise Unsupported("Ctrl+Alt+Space is forbidden")
@@ -6568,6 +6583,8 @@ class OrigSide(Side):
                 # R-23 (TW-146 rest): the commit of the step's last text settles before the double-click
                 self.objects_settled("before the double-click")
             self.click_at(pt, button, count, mods)
+            # R-37: after a right-click the next label lookups stay inside the opened menu; a click closes it
+            self.context_menu = button == "right"
             if pre and any(t in pre.get("tool", "").lower() for t in POINTER_TOOLS):
                 self.double_click_check(pt, pre)
         time.sleep(0.25)
@@ -6687,9 +6704,14 @@ class OrigSide(Side):
                     return
                 self.menu_path(parts)
                 return
-        if target:
+        opened = None
+        if target and self.loc_of(target).get("hold_ms"):
+            # toolbox flyouts: press and hold (`open` verb, its own three presses)
             self.pointer("open", target, {})
             time.sleep(0.3)
+        elif target:
+            # R-37 (TW-232): verified button, one click, menu waited for, re-measured retries (was the `open` verb)
+            opened = self.choose_open_menu(target, pt, info)
         oi = act.get("orig_index", a.get("orig_index"))
         parts = split_path(item or "")
         if oi is not None:
@@ -6698,9 +6720,134 @@ class OrigSide(Side):
             # menu is owner-drawn)
             self.click_index_path(parts, int(oi))
             return
-        if not self.wait_menus():
-            raise Unsupported("choose: target opened no menu and is no Win32 combo box")
+        if not (opened or self.wait_menus()):
+            raise Unsupported("choose: target opened no menu and is no Win32 combo box"
+                              + (f" ({self.choose_why})" if getattr(self, "choose_why", None) else ""))
         self.menu_path(parts)
+
+    def menu_button_at(self, target, pt):
+        """R-37 (TW-232): the Win32 button the ui_map point of a menu button lands on (`inspector.fx_add`: rel 564,40
+        of the Properties palette = the 21 x 21 px Button in the filter row's child dialog). The window under the
+        point when it is a Button; otherwise, for a panel-relative locator, the nearest untitled Button (at most
+        32 x 32 px) among the panel's child windows within `orig.choose_button_radius_px` (default 40) of the point,
+        whose centre is used instead. Returns (point, record)."""
+        rec = {"ui_map_point": [int(pt[0]), int(pt[1])]}
+        try:
+            at = self.h.call("at", x=int(pt[0]), y=int(pt[1])) or {}
+        except OrigError as e:
+            at = {"error": str(e)[:80]}
+        rec["at"] = {k: at.get(k) for k in ("class", "rect") if at.get(k) is not None}
+        if at.get("class") == "Button":
+            rec["button"] = at.get("rect")
+            return pt, rec
+        loc = self.loc_of(target)
+        if not (isinstance(loc, dict) and "rel" in loc and "panel" in loc):
+            return pt, rec
+        try:
+            p = self.panel(loc["panel"])
+            rec["palette"] = p.get("palette")
+            kids = self.h.list("kids", hwnd=p["hwnd"])
+        except OrigError as e:
+            rec["panel_error"] = str(e)[:80]
+            return pt, rec
+        radius = float(self.r.cfg["orig"].get("choose_button_radius_px", 40))
+        best, dist = None, None
+        for k in kids:
+            r = k.get("rect") or [0, 0, 0, 0]
+            if k.get("class") != "Button" or (k.get("title") or "").strip() \
+                    or not (0 < r[2] - r[0] <= 32 and 0 < r[3] - r[1] <= 32):
+                continue
+            d = ((r[0] + r[2]) / 2 - pt[0]) ** 2 + ((r[1] + r[3]) / 2 - pt[1]) ** 2
+            if d <= radius * radius and (dist is None or d < dist):
+                best, dist = k, d
+        rec["button"] = best["rect"] if best else None
+        if best:
+            r = best["rect"]
+            rec["moved_to_button"] = True
+            return ((r[0] + r[2]) // 2, (r[1] + r[3]) // 2), rec
+        return pt, rec
+
+    def choose_open_menu(self, target, pt, info):
+        """R-37 (TW-232, full run 43 `filters-adjust-color/02, 05, 06, 09`: "target opened no menu" on the live-filter
+        "+" button; `ok` in run 33, in step 19 of the same unit and in three probes). `choose` used the `open` verb,
+        which clicks a second time when nothing appeared within ~2.4 s, so a menu that opens late is closed again by
+        that click. Now the button is verified against the live window (`menu_button_at`), clicked once and the popup
+        menu waited for (`orig.choose_menu_wait_s`, default 3.5 s); no menu -> the point is measured again (panel
+        origin and button), the pointer rests on the button first (hover state), then one more click, at most
+        `orig.choose_retries` (default 2) times. A menu open before a retry click is used, never clicked away. The
+        tries are kept as value `choose_menu` and logged when the first click was not enough."""
+        self.choose_why = None
+        if isinstance(info, dict) and "dialog_button" in info:
+            self.h.call("dialog_close", mode=info["dialog_button"])
+            return []
+        if pt is None:
+            raise Unsupported(f"choose: no point for {target}")
+        wait_s = float(self.r.cfg["orig"].get("choose_menu_wait_s", 3.5))
+        retries = int(self.r.cfg["orig"].get("choose_retries", 2))
+        name = target if isinstance(target, str) else str(target)[:60]
+        pt, chk = self.menu_button_at(target, pt)
+        first = chk
+        rec = {"target": name, "check": chk, "tries": []}
+        try:
+            before = {w["hwnd"] for w in self.h.list("windows")}
+        except OrigError:
+            before = set()
+        ms = []
+        for k in range(1 + retries):
+            ms = self.h.call("menus").get("menus") or []
+            if ms:
+                rec["tries"].append({"menu_open_before_click": True})
+                break
+            if k:
+                # measured again: a rebuilt inspector or a moved panel group changes the point
+                try:
+                    pt0, _ = self.resolve(target)
+                    pt, chk = self.menu_button_at(target, pt0)
+                except (OrigError, Unmapped) as e:
+                    chk = {"error": str(e)[:80]}
+                self.o.focus()
+                self.h.call("move", x=int(pt[0]), y=int(pt[1]))
+                time.sleep(0.35)
+            t0 = time.time()
+            self.click_at(pt)
+            ms, after = [], None
+            while time.time() - t0 < wait_s:
+                ms = self.h.call("menus").get("menus") or []
+                if ms:
+                    after = round(time.time() - t0, 2)
+                    break
+                time.sleep(0.1)
+            tr = {"at": [int(pt[0]), int(pt[1])], "button": chk.get("button"), "menu_after_s": after}
+            if not ms:
+                try:
+                    fg = self.h.call("fg") or {}
+                    tr["fg"] = f"{fg.get('class')} ({fg.get('proc')})"
+                    tr["new_windows"] = [w.get("class") for w in self.h.list("windows") if w["hwnd"] not in before][:6]
+                    at = self.h.call("at", x=int(pt[0]), y=int(pt[1])) or {}
+                    tr["under_now"] = f"{at.get('class')} {at.get('rect')}"
+                except OrigError as e:
+                    tr["diag_error"] = str(e)[:80]
+            rec["tries"].append(tr)
+            if ms:
+                break
+        self.values.append({"choose_menu": rec})
+        clicks = [t for t in rec["tries"] if "at" in t]
+        if ms and len(clicks) == 1 and not first.get("moved_to_button"):
+            return ms
+        desc = "; ".join(
+            "menu open before the click" if t.get("menu_open_before_click") else
+            f"click {t['at']} (button {t.get('button')}) -> "
+            + (f"menu after {t['menu_after_s']} s" if t.get("menu_after_s") is not None else
+               f"no menu in {wait_s} s, fg {t.get('fg')}, under the point {t.get('under_now')}, "
+               f"new windows {t.get('new_windows')}")
+            for t in rec["tries"])
+        self.r.log(f"  orig choose {name}: ui_map point {first.get('ui_map_point')}, under it "
+                   f"{first.get('at', {}).get('class')} {first.get('at', {}).get('rect')}"
+                   + (f", moved to the button {first.get('button')}" if first.get("moved_to_button") else "")
+                   + f": {desc}" + ("" if ms else " - NO MENU"))
+        if not ms:
+            self.choose_why = f"{len(clicks)} clicks: {desc}"[:400]
+        return ms
 
     def click_index_path(self, parts, oi):
         """`orig_index` = raw index (separators count) in the last menu of the path; the text entries before it are
@@ -6916,6 +7063,7 @@ class FpSide(Side):
             pass
         self.call("ui_input", {"events": [{"type": "key", "key": "Escape"}, {"type": "pointer_gone"}]})
         self.popup_rect = None
+        self.context_menu = False  # R-37
         self.ensure_panels_shown()
         if self.view_dirty:
             try:
@@ -7904,6 +8052,23 @@ class FpSide(Side):
         """A text inside the popup opened last in this step (panel menu, R-4) first, then anywhere below the menu
         bar. The popup area grows by the sub menus opened from it."""
         pr = getattr(self, "popup_rect", None)
+        if pr and getattr(self, "context_menu", False):
+            # R-37 (TW-231, run 43 `xs-context-menus/15_effect_delete_result`: 'Löschen' is no entry of the canvas
+            # context menu, the window-wide non-exact lookup clicked the dock's 'Auswahl löschen' or the Properties
+            # panel's 'Stil löschen'): after a right-click only the opened menu and a sub menu right of it are
+            # searched, the entry text must match exactly (ellipsis and '&' ignored), polled for a sub menu that
+            # opens a frame later; not there -> unmapped, like the reference side
+            base = clean_label(str(text).replace("&", "").strip())
+            regions = ([pr[0] - 2, pr[1] - 2, pr[2] + 2, pr[3] + 2], [pr[2] - 4, pr[1] - 40, pr[2] + 400, pr[3] + 300])
+            for k in range(4):
+                if k:
+                    time.sleep(0.3)
+                for region in regions:
+                    hits = (self.call("ui_find", {"text": base, "exact": False, "region": region, "limit": 40}) or {}).get("hits") or []
+                    hits = [h for h in hits if clean_label(str(h.get("text") or "").replace("&", "")) == base]
+                    if hits:
+                        return min(hits, key=lambda h: (0 if "button" not in str(h.get("role") or "") else 1, h["rect"][1]))
+            raise Unmapped(f"fp: '{text}' not in the open context menu (area {[round(v) for v in pr]})")
         if pr:
             # R-5 (panel-library-styles/11): the styles panel's footer button 'Neuer Stil' lies under the menu entry
             # 'Neuer Stil…' and matched the cleaned text exactly, so the click made a style without the dialog. In
@@ -8132,6 +8297,8 @@ class FpSide(Side):
         return self.call("ui_input", dict({"events": events}, **extra))
 
     def key(self, combo):
+        if getattr(self, "context_menu", False):
+            self.context_menu, self.popup_rect = False, None  # R-37: a key closes / leaves the context menu
         mods, k = parse_combo(combo)
         if set(mods) >= {"ctrl", "alt"} and k == "space":
             raise Unsupported("Ctrl+Alt+Space is forbidden")
@@ -8744,7 +8911,29 @@ class FpSide(Side):
             ev = [{"type": "key", "key": egui_key(k), "action": "press"} for k in keys] + [{"type": "wait", "ms": 60}] + ev \
                 + [{"type": "key", "key": egui_key(k), "action": "release"} for k in keys]
         ev.append({"type": "wait", "ms": 200})
+        ctx_before = None
+        if verb.startswith("right"):
+            try:
+                ctx_before = self.window_image()[0]
+            except Exception:  # noqa: BLE001
+                ctx_before = None
         self.inp(ev)
+        if getattr(self, "context_menu", False) and verb not in ("hover", "hover_text") and not verb.startswith("right"):
+            # a click (on an entry or elsewhere) closes the context menu: back to the normal lookups
+            self.context_menu, self.popup_rect = False, None
+        if ctx_before is not None:
+            # R-37 (TW-231): the opened context menu's area (window image before / after, as `panel_menu` does) -
+            # the next text lookups of the step search only there (`find_in_popup`, exact entry texts)
+            try:
+                time.sleep(0.15)
+                img = self.window_image()[0]
+                bb = popup_component(ctx_before, img)
+                if bb and (bb[2] - bb[0]) >= 40 and (bb[3] - bb[1]) >= 30:
+                    self.popup_rect = list(bb)
+                    self.context_menu = True
+                    self.r.log(f"  fp context menu area {[round(v) for v in bb]}")
+            except Exception as e:  # noqa: BLE001
+                self.r.log(f"  fp context menu area: {str(e)[:100]}")
         if loc.get("select") and verb in ("click", "open"):
             hit = self.find(loc["select"], None, True, [0, 30, 10000, 10000])
             self.inp([{"type": "click", "pos": hit["center"]}, {"type": "wait", "ms": 200}])
