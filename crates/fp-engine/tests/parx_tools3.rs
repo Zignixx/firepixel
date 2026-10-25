@@ -683,21 +683,38 @@ fn rectangle_live_rect_while_dragging() {
 
 #[test]
 fn rect_primitive_corner_pointer_and_subselect() {
-    let e = expected();
     let mut s = session();
     let r = rect(&mut s, 100.0, 100.0, 300.0, 250.0);
     select(&mut s, &[r]);
     tool(&mut s, ToolId::Pointer);
     drag(&mut s, (100.0, 100.0), (130.0, 100.0));
-    assert!(rect_near(bounds(&s, r), exp_rect(&e["unit10"]["r06_corner_drag_ptr"]), 0.01), "{:?}", bounds(&s, r));
-    assert_eq!(label(&s).as_deref(), Some("Rechteck modifizieren"));
-    // Teilauswahl: ganzes Rechteck verschieben, Grundform bleibt
+    let ElementKind::Path(p) = &el(&s, r).kind else { panic!("Pfad") };
+    assert!(p.primitive.is_none(), "Punktzug löst die Grundform");
+    let a = p.contours[0].nodes[0].anchor;
+    assert!((a.x - 130.0).abs() < 0.01 && (a.y - 100.0).abs() < 0.01, "{a:?}");
+    assert_eq!(
+        (
+            p.contours[0].nodes[2].anchor.x,
+            p.contours[0].nodes[2].anchor.y
+        ),
+        (300.0, 250.0)
+    );
+    assert_eq!(label(&s).as_deref(), Some("Punkt verschieben"));
+    // Subselection moves the same corner and leaves the opposite one.
     let mut s = session();
     let r = rect(&mut s, 100.0, 100.0, 300.0, 250.0);
     select(&mut s, &[r]);
     tool(&mut s, ToolId::Subselection);
     drag(&mut s, (100.0, 100.0), (80.0, 100.0));
-    assert!(rect_near(bounds(&s, r), Rect::new(80.0, 100.0, 280.0, 250.0), 0.01), "{:?}", bounds(&s, r));
-    assert!(matches!(&el(&s, r).kind, ElementKind::Path(p) if p.primitive.is_some()), "bleibt Rechteck");
-    assert_eq!(label(&s).as_deref(), Some("Verschieben"));
+    let ElementKind::Path(p) = &el(&s, r).kind else { panic!("Pfad") };
+    let a = p.contours[0].nodes[0].anchor;
+    assert!((a.x - 80.0).abs() < 0.01 && (a.y - 100.0).abs() < 0.01, "{a:?}");
+    assert_eq!(
+        (
+            p.contours[0].nodes[2].anchor.x,
+            p.contours[0].nodes[2].anchor.y
+        ),
+        (300.0, 250.0)
+    );
+    assert_eq!(label(&s).as_deref(), Some("Punkt verschieben"));
 }

@@ -2,6 +2,17 @@
 
 User-visible changes on `main` after release v0.2.14. Release notes for a tagged build are still produced by the pre-release workflow ([RELEASE.md](RELEASE.md)).
 
+## 24 Oct 2026 — Path points can be selected and dragged
+
+A corner of a shape is a point. Clicking one selects only that point. Dragging it moves only that point, so a rectangle can be pulled into another outline. The rest of the shape stays where it is.
+
+- The selected point stays filled. The other points of that shape turn hollow.
+- Ctrl+click or Shift+click adds a point, or removes it if it was already selected. Dragging then moves every selected point and leaves the others fixed.
+- Clicking inside the shape, away from a point, still moves the whole object.
+- Delete or Backspace removes the selected points. Deleting one corner of a rectangle leaves a triangle.
+- Arrow keys nudge the selected points. Alt+arrow still duplicates the whole object.
+- The first point drag turns a rectangle primitive into an ordinary path. Undo restores the rectangle.
+
 ## 24 Oct 2026 — Live font preview
 
 While the font list in Properties (or the text editor dialog) is open, the highlighted family is shown on the selected text. Moving the highlight with the pointer, the arrow keys, or the scroll wheel updates the canvas immediately.
