@@ -332,14 +332,18 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   Firepixel extensions beyond the original: with a **group mask** selected, a further Subselection
   click (or a Pointer double-click) selects the child under the pointer, so its anchors can be edited
   one by one and the mask follows; the mask inspector has an **Invert** checkbox (vector and bitmap
-  masks) that hides what lies inside the mask and keeps everything outside (the mask object's own
+  masks; for a vector mask at the right end of the upper row, right above the *Mask:* rows; for a bitmap mask
+  right of *Alpha channel*) that hides what lies inside the mask and keeps everything outside (the mask object's own
   opacity, or a grey value in grayscale mode, sets how strongly). Inverted masks are stored in a
   Firepixel-own tag of the FW-PNG file; other programs show the plain mask.
 - **Mask modes.** *Group as Mask* always makes a grayscale mask with *Show fill and stroke* off; the masked
   element stays selected (History row *Group*). *Paste as Mask* gives a vector mask in *Path outline* mode
   and a bitmap mask in *Grayscale* mode and selects the mask; *Paste Inside* uses *Path outline* with
   *Show fill and stroke* on, so the mask's fill (or bitmap) shows under the content until you turn the
-  checkbox off (both History rows *Paste*). In grayscale the mask value is the luma (Rec. 709) of the mask's
+  checkbox off (both History rows *Paste*). For a bitmap mask *Path outline* is called *Alpha channel*: *Paste
+  Inside* onto a bitmap gives a bitmap mask in *Alpha channel* mode, where the bitmap's own transparency cuts the
+  content; *Add Mask*, *Reveal All* / *Hide All*, *Paste as Mask* of a bitmap and *Group as Mask* give
+  *Grayscale*. In grayscale the mask value is the luma (Rec. 709) of the mask's
   rendered look times its alpha: white shows, black hides, red gives 21 %, green 72 %, blue 7 %; gradients and
   feathered edges ramp. With a mask selected (mask thumbnail in the Layers panel or *Edit Mask*) the inspector
   follows the kind of the mask object, not the mode: a path, text or group (also a group of bitmaps) shows
@@ -588,12 +592,13 @@ visible); the diamond on the tab and a double-click on the tab return to the ful
   the *Anti-aliasing level* list (its *No Anti-Alias* entry is the hard edge), so give a text a Feather or Dither
   edge from a script or the command `pi.fill {edge, feather}`.
 
-- **Dither (fill density):** the per-cent field with the small checkerboard icon below the fill texture name turns
+- **Dither (fill density):** the per-cent field with the small checkerboard icon below the fill texture name (left of *Transparent*) turns
   the whole fill into an even pattern of fully opaque and empty pixels: 50 % is a checkerboard half tone of the
   fill colour, 25 % keeps every fourth pixel, 0 % switches it off and 100 % is the solid fill. It works for every
   fill category (solid, gradient, pattern) and uses the same fixed 8 × 8 pattern as the Dither edge, anchored to
   the document pixels. Combined with a Dither edge a pixel stays on only where both keep it, so the band fades out
-  from the chosen density. A change is one *Fill* step in the History panel; changing the fill category keeps the
+  from the chosen density. The arrow next to the field opens a slider; while you drag it the canvas shows the
+  density live, and releasing applies it. A change is one *Fill* step in the History panel; changing the fill category keeps the
   density. Dither density is a Firepixel extension; a `.fw.png` file stores it only in a Firepixel marker (written
   when the value is not 0), other programs show the plain fill.
 
@@ -640,8 +645,9 @@ visible); the diamond on the tab and a double-click on the tab return to the ful
   (Dots, Lines, Cross-hatch), *Size* (cell pitch 2–32 px), *Angle* (0–180°, default the classic 45° screen),
   *Density from luminance* (on: dark areas get large dots, light areas small ones, white none; off: the constant
   *Density* 0–100 % everywhere), *Color* of the ink (default black) and *Keep object color* (ink with the object's
-  own colour instead). Inked pixels are fully opaque, all others become transparent; the screen is anchored to the
-  document grid. A `.fw.png` file stores the filter only as a Firepixel entry of the effect list, so the reference
+  own colour instead) and *Anti-alias* (off by default: hard dots, inked pixels fully opaque and all others
+  transparent; on: smooth dot and line edges with intermediate transparency). The screen is anchored to the
+  document grid. The batch step *Screentone* (`filter.screentone`) applies the same screen to images. A `.fw.png` file stores the filter only as a Firepixel entry of the effect list, so the reference
   format keeps only its own effects (other programs show the object without the screen).
 
 - **Text tool defaults:** attributes set while the text editor is open change only the marked text;

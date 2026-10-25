@@ -17,13 +17,15 @@
 //!   `1 − (1 − w)² = d`.
 //!
 //! Inked pixels take the screentone colour (alpha × the object's alpha) or, with "keep colour",
-//! the object's own colour; all other pixels become transparent. The output is binary (no partial
-//! coverage), the frame stays (`max_growth` 0).
+//! the object's own colour; all other pixels become transparent. Without "anti-alias" the output
+//! is binary (no partial coverage, hard dots); with "anti-alias" (FB-86) every pixel is sampled
+//! on a 4 × 4 grid inside the pixel and its alpha is scaled by the inked share of the samples, so
+//! dot and line edges get intermediate values. The frame stays (`max_growth` 0).
 //!
 //! Parameters (all text like the other live filters): `screentone_type` 0 dots / 1 lines /
 //! 2 cross-hatch, `screentone_size` 2..32, `screentone_angle` 0..180, `screentone_density`
 //! 0..100, `screentone_from_luminance`, `screentone_color` `#rrggbb[aa]`,
-//! `screentone_keep_color`.
+//! `screentone_keep_color`, `screentone_anti_alias` (missing = off, the hard dots of older files).
 
 use fp_color::Rgba8;
 use fp_raster::RgbaImage;
@@ -79,6 +81,8 @@ pub struct ScreentoneParams {
     pub color: Rgba8,
     /// `screentone_keep_color`: ink with the object's own colour instead of `color`.
     pub keep_color: bool,
+    /// `screentone_anti_alias`: anti-aliased dot and line edges (FB-86, default off).
+    pub anti_alias: bool,
 }
 
 impl Default for ScreentoneParams {
@@ -91,6 +95,7 @@ impl Default for ScreentoneParams {
             from_luminance: true,
             color: Rgba8::new(0, 0, 0, 255),
             keep_color: false,
+            anti_alias: false,
         }
     }
 }
@@ -120,6 +125,7 @@ impl ScreentoneParams {
             from_luminance: p.flag("screentone_from_luminance", d.from_luminance),
             color: p.color("screentone_color", d.color),
             keep_color: p.flag("screentone_keep_color", d.keep_color),
+            anti_alias: p.flag("screentone_anti_alias", d.anti_alias),
         }
     }
 }
@@ -167,6 +173,45 @@ fn inked(kind: ScreentoneKind, u: f64, v: f64, d: f64) -> bool {
     }
 }
 
+/// Sub-pixel grid of the anti-aliased screen (per axis).
+const AA_GRID: usize = 4;
+
+/// Inked share 0..1 of the pixel whose centre lies at document coordinates (cx, cy): one sample
+/// without anti-aliasing, a 4 × 4 grid of samples with it.
+#[inline]
+#[allow(clippy::too_many_arguments)]
+fn coverage(
+    kind: ScreentoneKind,
+    cx: f64,
+    cy: f64,
+    sin: f64,
+    cos: f64,
+    size: f64,
+    d: f64,
+    anti_alias: bool,
+) -> f64 {
+    let at = |x: f64, y: f64| {
+        let u = (x * cos + y * sin) / size;
+        let v = (y * cos - x * sin) / size;
+        inked(kind, u, v, d)
+    };
+    if !anti_alias {
+        return if at(cx, cy) { 1.0 } else { 0.0 };
+    }
+    let step = 1.0 / AA_GRID as f64;
+    let mut n = 0usize;
+    for sj in 0..AA_GRID {
+        let y = cy - 0.5 + (sj as f64 + 0.5) * step;
+        for si in 0..AA_GRID {
+            let x = cx - 0.5 + (si as f64 + 0.5) * step;
+            if at(x, y) {
+                n += 1;
+            }
+        }
+    }
+    n as f64 / (AA_GRID * AA_GRID) as f64
+}
+
 /// Applies the Screentone filter to an object image (same frame).
 pub fn screentone(obj: &RgbaImage, p: &ScreentoneParams) -> RgbaImage {
     let mut out = obj.clone();
@@ -190,19 +235,24 @@ pub fn screentone(obj: &RgbaImage, p: &ScreentoneParams) -> RgbaImage {
                 continue;
             }
             let cx = (b.left + i as i32) as f64 + 0.5;
-            let u = (cx * cos + cy * sin) / size;
-            let v = (cy * cos - cx * sin) / size;
             let d = if p.from_luminance {
                 darkness(src)
             } else {
                 constant
             };
-            *px = if !inked(p.kind, u, v, d) {
+            let cov = coverage(p.kind, cx, cy, sin, cos, size, d, p.anti_alias);
+            let scale = |a: u32| (a as f64 * cov).round() as u32;
+            *px = if cov <= 0.0 {
                 [0, 0, 0, 0]
             } else if p.keep_color {
-                src
+                let a = scale(src[3] as u32);
+                if a == 0 {
+                    [0, 0, 0, 0]
+                } else {
+                    [src[0], src[1], src[2], a as u8]
+                }
             } else {
-                let a = (src[3] as u32 * p.color.a as u32 + 127) / 255;
+                let a = scale((src[3] as u32 * p.color.a as u32 + 127) / 255);
                 if a == 0 {
                     [0, 0, 0, 0]
                 } else {
@@ -244,6 +294,58 @@ mod tests {
         assert_eq!(p.angle, 0.0);
         assert_eq!(p.kind, ScreentoneKind::CrossHatch);
         assert!(p.from_luminance && !p.keep_color);
+        assert!(!p.anti_alias, "missing flag = hard dots");
         assert_eq!(p.color, Rgba8::new(0, 0, 0, 255));
+    }
+
+    fn flat_grey() -> RgbaImage {
+        let r = fp_raster::IRect::new(0, 0, 40, 40);
+        RgbaImage::from_raw(r, vec![[128, 128, 128, 255]; 1600]).expect("image")
+    }
+
+    fn alphas(img: &RgbaImage) -> std::collections::BTreeSet<u8> {
+        img.data().iter().map(|p| p[3]).collect()
+    }
+
+    #[test]
+    fn anti_alias_gives_intermediate_edge_values() {
+        let hard = screentone(&flat_grey(), &ScreentoneParams::default());
+        let a = alphas(&hard);
+        assert_eq!(
+            a.into_iter().collect::<Vec<_>>(),
+            vec![0, 255],
+            "two values"
+        );
+        let p = ScreentoneParams {
+            anti_alias: true,
+            ..ScreentoneParams::default()
+        };
+        let soft = screentone(&flat_grey(), &p);
+        let a = alphas(&soft);
+        assert!(a.contains(&0) && a.contains(&255), "{a:?}");
+        assert!(
+            a.iter().any(|v| *v > 0 && *v < 255),
+            "intermediate values at the dot edges"
+        );
+        // composited over white the edges are grey
+        let greys: std::collections::BTreeSet<u8> = soft
+            .data()
+            .iter()
+            .map(|p| 255 - p[3])
+            .filter(|g| *g > 0 && *g < 255)
+            .collect();
+        assert!(greys.len() > 3, "{greys:?}");
+        // the inked share stays about the tone (Rec. 601 darkness of 128 grey ≈ 0.498)
+        let ink: f64 = soft.data().iter().map(|p| p[3] as f64 / 255.0).sum::<f64>() / 1600.0;
+        assert!((ink - 0.498).abs() < 0.05, "{ink}");
+    }
+
+    #[test]
+    fn anti_alias_flag_is_read() {
+        let p = ScreentoneParams::read(Params(&crate::params::params_from_pairs([(
+            "screentone_anti_alias",
+            "true",
+        )])));
+        assert!(p.anti_alias);
     }
 }

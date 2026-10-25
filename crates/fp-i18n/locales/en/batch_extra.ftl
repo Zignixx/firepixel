@@ -479,3 +479,23 @@ batch-param-output-gif-perceptualPalette = Perceptual palette
     .tooltip = Flat areas count more than busy texture, where colour errors are hardly visible, when the colours are chosen.
 batch-param-output-gif-lossyMinSsim = Loss with quality bound (SSIM)
     .tooltip = 0 = off. Otherwise each frame uses the strongest LZW loss whose image keeps at least this similarity (SSIM, 0.5–0.9999, e.g. 0.99) to the frame; replaces “Loss”.
+
+## Screentone (Firepixel extension, FB-38 / FB-86)
+batch-step-filter-screentone = Screentone
+    .description = Turns every image into a halftone screen of dots, lines or cross-hatching, like the printed tones of comics.
+batch-param-filter-screentone-pattern = Pattern
+batch-value-filter-screentone-pattern-dots = Dots
+batch-value-filter-screentone-pattern-lines = Lines
+batch-value-filter-screentone-pattern-crossHatch = Cross-hatch
+batch-param-filter-screentone-size = Screen size
+    .tooltip = Distance between the dots (or lines) in pixels.
+batch-param-filter-screentone-angle = Angle
+batch-param-filter-screentone-fromLuminance = Density from brightness
+    .tooltip = Dark areas get large dots, light areas small ones. Off: the same density everywhere.
+batch-param-filter-screentone-density = Density
+    .tooltip = Share of ink when "Density from brightness" is off.
+batch-param-filter-screentone-color = Ink color
+batch-param-filter-screentone-keepColor = Keep image color
+    .tooltip = The dots keep the color of the image instead of the ink color.
+batch-param-filter-screentone-antiAlias = Anti-alias
+    .tooltip = Smooth dot edges with intermediate tones. Off: hard dots of only ink and transparency.

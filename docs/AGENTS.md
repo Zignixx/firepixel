@@ -176,7 +176,7 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     `{firepixel-screentone}`) mit den Textparametern `screentone_type` 0 Punkte / 1 Linien / 2 Kreuzschraffur,
     `screentone_size` 2..32 (Vorgabe 8), `screentone_angle` 0..180 (45), `screentone_density` 0..100 (50, gilt bei
     `screentone_from_luminance` = `false`), `screentone_from_luminance` (`true`), `screentone_color` (`#000000`),
-    `screentone_keep_color` (`false`); bearbeiten mit `pi.effect.set {index, params}`, Skripte über `effectList` wie
+    `screentone_keep_color` (`false`), `screentone_anti_alias` (`false`, geglättete Punktränder; fehlt = aus); bearbeiten mit `pi.effect.set {index, params}`, Skripte über `effectList` wie
     die anderen Live-Filter. FW-PNG: ein Eintrag `fpLv` der Effektliste statt eines `EPSv`
     `element.setFillHandles`. Ein Zug an der Linie h1–h2 bzw. h1–h3 dreht beide Arme starr um h1 (ein Schritt
     `element.rotateFillHandles {axis, toward}`, `toward` = Zeiger − h1); Umschalt beschränkt den Zug auf die

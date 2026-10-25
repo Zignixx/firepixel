@@ -311,6 +311,12 @@ pub fn set_panel_rect(ctx: &egui::Context, r: Rect) {
     ctx.data_mut(|d| d.insert_temp(Id::new(PANEL_RECT), (r, pass)));
 }
 
+/// Screen rect of the Properties inspector in the current (or last) frame; for tests.
+pub fn panel_rect(ctx: &egui::Context) -> Option<Rect> {
+    ctx.data(|d| d.get_temp::<(Rect, u64)>(Id::new(PANEL_RECT)))
+        .map(|(r, _)| r)
+}
+
 /// Was the mouse pressed on empty inspector space (no control under it)? Such a click keeps the
 /// focus in the number field and applies nothing (FB-09, measured in the reference: "click on
 /// empty panel space does not take the focus").

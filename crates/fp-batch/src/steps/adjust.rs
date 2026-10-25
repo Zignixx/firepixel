@@ -1,6 +1,7 @@
 //! Gruppe „Farbe und Effekte“ (SPEC-BATCH §3.4, Paket BATCH-4): `adjust.auto`, `adjust.basic`,
 //! `adjust.levels`, `adjust.curves`, `adjust.grayscale`, `adjust.invert`, `filter.sharpen`,
-//! `filter.blur`, `filter.registry` und `effect.live`.
+//! `filter.blur`, `filter.registry`, `effect.live` und `filter.screentone` (Firepixel-Erweiterung
+//! FB-38/FB-86).
 //!
 //! Die Rechenwege kommen aus den vorhandenen Filtern (`fp-raster`, dieselben wie *Filter ▸ …* im
 //! Menü) bzw. der Effekt-Engine (`fp-effects`, wie die Live-Effekte im Dokument). Eigene Rechnung nur
@@ -39,6 +40,7 @@ pub const FILTER_SHARPEN: &str = "filter.sharpen";
 pub const FILTER_BLUR: &str = "filter.blur";
 pub const FILTER_REGISTRY: &str = "filter.registry";
 pub const EFFECT_LIVE: &str = "effect.live";
+pub const FILTER_SCREENTONE: &str = "filter.screentone";
 
 /// Registriert die Schritte der Gruppe.
 pub fn register(r: &mut StepRegistry) {
@@ -52,6 +54,7 @@ pub fn register(r: &mut StepRegistry) {
     r.register(Arc::new(FilterBlur));
     r.register(Arc::new(FilterRegistry));
     r.register(Arc::new(EffectLive));
+    r.register(Arc::new(FilterScreentone));
 }
 
 // =================================================================== Hilfen
@@ -925,5 +928,70 @@ impl Step for EffectLive {
             "batch-value-effect-live-effect-{}",
             p_str(p, "effect", "dropShadow")
         ))
+    }
+}
+
+// =================================================================== filter.screentone
+
+/// `filter.screentone`: the Screentone live filter (Firepixel extension, FB-38) on the pixels of
+/// every image, with the same parameters as its dialog; `antiAlias` (FB-86) smooths the dot edges.
+struct FilterScreentone;
+
+/// Patterns of `filter.screentone` (file values 0, 1, 2 of `screentone_type`).
+pub const SCREENTONE_PATTERNS: [&str; 3] = ["dots", "lines", "crossHatch"];
+
+/// Screentone parameters of a `filter.screentone` step (`scale` < 1 on the preview proxy).
+pub fn screentone_params(p: &Value, scale: f64) -> fp_effects::ScreentoneParams {
+    let d = fp_effects::ScreentoneParams::default();
+    let kind = SCREENTONE_PATTERNS
+        .iter()
+        .position(|k| *k == p_str(p, "pattern", "dots"))
+        .unwrap_or(0);
+    let (lo, hi) = fp_effects::ScreentoneParams::SIZE_RANGE;
+    let c = p_color(p, "color", [0, 0, 0, 255]);
+    fp_effects::ScreentoneParams {
+        kind: fp_effects::ScreentoneKind::from_i64(kind as i64),
+        size: (p_f64(p, "size", d.size).clamp(lo, hi) * scale).max(lo),
+        angle: p_f64(p, "angle", d.angle).clamp(0.0, 180.0),
+        density: p_f64(p, "density", d.density).clamp(0.0, 100.0),
+        from_luminance: p_bool(p, "fromLuminance", d.from_luminance),
+        color: fp_color::Rgba8::new(c[0], c[1], c[2], c[3]),
+        keep_color: p_bool(p, "keepColor", d.keep_color),
+        anti_alias: p_bool(p, "antiAlias", d.anti_alias),
+    }
+}
+
+impl Step for FilterScreentone {
+    fn id(&self) -> &str {
+        FILTER_SCREENTONE
+    }
+    fn group(&self) -> StepGroup {
+        StepGroup::Color
+    }
+    fn params(&self) -> Vec<ParamDef> {
+        vec![
+            ParamDef::choice("pattern", &SCREENTONE_PATTERNS, "dots").beginner(),
+            ParamDef::int("size", 2, 32, 8).unit("px").beginner(),
+            ParamDef::int("angle", 0, 180, 45).unit("°"),
+            ParamDef::bool("fromLuminance", true),
+            ParamDef::int("density", 0, 100, 50).unit("%"),
+            ParamDef::color("color", "#000000"),
+            ParamDef::bool("keepColor", false),
+            ParamDef::bool("antiAlias", false).beginner(),
+        ]
+    }
+    fn applies_to(&self) -> &[ItemKind] {
+        &ItemKind::PIXELS
+    }
+    fn apply(&self, item: &mut Item, params: &Value, ctx: &mut StepContext) -> Result<()> {
+        let scale = preview_scale(item, ctx);
+        let p = screentone_params(params, scale.min(1.0));
+        for img in frames_mut(item)? {
+            ctx.check_cancel()?;
+            *img = fp_effects::screentone::screentone(img, &p);
+        }
+        finish(item);
+        refresh_transparency(item);
+        Ok(())
     }
 }

@@ -45,6 +45,7 @@ pub(super) fn register(r: &mut QuadrantRegistry) {
     r.register(14009, text_tool_q3);
     r.register(14128, mask_q3);
     r.register(15105, mask_options_q6);
+    r.register(super::layouts::MASK_INVERT_Q5, mask_invert_q5);
     r.register(14140, path_q3);
     r.register(14098, path_q4);
     r.register(14147, text_q3);
@@ -1128,8 +1129,8 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
     }
     // "Lock pattern to document" (Firepixel extension, FB-44): only for a selected pattern or
     // gradient; a padlock toggle in the free space between "Transparent" and the gradient dither
-    // toggle (same size, like the fill kind toggles above), since the free corner below the
-    // texture label holds the dither density field (FB-38) and has no room for a text checkbox
+    // toggle (same size, like the fill kind toggles above); the row has no room for a text
+    // checkbox
     if lock_shown
         && fields::toggle(
             ui,
@@ -1152,24 +1153,27 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
             .map(|f| f.dither_density)
             .unwrap_or(0);
         let den = enabled && kind != 0 && attrs.is_some();
-        // a small checkerboard icon instead of a text label (the free space holds no label
-        // next to a field wide enough for "100%"); the tooltip names the field
-        let lr = d.r(0.0, 15.0, 10.0, 13.0);
+        // a small checkerboard icon instead of a text label. FB-88: the row has no free space
+        // (the quad ends below it, the reference's "Transparent" starts at 33 DLU), so the field
+        // shows the bare number like the texture amount field next to it (the "%" made it wider
+        // and it touched the checkbox) and gets the pop-up slider arrow of the per-cent fields
+        // with a live canvas preview; icon, field and arrow end 3 DLU before "Transparent"
+        let lr = d.r(0.0, 15.0, 7.0, 13.0);
         dither_icon(ui, lr, den);
-        let fr = d.r(11.0, 15.0, 21.0, 13.0);
-        if let Some(v) = fields::number_unit(
+        let fr = d.r(7.0, 15.0, 16.0, 13.0);
+        if let Some(v) = fields::number(
             ui,
             id.with("density"),
             fr,
-            None,
+            Some(d.r(23.0, 15.0, 7.0, 13.0)),
             Some(density as f64),
             (0.0, 100.0),
             0,
             den,
-            "%",
         ) {
             apply_fill(ui, st, tgt, json!({"ditherDensity": v as i64}));
         }
+        preview_slider(ui, st, id.with("density"), den, PreviewValue::DitherDensity);
         tooltip_at(
             ui,
             id.with("density-tip"),
@@ -4118,8 +4122,9 @@ fn text_tool_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
 fn mask_q3(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let d = Dl::at(r.min);
     bitmap_mask_radios(ui, st, d, "pi-bmask");
-    // Firepixel extension (FB-35): Invert below the mode radios
-    mask_invert_box(ui, st, d.r(2.0, 28.0, 160.0, 12.0));
+    // Firepixel extension (FB-35): Invert right of the mode radios (FB-83: below them it began at
+    // 28 DLU = 45.5 px and was cut off at the row's bottom edge)
+    mask_invert_box(ui, st, d.r(125.0, 2.0, 80.0, 10.0));
 }
 
 /// Mode of the mask being edited (owner of the selected mask): `Some(true)` = "mask to path"
@@ -4197,11 +4202,14 @@ fn mask_options_q6(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let Some(m) = owner.as_ref().and_then(|o| o.element_mask()) else {
         return;
     };
-    fields::label(ui, d.r(2.0, 2.0, 40.0, 10.0), &t("pi-mask"), true);
+    // FB-83: the rows of the reference in their order (Mask: Path outline / Grayscale, then Show
+    // fill and stroke) at a pitch of 9.5 DLU (15 px), so all three end inside the quad (29.5 DLU =
+    // 48 px); before, Show sat at 24..36 DLU (39..58 px) and was cut off at the panel's bottom
+    fields::label(ui, d.r(2.0, 1.0, 24.0, 8.0), &t("pi-mask"), true);
     if fields::radio(
         ui,
         egui::Id::new("pi-mask-path"),
-        d.r(44.0, 0.0, 110.0, 12.0),
+        d.r(26.0, 0.0, 90.0, 9.5),
         &t("pi-mask-path-outline"),
         m.to_path,
         true,
@@ -4212,7 +4220,7 @@ fn mask_options_q6(ui: &mut Ui, st: &mut AppState, r: Rect) {
     if fields::radio(
         ui,
         egui::Id::new("pi-mask-image"),
-        d.r(44.0, 12.0, 110.0, 12.0),
+        d.r(26.0, 9.5, 90.0, 9.5),
         &t("pi-mask-grayscale"),
         !m.to_path,
         true,
@@ -4223,14 +4231,23 @@ fn mask_options_q6(ui: &mut Ui, st: &mut AppState, r: Rect) {
     if let Some(v) = fields::checkbox(
         ui,
         egui::Id::new("pi-mask-show"),
-        d.r(2.0, 24.0, 160.0, 12.0),
+        d.r(2.0, 19.5, 114.0, 9.5),
         &t("pi-mask-show-attrs"),
         m.show_attrs,
         m.to_path,
     ) {
         st.run("modify.mask.options", json!({"showAttrs": v}));
     }
-    mask_invert_box(ui, st, d.r(2.0, 36.0, 160.0, 12.0));
+    // FB-83: the Firepixel "Invert" checkbox no longer sits in a fourth row here (it reached the
+    // quad's bottom edge and was cut off); it is in Q5 right above ([`mask_invert_q5`])
+}
+
+/// Q5 of a selected vector mask (Firepixel extension, FB-35/FB-83): the "Invert" checkbox at the
+/// bottom of the quad right above the mask rows of Q6, in the same column and indent. The
+/// reference leaves this quad empty; its own mask rows in Q6 keep their measured order.
+fn mask_invert_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
+    let d = Dl::at(r.min + vec2(4.0, 0.0));
+    mask_invert_box(ui, st, d.r(2.0, 19.5, 114.0, 9.5));
 }
 
 /// Für Tests: Text einer Elementart im Inspektor (Q1).

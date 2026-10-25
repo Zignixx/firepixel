@@ -805,6 +805,8 @@ fn effect_params(d: &FormDialog) -> Value {
                 json!(s("color").as_str().unwrap_or("#000000ff")),
             );
             params.insert("screentone_keep_color".into(), json!(flag("keep_color")));
+            // FB-86: anti-aliased dot edges (missing in older files = off)
+            params.insert("screentone_anti_alias".into(), json!(flag("anti_alias")));
         }
         _ => {}
     }
@@ -1090,6 +1092,11 @@ pub fn effect_form(
                         "keep_color",
                         t("dlg-fx-screentone-keep-color").as_str(),
                         flag("screentone_keep_color", false),
+                    ),
+                    Field::check(
+                        "anti_alias",
+                        t("dlg-fx-screentone-anti-alias").as_str(),
+                        flag("screentone_anti_alias", false),
                     ),
                 ],
             )

@@ -362,7 +362,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     ui.ctx()
         .data_mut(|d| d.insert_temp(Id::new("inspector-state"), state.clone()));
     let half = st.settings.workspace.inspector_half;
-    if body.width() + 0.5 >= BODY_WIDTH {
+    // FB-83 (like TW-224 for the panels): a dragged height between half and full height shows
+    // both rows but has less room than they need; the inspector then scrolls vertically instead
+    // of cutting off the lower rows (e.g. the mask options of Q6)
+    let content_h = content_height(&theme);
+    let need_w = body.width() + 0.5 < BODY_WIDTH;
+    let need_h = !half && body.height() + 0.5 < content_h;
+    if !need_w && !need_h {
         quadrants(ui, st, body, &state, half, &theme);
     } else {
         // schmales Fenster: die Quadranten behalten ihre Breite nach dem Original, der Inspektor
@@ -379,13 +385,20 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         // erkennt; das Mausrad blättert ohne Umschalttaste waagerecht.
         child.spacing_mut().scroll = hscroll_style();
         child.style_mut().always_scroll_the_only_direction = true;
-        let out = egui::ScrollArea::horizontal()
-            .id_salt("inspector-hscroll")
+        let size = vec2(
+            if need_w { BODY_WIDTH } else { body.width() },
+            if need_h { content_h } else { body.height() },
+        );
+        let out = egui::ScrollArea::new([need_w, need_h])
+            .id_salt(if need_h {
+                "inspector-vscroll"
+            } else {
+                "inspector-hscroll"
+            })
             .auto_shrink([false, false])
             .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
             .show(&mut child, |ui| {
-                let (r, _) =
-                    ui.allocate_exact_size(vec2(BODY_WIDTH, body.height()), Sense::hover());
+                let (r, _) = ui.allocate_exact_size(size, Sense::hover());
                 quadrants(ui, st, r, &state, half, &theme);
             });
         ui.ctx()
@@ -400,6 +413,11 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
 }
 
 const HSCROLL_ID: &str = "inspector-hscroll-viewport";
+
+/// Height the two rows of quads need below the tab row (top margin, two rows, bottom margin).
+pub fn content_height(theme: &Theme) -> f32 {
+    2.0 * theme.metrics.inspector_row_height + 6.0
+}
 
 /// Sichtbarer Ausschnitt des waagerechten Bildlaufs im schmalen Fenster (`None`, wenn der
 /// Inspektor ganz hineinpasst). Texte, die genau an dieser Kante enden, sind nicht abgeschnitten,

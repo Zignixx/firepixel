@@ -358,7 +358,8 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Firepixel-Erweiterungen über das Original hinaus: Ist eine **Gruppenmaske** gewählt, wählt ein weiterer
   Klick mit der Teilauswahl (oder ein Doppelklick mit dem Zeiger) das Kind unter dem Zeiger, sodass sich
   seine Punkte einzeln bearbeiten lassen und die Maske folgt; der Masken-Inspektor hat ein Kästchen
-  **Invertieren** (Vektor- und Bitmapmasken), das verbirgt, was innerhalb der Maske liegt, und alles
+  **Invertieren** (Vektor- und Bitmapmasken; bei einer Vektormaske rechts in der oberen Zeile direkt über den
+  Zeilen *Maske:*, bei einer Bitmapmaske rechts neben *Alphakanal*), das verbirgt, was innerhalb der Maske liegt, und alles
   außerhalb zeigt (die eigene Deckkraft des Maskenobjekts bzw. ein Grauwert im Graustufenmodus bestimmt,
   wie stark). Invertierte Masken stehen in einem Firepixel-eigenen Tag der FW-PNG-Datei; andere Programme
   zeigen die normale Maske.
@@ -366,7 +367,10 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   anzeigen* aus; das maskierte Element bleibt gewählt (Verlaufszeile *Gruppieren*). *Als Maske einfügen* gibt
   bei einer Vektormaske den Modus *Pfadumriss*, bei einer Bitmapmaske *Graustufen* und wählt die Maske;
   *Innen einfügen* nimmt *Pfadumriss* mit *Füllung und Pinselstrich anzeigen* an, die Füllung (bzw. Bitmap)
-  der Maske liegt also unter dem Inhalt, bis das Kästchen aus ist (beide Zeilen *Einfügen*). In Graustufen ist
+  der Maske liegt also unter dem Inhalt, bis das Kästchen aus ist (beide Zeilen *Einfügen*). Bei einer Bitmapmaske heißt *Pfadumriss* *Alphakanal*:
+  *Innen einfügen* auf eine Bitmap gibt eine Bitmapmaske im Modus *Alphakanal*, deren eigene Transparenz den
+  Inhalt beschneidet; *Maske hinzufügen*, *Alles einblenden* / *Alles ausblenden*, *Als Maske einfügen* einer
+  Bitmap und *Als Maske gruppieren* geben *Graustufen*. In Graustufen ist
   der Maskenwert die Luma (Rec. 709) des gerenderten Maskenaussehens mal Alpha: Weiß zeigt, Schwarz blendet aus,
   Rot ergibt 21 %, Grün 72 %, Blau 7 %; Verläufe und weiche Kanten laufen aus. Ist eine Maske gewählt
   (Maskenminiatur im Ebenen-Bedienfeld oder *Maske bearbeiten*), richtet sich der Inspektor nach der Art des
@@ -640,11 +644,12 @@ und eingeklappte Höhe her.
   Dither-Kante daher per Skript oder mit dem Befehl `pi.fill {edge, feather}`.
 
 - **Dither (Dichte der Füllung):** Das Prozentfeld mit dem kleinen Schachbrett-Symbol unter dem Namen der
-  Fülltextur macht aus der ganzen Füllung ein gleichmäßiges Raster aus ganz deckenden und leeren Pixeln: 50 % ist
+  Fülltextur (links von *Transparent*) macht aus der ganzen Füllung ein gleichmäßiges Raster aus ganz deckenden und leeren Pixeln: 50 % ist
   ein schachbrettartiger Halbton der Füllfarbe, 25 % behält jedes vierte Pixel, 0 % schaltet es aus, 100 % ist die
   volle Füllung. Es wirkt bei jeder Füllart (Vollfarbe, Verlauf, Muster) und nutzt dasselbe feste 8 × 8-Raster wie
   der Dither-Rand, verankert an den Dokumentpixeln. Zusammen mit einem Dither-Rand bleibt ein Pixel nur an, wo
-  beide es behalten; der Rand läuft also von der gewählten Dichte nach außen aus. Eine Änderung ist ein Schritt
+  beide es behalten; der Rand läuft also von der gewählten Dichte nach außen aus. Der Pfeil neben dem Feld öffnet einen
+  Schieberegler; beim Ziehen zeigt die Leinwand die Dichte sofort, Loslassen übernimmt sie. Eine Änderung ist ein Schritt
   *Füllen* im Protokoll; ein Wechsel der Füllart behält die Dichte. Die Dither-Dichte ist eine
   Firepixel-Erweiterung; eine `.fw.png`-Datei speichert sie nur in einer Firepixel-Markierung (geschrieben, wenn
   der Wert nicht 0 ist), andere Programme zeigen die normale Füllung.
@@ -695,8 +700,10 @@ und eingeklappte Höhe her.
   *Muster* (Punkte, Linien, Kreuzschraffur), *Rasterweite* (Zellenabstand 2–32 px), *Winkel* (0–180°, Vorgabe das
   klassische 45°-Raster), *Dichte aus der Helligkeit* (an: dunkle Stellen bekommen große Punkte, helle kleine, Weiß
   keine; aus: überall die feste *Dichte* 0–100 %), *Farbe* der Tinte (Vorgabe Schwarz) und *Objektfarbe beibehalten*
-  (Tinte in der eigenen Farbe des Objekts). Getroffene Pixel sind ganz deckend, alle anderen werden transparent; das
-  Raster ist am Dokumentraster verankert. Eine `.fw.png`-Datei speichert den Filter nur als Firepixel-Eintrag der
+  (Tinte in der eigenen Farbe des Objekts) und *Glätten* (Vorgabe aus: harte Punkte, getroffene Pixel ganz deckend,
+  alle anderen transparent; an: glatte Punkt- und Linienränder mit Zwischenstufen der Transparenz). Das Raster ist am
+  Dokumentraster verankert. Der Stapelschritt *Rasterfolie* (`filter.screentone`) wendet dasselbe Raster auf Bilder
+  an. Eine `.fw.png`-Datei speichert den Filter nur als Firepixel-Eintrag der
   Effektliste; das Format des Originals behält also nur seine eigenen Effekte (andere Programme zeigen das Objekt
   ohne Raster).
 

@@ -1,5 +1,5 @@
 //! FB-38 (Firepixel extensions) in the Properties inspector:
-//! - the fill section has a field "… %" with a small checkerboard icon (uniform dither density of
+//! - the fill section has a per-cent field with a small checkerboard icon (uniform dither density of
 //!   the whole fill) below the texture name; typing a value applies it as one fill history row;
 //! - the live filter menu "+" has "Screentone" ("Rasterfolie") under Other; its dialog adds the
 //!   effect with all parameters, the edit dialog of an existing Screentone changes the same entry.
@@ -68,12 +68,13 @@ fn undo_count(h: &H) -> usize {
     st(h).session.active().map(|d| d.history.undo_count()).unwrap_or(0)
 }
 
-/// The dither density field: the inspector text field showing a value with "%" below the
-/// texture name (the only per-cent text field of the fill column).
+/// The dither density field: the inspector text field left of "Transparent" in its row (FB-88:
+/// the bare number like the texture amount field).
 fn density_field(h: &H) -> (egui::Rect, String, bool) {
+    let tr = h.get_by_label(&fp_i18n::t("pi-texture-transparent")).rect();
     h.get_all(By::new().role(egui::accesskit::Role::TextInput))
-        .filter(|n| n.rect().top() > HH - 160.0 && n.value().unwrap_or_default().ends_with('%'))
-        .min_by(|a, b| a.rect().left().total_cmp(&b.rect().left()))
+        .filter(|n| (n.rect().center().y - tr.center().y).abs() < 3.0 && n.rect().right() <= tr.left())
+        .max_by(|a, b| a.rect().left().total_cmp(&b.rect().left()))
         .map(|n| (n.rect(), n.value().unwrap_or_default(), !n.accesskit_node().is_disabled()))
         .expect("dither density field")
 }
@@ -82,7 +83,7 @@ fn density_field(h: &H) -> (egui::Rect, String, bool) {
 fn dither_density_field_applies_one_fill_row() {
     let (mut h, id) = harness_with_rect();
     let (f, value, enabled) = density_field(&h);
-    assert_eq!(value, "0%");
+    assert_eq!(value, "0");
     assert!(enabled);
     let rows = undo_count(&h);
     click(&mut h, f.center());
@@ -95,7 +96,7 @@ fn dither_density_field_applies_one_fill_row() {
     h.run_steps(2);
     assert_eq!(density(&h, id), 50);
     assert_eq!(undo_count(&h), rows + 1, "one history row");
-    assert_eq!(density_field(&h).1, "50%");
+    assert_eq!(density_field(&h).1, "50");
     // the tooltip text exists in both languages
     for lang in ["de", "en"] {
         assert!(fp_i18n::with_language(lang, || fp_i18n::t("pi-fill-dither-density-tip")).contains("Dither"), "{lang}");

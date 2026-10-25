@@ -18,7 +18,8 @@
 //!
 //! Extended by FB-28/FB-29 (TW-205/TW-206): the Layers panel's opacity slider, the pending alpha
 //! (and colour) of the fill and stroke colour pop-ups of the inspector, the Tools panel and the
-//! Color Mixer, the Color Mixer's channel sliders and the rectangle roundness.
+//! Color Mixer, the Color Mixer's channel sliders and the rectangle roundness. FB-88 adds the
+//! fill's dither density.
 //!
 //! FB-46: a pending value belongs to the objects it was started for. The pop-up slider and the
 //! colour pop-up remember the selection when they open ([`PreviewTarget`]); a commit whose
@@ -50,6 +51,8 @@ pub enum PreviewValue {
     Feather(f64),
     /// Fill texture amount in percent, like `pi.fill {textureAmount}`.
     FillTextureAmount(f64),
+    /// Uniform dither density of the fill in percent, like `pi.fill {ditherDensity}` (FB-88).
+    DitherDensity(f64),
     /// Stroke texture amount in percent, like `pi.stroke {textureAmount}`.
     StrokeTextureAmount(f64),
     /// Text attributes, the parameters of `text.applyAttributes` (e.g. `{"size": 40}`).
@@ -112,6 +115,7 @@ impl InspectorPreview {
             PreviewValue::Roundness { value, pixels } => {
                 (9u8, value.to_bits(), *pixels).hash(&mut h)
             }
+            PreviewValue::DitherDensity(v) => (11u8, v.to_bits()).hash(&mut h),
         }
         h.finish() | 1
     }
@@ -168,6 +172,13 @@ impl InspectorPreview {
                     fp_engine::docops::edit_path_attrs(e, &|a| {
                         if let Some(f) = a.fill.as_mut() {
                             f.texture_amount = pct(*v) * 10;
+                        }
+                    });
+                }
+                PreviewValue::DitherDensity(v) => {
+                    fp_engine::docops::edit_path_attrs(e, &|a| {
+                        if let Some(f) = a.fill.as_mut() {
+                            f.dither_density = pct(*v);
                         }
                     });
                 }

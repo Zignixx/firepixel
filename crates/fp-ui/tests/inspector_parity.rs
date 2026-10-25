@@ -588,7 +588,7 @@ fn bounds(h: &H, id: u64) -> (f64, f64, f64, f64) {
 
 /// Felder B, X, H, Y (Index 0–3) im Inspektor-Quadranten links unten.
 fn box_fields(h: &H) -> Vec<(egui::Rect, String)> {
-    let mut v: Vec<_> = inputs(h).into_iter().filter(|(r, _)| r.left() < 220.0 && r.top() > HH - 70.0).collect();
+    let mut v: Vec<_> = inputs(h).into_iter().filter(|(r, _)| r.right() < 205.0 && r.top() > HH - 70.0).collect();
     v.sort_by(|a, b| a.0.top().total_cmp(&b.0.top()).then(a.0.left().total_cmp(&b.0.left())));
     assert_eq!(v.len(), 4, "B/X/H/Y: {v:?}");
     v

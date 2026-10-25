@@ -436,7 +436,7 @@ fn text_tool_defaults_antialias_kern_orientation() {
 // ------------------------------------------------------------------ Textgrenzen beim Bearbeiten
 
 fn box_texts(h: &H) -> Vec<String> {
-    let mut v: Vec<_> = inputs(h).into_iter().filter(|(r, _)| r.left() < 220.0 && r.top() > HH - 70.0).collect();
+    let mut v: Vec<_> = inputs(h).into_iter().filter(|(r, _)| r.right() < 205.0 && r.top() > HH - 70.0).collect();
     v.sort_by(|a, c| a.0.top().total_cmp(&c.0.top()).then(a.0.left().total_cmp(&c.0.left())));
     v.into_iter().map(|x| x.1).collect()
 }

@@ -426,6 +426,7 @@ dlg-fx-screentone-size = Rasterweite:
 dlg-fx-screentone-density = Dichte:
 dlg-fx-screentone-from-luminance = Dichte aus der Helligkeit
 dlg-fx-screentone-keep-color = Objektfarbe beibehalten
+dlg-fx-screentone-anti-alias = Glätten
 
 ## Formular-Dialoge (form.rs)
 dlg-preview = Vorschau

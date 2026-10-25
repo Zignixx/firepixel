@@ -258,3 +258,30 @@ fn default_values_leave_the_reference_format_untouched() {
             .is_some_and(|l| l.effects.iter().all(|x| !x.is_firepixel()))
     );
 }
+
+/// FB-86: the Screentone flag "anti-alias" (`screentone_anti_alias`) round-trips in the `fpLv`
+/// entry; a file written before the flag existed has no key, which reads as off (hard dots).
+#[test]
+fn screentone_anti_alias_round_trips_and_is_optional() {
+    let mut on = screentone();
+    on.set("screentone_anti_alias", "true");
+    let list = EffectList {
+        effects: vec![on],
+        ..EffectList::default()
+    };
+    let back = effects_back(&write_effect_list(&list));
+    assert_eq!(all_pairs(&back), all_pairs(&list));
+    assert_eq!(back.effects[0].get("screentone_anti_alias"), Some("true"));
+    assert_eq!(
+        back.effects[0].get_bool("screentone_anti_alias"),
+        Some(true)
+    );
+    // older file: no key at all
+    let old = EffectList {
+        effects: vec![screentone()],
+        ..EffectList::default()
+    };
+    let back = effects_back(&write_effect_list(&old));
+    assert_eq!(back.effects[0].get("screentone_anti_alias"), None);
+    assert_eq!(back.effects[0].kind(), EffectKind::Screentone);
+}

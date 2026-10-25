@@ -67,6 +67,11 @@ const DOC_Q: [u16; 6] = [14100, 14080, 14031, 6564, 14083, 14084];
 /// (Firepixel extension, `Firepixel_PointerLasso`); the original leaves Q5 empty there (14083).
 pub const POINTER_Q5: u16 = 61007;
 const POINTER_DOC_Q: [u16; 6] = [14100, 14080, 14031, 6564, POINTER_Q5, 14084];
+/// Firepixel's own Q5 of a selected vector mask: the "Invert" checkbox (Firepixel extension
+/// FB-35; moved out of the measured mask rows of Q6 by FB-83 so they keep their order and the
+/// checkbox is never cut off at the panel's bottom edge, and it stays visible at half height). The
+/// original leaves Q5 empty there (14083).
+pub const MASK_INVERT_Q5: u16 = 61008;
 const DOC_BOX: [u16; 6] = [14100, 14007, 14031, 6564, 14083, 14084];
 
 /// Die Tabelle in Original-Reihenfolge.
@@ -271,7 +276,7 @@ pub const LAYOUTS: &[PiLayout] = &[
     row(
         19,
         MaskSel(true),
-        [14101, 14007, 14140, 14098, 14083, 15105],
+        [14101, 14007, 14140, 14098, MASK_INVERT_Q5, 15105],
         441,
     ),
     row(20, Never, [14102, 14007, 14129, 14130, 14132, 15101], 438),

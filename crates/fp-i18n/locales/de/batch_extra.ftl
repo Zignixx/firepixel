@@ -479,3 +479,23 @@ batch-param-output-gif-perceptualPalette = Wahrnehmungsgewichtete Palette
     .tooltip = Ruhige Flächen zählen bei der Farbauswahl mehr als unruhige Strukturen, in denen Farbfehler kaum auffallen.
 batch-param-output-gif-lossyMinSsim = Verlust mit Qualitätsgrenze (SSIM)
     .tooltip = 0 = aus. Sonst nutzt jedes Frame den stärksten LZW-Verlust, bei dem sein Bild mindestens diese Ähnlichkeit (SSIM, 0,5–0,9999, z. B. 0,99) zum Frame behält; ersetzt „Verlust“.
+
+## Rasterfolie (Firepixel-Erweiterung, FB-38 / FB-86)
+batch-step-filter-screentone = Rasterfolie
+    .description = Macht aus jedem Bild ein Raster aus Punkten, Linien oder Kreuzschraffur wie die gedruckten Töne in Comics.
+batch-param-filter-screentone-pattern = Muster
+batch-value-filter-screentone-pattern-dots = Punkte
+batch-value-filter-screentone-pattern-lines = Linien
+batch-value-filter-screentone-pattern-crossHatch = Kreuzschraffur
+batch-param-filter-screentone-size = Rasterweite
+    .tooltip = Abstand der Punkte (bzw. Linien) in Pixeln.
+batch-param-filter-screentone-angle = Winkel
+batch-param-filter-screentone-fromLuminance = Dichte aus der Helligkeit
+    .tooltip = Dunkle Stellen bekommen große Punkte, helle kleine. Aus: überall dieselbe Dichte.
+batch-param-filter-screentone-density = Dichte
+    .tooltip = Anteil der Farbe, wenn „Dichte aus der Helligkeit“ aus ist.
+batch-param-filter-screentone-color = Rasterfarbe
+batch-param-filter-screentone-keepColor = Bildfarbe beibehalten
+    .tooltip = Die Punkte behalten die Farbe des Bildes statt der Rasterfarbe.
+batch-param-filter-screentone-antiAlias = Glätten
+    .tooltip = Glatte Punktränder mit Zwischentönen. Aus: harte Punkte nur aus Farbe und Transparenz.

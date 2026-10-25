@@ -172,7 +172,7 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     `{firepixel-screentone}`) with the text parameters `screentone_type` 0 dots / 1 lines / 2 cross-hatch,
     `screentone_size` 2..32 (default 8), `screentone_angle` 0..180 (45), `screentone_density` 0..100 (50, used
     when `screentone_from_luminance` is `false`), `screentone_from_luminance` (`true`), `screentone_color`
-    (`#000000`), `screentone_keep_color` (`false`); edit with `pi.effect.set {index, params}`, scripts through
+    (`#000000`), `screentone_keep_color` (`false`), `screentone_anti_alias` (`false`, anti-aliased dot edges; missing = off); edit with `pi.effect.set {index, params}`, scripts through
     `effectList` like the other live filters. FW-PNG: an `fpLv` entry of the effect list instead of an `EPSv`
     §1.2); a drag on h2 or h3 moves only that handle; one `element.setFillHandles` step each. A drag on the line
     h1–h2 / h1–h3 turns both arms rigidly about h1 (one `element.rotateFillHandles {axis, toward}` step, `toward` =

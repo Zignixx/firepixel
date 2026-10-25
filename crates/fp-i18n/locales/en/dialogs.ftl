@@ -426,6 +426,7 @@ dlg-fx-screentone-size = Size:
 dlg-fx-screentone-density = Density:
 dlg-fx-screentone-from-luminance = Density from luminance
 dlg-fx-screentone-keep-color = Keep object color
+dlg-fx-screentone-anti-alias = Anti-alias
 
 ## Form dialogs (form.rs)
 dlg-preview = Preview

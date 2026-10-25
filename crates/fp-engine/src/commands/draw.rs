@@ -527,6 +527,7 @@ fn menu_preset(name: &str) -> &'static [(&'static str, &'static str)] {
             ("screentone_from_luminance", "true"),
             ("screentone_color", "#000000"),
             ("screentone_keep_color", "false"),
+            ("screentone_anti_alias", "false"),
         ],
         _ => &[],
     }
