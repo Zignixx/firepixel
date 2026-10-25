@@ -273,7 +273,7 @@ pub fn open_at(st: &mut AppState, at: fp_geom::Point) -> ContextMenu {
     let tool = st.session.tools.active;
     let selects = matches!(
         tool,
-        ToolId::Pointer | ToolId::SelectBehind | ToolId::Subselection
+        ToolId::Pointer | ToolId::SelectBehind | ToolId::Subselection | ToolId::MaskElementSelect
     ) && !st.session.tool_is_editing_text();
     if selects && let Some(d) = st.session.active() {
         let opt = fp_engine::docops::HitOptions {

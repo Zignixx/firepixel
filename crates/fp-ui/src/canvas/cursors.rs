@@ -191,6 +191,15 @@ fn badge_square(p: &Painter, at: Pos2, c: &Palette, filled: bool) {
     }
 }
 
+/// Mask badge (FB-80): a dark square with a light disc, like a mask thumbnail.
+fn badge_mask(p: &Painter, at: Pos2, c: &Palette) {
+    let r = egui::Rect::from_min_size(pos2(at.x + 11.0, at.y + 11.0), vec2(7.0, 7.0));
+    // light rim, dark square, light disc (`cursor_fill` is the dark arrow colour)
+    p.rect_filled(r.expand(1.0), 0.0, c.cursor_outline);
+    p.rect_filled(r, 0.0, c.cursor_fill);
+    p.circle_filled(r.center(), 2.0, c.cursor_outline);
+}
+
 fn badge_plus(p: &Painter, at: Pos2, c: &Palette, minus: bool) {
     let o = pos2(at.x + 13.5, at.y + 14.5);
     let bg = egui::Rect::from_center_size(o, vec2(9.0, 9.0));
@@ -737,6 +746,11 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
             arrow(p, at, colors, false);
             badge_square(p, at, colors, false);
         }
+        // Mask Element Selection (FB-80): hollow Subselection arrow with the mask badge
+        Cursor::MaskSelect => {
+            arrow(p, at, colors, true);
+            badge_mask(p, at, colors);
+        }
         Cursor::PointerPoint => {
             arrow(p, at, colors, false);
             badge_square(p, at, colors, true);
@@ -899,6 +913,7 @@ mod tests {
                 Cursor::Subselect,
                 Cursor::SubselectPoint,
                 Cursor::SelectBehind,
+                Cursor::MaskSelect,
                 Cursor::PenAdd,
                 Cursor::PenRemove,
                 Cursor::PenContinue,

@@ -2926,7 +2926,7 @@ fn shift_constraint_projects_onto_axis() {
 
 #[test]
 fn every_tool_has_a_machine() {
-    assert_eq!(TOOLS.len(), 52);
+    assert_eq!(TOOLS.len(), 53);
     let missing: Vec<&str> = TOOLS
         .iter()
         .filter(|t| !t.implemented)

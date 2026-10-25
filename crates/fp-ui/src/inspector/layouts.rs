@@ -450,6 +450,8 @@ pub const LAYOUTS: &[PiLayout] = &[
     ),
     row(30, Tool(ToolId::Pointer), POINTER_DOC_Q, 73),
     row(31, Tool(ToolId::Subselection), POINTER_DOC_Q, 73),
+    // FB-80: the Mask Element Selection shows the Subselection's layout
+    row(31, Tool(ToolId::MaskElementSelect), POINTER_DOC_Q, 73),
     row(32, Tool(ToolId::SelectBehind), DOC_Q, 73),
     row(33, Tool(ToolId::Hand), DOC_Q, 73),
     row(34, Tool(ToolId::Zoom), DOC_Q, 73),

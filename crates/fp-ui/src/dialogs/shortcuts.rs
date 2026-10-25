@@ -290,7 +290,14 @@ pub fn rows(st: &AppState, set: &ShortcutSet, section: usize, filter: &str) -> V
             if !f.is_empty() && !label.to_lowercase().contains(&f) {
                 continue;
             }
-            out.push((format!("tool:{}", t.guid), label, set.tool(t.guid).to_vec()));
+            // FB-80: the Mask Element Selection shows the Subselection keys it shares until it
+            // gets keys of its own
+            let keys = if t.id == fp_engine::ToolId::MaskElementSelect {
+                fp_engine::tools::tool_shortcuts(set, t.id)
+            } else {
+                set.tool(t.guid).to_vec()
+            };
+            out.push((format!("tool:{}", t.guid), label, keys));
         }
     }
     out

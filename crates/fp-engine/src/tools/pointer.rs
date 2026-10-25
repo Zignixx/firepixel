@@ -843,6 +843,9 @@ pub struct PointerTool {
     /// Select Behind: where the last click was released; no hover frame there until the pointer
     /// moves (measured, TW-157).
     click_pos: Option<Point>,
+    /// Subselection of the Mask Element Selection (FB-80): a click on a masked object reaches its
+    /// mask instead of its content.
+    mask_reach: bool,
 }
 
 impl PointerTool {
@@ -855,6 +858,33 @@ impl PointerTool {
             hover: None,
             hover_cursor: Cursor::Arrow,
             click_pos: None,
+            mask_reach: false,
+        }
+    }
+
+    /// The Subselection machine of the Mask Element Selection (FB-80, see [`super::MaskElementTool`]).
+    pub fn mask_elements() -> PointerTool {
+        PointerTool {
+            mask_reach: true,
+            ..PointerTool::new(ToolId::Subselection)
+        }
+    }
+
+    /// Subselection target under `p` from the top-level hit `path` (FB-80, Firepixel extension):
+    /// the Subselection reaches the **content** of a masked object (also a single masked path or
+    /// bitmap), the Mask Element Selection its **mask** (the measured Subselection target, RE spec
+    /// 68 §3.2). Ordinary objects: the deepest hit child for both.
+    fn subselection_target(
+        &self,
+        ctx: &ToolContext,
+        path: &ElementPath,
+        p: Point,
+        opt: &HitOptions,
+    ) -> ElementPath {
+        if self.mask_reach {
+            docops::subselect_hit(ctx.doc, path, p, ctx.geometry, opt)
+        } else {
+            docops::deep_hit(ctx.doc, path, p, ctx.geometry, opt)
         }
     }
 
@@ -1092,7 +1122,7 @@ impl PointerTool {
             .and_then(|id| docops::element_on_page(ctx.doc, ctx.page, id));
         if let Some(path) = hit {
             let path = if self.id == ToolId::Subselection {
-                docops::subselect_hit(ctx.doc, &path, p, ctx.geometry, &opt)
+                self.subselection_target(ctx, &path, p, &opt)
             } else {
                 path
             };
@@ -1219,7 +1249,8 @@ impl PointerTool {
         } else {
             top_hit(ctx, p, &opt)
         };
-        // Subselection: a masked element gives its mask (RE spec 68 §3.2, M-7); with a group mask
+        // Subselection: a masked element gives its content, the Mask Element Selection its mask
+        // (FB-80; the measured Subselection target, RE spec 68 §3.2, M-7); with a group mask
         // selected, its children are reachable one by one (Firepixel extension E-1)
         let mut mask_child = None;
         if self.id == ToolId::Subselection {
@@ -1232,7 +1263,7 @@ impl PointerTool {
                 &opt,
             );
             if let Some(t) = &target {
-                target = Some(docops::subselect_hit(ctx.doc, t, p, ctx.geometry, &opt));
+                target = Some(self.subselection_target(ctx, t, p, &opt));
             }
         }
         let target_id =

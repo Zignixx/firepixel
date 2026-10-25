@@ -19,6 +19,8 @@ pub enum Icon {
     Pointer,
     SelectBehind,
     Subselection,
+    /// Mask Element Selection (FB-80): Subselection arrow with a mask badge.
+    MaskElementSelect,
     Scale,
     Skew,
     Distort,
@@ -250,6 +252,7 @@ pub fn tool_icon(id: ToolId) -> Icon {
         ToolId::Pointer => Icon::Pointer,
         ToolId::SelectBehind => Icon::SelectBehind,
         ToolId::Subselection => Icon::Subselection,
+        ToolId::MaskElementSelect => Icon::MaskElementSelect,
         ToolId::Marquee => Icon::Marquee,
         ToolId::OvalMarquee => Icon::OvalMarquee,
         ToolId::Lasso => Icon::Lasso,
@@ -856,6 +859,13 @@ fn draw(p: &Pen, icon: Icon) {
             p.poly(Some(paper), Some(fg), &ARROW);
         }
         Icon::Subselection => p.poly(Some(paper), Some(fg), &ARROW),
+        // FB-80: the Subselection arrow with a mask badge (dark square with a light disc, the
+        // look of a mask thumbnail) at the upper right, clear of the arrow
+        Icon::MaskElementSelect => {
+            p.poly(Some(paper), Some(fg), &ARROW);
+            p.rect(9.0, 1.0, 6.0, 6.0, Some(fg), Some(fg));
+            p.circle((12.0, 4.0), 1.8, Some(paper), None);
+        }
         Icon::Scale => {
             p.rect(1.5, 1.5, 9.0, 9.0, Some(paper), Some(fg));
             p.line(fg, &[(4.0, 4.0), (12.5, 12.5)]);
@@ -1752,6 +1762,7 @@ pub const ALL_ICONS: &[Icon] = &[
     Icon::Pointer,
     Icon::SelectBehind,
     Icon::Subselection,
+    Icon::MaskElementSelect,
     Icon::Scale,
     Icon::Skew,
     Icon::Distort,

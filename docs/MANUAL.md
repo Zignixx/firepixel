@@ -93,7 +93,7 @@ Frequent shortcuts (set "Firepixel", switchable in *Edit ▸ Keyboard Shortcuts.
 
 | Key | Tool | Key | Tool |
 |---|---|---|---|
-| V / 0 | Pointer | A / 1 | Subselection |
+| V / 0 | Pointer / Select Behind | A / 1 | Subselection / Mask Element Selection |
 | M | Marquee | L | Lasso |
 | W | Magic Wand | B | Brush |
 | P | Pen | U | Rectangle / Ellipse / Polygon |
@@ -318,19 +318,23 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   frame, the object's row stays highlighted, and the inspector shows *Bitmap mask* with *Alpha
   channel* / *Grayscale*. The History row is *Add Mask*. Scripts see the masked object in
   `fw.selection` and the mask in `fw.selectedMask` while a mask is edited.
-- **Working with masks:** a *Subselection* click on a masked object selects its mask, and so does a
+- **Working with masks:** a *Subselection* click on a masked object selects its **content** (also a
+  single masked path or bitmap), which can then be moved, scaled, point-edited or painted into while the
+  mask stays (Firepixel extension). The **Mask Element Selection** in the Subselection flyout (A / 1
+  switches between the two; icon and cursor show the Subselection arrow with a mask badge) selects the
+  **mask** of the clicked masked object instead, and so does a
   *Pointer* click with Alt held (on a normal group, Pointer + Alt-click selects the clicked child;
   Alt-drag still duplicates); *Select Behind* never picks a mask. A click on the mask thumbnail in the
   Layers panel works like the context menu's *Edit Mask*: the mask is selected, its thumbnail gets a
   bright green frame, the row stays highlighted and shows a mask icon in its second column; a bitmap
   mask goes into bitmap editing. A click on the row's name selects the object again and frames its own
-  thumbnail blue (a selected object's thumbnail is always framed blue). The anchors of a single-path mask move with the Subselection while the content stays.
+  thumbnail blue (a selected object's thumbnail is always framed blue). The anchors of a single-path mask move with the Mask Element Selection while the content stays; on ordinary objects that tool works like the Subselection.
   *Disable Mask* turns the mask off; the menu entry then reads *Enable Mask* and the mask thumbnail
   shows a red X. *Delete Mask* asks first: *Apply* (the default) bakes the mask into the object, which
   becomes one bitmap; *Discard* removes the mask and keeps the object; *Cancel* does nothing.
   *Ungroup* gives the mask object on top of the content, both selected.
-  Firepixel extensions beyond the original: with a **group mask** selected, a further Subselection
-  click (or a Pointer double-click) selects the child under the pointer, so its anchors can be edited
+  Firepixel extensions beyond the original: with a **group mask** selected, a further click with the
+  Mask Element Selection or the Subselection (or a Pointer double-click) selects the child under the pointer, so its anchors can be edited
   one by one and the mask follows; the mask inspector has an **Invert** checkbox (vector and bitmap
   masks; for a vector mask at the right end of the upper row, right above the *Mask:* rows; for a bitmap mask
   right of *Alpha channel*) that hides what lies inside the mask and keeps everything outside (the mask object's own

@@ -219,7 +219,8 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     Anwenden), `modify.mask.options {invert?}` (Firepixel-Erweiterung: invertierte Maske, was innerhalb der
     Maske liegt, wird verborgen; die eigene Deckkraft des Maskenobjekts bestimmt die Stärke; gespeichert im
     Firepixel-eigenen FW-PNG-Tag `fpIb`), `select.pointAt {point, deep: true}` (wie die Teilauswahl: ein
-    maskiertes Element liefert seine Maske). Skripte: `dom.setElementMaskInvert(bool)` (Firepixel-eigene
+    maskiertes Element liefert seinen Inhalt, FB-80) und `select.pointAt {point, deep: true, mask: true}`
+    (wie die Maskenelement-Auswahl `tool.maskElementSelect`: ein maskiertes Element liefert seine Maske). Skripte: `dom.setElementMaskInvert(bool)` (Firepixel-eigene
     Methode neben der Referenz-API) und das Feld `invert` des `mask`-Objekts eines Elements
   * Text und Auswahl: `text.detachFromPath` (Text wird wieder Rahmen fester Breite = Breite vor dem Anfügen,
     mittig über den Pfadgrenzen; der Pfad kommt oben in die Ebene, Auswahl danach [Pfad, Text]),

@@ -1106,10 +1106,17 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 json!(false),
                 "in Gruppen absteigen (Teilauswahl)",
             )
+            .opt_default(
+                "mask",
+                ParamKind::Bool,
+                json!(false),
+                "Maske statt Inhalt (Maskenelement-Auswahl)",
+            )
             .run(|s, p| {
                 let pt = p.point("point")?;
                 let m = mode(p)?;
                 let deep = p.bool_or("deep", false)?;
+                let to_mask = p.bool_or("mask", false)?;
                 let geo_tol = s.prefs.pick_distance();
                 let hits = {
                     let d = s.doc()?;
@@ -1120,9 +1127,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let h = docops::hits_at(&d.doc, d.page, d.frame, pt, s.geometry(), &opt);
                     h.first()
                         .map(|f| {
-                            if deep {
-                                // like the Subselection: a masked element gives its mask (RE spec 68 §3.2)
+                            if to_mask {
+                                // like the Mask Element Selection: a masked element gives its
+                                // mask (the measured Subselection target, RE spec 68 §3.2)
                                 docops::subselect_hit(&d.doc, f, pt, s.geometry(), &opt)
+                            } else if deep {
+                                // like the Subselection: a masked element gives its content (FB-80)
+                                docops::deep_hit(&d.doc, f, pt, s.geometry(), &opt)
                             } else {
                                 f.clone()
                             }

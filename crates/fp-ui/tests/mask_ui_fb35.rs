@@ -306,12 +306,15 @@ fn set_tool(h: &mut H, t: ToolId) {
 }
 
 #[test]
-fn canvas_clicks_select_the_mask_with_subselection_and_pointer_alt() {
-    let (mut h, g, m, _) = harness();
+fn canvas_clicks_select_the_mask_with_mask_element_selection_and_pointer_alt() {
+    let (mut h, g, m, b) = harness();
     run(&mut h, "select.none", json!({}));
+    set_tool(&mut h, ToolId::MaskElementSelect);
+    canvas_click(&mut h, 150.0, 150.0, Modifiers::NONE);
+    assert_eq!(selection(&h), vec![m], "Mask Element Selection click selects the mask (FB-80)");
     set_tool(&mut h, ToolId::Subselection);
     canvas_click(&mut h, 150.0, 150.0, Modifiers::NONE);
-    assert_eq!(selection(&h), vec![m], "Subselection click selects the mask");
+    assert_eq!(selection(&h), vec![b], "Subselection click selects the content (FB-80)");
     set_tool(&mut h, ToolId::Pointer);
     canvas_click(&mut h, 150.0, 150.0, Modifiers::NONE);
     assert_eq!(selection(&h), vec![g], "a plain Pointer click selects the masked element");

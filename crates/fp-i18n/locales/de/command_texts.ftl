@@ -171,6 +171,7 @@ cmdtext-nur-vollstaendig-umschlossene-objekte = nur vollständig umschlossene Ob
 cmdtext-verknuepfung = Verknüpfung
 cmdtext-rechteck-beruehrte-objekte-wie-im-original = Rechteck (berührte Objekte wie im Original)
 cmdtext-in-gruppen-absteigen-teilauswahl = in Gruppen absteigen (Teilauswahl)
+cmdtext-maske-statt-inhalt-maskenelement-auswahl = Maske statt Inhalt (Maskenelement-Auswahl)
 cmdtext-punkt = Punkt
 cmdtext-element-contour-node = {"["}{"{"}element, contour, node{"}"}, …]
 cmdtext-geglaetteter-rand = geglätteter Rand

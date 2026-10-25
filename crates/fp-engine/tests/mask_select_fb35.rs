@@ -5,6 +5,9 @@
 //! Scene: red bitmap 100,100 100 × 100 (content), masked by a square path 120..180 (or by a group
 //! of two squares). The mask mode is set to path outline explicitly, so the tests do not depend on
 //! the mode a command chooses.
+//!
+//! Since FB-80 the measured Subselection target (the mask) belongs to the Mask Element Selection;
+//! the Subselection reaches the content (tests in `fb80_mask_element_select`).
 
 use crate::common;
 use common::*;
@@ -93,11 +96,11 @@ fn px(img: &fp_raster::RgbaImage, x: i32, y: i32) -> [u8; 4] {
 // ------------------------------------------------------------------ M-7: selecting the mask
 
 #[test]
-fn subselection_click_on_masked_bitmap_selects_its_mask() {
+fn mask_element_selection_click_on_masked_bitmap_selects_its_mask() {
     let (mut s, g, mask, _) = scene();
-    tool(&mut s, ToolId::Subselection);
+    tool(&mut s, ToolId::MaskElementSelect);
     click(&mut s, 150.0, 150.0);
-    assert_eq!(sel(&s), vec![mask], "the Subselection selects the mask");
+    assert_eq!(sel(&s), vec![mask], "the Mask Element Selection selects the mask (FB-80)");
     // the Pointer keeps selecting the masked element
     tool(&mut s, ToolId::Pointer);
     click(&mut s, 150.0, 150.0);
@@ -160,7 +163,7 @@ fn select_behind_never_picks_the_mask() {
 #[test]
 fn single_path_mask_anchor_drag_moves_only_the_mask() {
     let (mut s, _, mask, bmp) = scene();
-    tool(&mut s, ToolId::Subselection);
+    tool(&mut s, ToolId::MaskElementSelect);
     click(&mut s, 150.0, 150.0);
     assert_eq!(sel(&s), vec![mask]);
     let content_before = visible_bounds(&s, bmp);
@@ -172,7 +175,7 @@ fn single_path_mask_anchor_drag_moves_only_the_mask() {
 }
 
 #[test]
-fn subselection_on_a_bitmap_mask_starts_editing_the_mask() {
+fn mask_element_selection_on_a_bitmap_mask_starts_editing_the_mask() {
     let mut s = doc_session(400.0, 300.0);
     let bmp = bitmap(&mut s, 100, 100, 100, 100, [255, 0, 0, 255]);
     select(&mut s, &[bmp]);
@@ -182,7 +185,7 @@ fn subselection_on_a_bitmap_mask_starts_editing_the_mask() {
     assert_eq!(sel(&s), vec![mask], "Reveal All edits the new mask (RE spec 68 §8)");
     let _ = s.execute("modify.exitBitmapMode", json!({}));
     ex(&mut s, "select.none", json!({}));
-    tool(&mut s, ToolId::Subselection);
+    tool(&mut s, ToolId::MaskElementSelect);
     click(&mut s, 150.0, 150.0);
     assert_eq!(sel(&s), vec![mask]);
     assert!(s.active().is_some_and(|d| d.bitmap_mode), "bitmap editing of the mask");
@@ -208,7 +211,7 @@ fn normal_groups_keep_their_subselection() {
 #[test]
 fn group_mask_children_are_selectable_and_editable() {
     let (mut s, _, mg, a, b) = group_scene();
-    tool(&mut s, ToolId::Subselection);
+    tool(&mut s, ToolId::MaskElementSelect);
     click(&mut s, 130.0, 150.0);
     assert_eq!(sel(&s), vec![mg], "first click: the whole group mask (as measured)");
     // extension: a further click reaches the child under the pointer
@@ -231,7 +234,7 @@ fn group_mask_children_are_selectable_and_editable() {
 #[test]
 fn pointer_double_click_enters_a_selected_group_mask() {
     let (mut s, _, mg, _, b) = group_scene();
-    tool(&mut s, ToolId::Subselection);
+    tool(&mut s, ToolId::MaskElementSelect);
     click(&mut s, 130.0, 150.0);
     assert_eq!(sel(&s), vec![mg]);
     tool(&mut s, ToolId::Pointer);

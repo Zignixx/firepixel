@@ -2040,6 +2040,7 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
         st.session.tools.active,
         fp_engine::ToolId::Pointer
             | fp_engine::ToolId::Subselection
+            | fp_engine::ToolId::MaskElementSelect
             | fp_engine::ToolId::SelectBehind
     );
     let guide_hit = match (pointer, st.session.active()) {
@@ -2703,7 +2704,10 @@ fn overlays(
             | fp_engine::ToolId::ReplaceColor
             | fp_engine::ToolId::RedEyeRemoval
     );
-    let subsel_outline = st.session.tools.active == fp_engine::ToolId::Subselection;
+    let subsel_outline = matches!(
+        st.session.tools.active,
+        fp_engine::ToolId::Subselection | fp_engine::ToolId::MaskElementSelect
+    );
     // FB-19 (RE spec 60 section 1.3): the Pointer and the Pen show a single selected vector path
     // (free or rectangle primitive) as its outline plus anchor squares (from `Overlay::PathPoints`),
     // not as a bounding box; the path the pen is drawing is shown by the pen's own overlay
@@ -2942,8 +2946,11 @@ fn overlays(
         vec2(0.0, 0.0)
     };
     // Subselection tool: point display per re 54 (Some(ShowSolidPoints))
-    let subsel_points = (st.session.tools.active == fp_engine::ToolId::Subselection)
-        .then(|| st.session.prefs.get_bool("ShowSolidPoints", false));
+    let subsel_points = matches!(
+        st.session.tools.active,
+        fp_engine::ToolId::Subselection | fp_engine::ToolId::MaskElementSelect
+    )
+    .then(|| st.session.prefs.get_bool("ShowSolidPoints", false));
     let cc = st.canvases.entry(id).or_default();
     let mut had_text = false;
     for o in feedback.iter().cloned() {

@@ -22,7 +22,7 @@ fn scenario(t: ToolId, f: &Fix) -> (Vec<u64>, Vec<ToolEvent>) {
     match t {
         ToolId::Pointer => (empty, drag((100.0, 100.0), (130.0, 120.0))),
         ToolId::SelectBehind => (empty, click(100.0, 100.0)),
-        ToolId::Subselection => (f.group.clone(), click(625.0, 65.0)),
+        ToolId::Subselection | ToolId::MaskElementSelect => (f.group.clone(), click(625.0, 65.0)),
         ToolId::Marquee | ToolId::OvalMarquee => (f.bitmap.clone(), drag((450.0, 50.0), (520.0, 130.0))),
         // Lasso: geschlossene Freihandform (nicht auf einer Geraden)
         ToolId::Lasso => (f.bitmap.clone(), vec![E::down(450.0, 50.0), E::drag(520.0, 60.0), E::drag(510.0, 130.0), E::drag(455.0, 120.0), E::up(455.0, 120.0)]),

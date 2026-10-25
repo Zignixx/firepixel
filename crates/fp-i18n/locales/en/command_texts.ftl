@@ -171,6 +171,7 @@ cmdtext-nur-vollstaendig-umschlossene-objekte = only completely enclosed objects
 cmdtext-verknuepfung = Combination
 cmdtext-rechteck-beruehrte-objekte-wie-im-original = Rectangle (touched objects as in the original)
 cmdtext-in-gruppen-absteigen-teilauswahl = descend into groups (subselection)
+cmdtext-maske-statt-inhalt-maskenelement-auswahl = mask instead of content (Mask Element Selection)
 cmdtext-punkt = Point
 cmdtext-element-contour-node = {"["}{"{"}element, contour, node{"}"}, …]
 cmdtext-geglaetteter-rand = anti-aliased edge

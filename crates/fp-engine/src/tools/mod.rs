@@ -13,6 +13,7 @@
 pub mod ai_select;
 mod bitmap;
 mod draw;
+mod mask_select;
 pub mod pathedit;
 mod pointer;
 mod retouch;
@@ -36,6 +37,7 @@ pub use bitmap::{BrushTool, EyedropperTool, FillTool, LassoTool, MarqueeTool, Wa
 pub use draw::{
     FreehandTool, LineTool, PenTool, ShapeTool, WebShapeTool, freehand_contour, refit_freehand,
 };
+pub use mask_select::MaskElementTool;
 pub use pathedit::{FreeformTool, KnifeTool, ScrubTool};
 pub use pointer::{
     ALT_MARQUEE_DESELECT_PREF, CropTool, POINTER_EDITS_POINTS_PREF, POINTER_LASSO_PREF,
@@ -399,6 +401,8 @@ pub enum Cursor {
     SubselectPoint,
     /// Hintere auswählen.
     SelectBehind,
+    /// Mask Element Selection (FB-80): the hollow Subselection arrow with a mask badge.
+    MaskSelect,
     /// Stift: Punkt hinzufügen / entfernen / Pfad fortsetzen.
     PenAdd,
     PenRemove,
@@ -1024,6 +1028,10 @@ pub enum ToolId {
     AiObject,
     AiSubject,
     AiRefineEdge,
+    /// Firepixel extension (FB-80): Subselection flyout, selects the mask of the clicked masked
+    /// object (the measured Subselection target, RE spec 68 §3.2), ordinary objects like the
+    /// Subselection.
+    MaskElementSelect,
 }
 
 /// Beschreibung eines Werkzeugs.
@@ -1059,6 +1067,7 @@ tools_table! {
     Pointer, "tool.pointer", "Zeiger", "CSelectionTool", "{4e54aeee-c168-11d0-ba02-00059a80e4fd}", "Zeiger", "Auswählen", true;
     SelectBehind, "tool.selectBehind", "Hintere auswählen", "CSelectBehindTool", "{f4f7cbfa-c6f4-11d0-b598-000502701850}", "Zeiger", "Auswählen", true;
     Subselection, "tool.subselection", "Teilauswahl", "CSubSelectionTool", "{98bdebde-43c8-47ec-8699-76f6c211e055}", "Teilauswahl", "Auswählen", true;
+    MaskElementSelect, "tool.maskElementSelect", "Maskenelement-Auswahl", "FpMaskElementTool", "{6b1f3c2e-8d4a-4f6e-9a71-5c2d0e8b4a21}", "Teilauswahl", "Auswählen", true;
     Marquee, "tool.marquee", "Auswahlrahmen", "CMarqueeTool", "{fda61c66-c6f4-11d0-b598-000502701850}", "Auswahlrahmen", "Bitmap", true;
     OvalMarquee, "tool.ovalMarquee", "Ovaler Auswahlrahmen", "COvalMarqueeTool", "{015621b2-c6f5-11d0-b598-000502701850}", "Auswahlrahmen", "Bitmap", true;
     Lasso, "tool.lasso", "Lasso", "CLassoTool", "{f9c58cf8-c6f4-11d0-b598-000502701850}", "Lasso", "Bitmap", true;
@@ -1184,6 +1193,11 @@ pub fn tool_shortcuts(set: &ShortcutSet, id: ToolId) -> Vec<Shortcut> {
     let mut v = set.tool(i.guid).to_vec();
     match id {
         ToolId::Subselection => v.extend_from_slice(set.tool(LEGACY_SUBSELECT_GUID)),
+        // FB-80: the Mask Element Selection shares the Subselection's keys (A, 1 cycle through
+        // the flyout like V, 0 for Pointer / Select Behind) until a set gives it keys of its own
+        ToolId::MaskElementSelect if !set.tools.contains_key(i.guid) => {
+            v = tool_shortcuts(set, ToolId::Subselection);
+        }
         ToolId::Rectangle => v.extend_from_slice(set.tool(LEGACY_ROUNDRECT_GUID)),
         ToolId::Slice => v.extend_from_slice(set.tool(LEGACY_SLICE_GUID)),
         _ => {}
@@ -1226,6 +1240,7 @@ pub fn make_machine(id: ToolId) -> Box<dyn ToolMachine> {
         ToolId::Pointer | ToolId::SelectBehind | ToolId::Subselection => {
             Box::new(PointerTool::new(id))
         }
+        ToolId::MaskElementSelect => Box::new(MaskElementTool::default()),
         ToolId::Scale | ToolId::Skew | ToolId::Distort | ToolId::NineSliceScale => {
             Box::new(TransformTool::new(id))
         }
@@ -1361,7 +1376,7 @@ mod tests {
 
     #[test]
     fn table_and_shortcuts() {
-        assert_eq!(TOOLS.len(), 52);
+        assert_eq!(TOOLS.len(), 53);
         let set = crate::shortcuts::builtin_set("Firepixel")
             .cloned()
             .unwrap_or_default();

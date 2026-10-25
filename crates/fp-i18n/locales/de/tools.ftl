@@ -11,6 +11,7 @@
 tool-pointer = Zeiger
 tool-selectBehind = Hintere auswählen
 tool-subselection = Teilauswahl
+tool-maskElementSelect = Maskenelement-Auswahl
 tool-marquee = Auswahlrahmen
 tool-ovalMarquee = Ovaler Auswahlrahmen
 tool-lasso = Lasso
@@ -65,7 +66,8 @@ tool-zoom = Zoom
 
 tool-desc-pointer = Wählt Objekte per Klick oder Rahmen aus und verschiebt sie.
 tool-desc-selectBehind = Wählt bei jedem Klick das nächste darunterliegende Objekt aus.
-tool-desc-subselection = Wählt einzelne Objekte in Gruppen und die Punkte eines Pfads aus.
+tool-desc-subselection = Wählt Objekte in Gruppen, maskierte Inhalte und die Punkte eines Pfads aus.
+tool-desc-maskElementSelect = Wählt die Maske eines maskierten Objekts aus, um sie einzeln zu bearbeiten.
 tool-desc-marquee = Wählt einen rechteckigen Pixelbereich in einer Bitmap aus.
 tool-desc-ovalMarquee = Wählt einen elliptischen Pixelbereich in einer Bitmap aus.
 tool-desc-lasso = Wählt einen frei gezeichneten Pixelbereich aus.

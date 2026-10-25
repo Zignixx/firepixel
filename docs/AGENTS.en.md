@@ -214,7 +214,8 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     Apply first), `modify.mask.options {invert?}` (Firepixel extension: inverted mask, what lies inside the
     mask is hidden; the mask object's own opacity sets the strength; stored as the Firepixel-own FW-PNG
     tag `fpIb`), `select.pointAt {point, deep: true}` (like the Subselection: a masked element gives its
-    mask). Scripting: `dom.setElementMaskInvert(bool)` (Firepixel-own method beside the reference API)
+    content, FB-80) and `select.pointAt {point, deep: true, mask: true}` (like the Mask Element Selection
+    `tool.maskElementSelect`: a masked element gives its mask). Scripting: `dom.setElementMaskInvert(bool)` (Firepixel-own method beside the reference API)
     and the field `invert` of an element's `mask` object
   * Text and selection: `text.detachFromPath` (the text becomes a fixed-width block again, width = width
     before attaching, centered on the path bounds; the path goes to the top of the layer, selection

@@ -97,7 +97,7 @@ Häufige Kürzel (Satz „Firepixel“, umschaltbar unter *Bearbeiten ▸ Tastat
 
 | Taste | Werkzeug | Taste | Werkzeug |
 |---|---|---|---|
-| V / 0 | Zeiger | A / 1 | Teilauswahl |
+| V / 0 | Zeiger / Hintere auswählen | A / 1 | Teilauswahl / Maskenelement-Auswahl |
 | M | Auswahlrahmen | L | Lasso |
 | W | Zauberstab | B | Pinsel |
 | P | Stift | U | Rechteck / Ellipse / Polygon |
@@ -342,21 +342,26 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   hervorgehoben, und der Inspektor zeigt *Bitmap-Maske* mit *Alphakanal* / *Graustufen*. Die
   Verlaufszeile heißt *Maske hinzufügen*. Skripte sehen während der Maskenbearbeitung das maskierte
   Objekt in `fw.selection` und die Maske in `fw.selectedMask`.
-- **Arbeiten mit Masken:** Ein Klick mit der *Teilauswahl* auf ein maskiertes Objekt wählt dessen Maske,
-  ebenso ein Klick mit dem *Zeiger* bei gedrückter Alt-Taste (auf einer normalen Gruppe wählt Zeiger +
+- **Arbeiten mit Masken:** Ein Klick mit der *Teilauswahl* auf ein maskiertes Objekt wählt dessen
+  **Inhalt** (auch einen einzelnen maskierten Pfad oder eine Bitmap), der sich dann verschieben,
+  skalieren, punktweise bearbeiten oder bemalen lässt, während die Maske bleibt (Firepixel-Erweiterung).
+  Die **Maskenelement-Auswahl** im Flyout der Teilauswahl (A / 1 schaltet zwischen beiden um; Symbol und
+  Zeiger zeigen den Teilauswahl-Pfeil mit einem Maskenzeichen) wählt stattdessen die **Maske** des
+  angeklickten maskierten Objekts, ebenso ein Klick mit dem *Zeiger* bei gedrückter Alt-Taste (auf einer normalen Gruppe wählt Zeiger +
   Alt-Klick das getroffene Kind; Alt-Ziehen dupliziert weiterhin); *Hintere auswählen* wählt nie eine
   Maske. Ein Klick auf die Maskenminiatur im Ebenen-Bedienfeld wirkt wie *Maske bearbeiten* im
   Kontextmenü: Die Maske wird gewählt, ihre Miniatur bekommt einen hellgrünen Rahmen, die Zeile bleibt
   hervorgehoben und zeigt ein Maskensymbol in der zweiten Spalte; eine Bitmapmaske geht in die
   Bitmap-Bearbeitung. Ein Klick auf den Namen der Zeile wählt wieder das Objekt und rahmt dessen eigene
   Miniatur blau (die Miniatur eines gewählten Objekts ist immer blau gerahmt). Die Ankerpunkte
-  einer Maske aus einem einzelnen Pfad lassen sich mit der Teilauswahl ziehen, der Inhalt bleibt stehen.
+  einer Maske aus einem einzelnen Pfad lassen sich mit der Maskenelement-Auswahl ziehen, der Inhalt bleibt
+  stehen; auf gewöhnlichen Objekten wirkt dieses Werkzeug wie die Teilauswahl.
   *Maske deaktivieren* schaltet die Maske ab; der Menüeintrag heißt dann *Maske aktivieren*, und die
   Maskenminiatur zeigt ein rotes X. *Maske löschen* fragt zuerst: *Anwenden* (Vorgabe) backt die Maske in
   das Objekt, das dabei zu einer Bitmap wird; *Verwerfen* entfernt die Maske und behält das Objekt;
   *Abbrechen* tut nichts. *Gruppierung aufheben* ergibt das Maskenobjekt über dem Inhalt, beide gewählt.
   Firepixel-Erweiterungen über das Original hinaus: Ist eine **Gruppenmaske** gewählt, wählt ein weiterer
-  Klick mit der Teilauswahl (oder ein Doppelklick mit dem Zeiger) das Kind unter dem Zeiger, sodass sich
+  Klick mit der Maskenelement-Auswahl oder der Teilauswahl (oder ein Doppelklick mit dem Zeiger) das Kind unter dem Zeiger, sodass sich
   seine Punkte einzeln bearbeiten lassen und die Maske folgt; der Masken-Inspektor hat ein Kästchen
   **Invertieren** (Vektor- und Bitmapmasken; bei einer Vektormaske rechts in der oberen Zeile direkt über den
   Zeilen *Maske:*, bei einer Bitmapmaske rechts neben *Alphakanal*), das verbirgt, was innerhalb der Maske liegt, und alles

@@ -357,7 +357,7 @@ fn web_and_view_tools() {
 
 #[test]
 fn tool_table_and_shortcuts() {
-    assert_eq!(TOOLS.len(), 52);
+    assert_eq!(TOOLS.len(), 53);
     let implemented = TOOLS.iter().filter(|t| t.implemented).count();
     println!("Werkzeuge mit Zustandsautomat: {implemented}/49");
     assert!(implemented >= 34);
