@@ -81,7 +81,8 @@ fn l3_exit_bitmap_mode_trims_after_delete() {
     // Select None above emptied the object selection (Escape itself keeps a selected bitmap
     // selected, re 58 §6); select the bitmap again for the copy
     select(&mut s, &[id]);
-    assert!(history(&s) <= n + 1);
+    // Escape without a pixel selection: two rows "Exit Bitmap Mode" (RE spec 71 §1.4)
+    assert!(history(&s) <= n + 2);
     ex(&mut s, "edit.copy", json!({}));
     let v = ex(&mut s, "edit.paste", json!({}));
     let cid = fp_model::ElementId(v["ids"][0].as_u64().expect("id"));
@@ -121,18 +122,28 @@ fn l3_eraser_then_escape_trims() {
     assert_eq!(bounds(&s, id), Rect::new(100.0, 50.0, 200.0, 150.0), "nach Esc beschnitten");
 }
 
-/// L3: Zeigerklick (außerhalb eines Rahmens) nach der Bearbeitung beendet den Modus mit Beschnitt.
+/// L3: a Pointer click (outside a marquee) after work in bitmap mode ends the mode with the trim;
+/// with marching ants choosing the Pointer keeps the mode (RE spec 71 §1.4), without them choosing
+/// the Pointer already ends it and trims.
 #[test]
 fn l3_pointer_click_trims() {
     let (mut s, id) = rand_bitmap("l3p");
     marquee(&mut s, 100.0, 50.0, 150.0, 150.0);
     ex(&mut s, "edit.clear", json!({}));
-    ex(&mut s, "select.none", json!({}));
     tool(&mut s, ToolId::Pointer);
+    assert!(s.active().expect("d").bitmap_mode, "marching ants keep bitmap mode");
     assert_eq!(bounds(&s, id), Rect::new(0.0, 0.0, 400.0, 300.0), "Werkzeugwechsel allein beschneidet nicht");
     events(&mut s, &[ToolEvent::down(170.0, 100.0), ToolEvent::up(170.0, 100.0)]);
     assert_eq!(bounds(&s, id), Rect::new(150.0, 50.0, 200.0, 150.0), "Klick beschneidet");
     assert!(!s.active().expect("d").bitmap_mode);
+    // without marching ants the Pointer choice ends the mode and trims
+    let (mut s, id) = rand_bitmap("l3p2");
+    marquee(&mut s, 100.0, 50.0, 150.0, 150.0);
+    ex(&mut s, "edit.clear", json!({}));
+    ex(&mut s, "select.none", json!({}));
+    tool(&mut s, ToolId::Pointer);
+    assert!(!s.active().expect("d").bitmap_mode);
+    assert_eq!(bounds(&s, id), Rect::new(150.0, 50.0, 200.0, 150.0), "Zeiger wählen beschneidet");
 }
 
 // ------------------------------------------------------------------ L5

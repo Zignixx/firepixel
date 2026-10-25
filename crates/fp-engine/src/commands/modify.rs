@@ -3075,8 +3075,21 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 ParamKind::Bool,
                 "die ausgewählten Bitmaps gelten als bearbeitet (ein nach Escape beendeter Pinselstrich): das Verlassen des Modus ist ein Protokollschritt und beschneidet sie",
             )
+            .opt(
+                "row",
+                ParamKind::Bool,
+                "History row \"Edit Bitmap\" when bitmap mode starts (RE spec 71 §1.3: choosing a bitmap tool with a bitmap selected, a stroke on a bitmap, a Pointer double-click)",
+            )
+            .opt(
+                "again",
+                ParamKind::Bool,
+                "with `row`: write the row even when bitmap mode is already on (second row of the Pointer double-click, RE spec 71 §1.3)",
+            )
             .run(|s, p| {
                 let worked = p.opt_bool("worked")?.unwrap_or(false);
+                let row = p.opt_bool("row")?.unwrap_or(false);
+                let again = p.opt_bool("again")?.unwrap_or(false);
+                let was_on = s.doc_mut()?.bitmap_mode;
                 let d = s.doc_mut()?;
                 d.bitmap_mode = true;
                 if worked {
@@ -3089,6 +3102,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             d.bitmap_worked.push(id);
                         }
                     }
+                }
+                if row && (!was_on || again) {
+                    s.force_history_step();
+                    return Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-edit-bitmap")));
                 }
                 Ok(CommandOutput::session())
             }),
@@ -3116,7 +3133,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 ParamKind::Bool,
                 "immer einen Protokollschritt anlegen, ohne die Bitmaps als bearbeitet zu zählen (Escape beim Aufziehen eines Auswahlrahmens oder Lassos)",
             )
+            .opt(
+                "twice",
+                ParamKind::Bool,
+                "with `row`: write the row \"Exit Bitmap Mode\" twice (Escape in bitmap mode without a pixel selection, RE spec 71 §1.4)",
+            )
             .run(|s, p| {
+                if p.opt_bool("twice")?.unwrap_or(false) {
+                    s.execute("modify.exitBitmapMode", json!({"row": true}))?;
+                }
                 // Pinsel: Esc nach dem Zug legt im Original den Schritt „Bitmapmodus beenden“ an (01/14);
                 // Esc beim Aufziehen eines Auswahlrahmens ebenso (re 62 §1.5)
                 if p.opt_bool("step")?.unwrap_or(false) || p.opt_bool("row")?.unwrap_or(false) {

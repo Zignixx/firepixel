@@ -1911,7 +1911,9 @@ impl PointerTool {
                 switch_tool: Some(ToolId::Marquee),
                 ..ToolResponse::commit(vec![
                     pick("select.set", json!({"ids": [e.id.0], "mode": "replace"})),
-                    Invocation::new("modify.editBitmap", json!({})),
+                    // RE spec 71 §1.3: two rows "Edit Bitmap"
+                    Invocation::new("modify.editBitmap", json!({"row": true})),
+                    Invocation::new("modify.editBitmap", json!({"row": true, "again": true})),
                 ])
             },
             ElementKind::Text(_) => text_edit_response(e.id, p),

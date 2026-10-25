@@ -141,6 +141,9 @@ pub(crate) fn bitmap_target(ctx: &ToolContext) -> bool {
 /// beenden“ (Verlaufsschritt; Auswahlrahmen weg, Bitmap bleibt ausgewählt, Werkzeug → Zeiger;
 /// UX-A L13, `a_321`). Ohne Pixelauswahl: nichts (auch im Bitmapmodus, L27).
 pub(crate) fn escape_bitmap_mode(ctx: &ToolContext) -> ToolResponse {
+    if ctx.bitmap_mode {
+        return escape_in_bitmap_mode(ctx);
+    }
     // Nur mit Auswahlrahmen (z. B. nach dem Zauberstab, L13): Rahmen weg, Bitmapmodus beenden,
     // Zeiger. Ohne Rahmen (Bitmapmodus per Doppelklick, L27) bleibt im Original alles, wie es ist:
     // Werkzeug Auswahlrahmen, Bitmap gewählt (PM-1, gemessen).
@@ -151,6 +154,21 @@ pub(crate) fn escape_bitmap_mode(ctx: &ToolContext) -> ToolResponse {
     }
     ToolResponse {
         commands: vec![Invocation::new("modify.exitBitmapMode", json!({}))],
+        switch_tool: Some(ToolId::Pointer),
+        ..ToolResponse::default()
+    }
+}
+
+/// Escape in bitmap mode with no drag running (RE spec 71 §1.4): the mode ends, the Pointer becomes
+/// active and the bitmap stays selected as an object; the row "Exit Bitmap Mode" is written twice
+/// without a pixel selection and once with one.
+pub(crate) fn escape_in_bitmap_mode(ctx: &ToolContext) -> ToolResponse {
+    let twice = !ctx.selection.has_pixels();
+    ToolResponse {
+        commands: vec![Invocation::new(
+            "modify.exitBitmapMode",
+            json!({"row": true, "twice": twice}),
+        )],
         switch_tool: Some(ToolId::Pointer),
         ..ToolResponse::default()
     }
@@ -189,8 +207,15 @@ pub(crate) fn nudge_marquee(ev: &ToolEvent, ctx: &ToolContext) -> Option<ToolRes
 /// drag is dropped.
 pub(crate) fn escape_selection_drag(ctx: &ToolContext) -> ToolResponse {
     let exit = || Invocation::new("modify.exitBitmapMode", json!({"row": true}));
-    let commands = if ctx.selection.has_pixels() || ctx.bitmap_mode || ctx.bitmap_worked {
+    let commands = if ctx.selection.has_pixels() {
         vec![exit()]
+    } else if ctx.bitmap_mode || ctx.bitmap_worked {
+        // without a pixel selection the row comes twice, also when the mode started earlier
+        // (RE spec 71 §1.4)
+        vec![Invocation::new(
+            "modify.exitBitmapMode",
+            json!({"row": true, "twice": true}),
+        )]
     } else if bitmap_target(ctx) {
         let edit = || Invocation::new("modify.editBitmap", json!({}));
         vec![edit(), exit(), edit(), exit()]
@@ -210,6 +235,9 @@ pub(crate) fn escape_selection_drag(ctx: &ToolContext) -> ToolResponse {
 /// ausgewählt – auch ohne vorheriges Malen. Ohne Bitmap (nichts oder ein Vektor gewählt) bleibt
 /// alles, wie es ist.
 pub(crate) fn escape_paint_tool(ctx: &ToolContext) -> ToolResponse {
+    if ctx.bitmap_mode {
+        return escape_in_bitmap_mode(ctx);
+    }
     if !bitmap_target(ctx) {
         return ToolResponse::default();
     }

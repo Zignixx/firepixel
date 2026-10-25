@@ -700,3 +700,6 @@ cmdtext-maske-invertieren-firepixel-erweiterung = Maske invertieren (Firepixel-E
 cmdtext-maske-vorher-anwenden-in-bitmap-umwandeln = Maske vorher anwenden (in Bitmap umwandeln)
 cmdtext-dither-dichte-der-ganzen-fuellung-in-0-a-10df26 = Dither-Dichte der ganzen Füllung in % (0 = aus, 100 = deckend; Firepixel-Erweiterung)
 cmdtext-kontur-x-y-wird-geschlossen = Kontur [[x, y], …] (wird geschlossen)
+cmdtext-history-row-edit-bitmap-when-bitmap-mode-92f058 = Protokollzeile „Bitmap bearbeiten“, wenn der Bitmapmodus beginnt (Bitmap-Werkzeug bei gewählter Bitmap, Strich auf eine Bitmap, Doppelklick mit dem Zeiger)
+cmdtext-with-row-write-the-row-even-when-bitmap-942cd5 = mit `row`: die Zeile auch schreiben, wenn der Bitmapmodus schon an ist (zweite Zeile des Zeiger-Doppelklicks)
+cmdtext-with-row-write-the-row-exit-bitmap-mode-6c5ec9 = mit `row`: die Zeile „Bitmapmodus beenden“ zweimal schreiben (Escape im Bitmapmodus ohne Pixelauswahl)

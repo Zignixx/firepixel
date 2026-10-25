@@ -194,10 +194,13 @@ fn escape_mid_stroke_and_after() {
     assert_eq!(label, fp_i18n::t("cmd-modify-exitBitmapMode"), "Verlaufsname");
     assert_eq!(s.active().map(|d| d.selection.elements.clone()), Some(vec![b1]), "B1 bleibt gewählt");
     assert_eq!(sha16(&render(&s)), "db9c8103846f1a9f", "Bild unverändert");
-    // ohne vorherigen Zug: kein Schritt (FV-11)
+    // the Brush chosen again with B1 selected starts bitmap mode ("Edit Bitmap"); Escape ends it
+    // with two rows "Exit Bitmap Mode" (RE spec 71 §1.3, §1.4; replaces the older FV-11 reading)
     s.set_tool(ToolId::Brush).expect("Pinsel");
+    assert_eq!(steps(&s), n0 + 3);
     events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
-    assert_eq!(steps(&s), n0 + 2);
+    assert_eq!(steps(&s), n0 + 5);
+    assert_eq!(s.tools.active, ToolId::Pointer);
 }
 
 /// 01/11: T03, BM gewählt, Zug beginnt außerhalb der Bitmap (100,250 → 500,250, Größe 20):

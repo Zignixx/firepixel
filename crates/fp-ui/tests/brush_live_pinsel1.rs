@@ -169,7 +169,7 @@ fn canvas_drag_paints_live_with_inspector_values() {    let (a, _) = app(false);
     assert_eq!(st(&h).session.tools.options.paint_blend, 30, "Mischmodus aus dem Inspektor");
     let n0 = steps(&h);
     mouse_drag(&mut h, &[(80.0, 100.0), (300.0, 160.0), (500.0, 120.0)]);
-    assert_eq!(steps(&h), n0 + 1, "Loslassen = ein Verlaufsschritt");
+    assert_eq!(steps(&h), n0 + 2, "Loslassen = ein Verlaufsschritt (nach \"Edit Bitmap\", RE spec 71)");
     let id = top_id(&h);
     let img = image(&h, id);
     let max = img.data().iter().map(|p| p[3]).max().unwrap_or(0);
@@ -183,9 +183,9 @@ fn canvas_drag_paints_live_with_inspector_values() {    let (a, _) = app(false);
     assert_eq!(preview_tiles(&h), 0, "Vorschau freigegeben");
     // Rückgängig/Wiederholen
     h.state_mut().state.session.undo().expect("Rückgängig");
-    assert_eq!(steps(&h), n0);
-    h.state_mut().state.session.redo().expect("Wiederholen");
     assert_eq!(steps(&h), n0 + 1);
+    h.state_mut().state.session.redo().expect("Wiederholen");
+    assert_eq!(steps(&h), n0 + 2);
 }
 
 #[test]

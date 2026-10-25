@@ -772,7 +772,15 @@ fn parity_ux_a_rubber_escape_text_zoom() {
     assert_eq!(d.selection.elements, vec![b], "Bitmap bleibt gewählt");
     assert_eq!(s.tools.active, ToolId::Pointer);
     assert_eq!(s.active().unwrap().history.len(), n + 1, "Verlaufsschritt");
-    // Esc ohne Bitmapmodus und Auswahlrahmen: nichts
+    // the Magic Wand chosen with the bitmap selected starts bitmap mode (RE spec 71 §1.3); Escape
+    // without a marquee ends it with two rows and the Pointer (§1.4)
+    tool(&mut s, ToolId::MagicWand);
+    assert!(s.active().unwrap().bitmap_mode);
+    let n = s.active().unwrap().history.len();
+    s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
+    assert_eq!((s.tools.active, s.active().unwrap().history.len()), (ToolId::Pointer, n + 2));
+    // Escape without bitmap mode and marquee: nothing
+    select(&mut s, &[]);
     tool(&mut s, ToolId::MagicWand);
     let n = s.active().unwrap().history.len();
     s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
@@ -1173,12 +1181,16 @@ fn pointer_double_click_bitmap_enters_bitmap_mode() {
     assert!(d.bitmap_mode, "Bitmapmodus");
     assert_eq!(d.selection.elements, vec![b]);
     assert_eq!(s.tools.active, ToolId::Marquee, "Werkzeug Auswahlrahmen");
-    // Esc ohne Auswahlrahmen: im Original bleibt alles (Werkzeug Auswahlrahmen, Bitmap gewählt; PM-1)
+    // Escape without a marquee ends bitmap mode: Pointer, two rows "Exit Bitmap Mode", the bitmap
+    // stays selected (RE spec 71 §1.4; replaces the older PM-1 reading)
     let n = s.active().unwrap().history.len();
     s.tool_event(&ToolEvent::key(ToolKey::Escape)).expect("Esc");
     let d = s.active().unwrap();
-    assert_eq!((s.tools.active, d.selection.elements.clone(), d.history.len()), (ToolId::Marquee, vec![b], n));
-    assert!(d.bitmap_mode, "Bitmapmodus bleibt");
+    assert_eq!((s.tools.active, d.selection.elements.clone(), d.history.len()), (ToolId::Pointer, vec![b], n + 2));
+    assert!(!d.bitmap_mode, "bitmap mode ends");
+    // the Marquee chosen again with the bitmap selected starts bitmap mode again
+    tool(&mut s, ToolId::Marquee);
+    assert!(s.active().unwrap().bitmap_mode);
     // mit Auswahlrahmen beendet Esc den Bitmapmodus (L13); the bitmap stays selected (re 58 §6,
     // measured with the real Escape key; the old TW-04 rule "object selection empty" is refuted)
     drag(&mut s, (110.0, 110.0), (140.0, 140.0));

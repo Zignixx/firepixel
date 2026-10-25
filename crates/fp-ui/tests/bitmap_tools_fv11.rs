@@ -134,7 +134,8 @@ fn brush_without_selection_creates_new_bitmap_and_keeps_painting_into_it() {
     assert_eq!(px(s, nb, 350, 20), [0xc0, 0x40, 0x40, 255], "mit der Strichfarbe");
     assert_eq!(sel(s), vec![nb], "neue Bitmap ausgewählt");
     assert_eq!(s.tools.active, ToolId::Brush, "Werkzeug bleibt Pinsel");
-    assert_eq!(undo_count(s), h0 + 1, "ein Verlaufsschritt");
+    // "Edit Bitmap" (bitmap mode starts, RE spec 71 §1.3) and the stroke row
+    assert_eq!(undo_count(s), h0 + 2, "Edit Bitmap + Brush");
     // zweiter Strich malt in dieselbe (ausgewählte) Bitmap
     drag(s, (300.0, 40.0), (400.0, 40.0));
     assert_eq!(ids(s).len(), n0 + 1, "kein weiteres Objekt");
@@ -143,8 +144,9 @@ fn brush_without_selection_creates_new_bitmap_and_keeps_painting_into_it() {
     esc(s);
     assert_eq!(s.tools.active, ToolId::Pointer);
     assert_eq!(sel(s), vec![nb]);
-    // Esc nach dem Zug legt wie im Original den Schritt „Bitmapmodus beenden“ an (PAR 01/14)
-    assert_eq!(undo_count(s), h0 + 3, "zwei Striche + Bitmapmodus beenden");
+    // Escape without a pixel selection writes "Exit Bitmap Mode" twice (RE spec 71 §1.4)
+    assert_eq!(undo_count(s), h0 + 5, "Edit Bitmap, two strokes, Exit Bitmap Mode twice");
+    s.undo().expect("undo");
     s.undo().expect("undo");
     // Rückgängig: erst der zweite Strich, dann die neue Bitmap
     s.undo().expect("undo");
@@ -240,7 +242,8 @@ fn eraser_dab_and_stroke_like_original() {
     esc(s);
     assert_eq!(s.tools.active, ToolId::Pointer, "Esc nach dem Radieren: Zeiger");
     assert_eq!(sel(s), vec![b]);
-    // Esc nach dem Radieren legt „Bitmapmodus beenden“ an (Original, PAR 03/16)
+    // Esc nach dem Radieren legt „Bitmapmodus beenden“ zweimal an (RE spec 71 §1.4)
+    s.undo().expect("undo");
     s.undo().expect("undo");
     s.undo().expect("undo");
     assert_eq!(px(s, b, 184, 366), [255, 0, 0, 255], "Strg+Z stellt her");

@@ -2920,3 +2920,80 @@ fn fp4_02_fill_live_draws_handles_above_live_image() {
     assert!(!super::fill_live_shows_handles(ToolId::Gradient));
     assert!(!super::fill_live_shows_handles(ToolId::PaintBucket));
 }
+
+/// Enabled state and screen rect of the status-bar button "Exit Bitmap Mode".
+fn exit_bitmap_button(h: &Harness<'static, FirepixelApp>) -> (bool, egui::Rect) {
+    use egui_kittest::kittest::{NodeT as _, Queryable as _};
+    let name = fp_i18n::t("ui-exit-bitmap-mode");
+    let n = h
+        .query_all(egui_kittest::kittest::By::new().role(egui::accesskit::Role::Button))
+        .find(|n| n.accesskit_node().label().as_deref() == Some(name.as_str()))
+        .expect("Exit Bitmap Mode button");
+    (!n.accesskit_node().is_disabled(), n.rect())
+}
+
+/// FB-62 (RE spec 71 section 1): the status-bar button is grey and disabled outside bitmap mode,
+/// red and enabled while painting on a bitmap; its click ends the mode with one row and keeps the
+/// tool.
+#[test]
+fn exit_bitmap_mode_button_is_red_in_bitmap_mode() {
+    let mut h = harness();
+    {
+        let s = &mut h.state_mut().state.session;
+        let img = fp_raster::RgbaImage::filled(
+            fp_geom::IRect::from_xywh(100, 100, 120, 80),
+            fp_color::Rgba8::new(255, 255, 255, 255),
+        )
+        .expect("image");
+        s.clipboard.clear();
+        s.clipboard.pixels = Some(img);
+        s.execute("edit.paste", json!({})).expect("paste");
+        s.execute("select.set", json!({"ids": [], "mode": "replace"}))
+            .expect("deselect");
+    }
+    set_tool(&mut h, ToolId::Brush);
+    h.run_steps(2);
+    assert!(!exit_bitmap_button(&h).0, "grey without bitmap mode");
+    assert_eq!(
+        super::exit_bitmap_mode_colors(false),
+        (
+            egui::Color32::from_rgb(0xbf, 0xbf, 0xbf),
+            egui::Color32::from_rgb(0xf4, 0xf4, 0xf4)
+        )
+    );
+    // a stroke on the bitmap starts bitmap mode: the button turns red
+    let (a, b) = (at(&h, 120.0, 140.0), at(&h, 200.0, 140.0));
+    mouse_drag(&mut h, a, b, Modifiers::NONE);
+    h.run_steps(2);
+    let st = &h.state().state;
+    assert!(st.session.active().expect("doc").bitmap_mode);
+    let (on, r) = exit_bitmap_button(&h);
+    assert!(on, "enabled in bitmap mode");
+    assert_eq!(
+        super::exit_bitmap_mode_colors(true),
+        (egui::Color32::from_rgb(0xcc, 0, 0), egui::Color32::WHITE)
+    );
+    // the click ends bitmap mode, the Brush stays
+    let n = undo_count(&h);
+    mv(&mut h, r.center());
+    button(
+        &mut h,
+        r.center(),
+        PointerButton::Primary,
+        true,
+        Modifiers::NONE,
+    );
+    button(
+        &mut h,
+        r.center(),
+        PointerButton::Primary,
+        false,
+        Modifiers::NONE,
+    );
+    h.run_steps(3);
+    let st = &h.state().state;
+    assert!(!st.session.active().expect("doc").bitmap_mode);
+    assert_eq!(st.session.tools.active, ToolId::Brush);
+    assert_eq!(undo_count(&h), n + 1, "one row Exit Bitmap Mode");
+    assert!(!exit_bitmap_button(&h).0, "grey again");
+}

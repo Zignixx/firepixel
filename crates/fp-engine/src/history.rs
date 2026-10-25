@@ -123,6 +123,17 @@ impl History {
         }
     }
 
+    /// Puts `step` just below the newest row (a row that belongs before it, e.g. "Edit Bitmap"
+    /// before the first stroke, RE spec 71 §1.3); trims to `MaxUndos` like [`History::push`].
+    pub(crate) fn insert_below_top(&mut self, step: HistoryStep) {
+        let at = self.undo.len().saturating_sub(1);
+        self.undo.insert(at, step);
+        while self.undo.len() > self.max_undos {
+            self.undo.remove(0);
+            self.dropped += 1;
+        }
+    }
+
     /// Letzter Schritt zum Zusammenfassen mit einem Folgeschritt (z. B. Pfeiltasten); nur, wenn
     /// nichts zum Wiederholen ansteht (and not right after a redo: a redone row stays as it was).
     pub fn last_mergeable(&mut self) -> Option<&mut HistoryStep> {

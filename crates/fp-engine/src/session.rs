@@ -105,6 +105,24 @@ pub(crate) fn is_key_nudge(name: &str, params: &Value) -> bool {
 /// retouch tools.
 const NOT_REPEATABLE: &[&str] = &["bitmap.paint", "bitmap.erase", "bitmap.retouch"];
 
+/// Bitmap-tool strokes: outside bitmap mode they start it (RE spec 71 §1.3).
+const PAINT_COMMANDS: &[&str] = &["bitmap.paint", "bitmap.erase", "bitmap.retouch"];
+
+/// Text key of the History row of a paint stroke, named after its tool (RE spec 71, FB-62).
+fn paint_row_key(name: &str, params: &Value) -> Option<&'static str> {
+    match name {
+        "bitmap.paint" => Some(
+            if params.get("tool").and_then(|v| v.as_str()) == Some("pencil") {
+                "tool-pencil"
+            } else {
+                "tool-brush"
+            },
+        ),
+        "bitmap.erase" => Some("tool-eraser"),
+        _ => None,
+    }
+}
+
 /// Command and parameters that repeat a history row (TW-173). An arrow-key nudge is repeated as a
 /// plain move (a new row, not merged into the nudge row); a pen point (`appendPointToPath` in the
 /// original) appends the same point to the same contour again.
@@ -662,6 +680,9 @@ pub struct Session {
     /// Nächster Befehl legt auch ohne Änderung einen Verlaufsschritt an (Original: z. B.
     /// „JPEG-Maske löschen“ ohne Maske).
     force_step: bool,
+    /// Commands of a tool response are running (a canvas stroke, not a script or MCP call): a
+    /// paint stroke then starts bitmap mode (RE spec 71 §1.3).
+    in_tool_commands: bool,
     next_doc: u64,
     untitled: u32,
 }
@@ -719,6 +740,7 @@ impl Session {
             live_text: None,
             group_log: Vec::new(),
             force_step: false,
+            in_tool_commands: false,
             next_doc: 1,
             untitled: 0,
             prefs,
@@ -1078,6 +1100,7 @@ impl Session {
         let before = self.active().map(|d| d.snapshot());
         let colors_before = (self.tools.stroke_color, self.tools.fill_color);
         let rows_before = self.history_rows();
+        let mode_before = self.active().is_some_and(|d| d.bitmap_mode);
         let res = cmd.apply(self, &p);
         let mut out = match res {
             Ok(o) => o,
@@ -1100,6 +1123,13 @@ impl Session {
             .filter(|k| fp_i18n::has(k))
         {
             out.label = Some(fp_i18n::t(&k));
+        }
+        // RE spec 71 §1.5 / FB-62: a paint stroke row is named after its tool (Pencil, Brush,
+        // Eraser)
+        if out.label.as_ref().is_none_or(|l| *l == info.step_label())
+            && let Some(k) = paint_row_key(name, &p.value)
+        {
+            out.label = Some(fp_i18n::t(k));
         }
         // Verlaufsname in der Sprache der Oberfläche, auch wenn der Befehl über die MCP-Brücke in der
         // Antwortsprache der Agenten lief (CT-1b N1), dazu die sprachneutrale Quelle (K-2): erkannt
@@ -1133,6 +1163,9 @@ impl Session {
                 if let (Some(id), Some(b)) = (doc_id, before) {
                     self.finish_step(id, b, step_name, step_key, name, &p.value);
                     self.note_tool_colors(rows_before, colors_before);
+                    if PAINT_COMMANDS.contains(&name) && !mode_before && self.in_tool_commands {
+                        self.enter_bitmap_mode_below_top(rows_before);
+                    }
                 }
             }
             Effect::View => {
@@ -1144,7 +1177,7 @@ impl Session {
         }
         // re 28 L3: Arbeit im Bitmap-Modus merken (Auswahlrahmen, Löschen, Malen …); beim Verlassen
         // des Modus wird die Bitmap dann beschnitten
-        if name != "modify.exitBitmapMode"
+        if !matches!(name, "modify.exitBitmapMode" | "modify.editBitmap")
             && let Some(d) = self.active_mut()
             && (d.bitmap_mode
                 || d.selection.has_pixels()
@@ -1360,6 +1393,35 @@ impl Session {
 
     /// Rows of the active document's History including the dropped ones (to see whether a command
     /// added a row).
+    /// RE spec 71 §1.3: a bitmap-tool stroke outside bitmap mode starts the mode; the row "Edit
+    /// Bitmap" goes in just below the stroke row the command wrote (after a row "Insert Empty
+    /// Bitmap" of a new bitmap). Nothing happens when the command wrote no row.
+    fn enter_bitmap_mode_below_top(&mut self, rows_before: usize) {
+        if self.group_depth > 0 || self.history_rows() <= rows_before {
+            return;
+        }
+        let Some(d) = self.active_mut() else {
+            return;
+        };
+        d.bitmap_mode = true;
+        let Some(top) = d.history.top() else {
+            return;
+        };
+        let key = "msg-step-edit-bitmap";
+        let step = crate::history::HistoryStep {
+            label: fp_i18n::with_ui_language(|| fp_i18n::t(key)),
+            key: Some(crate::history::StepKey::Text(key.into())),
+            command: "modify.editBitmap".into(),
+            params: serde_json::json!({}),
+            recordable: true,
+            before: top.before.clone(),
+            after: top.before.clone(),
+        };
+        d.history.insert_below_top(step);
+        let id = d.id;
+        self.events.push(SessionEvent::HistoryChanged(id));
+    }
+
     fn history_rows(&self) -> usize {
         self.active()
             .map(|d| d.history.len() + d.history.dropped())
@@ -1802,8 +1864,29 @@ impl Session {
             let painted = self
                 .active()
                 .is_some_and(|d| d.bitmap_mode || !d.bitmap_worked.is_empty());
-            if paint_tool && leaves_bitmap && painted {
+            // RE spec 71 §1.4: choosing the Pointer ends bitmap mode (one row "Exit Bitmap Mode",
+            // the bitmap stays selected as an object), but not while a pixel selection is there
+            let pixels = self.active().is_some_and(|d| d.selection.has_pixels());
+            if id == ToolId::Pointer {
+                if painted && !pixels {
+                    let p = if paint_tool {
+                        serde_json::json!({"step": true})
+                    } else {
+                        serde_json::json!({"row": true})
+                    };
+                    self.execute("modify.exitBitmapMode", p)?;
+                }
+            } else if paint_tool && leaves_bitmap && painted {
                 self.execute("modify.exitBitmapMode", serde_json::json!({"step": true}))?;
+            }
+            // RE spec 71 §1.3: choosing a bitmap tool while a bitmap is selected starts bitmap
+            // mode at once (one row "Edit Bitmap", no stroke needed)
+            let starts_mode = !leaves_bitmap
+                && self.active().is_some_and(|d| {
+                    !d.bitmap_mode && !crate::commands::edit::selected_bitmaps(d).is_empty()
+                });
+            if starts_mode {
+                self.execute("modify.editBitmap", serde_json::json!({"row": true}))?;
             }
             self.tools.active = id;
             self.tools.machine = tools::make_machine(id);
@@ -2072,6 +2155,7 @@ impl Session {
                 resp.results.extend(results);
             }
             _ => {
+                let outer = std::mem::replace(&mut self.in_tool_commands, true);
                 for c in &cmds {
                     match self.execute(&c.command, c.params.clone()) {
                         Ok(o) => resp.results.push(o.value),
@@ -2083,6 +2167,7 @@ impl Session {
                         }
                     }
                 }
+                self.in_tool_commands = outer;
             }
         }
         resp.commands = cmds;

@@ -114,7 +114,7 @@ fn live_stroke_matches_result_and_is_one_step() {
     let pts = [(60.0, 80.0), (160.0, 120.0), (260.0, 90.0), (300.0, 200.0)];
     let p = stroke(&mut s, &pts).expect("Vorschau während des Ziehens");
     assert!(!p.tiles.is_empty(), "Vorschau hat Kacheln");
-    assert_eq!(steps(&s), n0 + 1, "Loslassen = genau ein Verlaufsschritt");
+    assert_eq!(steps(&s), n0 + 2, "Loslassen = genau ein Verlaufsschritt (nach \"Edit Bitmap\", RE spec 71)");
     let id = top_elements(&s)[0].id;
     let img = image(&s, id);
     // die letzte Vorschau zeigt genau die Pixel des Ergebnisses
@@ -291,7 +291,7 @@ fn fifty_value_changes_do_not_stack() {
     }
     assert_eq!(steps(&s), n0, "Einstellungen ändern ist kein Verlaufsschritt");
     stroke(&mut s, &[(40.0, 150.0), (340.0, 150.0)]);
-    assert_eq!(steps(&s), n0 + 1);
+    assert_eq!(steps(&s), n0 + 2);
     assert_eq!(top_elements(&s).len(), 1, "genau eine Bitmap");
     let id = top_elements(&s)[0].id;
     let img = image(&s, id);
@@ -319,11 +319,11 @@ fn escape_discards_the_stroke() {
     // re 62 §1.4: the Pointer is active at once, the stroke is still painted on release
     assert_eq!(s.tools.active, ToolId::Pointer);
     events(&mut s, &[ToolEvent::up(250.0, 60.0)]);
-    assert_eq!(steps(&s), n0 + 1, "Esc mitten im Zug: Strich vollständig gemalt");
+    assert_eq!(steps(&s), n0 + 2, "Esc mitten im Zug: Strich vollständig gemalt");
     // der nächste Zug malt wieder
     tool(&mut s, ToolId::Brush);
     stroke(&mut s, &[(50.0, 100.0), (250.0, 100.0)]);
-    assert_eq!(steps(&s), n0 + 2);
+    assert_eq!(steps(&s), n0 + 3);
 }
 
 #[test]

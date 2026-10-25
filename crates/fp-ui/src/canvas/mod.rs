@@ -2700,7 +2700,9 @@ fn overlays(
             let Some(e) = path.as_ref().and_then(|p| d.doc.element_at(p)).cloned() else {
                 continue;
             };
-            if paint_tool && matches!(e.kind, fp_model::ElementKind::Bitmap(_)) {
+            // bitmap mode hides the object handles of the bitmap and draws no frame (RE spec 71
+            // §1.2)
+            if (paint_tool || d.bitmap_mode) && matches!(e.kind, fp_model::ElementKind::Bitmap(_)) {
                 continue;
             }
             // Animationsinstanz: Rahmen nur um das Bild im aktuellen Status (TW-20)
@@ -4040,6 +4042,69 @@ fn scrollbars(ui: &mut Ui, st: &mut AppState, area: Rect, view: &fp_engine::View
     }
 }
 
+/// Pixel image of the "Exit Bitmap Mode" symbol, 10 x 10 px without anti-aliasing (RE spec 71
+/// §1.1): `O` circle, `x` cross.
+const EXIT_BITMAP_MODE_PIXELS: [&str; 10] = [
+    "...OOOO...",
+    "..OOOOOO..",
+    ".OxxOOxxO.",
+    "OOxxxxxxOO",
+    "OOOxxxxOOO",
+    "OOOxxxxOOO",
+    "OOxxxxxxOO",
+    ".OxxOOxxO.",
+    "..OOOOOO..",
+    "...OOOO...",
+];
+
+/// Circle and cross colour of the "Exit Bitmap Mode" symbol (RE spec 71 §1.1): red #CC0000 with a
+/// white cross in bitmap mode, otherwise grey #BFBFBF with #F4F4F4.
+pub(crate) fn exit_bitmap_mode_colors(on: bool) -> (Color32, Color32) {
+    if on {
+        (Color32::from_rgb(0xcc, 0, 0), Color32::WHITE)
+    } else {
+        (
+            Color32::from_rgb(0xbf, 0xbf, 0xbf),
+            Color32::from_rgb(0xf4, 0xf4, 0xf4),
+        )
+    }
+}
+
+/// The status-bar button "Exit Bitmap Mode": no frame, no hover change, the 10 x 10 px symbol in
+/// whole pixels; disabled (a click does nothing) outside bitmap mode.
+fn exit_bitmap_mode_button(ui: &mut Ui, size: egui::Vec2, on: bool, tip: &str) -> egui::Response {
+    let sense = if on { Sense::click() } else { Sense::hover() };
+    let (rect, resp) = ui.allocate_exact_size(size, sense);
+    if ui.is_rect_visible(rect) {
+        let ppp = ui.ctx().pixels_per_point();
+        let px = 1.0 / ppp;
+        let side = 10.0 * px;
+        let o = pos2(
+            ((rect.center().x - side / 2.0) * ppp).round() / ppp,
+            ((rect.center().y - side / 2.0) * ppp).round() / ppp,
+        );
+        let (circle, cross) = exit_bitmap_mode_colors(on);
+        let painter = ui.painter();
+        for (y, row) in EXIT_BITMAP_MODE_PIXELS.iter().enumerate() {
+            for (x, ch) in row.chars().enumerate() {
+                let c = match ch {
+                    'O' => circle,
+                    'x' => cross,
+                    _ => continue,
+                };
+                let p = o + vec2(x as f32 * px, y as f32 * px);
+                painter.rect_filled(Rect::from_min_size(p, vec2(px, px)), 0.0, c);
+            }
+        }
+    }
+    crate::ui_kit::icon_button_info(&resp, on, tip, None);
+    if tip.is_empty() {
+        resp
+    } else {
+        resp.on_hover_text(tip)
+    }
+}
+
 // ---------------------------------------------------------------------- Fußleiste
 
 /// Auswahlinfo links in der Fußleiste (Typtexte 10922–10929 bzw. Exportformat + „(Dokument)“).
@@ -4305,25 +4370,34 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             Icon::ExitBitmapMode,
             fp_i18n::t("ui-exit-bitmap-mode"),
             bitmap_mode,
-            Some(Action::Run("modify.exitBitmapMode".into(), json!({}))),
+            // one row "Exit Bitmap Mode" also without work in the mode; the tool stays (RE spec
+            // 71 §1.4)
+            Some(Action::Run(
+                "modify.exitBitmapMode".into(),
+                json!({"row": true}),
+            )),
         ),
     ];
     for (icon, tip, en, act) in items2 {
         let r = Rect::from_min_size(pos2(x, y), bsize);
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r));
-        if widgets::icon_button(
-            &mut child,
-            icon,
-            bsize,
-            11.0,
-            ButtonLook {
-                selected: false,
-                enabled: en,
-                group: Some(ToolGroup::View),
-            },
-            &tip,
-        )
-        .clicked()
+        let resp = if icon == Icon::ExitBitmapMode {
+            exit_bitmap_mode_button(&mut child, bsize, en, &tip)
+        } else {
+            widgets::icon_button(
+                &mut child,
+                icon,
+                bsize,
+                11.0,
+                ButtonLook {
+                    selected: false,
+                    enabled: en,
+                    group: Some(ToolGroup::View),
+                },
+                &tip,
+            )
+        };
+        if resp.clicked()
             && let Some(a) = act
         {
             st.push(a);

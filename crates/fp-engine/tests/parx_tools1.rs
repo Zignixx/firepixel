@@ -330,7 +330,8 @@ fn escape_after_stroke_ends_bitmap_mode_with_step() {
         let n = s.active().expect("d").history.undo_count();
         events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
         let d = s.active().expect("d");
-        assert_eq!(d.history.undo_count(), n + 1, "{t:?}: ein Schritt");
+        // two rows "Exit Bitmap Mode" without a pixel selection (RE spec 71 §1.4)
+        assert_eq!(d.history.undo_count(), n + 2, "{t:?}: two rows");
         assert_eq!(d.history.undo_label(), Some("Bitmapmodus beenden"), "{t:?}");
         assert_eq!(d.selection.elements, vec![id], "{t:?}: Bitmap bleibt gewählt");
         assert_eq!(s.tools.active, ToolId::Pointer);

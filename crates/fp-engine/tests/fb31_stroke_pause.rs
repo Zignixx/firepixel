@@ -110,7 +110,7 @@ fn resumed_stroke_is_one_row_and_the_overlap_does_not_darken() {
     assert!(k > 1 && k < n - 1, "the resumed part starts inside the points ({k} of {n})");
     assert_eq!(r.commands[0].params["points"][k], json!([151.0, 41.0]), "the resumed part starts at the press (even size: +1/+1)");
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle);
-    assert_eq!(steps(&s), n0 + 1, "the whole stroke is ONE history row");
+    assert_eq!(steps(&s), n0 + 2, "the whole stroke is ONE history row (after the row \"Edit Bitmap\" that starts bitmap mode, RE spec 71)");
     let id = top_elements(&s)[0].id;
     let img = image(&s, id);
     let single_h = alpha(&img, 100, 100);
@@ -157,7 +157,7 @@ fn escape_while_paused_applies_the_stroke() {
     assert_eq!(s.tool_stroke_pause(), StrokePause::Paused, "Space + press keeps the pause");
     let r = key(&mut s, ToolKey::Escape);
     assert_eq!(r.commands.first().map(|c| c.command.as_str()), Some("bitmap.paint"));
-    assert_eq!(steps(&s), n0 + 1, "Escape applies the paused stroke");
+    assert_eq!(steps(&s), n0 + 2, "Escape applies the paused stroke");
     assert_eq!(s.tools.active, ToolId::Brush, "the tool stays");
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle);
     let img = image(&s, top_elements(&s)[0].id);
@@ -198,7 +198,7 @@ fn undo_while_paused_discards_and_redo_applies() {
     events(&mut s, &[ToolEvent::down(50.0, 200.0)]);
     drag(&mut s, (50.0, 200.0), (250.0, 200.0));
     events(&mut s, &[ToolEvent::up(250.0, 200.0)]);
-    assert_eq!(steps(&s), n0 + 2);
+    assert_eq!(steps(&s), n0 + 3);
 }
 
 #[test]
@@ -212,7 +212,7 @@ fn menu_command_applies_but_zoom_keeps_the_pause() {
     assert_eq!(steps(&s), n0);
     ex(&mut s, "select.none", json!({}));
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle, "a menu command applies the stroke");
-    assert_eq!(steps(&s), n0 + 2, "the stroke row, then the command");
+    assert_eq!(steps(&s), n0 + 3, "the stroke row, then the command");
 }
 
 #[test]
@@ -236,7 +236,7 @@ fn pencil_and_eraser_pause_too() {
     events(&mut s, &[ToolEvent::down(150.0, 40.0)]);
     drag(&mut s, (150.0, 40.0), (150.0, 200.0));
     events(&mut s, &[ToolEvent::up(150.0, 200.0)]);
-    assert_eq!(steps(&s), n0 + 1, "release after the resume applies the whole stroke");
+    assert_eq!(steps(&s), n0 + 2, "release after the resume applies the whole stroke");
     let id = top_elements(&s)[0].id;
     let img = image(&s, id);
     assert!(alpha(&img, 100, 100) > 0 && alpha(&img, 150, 170) > 0, "both parts painted");

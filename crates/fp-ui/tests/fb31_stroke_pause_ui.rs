@@ -111,7 +111,7 @@ fn p_pauses_and_the_next_press_resumes_the_stroke() {
     let q1 = move_to(&mut h, (240.0, 40.0), (240.0, 300.0));
     button(&mut h, q1, false);
     h.run_steps(2);
-    assert_eq!(steps(&h), n0 + 1, "one History row for the whole stroke");
+    assert_eq!(steps(&h), n0 + 2, "one History row for the whole stroke (after \"Edit Bitmap\", RE spec 71)");
     assert_eq!(st(&h).session.tool_stroke_pause(), StrokePause::Idle);
     assert_ne!(status(&h), fp_i18n::t("ui-stroke-paused"), "the status line is free again");
     assert_ne!(status(&h), fp_i18n::t("ui-stroke-pause-hint"));
@@ -129,7 +129,7 @@ fn enter_applies_a_paused_stroke() {
     key(&mut h, Key::P);
     button(&mut h, p1, false);
     key(&mut h, Key::Enter);
-    assert_eq!(steps(&h), n0 + 1, "Enter applies the paused stroke");
+    assert_eq!(steps(&h), n0 + 2, "Enter applies the paused stroke (after \"Edit Bitmap\")");
     assert_eq!(st(&h).session.tool_stroke_pause(), StrokePause::Idle);
     assert_eq!(st(&h).session.tools.active, ToolId::Brush);
 }
