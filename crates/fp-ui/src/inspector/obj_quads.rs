@@ -970,6 +970,25 @@ fn preview_slider(
     }
 }
 
+/// Live canvas preview of the family highlighted in the open font list. The document and its
+/// history stay untouched until Enter or a click commits `text.applyAttributes`. Highlighting
+/// the current family, closing the list, or Esc drops the preview. With the on-canvas text
+/// editor open the preview is skipped, same as the text sliders.
+pub(crate) fn preview_marked_font(ctx: &egui::Context, st: &mut AppState, family: &str, style: &str) {
+    if st.session.text_edit_attrs().is_some() {
+        return;
+    }
+    let Some(marked) = super::fonts::marked_family(ctx) else {
+        return;
+    };
+    if marked.eq_ignore_ascii_case(family) {
+        return;
+    }
+    let ps = super::fonts::ps_name(&marked, style);
+    st.inspector_preview =
+        InspectorPreview::for_selection(st, PreviewValue::Text(json!({"font": ps})));
+}
+
 /// Live canvas preview of a pending text slider value (FB-21/FB-22): the attribute patch of
 /// `text.applyAttributes` on the selected text objects. With the text editor open only the field
 /// shows the pending value (the marked text is not previewed).
@@ -3430,12 +3449,16 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     if fsel.is_none() && en {
         let resp = fields::combo_box_frame(ui, id.with("fam"), fam_r, &family, en);
         let _ = resp;
-    } else if let Some(i) = super::fonts::family_combo(ui, id.with("fam"), fam_r, &names, fsel, en)
-    {
-        let ps = super::fonts::ps_name(names[i], &style);
-        // auch aus dem Inspektor in „zuletzt benutzt“ des Schrift-Menüs (BA-061)
-        crate::menu::note_recent_font(st, &ps);
-        set_text(ui, st, tgt, json!({"font": ps}));
+    } else {
+        if let Some(i) = super::fonts::family_combo(ui, id.with("fam"), fam_r, &names, fsel, en) {
+            let ps = super::fonts::ps_name(names[i], &style);
+            // auch aus dem Inspektor in „zuletzt benutzt“ des Schrift-Menüs (BA-061)
+            crate::menu::note_recent_font(st, &ps);
+            set_text(ui, st, tgt, json!({"font": ps}));
+        }
+        if en {
+            preview_marked_font(ui.ctx(), st, &family, &style);
+        }
     }
     // descriptive tooltips as measured (RE spec 60 §4); none on the arrows, glyphs and labels
     fields::tip(ui, id.with("fam"), fam_r, &t("pi-tip-font-family"));
