@@ -822,6 +822,20 @@ pub fn build_main_menu_where(
                         .unwrap_or(nodes.len());
                     nodes.insert(pos, runtime_item("view.livePointPreview"));
                 }
+                // Firepixel's own switches "Pointer Edits Points" (TW-256) and "Live Font
+                // Preview" (TW-255, contributor PR #3) right after it
+                let mut after = "view.livePointPreview";
+                for id in ["view.pointerEditsPoints", "view.liveFontPreview"] {
+                    if st.session.registry().get(id).is_some() {
+                        let pos = nodes
+                            .iter()
+                            .position(|n| matches!(n, Node::Item { action: ItemAction::Command(c), .. } if c == after))
+                            .map(|i| i + 1)
+                            .unwrap_or(nodes.len());
+                        nodes.insert(pos, runtime_item(id));
+                        after = id;
+                    }
+                }
                 // Firepixel's own switch "Coordinate Tag" right after Tooltips (FB-41)
                 if st.session.registry().get("view.coordinateTag").is_some() {
                     let pos = nodes

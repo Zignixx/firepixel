@@ -280,6 +280,31 @@ fn inspector_search_filter_arrows_enter() {
     combo_with(&h, "Arial");
 }
 
+/// TW-255: View ▸ Live Font Preview off (preference `LiveFontPreview`, default on): the list still
+/// highlights with ↑/↓, but nothing is previewed on the canvas.
+#[test]
+fn live_font_preview_switch_off_previews_nothing() {
+    let _g = lock();
+    let fams = wait_fonts();
+    let all = names(&fams);
+    let hits = fonts::filter_names(&all, "ar");
+    assert!(hits.len() >= 2, "System mit mehreren Treffern für „ar“");
+    let mut h = harness(|s| {
+        text_session(s);
+    });
+    h.run_steps(2);
+    assert!(fp_engine::session::live_font_preview(&st(&h).session.prefs), "on by default");
+    let _ = h.state_mut().state.session.execute("view.liveFontPreview", json!({}));
+    assert!(!fp_engine::session::live_font_preview(&st(&h).session.prefs));
+    let combo = combo_with(&h, "Arial");
+    click(&mut h, combo.center());
+    type_text(&mut h, "ar");
+    key(&mut h, Key::ArrowDown);
+    assert_eq!(fonts::marked_family(&h.ctx).as_deref(), Some(all[hits[1]]));
+    assert!(preview_font(&h).is_none(), "switch off: no canvas preview");
+    key(&mut h, Key::Escape);
+}
+
 /// Esc schließt ohne Änderung; die Taste geht nicht an die Leinwand (Auswahl bleibt), ein Klick
 /// in das Suchfeld schließt die Liste nicht.
 #[test]

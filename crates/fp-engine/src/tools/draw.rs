@@ -1734,7 +1734,7 @@ impl ToolMachine for PenTool {
             // a selected path without a path in progress: anchors like the Subselection (hollow,
             // selected ones filled); a rectangle primitive: its four corners filled (RE spec 60
             // section 1.3). Right after closing the first anchor is filled (section 1.2).
-            v = super::pointer::path_points_feedback(ctx, true, true);
+            v = super::pointer::path_points_feedback(ctx, true, true, false);
             if let Some(a) = self.closed_first
                 && let [id] = ctx.selection.elements.as_slice()
                 && let Some(Overlay::PathPoints {

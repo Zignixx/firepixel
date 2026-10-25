@@ -360,8 +360,8 @@ impl FirepixelApp {
             }
         }
         if st.settings.workspace.show_inspector && !hidden && !studio && chrome.inspector {
-            let room = ui.max_rect().height();
-            let h = inspector::height(&theme, st);
+            let room = ui.max_rect().height() - m.splitter;
+            let h = inspector::height(&theme, st, room);
             let resp = egui::Panel::bottom("fp-inspector")
                 .exact_size(h + m.splitter)
                 .frame(no_frame)
@@ -374,17 +374,24 @@ impl FirepixelApp {
                     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
                     inspector::show(&mut child, st);
                 });
-            // Drag the top edge up or down. The dock splitter is interactive; this one was only painted.
+            // Drag the top edge up or down (Firepixel extension TW-254, contributor PR #3). The
+            // grip covers the splitter and 2 px of the document area above it, never the tab row.
             let r = resp.response.rect;
-            let grip_h = (m.splitter + 4.0).min(r.height().max(1.0));
-            let grip = Rect::from_min_size(r.min, vec2(r.width(), grip_h));
+            let grip = Rect::from_min_max(
+                pos2(r.left(), r.top() - 2.0),
+                pos2(r.right(), r.top() + m.splitter),
+            );
             let g = ui.interact(grip, egui::Id::new("inspector-height"), egui::Sense::drag());
             if g.hovered() || g.dragged() {
                 ctx.set_cursor_icon(egui::CursorIcon::ResizeVertical);
             }
-            if g.dragged() {
-                let max_h = (room - 120.0 - m.splitter).max(h);
-                let new_h = (h - g.drag_delta().y)
+            if g.dragged()
+                && let Some(p) = g.interact_pointer_pos()
+            {
+                // absolute from the pointer, so snapping to the discrete heights is not sticky
+                let max_h = (room - inspector::DOC_MIN_VISIBLE)
+                    .max(theme.metrics.inspector_header_height + 2.0);
+                let new_h = (r.bottom() - p.y - m.splitter * 0.5)
                     .clamp(theme.metrics.inspector_header_height + 2.0, max_h);
                 inspector::apply_dragged_height(
                     &mut st.settings.workspace,

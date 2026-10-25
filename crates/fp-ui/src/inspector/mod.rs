@@ -117,16 +117,28 @@ impl InspectorState {
     }
 }
 
+/// Minimum height of the document area the Properties panel leaves visible when its height
+/// was dragged (Firepixel extension TW-254, contributor PR #3).
+pub const DOC_MIN_VISIBLE: f32 = 120.0;
+
+/// Snap distance in pixels: a dragged height this close to the full or half height
+/// returns to that discrete size.
+const HEIGHT_SNAP: f32 = 5.0;
+
 /// Höhe des Inspektors (Kopf + zwei Zeilen bzw. eine Zeile im Halbhöhenmodus).
 /// A dragged height (`inspector_height`) replaces the discrete size until the next
-/// diamond click or tab double-click.
-pub fn height(theme: &Theme, st: &AppState) -> f32 {
+/// diamond click or tab double-click. `room` is the height available for document area plus
+/// panel (without the splitter): a dragged height never leaves less than
+/// [`DOC_MIN_VISIBLE`] pixels of the document visible, also when the window shrinks later.
+pub fn height(theme: &Theme, st: &AppState, room: f32) -> f32 {
     let ws = &st.settings.workspace;
     let header = theme.metrics.inspector_header_height;
+    let collapsed = header + 2.0;
     if ws.inspector_collapsed {
-        header + 2.0
-    } else if ws.inspector_height >= header + 2.0 {
+        collapsed
+    } else if ws.inspector_height >= collapsed {
         ws.inspector_height
+            .min((room - DOC_MIN_VISIBLE).max(collapsed))
     } else if ws.inspector_half {
         header + theme.metrics.inspector_row_height + 6.0
     } else {
@@ -136,11 +148,13 @@ pub fn height(theme: &Theme, st: &AppState) -> f32 {
 
 /// Apply a drag of the Properties top edge. `h` is the content height in pixels.
 /// Dragging down to the tab row collapses the panel and forgets the custom height.
+/// Within a few pixels of the half or full height the panel snaps to that discrete size.
 /// At or below one row the second row stays hidden; above that both rows show, and
 /// the panel may grow past the two-row size.
 pub fn apply_dragged_height(ws: &mut crate::workspace::Workspace, header: f32, row: f32, h: f32) {
     let collapsed_h = header + 2.0;
     let half_h = header + row + 6.0;
+    let full_h = header + 2.0 * row + 8.0;
     if h <= collapsed_h + 4.0 {
         ws.inspector_collapsed = true;
         ws.inspector_half = false;
@@ -148,6 +162,16 @@ pub fn apply_dragged_height(ws: &mut crate::workspace::Workspace, header: f32, r
         return;
     }
     ws.inspector_collapsed = false;
+    if (h - full_h).abs() <= HEIGHT_SNAP {
+        ws.inspector_half = false;
+        ws.inspector_height = 0.0;
+        return;
+    }
+    if (h - half_h).abs() <= HEIGHT_SNAP {
+        ws.inspector_half = true;
+        ws.inspector_height = 0.0;
+        return;
+    }
     ws.inspector_half = h <= half_h + 4.0;
     ws.inspector_height = h;
 }
@@ -527,9 +551,14 @@ mod height_drag {
         assert!(!ws.inspector_collapsed);
         assert!(!ws.inspector_half);
         assert!((ws.inspector_height - (full + 40.0)).abs() < 0.01);
-        apply_dragged_height(&mut ws, header, row, header + row);
+        apply_dragged_height(&mut ws, header, row, header + row - 8.0);
         assert!(!ws.inspector_collapsed);
         assert!(ws.inspector_half, "one row hides the second");
+        // near the discrete heights the drag snaps to them
+        apply_dragged_height(&mut ws, header, row, full + 3.0);
+        assert!(!ws.inspector_half && ws.inspector_height == 0.0, "snaps to full");
+        apply_dragged_height(&mut ws, header, row, header + row + 6.0 - 2.0);
+        assert!(ws.inspector_half && ws.inspector_height == 0.0, "snaps to half");
         apply_dragged_height(&mut ws, header, row, header + 2.0);
         assert!(ws.inspector_collapsed);
         assert_eq!(ws.inspector_height, 0.0);

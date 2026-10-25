@@ -577,6 +577,17 @@ pub fn coordinate_tag(prefs: &crate::prefs::Preferences) -> bool {
     prefs.get_bool(COORDINATE_TAG_PREF, true)
 }
 
+/// Preference of View ▸ Live Font Preview (Firepixel extension TW-255, contributor PR #3): the
+/// family highlighted in an open font list of the Properties panel or the text editor dialog is
+/// previewed on the selected text objects (render only; no History step until Enter or a click).
+/// On by default; off = only Enter or a click shows the new family, like the reference.
+pub const LIVE_FONT_PREVIEW_PREF: &str = "LiveFontPreview";
+
+/// Whether View ▸ Live Font Preview is on ([`LIVE_FONT_PREVIEW_PREF`], default on).
+pub fn live_font_preview(prefs: &crate::prefs::Preferences) -> bool {
+    prefs.get_bool(LIVE_FONT_PREVIEW_PREF, true)
+}
+
 /// Preference of Layers panel options ▸ Show Group Contents (Firepixel extension, FB-59 to
 /// FB-61): group rows get a toggle that lists their objects (and masked objects one that lists
 /// the objects of the mask) indented below; a click on such a row selects the object like the

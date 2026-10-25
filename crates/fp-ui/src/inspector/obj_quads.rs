@@ -973,9 +973,14 @@ fn preview_slider(
 /// Live canvas preview of the family highlighted in the open font list. The document and its
 /// history stay untouched until Enter or a click commits `text.applyAttributes`. Highlighting
 /// the current family, closing the list, or Esc drops the preview. With the on-canvas text
-/// editor open the preview is skipped, same as the text sliders.
+/// editor open the preview is skipped, same as the text sliders. Firepixel extension TW-255
+/// (contributor PR #3), switchable with View ▸ Live Font Preview (preference `LiveFontPreview`,
+/// default on). In the text editor dialog the preview shows on the selected text objects, not
+/// on the dialog's own draft text.
 pub(crate) fn preview_marked_font(ctx: &egui::Context, st: &mut AppState, family: &str, style: &str) {
-    if st.session.text_edit_attrs().is_some() {
+    if !fp_engine::session::live_font_preview(&st.session.prefs)
+        || st.session.text_edit_attrs().is_some()
+    {
         return;
     }
     let Some(marked) = super::fonts::marked_family(ctx) else {

@@ -38,7 +38,8 @@ pub use draw::{
 };
 pub use pathedit::{FreeformTool, KnifeTool, ScrubTool};
 pub use pointer::{
-    ALT_MARQUEE_DESELECT_PREF, CropTool, POINTER_LASSO_PREF, PointerTool, TransformTool,
+    ALT_MARQUEE_DESELECT_PREF, CropTool, POINTER_EDITS_POINTS_PREF, POINTER_LASSO_PREF,
+    PointerTool, TransformTool, pointer_edits_points,
 };
 pub use retouch::RetouchTool;
 pub use text::{TextEditView, TextTool};

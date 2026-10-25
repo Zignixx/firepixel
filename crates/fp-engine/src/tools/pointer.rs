@@ -337,11 +337,14 @@ fn point_hit(
 
 /// Pfadpunkt-Anzeige der ausgewählten Pfade. `subselect`: selected points filled with handles,
 /// the others hollow (otherwise all filled); `primitive_corners`: a rectangle primitive shows only
-/// its four corners, filled (Pointer and Pen, RE spec 60 section 1.3).
+/// its four corners, filled (Pointer and Pen, RE spec 60 section 1.3). `edit_points` (Pointer
+/// with the Firepixel option [`POINTER_EDITS_POINTS_PREF`], TW-256): selected points filled with
+/// handles, the others hollow; a rectangle with a selected point shows its real anchors.
 pub(crate) fn path_points_feedback(
     ctx: &ToolContext,
     subselect: bool,
     primitive_corners: bool,
+    edit_points: bool,
 ) -> Vec<Overlay> {
     let mut out = Vec::new();
     for id in ctx.selection.elements.iter().take(64) {
@@ -351,21 +354,13 @@ pub(crate) fn path_points_feedback(
         let ElementKind::Path(pe) = &e.kind else {
             continue;
         };
-        let selected: Vec<(usize, usize)> = ctx
-            .selection
-            .points
-            .iter()
-            .filter(|r| r.element == *id)
-            .map(|r| (r.contour, r.node))
-            .collect();
-        // A rectangle with nothing picked still shows its four corners, all filled.
-        // Once a point is selected, the real anchors are drawn so the picked ones
-        // read as filled and the others hollow.
+        let picked = edit_points && ctx.selection.points.iter().any(|r| r.element == *id);
         if let Some(pr) = pe
             .primitive
             .as_ref()
-            .filter(|_| primitive_corners && selected.is_empty() && !subselect)
+            .filter(|_| primitive_corners && !picked)
         {
+            // Rechteck-Grundform: nur die vier Eckpunkte (Ziehen = Rundung)
             let q = pr
                 .rect
                 .normalized()
@@ -378,7 +373,16 @@ pub(crate) fn path_points_feedback(
             });
             continue;
         }
-        let picked = !selected.is_empty();
+        let selected: Vec<(usize, usize)> = if subselect || edit_points {
+            ctx.selection
+                .points
+                .iter()
+                .filter(|r| r.element == *id)
+                .map(|r| (r.contour, r.node))
+                .collect()
+        } else {
+            Vec::new()
+        };
         out.push(Overlay::PathPoints {
             contours: pe.contours.clone(),
             selected,
@@ -467,7 +471,8 @@ enum PState {
         start: Point,
         hit: PointHit,
         pull: bool,
-        /// A plain click (no drag) leaves only this point selected.
+        /// Pointer with the point-editing option: a click without a drag on an already selected
+        /// point leaves only that point selected (TW-256).
         solo: bool,
     },
     Moving {
@@ -754,6 +759,19 @@ impl ControlDrag {
 /// free-form outline instead of a rectangle when dragged on empty canvas (default: rectangle).
 pub const POINTER_LASSO_PREF: &str = "Firepixel_PointerLasso";
 
+/// Preference of the Firepixel option *View ▸ Pointer Edits Points* (TW-256, contributor PR #3),
+/// default off = the measured reference rules (a corner handle scales a rectangle, PARITAET_A
+/// L26; dragging a path point moves the whole object, PAR 08/04). On: the Pointer selects the
+/// anchors of the selected paths (click; Ctrl/Shift add or remove), a drag moves only the
+/// selected points (a rectangle primitive becomes a path on the first point drag), the arrow
+/// keys nudge them, and a single selected path offers no frame handles.
+pub const POINTER_EDITS_POINTS_PREF: &str = "PointerEditsPoints";
+
+/// State of [`POINTER_EDITS_POINTS_PREF`] (default off).
+pub fn pointer_edits_points(prefs: &crate::prefs::Preferences) -> bool {
+    prefs.get_bool(POINTER_EDITS_POINTS_PREF, false)
+}
+
 /// Preference of the Firepixel Alt-marquee deselect (FB-56): `true` = an Alt-marquee of the
 /// Pointer or the Subselection started on empty canvas removes the objects inside from the
 /// selection; default off = the reference behaviour (Pointer: select like the Subselection,
@@ -888,32 +906,40 @@ impl PointerTool {
         self.id == ToolId::Pointer && ctx.prefs.get_bool("PointerToolPaintHandles", true)
     }
 
-    /// Handle (0..8) under `p` that resizes the selection.
-    ///
-    /// A single path is edited by its anchors, not by these handles: dragging a
-    /// corner moves that point. Bitmaps, text and groups still scale from the frame.
-    fn resize_handle(&self, ctx: &ToolContext, p: Point, tol: f32) -> Option<usize> {
-        if self.id != ToolId::Pointer || !self.paint_handles(ctx) {
+    /// The Pointer with the Firepixel option [`POINTER_EDITS_POINTS_PREF`] (TW-256).
+    fn edits_points(&self, ctx: &ToolContext) -> bool {
+        self.id == ToolId::Pointer && pointer_edits_points(ctx.prefs)
+    }
+
+    /// Frame handle (0..8) under `p` that scales the selection. Measured default: also the
+    /// corner handles of a rectangle primitive (PARITAET_A L26), not the corners of a plain path
+    /// (there the anchor wins, PAR 08/04). With the point-editing option a single selected path
+    /// offers no frame handles at all: its anchors are edited instead (TW-256).
+    fn resize_handle(&self, ctx: &ToolContext, b: &Rect, p: Point, tol: f32) -> Option<usize> {
+        if !self.paint_handles(ctx) {
             return None;
         }
-        if ctx.selection.elements.len() == 1
+        if self.edits_points(ctx)
+            && ctx.selection.elements.len() == 1
             && docops::element_on_page(ctx.doc, ctx.page, ctx.selection.elements[0])
                 .is_some_and(|e| matches!(e.kind, ElementKind::Path(_)))
         {
             return None;
         }
-        let b = Self::selection_bounds(ctx)?;
-        let h = handle_at(&b, p, tol)?;
+        let h = handle_at(b, p, tol)?;
         if h % 2 == 0 && Self::has_plain_path(ctx) {
             return None;
         }
         Some(h)
     }
 
-    /// Select the anchor under the pointer. A plain click keeps only that point;
-    /// Ctrl or Shift adds it, or removes it when it was already selected.
-    /// `solo` is set when a click with no drag should narrow the selection to this point.
+    /// Point selection on pressing an anchor. Subselection (measured): a plain click on an
+    /// unselected point replaces, Shift adds or removes; Ctrl does the same (Firepixel addition,
+    /// TW-256). Pointer with the point-editing option: likewise, and a plain click on an already
+    /// selected point narrows the selection to it on release (`solo`), so a drag still moves all
+    /// selected points.
     fn point_select(
+        &self,
         ctx: &ToolContext,
         ev: &ToolEvent,
         hit: &PointHit,
@@ -927,20 +953,20 @@ impl PointerTool {
             node: hit.node,
         };
         let already = ctx.selection.points.contains(&r);
-        let add = ev.mods.ctrl || ev.mods.shift;
-        let one = json!({"points": [{"element": hit.id.0, "contour": hit.contour, "node": hit.node}]});
-        if add {
-            let mode = if already { "subtract" } else { "add" };
-            let mut params = one;
-            params["mode"] = json!(mode);
-            return (vec![pick("select.points", params)], false);
+        let add = ev.mods.shift || ev.mods.ctrl;
+        if !add && already {
+            return (Vec::new(), self.id == ToolId::Pointer);
         }
-        if !already {
-            let mut params = one;
-            params["mode"] = json!("replace");
-            return (vec![pick("select.points", params)], true);
-        }
-        (Vec::new(), true)
+        let mode = match (add, already) {
+            (true, true) => "subtract",
+            (true, false) => "add",
+            _ => "replace",
+        };
+        let cmd = pick(
+            "select.points",
+            json!({"points": [{"element": hit.id.0, "contour": hit.contour, "node": hit.node}], "mode": mode}),
+        );
+        (vec![cmd], false)
     }
 
     /// Object a Select Behind click at `p` selects: the next hit below the topmost selected hit
@@ -1014,16 +1040,30 @@ impl PointerTool {
                 ..ToolResponse::default()
             };
         }
-        // Over a resize point the cursor shows which edge will move.
-        if let Some(h) = self.resize_handle(ctx, p, tol) {
-            self.hover_cursor = handle_cursor(h);
+        // Über den Griffen der Auswahl zeigt das Original einen Pfeil ohne Zusatz: über den Ecken
+        // weiß mit schwarzem Rand (K2, wie die Teilauswahl), über den Kanten schwarz (K3)
+        // (with the point-editing option, TW-256: the resize cursor of the handle instead)
+        if let Some(b) = Self::selection_bounds(ctx)
+            && let Some(h) = self.resize_handle(ctx, &b, p, tol)
+        {
+            if self.edits_points(ctx) {
+                self.hover_cursor = handle_cursor(h);
+            } else if h % 2 == 0 && self.hover_cursor == Cursor::Arrow {
+                self.hover_cursor = Cursor::Subselect;
+            }
             return ToolResponse {
                 cursor: self.hover_cursor,
                 ..ToolResponse::default()
             };
         }
         if self.id != ToolId::SelectBehind
-            && point_hit(ctx, p, true, self.id == ToolId::Subselection).is_some()
+            && point_hit(
+                ctx,
+                p,
+                self.edits_points(ctx),
+                self.id == ToolId::Subselection,
+            )
+            .is_some()
         {
             self.hover_cursor = self.point_cursor();
             return ToolResponse {
@@ -1130,10 +1170,12 @@ impl PointerTool {
                 ..ToolResponse::default()
             };
         }
-        // Frame handles scale bitmaps, text and groups. A path's own anchors are
-        // points: the click below selects them instead of scaling the shape.
+        // Griffe der Auswahl (nur Zeiger, PointerToolPaintHandles); auch die Eckgriffe eines
+        // Rechtecks skalieren – im Original live gemessen, die Rundung bleibt (PARITAET_A L26)
+        // Am Eckpunkt eines gewöhnlichen Pfads verschiebt der Zeiger dagegen das Objekt (PAR 08/04)
+        // With the point-editing option (TW-256) a single path offers no frame handles.
         if let Some(b) = Self::selection_bounds(ctx)
-            && let Some(h) = self.resize_handle(ctx, p, tol)
+            && let Some(h) = self.resize_handle(ctx, &b, p, tol)
         {
             self.state = PState::PressedHandle {
                 start: p,
@@ -1145,14 +1187,20 @@ impl PointerTool {
                 ..ToolResponse::default()
             };
         }
-        // Path anchors, including the corners of a rectangle primitive. A plain click
-        // selects that point; Ctrl or Shift adds another. Dragging moves only the
-        // selected points.
+        // Pfadpunkte ausgewählter Pfade (Zeiger: Anker; Teilauswahl: Anker und Henkel). Die
+        // Eckpunkte einer Rechteck-Grundform verschieben mit der Teilauswahl das ganze Rechteck
+        // (PAR 10/06), sie sind hier also keine Pfadpunkte. With the point-editing option the
+        // Pointer takes them as points (TW-256).
+        let edits = self.edits_points(ctx);
         if self.id != ToolId::SelectBehind
-            && let Some(hit) = point_hit(ctx, p, true, self.id == ToolId::Subselection)
+            && let Some(hit) = point_hit(ctx, p, edits, self.id == ToolId::Subselection)
         {
             let pull = self.id == ToolId::Subselection && ev.mods.alt && hit.part == Part::Anchor;
-            let (commands, solo) = Self::point_select(ctx, ev, &hit);
+            let (cmds, solo) = if self.id == ToolId::Subselection || edits {
+                self.point_select(ctx, ev, &hit)
+            } else {
+                (Vec::new(), false)
+            };
             self.state = PState::PressedPoint {
                 start: p,
                 hit,
@@ -1160,7 +1208,7 @@ impl PointerTool {
                 solo,
             };
             return ToolResponse {
-                commands,
+                commands: cmds,
                 cursor: self.point_cursor(),
                 ..ToolResponse::default()
             };
@@ -1285,6 +1333,23 @@ impl PointerTool {
                 };
                 self.moved(p, ev, ctx)
             }
+            // Zeiger am Punkt eines gewählten Pfads: Ziehen verschiebt das ganze Objekt (PAR 08/04)
+            PState::PressedPoint { start, .. }
+                if self.id == ToolId::Pointer
+                    && !self.edits_points(ctx)
+                    && self.move_starts(ctx, start, p) =>
+            {
+                self.state = PState::Moving {
+                    start,
+                    cur: p,
+                    copy: ev.mods.alt,
+                    bounds: Self::selection_bounds(ctx),
+                    guides: Vec::new(),
+                    fresh: false,
+                    shift_latched: ev.mods.shift && self.id == ToolId::Pointer,
+                };
+                self.moved(p, ev, ctx)
+            }
             PState::PressedEmpty { start, mode } if dist(start, p) >= thr => {
                 self.state = PState::Rubber {
                     start,
@@ -1344,12 +1409,16 @@ impl PointerTool {
                 self.state = PState::Control(c);
                 ToolResponse::with_overlay(self.overlay.clone(), Cursor::PointerPoint)
             }
-            // Point drags start at the same per-zoom threshold as Pointer moves:
+            // (the Pointer never drags a single point: below its move threshold it waits; only
+            // with the point-editing option, TW-256, it drags points like the Subselection)
+            // Subselection point drags start at the same per-zoom threshold as Pointer moves:
             // measured at 50 % an anchor drag of (1,1) screen px writes no row, (−2,−2) one
             // (TW-187, re 55 §7.3), i.e. travel > 3·√zoom screen px. Handle drags share the
             // transition (not measured separately).
-            PState::PressedPoint { start, hit, pull, .. }
-                if ctx.exceeds_move_threshold(start, p) =>
+            PState::PressedPoint {
+                start, hit, pull, ..
+            } if (self.id != ToolId::Pointer || self.edits_points(ctx))
+                && ctx.exceeds_move_threshold(start, p) =>
             {
                 self.state = PState::DraggingPoint {
                     start,
@@ -1562,20 +1631,19 @@ impl PointerTool {
         };
         let mut cs = pe.contours.clone();
         // mehrere unterausgewählte Punkte desselben Pfads wandern gemeinsam
-        let multi: Vec<PointRef> =
-            if matches!(self.id, ToolId::Pointer | ToolId::Subselection)
-                && hit.part == Part::Anchor
-                && !pull
-            {
-                ctx.selection
-                    .points
-                    .iter()
-                    .filter(|r| r.element == hit.id)
-                    .copied()
-                    .collect()
-            } else {
-                Vec::new()
-            };
+        let multi: Vec<PointRef> = if (self.id == ToolId::Subselection || self.edits_points(ctx))
+            && hit.part == Part::Anchor
+            && !pull
+        {
+            ctx.selection
+                .points
+                .iter()
+                .filter(|r| r.element == hit.id)
+                .copied()
+                .collect()
+        } else {
+            Vec::new()
+        };
         let mv = |q: &mut Point| {
             q.x += dx;
             q.y += dy;
@@ -1832,8 +1900,19 @@ impl PointerTool {
                     json!({"id": hit.id.0, "contours": contours_json(&cs), "step": "move-point"}),
                 )])
             }
-            PState::PressedPoint { hit, solo, .. } if solo && hit.part == Part::Anchor => {
-                // A click without a drag leaves only this point selected.
+            // Pointer with the point-editing option (TW-256): the press already selected the
+            // point; a plain click on a selected point narrows the selection to it
+            PState::PressedPoint { hit, solo, .. } if self.edits_points(ctx) => {
+                if !solo || hit.part != Part::Anchor {
+                    return ToolResponse::default();
+                }
+                ToolResponse::commit(vec![pick(
+                    "select.points",
+                    json!({"points": [{"element": hit.id.0, "contour": hit.contour, "node": hit.node}], "mode": "replace"}),
+                )])
+            }
+            PState::PressedPoint { hit, .. } if self.id == ToolId::Pointer => {
+                // Klick auf einen Punkt mit dem Zeiger: Punkt unterauswählen (zum Löschen mit Entf)
                 ToolResponse::commit(vec![pick(
                     "select.points",
                     json!({"points": [{"element": hit.id.0, "contour": hit.contour, "node": hit.node}], "mode": "replace"}),
@@ -2141,7 +2220,7 @@ impl ToolMachine for PointerTool {
                         "up" => (0.0, -s),
                         _ => (0.0, s),
                     };
-                    if self.id != ToolId::SelectBehind
+                    if (self.id == ToolId::Subselection || self.edits_points(ctx))
                         && !ctx.selection.points.is_empty()
                         && !ev.mods.alt
                     {
@@ -2213,7 +2292,7 @@ impl ToolMachine for PointerTool {
         let moving = matches!(self.state, PState::Moving { .. } | PState::Scaling { .. });
         if !dragging_points && !moving && self.id != ToolId::SelectBehind {
             let sub = self.id == ToolId::Subselection;
-            v.extend(path_points_feedback(ctx, sub, !sub));
+            v.extend(path_points_feedback(ctx, sub, !sub, self.edits_points(ctx)));
             if !matches!(self.state, PState::Control(_)) {
                 v.extend(control_points_feedback(ctx, None));
             }

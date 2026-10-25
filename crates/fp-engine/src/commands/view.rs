@@ -289,6 +289,40 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 Ok(CommandOutput::session())
             }),
     );
+    // Firepixel's own switch (TW-256, contributor PR #3): the Pointer edits the anchors of the
+    // selected paths like the Subselection; default off = the measured reference rules.
+    r.add(
+        cmd("view.pointerEditsPoints")
+            .label("Zeiger bearbeitet Punkte")
+            .describe("Zeiger: Klick auf einen Ankerpunkt wählt ihn (Strg/Umschalt fügt hinzu oder entfernt), Ziehen verschiebt nur die ausgewählten Punkte, Entf löscht sie; ein Rechteck wird beim ersten Punktziehen zum Pfad (ab Werk aus: Eckgriff skaliert, Ziehen eines Punkts verschiebt das Objekt)")
+            .checked(|s| crate::tools::pointer_edits_points(&s.prefs))
+            .run(|s, _| {
+                let on = crate::tools::pointer_edits_points(&s.prefs);
+                s.prefs.set(
+                    crate::tools::POINTER_EDITS_POINTS_PREF,
+                    crate::prefs::PrefValue::Bool(!on),
+                );
+                s.prefs_changed();
+                Ok(CommandOutput::session())
+            }),
+    );
+    // Firepixel's own switch (TW-255, contributor PR #3): an open font list previews the
+    // highlighted family on the selected text; default on.
+    r.add(
+        cmd("view.liveFontPreview")
+            .label("Live-Schriftvorschau")
+            .describe("Zeigt die in einer offenen Schriftliste markierte Schrift sofort an den ausgewählten Textobjekten (ohne Verlaufsschritt bis Eingabe oder Klick; ab Werk an)")
+            .checked(|s| crate::session::live_font_preview(&s.prefs))
+            .run(|s, _| {
+                let on = crate::session::live_font_preview(&s.prefs);
+                s.prefs.set(
+                    crate::session::LIVE_FONT_PREVIEW_PREF,
+                    crate::prefs::PrefValue::Bool(!on),
+                );
+                s.prefs_changed();
+                Ok(CommandOutput::session())
+            }),
+    );
     toggle!(
         r,
         "view.nineSliceScalingGuides.lockGuides",

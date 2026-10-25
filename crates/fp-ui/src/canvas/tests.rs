@@ -2613,8 +2613,8 @@ fn arrow_keys_nudge_through_the_tool() {
     assert_eq!(bnd.left, 60.0);
 }
 
-/// Dragging the bottom-right corner of a rectangle moves only that point. The other
-/// three corners stay put, and the shape is no longer a rectangle primitive.
+/// UX-A L26 mit Mausereignissen über viele Bilder: R1 50,50–150,120 gewählt, Eckgriff rechts
+/// unten mit dem Zeiger um +40/+30 ziehen → größer (Original live), Rundung bleibt 0.
 #[test]
 fn pointer_corner_handle_scales_rectangle_ui() {
     let mut h = harness();
@@ -2668,52 +2668,7 @@ fn pointer_corner_handle_scales_rectangle_ui() {
     let ElementKind::Path(p) = &e.kind else {
         panic!("kein Pfad")
     };
-    assert!(p.primitive.is_none(), "the corner drag edits the point");
-    let xy = |i: usize| {
-        let q = p.contours[0].nodes[i].anchor;
-        (q.x, q.y)
-    };
-    assert_eq!(xy(0), (50.0, 50.0));
-    assert_eq!(xy(1), (150.0, 50.0));
-    assert_eq!(xy(2), (190.0, 150.0));
-    assert_eq!(xy(3), (50.0, 120.0));
-}
-
-/// Ctrl+click adds a second corner. Dragging one of them moves only the selected points.
-#[test]
-fn ctrl_click_drags_only_selected_rectangle_points_ui() {
-    let mut h = harness();
-    let _ = h
-        .state_mut()
-        .state
-        .session
-        .execute("view.setZoom", json!({"zoom": 1.0}));
-    let _ = h
-        .state_mut()
-        .state
-        .session
-        .execute("draw.rectangle", json!({"rect": [50, 50, 150, 120]}));
-    set_tool(&mut h, ToolId::Pointer);
-    h.run_steps(2);
-    let tr = at(&h, 150.0, 50.0);
-    mouse_drag(&mut h, tr, tr + egui::vec2(20.0, -10.0), Modifiers::NONE);
-    let br = at(&h, 150.0, 120.0);
-    button(&mut h, br, PointerButton::Primary, true, Modifiers::CTRL);
-    button(&mut h, br, PointerButton::Primary, false, Modifiers::CTRL);
-    h.step();
-    mouse_drag(&mut h, br, br + egui::vec2(0.0, 20.0), Modifiers::NONE);
-    let e = top(&h)[0].clone();
-    let ElementKind::Path(p) = &e.kind else {
-        panic!("kein Pfad")
-    };
-    let xy = |i: usize| {
-        let q = p.contours[0].nodes[i].anchor;
-        (q.x, q.y)
-    };
-    assert_eq!(xy(0), (50.0, 50.0), "unselected corner stays");
-    assert_eq!(xy(1), (170.0, 60.0), "selected top-right moves with the drag");
-    assert_eq!(xy(2), (150.0, 140.0), "dragged bottom-right");
-    assert_eq!(xy(3), (50.0, 120.0), "unselected corner stays");
+    assert_eq!(p.primitive.as_ref().map(|x| x.roundness), Some(0.0));
 }
 
 /// UX-A L24 mit getrennten Bildern und echtem Abstand (Klicks ~0,3 s auseinander, Doppelklick
@@ -3041,4 +2996,53 @@ fn exit_bitmap_mode_button_is_red_in_bitmap_mode() {
     assert_eq!(st.session.tools.active, ToolId::Brush);
     assert_eq!(undo_count(&h), n + 1, "one row Exit Bitmap Mode");
     assert!(!exit_bitmap_button(&h).0, "grey again");
+}
+
+/// TW-256 (View ▸ Pointer Edits Points, contributor PR #3) with mouse events: with the option on,
+/// dragging a rectangle corner moves only that point, Ctrl+click adds a second corner and
+/// dragging one of them moves only the selected points.
+#[test]
+fn pointer_edits_points_option_drags_only_selected_rectangle_points_ui() {
+    let mut h = harness();
+    let _ = h
+        .state_mut()
+        .state
+        .session
+        .execute("view.setZoom", json!({"zoom": 1.0}));
+    let _ = h
+        .state_mut()
+        .state
+        .session
+        .execute("view.pointerEditsPoints", json!({}));
+    let _ = h
+        .state_mut()
+        .state
+        .session
+        .execute("draw.rectangle", json!({"rect": [50, 50, 150, 120]}));
+    set_tool(&mut h, ToolId::Pointer);
+    h.run_steps(2);
+    let tr = at(&h, 150.0, 50.0);
+    mouse_drag(&mut h, tr, tr + egui::vec2(20.0, -10.0), Modifiers::NONE);
+    let br = at(&h, 150.0, 120.0);
+    button(&mut h, br, PointerButton::Primary, true, Modifiers::CTRL);
+    button(&mut h, br, PointerButton::Primary, false, Modifiers::CTRL);
+    h.step();
+    mouse_drag(&mut h, br, br + egui::vec2(0.0, 20.0), Modifiers::NONE);
+    let e = top(&h)[0].clone();
+    let ElementKind::Path(p) = &e.kind else {
+        panic!("kein Pfad")
+    };
+    assert!(p.primitive.is_none(), "the corner drag edits the point");
+    let xy = |i: usize| {
+        let q = p.contours[0].nodes[i].anchor;
+        (q.x, q.y)
+    };
+    assert_eq!(xy(0), (50.0, 50.0), "unselected corner stays");
+    assert_eq!(
+        xy(1),
+        (170.0, 60.0),
+        "selected top-right moves with the drag"
+    );
+    assert_eq!(xy(2), (150.0, 140.0), "dragged bottom-right");
+    assert_eq!(xy(3), (50.0, 120.0), "unselected corner stays");
 }
