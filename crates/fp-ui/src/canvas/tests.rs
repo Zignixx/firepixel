@@ -1662,6 +1662,74 @@ fn plain_wheel_scrolls_with_hg_sequence() {
     );
 }
 
+/// FB-77: Shift + wheel over the canvas does nothing by default (reference, UX-A L10); with the
+/// preference `Firepixel_ShiftWheelHorizontal` on it pans horizontally by one notch (52 px), the
+/// vertical position stays.
+#[test]
+fn shift_wheel_scrolls_horizontally_only_with_preference_fb77() {
+    let mut h = harness();
+    let _ = h
+        .state_mut()
+        .state
+        .session
+        .execute("file.new", json!({"width": 800, "height": 600}));
+    h.run_steps(3);
+    let _ = h
+        .state_mut()
+        .state
+        .session
+        .execute("view.setZoom", json!({"zoom": 4.0}));
+    h.run_steps(3);
+    let area = h
+        .state()
+        .state
+        .canvases
+        .get(&h.state().state.session.active_id().expect("id"))
+        .and_then(|c| c.area)
+        .expect("area");
+    let origin = |h: &Harness<'static, FirepixelApp>| {
+        h.state()
+            .state
+            .session
+            .active()
+            .map(|d| d.view.origin)
+            .unwrap_or_default()
+    };
+    let shift_wheel = |h: &mut Harness<'static, FirepixelApp>| {
+        hg_ev(h, Event::PointerMoved(area.center()));
+        hg_ev(
+            h,
+            Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Line,
+                delta: egui::vec2(0.0, -1.0),
+                phase: egui::TouchPhase::Move,
+                modifiers: Modifiers::SHIFT,
+            },
+        );
+        h.run_steps(5);
+    };
+    let o0 = origin(&h);
+    assert!(
+        !h.state()
+            .state
+            .session
+            .prefs
+            .get_bool(super::SHIFT_WHEEL_HORIZONTAL_PREF, false),
+        "default off"
+    );
+    shift_wheel(&mut h);
+    assert_eq!(origin(&h), o0, "off: Shift + wheel does nothing");
+    h.state_mut().state.session.prefs.set(
+        super::SHIFT_WHEEL_HORIZONTAL_PREF,
+        fp_engine::prefs::PrefValue::Bool(true),
+    );
+    shift_wheel(&mut h);
+    let o1 = origin(&h);
+    let dx = (o1.0 - o0.0) * 4.0;
+    assert!((dx - 52.0).abs() < 0.01, "on: one notch to the right, {dx}");
+    assert_eq!(o1.1, o0.1, "on: no vertical scrolling");
+}
+
 /// Doppelklick mit dem Zeiger auf Text öffnet den Text-Editor an der Klickstelle (HGs Folge).
 #[test]
 fn double_click_text_starts_editing_hg_sequence() {

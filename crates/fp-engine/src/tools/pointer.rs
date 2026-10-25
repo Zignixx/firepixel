@@ -457,6 +457,9 @@ enum PState {
         fresh: bool,
         /// Shift was held at the press.
         shift: bool,
+        /// Alt was held at the press (Pointer Alt-click selects like the Subselection; with
+        /// [`DUPLICATE_WITH_CTRL_DRAG_PREF`] Alt is no longer the duplicate key).
+        alt: bool,
     },
     PressedEmpty {
         start: Point,
@@ -778,11 +781,34 @@ pub fn pointer_edits_points(prefs: &crate::prefs::Preferences) -> bool {
 /// Subselection: a normal marquee). Alt-drag on an object still clones.
 pub const ALT_MARQUEE_DESELECT_PREF: &str = "Firepixel_AltMarqueeDeselects";
 
+/// Preference of the Firepixel Ctrl-drag duplicate (FB-75): `true` = Ctrl-drag of the selection
+/// drags a copy and Alt-drag moves without copying (Alt keeps its other roles); default off = the
+/// reference (Alt-drag duplicates, Ctrl adds nothing to an object drag). Alt+arrow keys keep
+/// duplicating either way.
+pub const DUPLICATE_WITH_CTRL_DRAG_PREF: &str = "Firepixel_DuplicateWithCtrlDrag";
+
+/// Preference of the Firepixel additive Shift-marquee (FB-76): `true` = a Shift-marquee of the
+/// Pointer only adds to the selection (the Subselection always adds) and the Alt-marquee removes
+/// (implies [`ALT_MARQUEE_DESELECT_PREF`] while on); default off = the reference (the Pointer's
+/// Shift-marquee toggles each object inside, TW-223).
+pub const SHIFT_MARQUEE_ADDS_ONLY_PREF: &str = "Firepixel_ShiftMarqueeAddsOnly";
+
+/// Duplicate key of an object drag: Alt (reference) or Ctrl with
+/// [`DUPLICATE_WITH_CTRL_DRAG_PREF`].
+fn dup_key(ev: &ToolEvent, ctx: &ToolContext) -> bool {
+    if ctx.prefs.get_bool(DUPLICATE_WITH_CTRL_DRAG_PREF, false) {
+        ev.mods.ctrl
+    } else {
+        ev.mods.alt
+    }
+}
+
 /// How a marquee of the Pointer / Subselection combines with the selection (RE spec 69 section
 /// 5.3, measured): Pointer plain or Ctrl = replace, Shift (also Shift+Alt) = toggle each object
 /// inside, Alt = replace like the Subselection (children of groups one by one); Subselection
 /// plain or Alt = replace, Shift = add. Firepixel extension (FB-56,
-/// [`ALT_MARQUEE_DESELECT_PREF`]): Alt without Shift removes the objects inside instead.
+/// [`ALT_MARQUEE_DESELECT_PREF`]): Alt without Shift removes the objects inside instead; with
+/// [`SHIFT_MARQUEE_ADDS_ONLY_PREF`] (FB-76) Shift only adds and Alt removes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Marquee {
     Replace,
@@ -796,15 +822,16 @@ enum Marquee {
 
 impl Marquee {
     fn of(id: ToolId, ev: &ToolEvent, ctx: &ToolContext) -> Marquee {
-        let deselect = || ctx.prefs.get_bool(ALT_MARQUEE_DESELECT_PREF, false);
+        let adds_only = ctx.prefs.get_bool(SHIFT_MARQUEE_ADDS_ONLY_PREF, false);
+        let deselect = || adds_only || ctx.prefs.get_bool(ALT_MARQUEE_DESELECT_PREF, false);
         match id {
-            ToolId::Pointer if ev.mods.shift => Marquee::Toggle,
+            ToolId::Pointer if ev.mods.shift && !adds_only => Marquee::Toggle,
             ToolId::Pointer | ToolId::Subselection
                 if ev.mods.alt && !ev.mods.shift && deselect() =>
             {
                 Marquee::Subtract
             }
-            ToolId::Pointer if ev.mods.alt => Marquee::Deep,
+            ToolId::Pointer if ev.mods.alt && !ev.mods.shift => Marquee::Deep,
             _ if ev.mods.shift => Marquee::Add,
             _ => Marquee::Replace,
         }
@@ -1175,13 +1202,14 @@ impl PointerTool {
         {
             // Alt on a handle or a handle line clones the object like an Alt drag on it; the
             // handles are not dragged (RE spec 69 §3.2, `moveSelectionBy(…, true, …)`)
-            if ev.mods.alt {
+            if dup_key(ev, ctx) {
                 self.state = PState::PressedObject {
                     start: p,
                     copy: true,
                     toggle: None,
                     fresh: false,
                     shift: false,
+                    alt: ev.mods.alt,
                 };
                 return ToolResponse {
                     cursor: Cursor::Copy,
@@ -1274,12 +1302,14 @@ impl PointerTool {
                 // Shift on a selected object: deselect on release without drag; a drag from there
                 // is an additive marquee and never moves the object (TW-118, re 45 §2.3)
                 let toggle_on_up = ev.mods.shift && already;
+                let copy = dup_key(ev, ctx);
                 self.state = PState::PressedObject {
                     start: p,
-                    copy: ev.mods.alt,
+                    copy,
                     toggle: toggle_on_up.then_some(id),
                     fresh: !already,
                     shift: ev.mods.shift,
+                    alt: ev.mods.alt,
                 };
                 let cmds = if toggle_on_up {
                     vec![]
@@ -1292,11 +1322,7 @@ impl PointerTool {
                 };
                 ToolResponse {
                     commands: cmds,
-                    cursor: if ev.mods.alt {
-                        Cursor::Copy
-                    } else {
-                        Cursor::Move
-                    },
+                    cursor: if copy { Cursor::Copy } else { Cursor::Move },
                     ..ToolResponse::default()
                 }
             }
@@ -1350,13 +1376,14 @@ impl PointerTool {
                 fresh,
                 shift,
                 toggle,
+                ..
             } if self.move_starts(ctx, start, p)
                 && (toggle.is_none() || self.id != ToolId::Pointer) =>
             {
                 self.state = PState::Moving {
                     start,
                     cur: p,
-                    copy: copy || ev.mods.alt,
+                    copy: copy || dup_key(ev, ctx),
                     bounds: Self::selection_bounds(ctx),
                     guides: Vec::new(),
                     fresh,
@@ -1373,7 +1400,7 @@ impl PointerTool {
                 self.state = PState::Moving {
                     start,
                     cur: p,
-                    copy: ev.mods.alt,
+                    copy: dup_key(ev, ctx),
                     bounds: Self::selection_bounds(ctx),
                     guides: Vec::new(),
                     fresh: false,
@@ -1468,7 +1495,7 @@ impl PointerTool {
                 shift_latched,
                 ..
             } => {
-                let copy = copy || ev.mods.alt;
+                let copy = copy || dup_key(ev, ctx);
                 // Shift held since the press (adding to the selection) does not constrain; only
                 // Shift pressed after the move started snaps to 0°/45°/90° (re 45 §2.3)
                 let shift_latched = shift_latched && ev.mods.shift;
@@ -1547,10 +1574,17 @@ impl PointerTool {
                 };
                 // any Alt drag of the Pointer and an Alt marquee of the Subselection show the
                 // arrow with "+" (RE spec 69 section 4.2); Shift shows no badge; a deselect
-                // marquee (Firepixel extension FB-56) shows the arrow with "−"
+                // marquee (Firepixel extension FB-56) shows the arrow with "−"; with the additive
+                // Shift-marquee (FB-76) Shift shows "+"; with the Ctrl duplicate (FB-75) the Alt
+                // marquee shows no "+"
+                let add_badge =
+                    mode == Marquee::Add && ctx.prefs.get_bool(SHIFT_MARQUEE_ADDS_ONLY_PREF, false);
+                let alt_badge = ev.mods.alt
+                    && self.id != ToolId::SelectBehind
+                    && !ctx.prefs.get_bool(DUPLICATE_WITH_CTRL_DRAG_PREF, false);
                 let cursor = if mode == Marquee::Subtract {
                     Cursor::Deselect
-                } else if ev.mods.alt && self.id != ToolId::SelectBehind {
+                } else if add_badge || alt_badge {
                     Cursor::Copy
                 } else {
                     self.idle_cursor()
@@ -1861,7 +1895,7 @@ impl PointerTool {
             // j1): a masked element gives its mask, a group the clicked child; Alt-drag stays the
             // copy (Duplicate)
             PState::PressedObject {
-                copy: true,
+                alt: true,
                 toggle: None,
                 shift: false,
                 ..

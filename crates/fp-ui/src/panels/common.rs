@@ -40,19 +40,48 @@ pub fn list_frame(
                 .max_rect(rect.shrink(1.0))
                 .layout(egui::Layout::top_down(egui::Align::Min)),
         );
-        // ohne Mindesthöhe (egui: 64 px), sonst reicht der Bildlaufbereich über die Fußleiste
-        egui::ScrollArea::vertical()
+        // ohne Mindesthöhe (egui: 64 px), sonst reicht der Bildlaufbereich über die Fußleiste.
+        // Rows wider than the list (deep nesting, FB-77) report their width with [`want_width`];
+        // the list then gets a horizontal scroll bar (Shift + wheel scrolls it) and every row
+        // spans that width (last frame's value, so all rows of a frame are equally wide).
+        let want_id = Id::new(("list-want-width", Id::new(&id)));
+        let prev: f32 = child.data(|d| d.get_temp(want_id)).unwrap_or(0.0);
+        child.data_mut(|d| d.insert_temp(Id::new(WANT_WIDTH), 0.0f32));
+        egui::ScrollArea::both()
             .id_salt(Id::new(id))
             .auto_shrink([false, false])
             .min_scrolled_height(0.0)
+            .min_scrolled_width(0.0)
             .max_height(rect.height() - 2.0)
             .show(&mut child, |ui| {
                 ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+                if prev > ui.available_width() {
+                    ui.set_min_width(prev);
+                }
                 add(ui);
             });
+        let want: f32 = child
+            .data_mut(|d| d.remove_temp(Id::new(WANT_WIDTH)))
+            .unwrap_or(0.0);
+        if want != prev {
+            child.data_mut(|d| d.insert_temp(want_id, want));
+            child.ctx().request_repaint();
+        }
     }
     ui.allocate_rect(rect, Sense::hover());
     rect
+}
+
+/// Slot of the widest row width reported while [`list_frame`] draws its rows.
+const WANT_WIDTH: &str = "list-want-width-current";
+
+/// A row of the list being drawn by [`list_frame`] needs `width` px (from the list's left edge)
+/// to show its indented content; a list narrower than that scrolls horizontally (FB-77).
+pub fn want_width(ui: &Ui, width: f32) {
+    ui.data_mut(|d| {
+        let w = d.get_temp_mut_or(Id::new(WANT_WIDTH), 0.0f32);
+        *w = w.max(width);
+    });
 }
 
 /// Zeilen einer einfachen Liste per Ziehen umordnen (Status, Seiten; CT-C-02/03, wie im

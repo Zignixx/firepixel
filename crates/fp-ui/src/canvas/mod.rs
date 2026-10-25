@@ -110,6 +110,11 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
 /// Höhe der Pfadleiste im Symbol-Bearbeitungsmodus.
 pub const SYMBOL_BAR_H: f32 = 24.0;
 
+/// Preference of the Firepixel Shift + wheel scrolling (FB-77): `true` = Shift + mouse wheel pans
+/// the canvas horizontally by the amount the wheel would scroll vertically; default off = the
+/// reference (Shift + wheel does nothing, UX-A L10).
+pub const SHIFT_WHEEL_HORIZONTAL_PREF: &str = "Firepixel_ShiftWheelHorizontal";
+
 /// Pfad der aktiven Symbol-Bearbeitungsansicht: Seitenname des Dokuments und Symbolname
 /// (`None`, wenn das aktive Dokument keine Bearbeitungsansicht ist).
 pub fn symbol_path(st: &AppState) -> Option<(String, String)> {
@@ -2034,6 +2039,10 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
         // Punkte direkt; Umschalt = waagerecht
         let _ = wheel;
         let page_h = area.height();
+        let shift_h = st
+            .session
+            .prefs
+            .get_bool(SHIFT_WHEEL_HORIZONTAL_PREF, false);
         let (mut dx, mut dy) = (0.0f32, 0.0f32);
         for (unit, delta, ctrl, shift) in &wheel_events {
             if *ctrl {
@@ -2044,8 +2053,12 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
                 egui::MouseWheelUnit::Line => line_px,
                 egui::MouseWheelUnit::Page => page_h,
             };
-            // Umschalt+Rad tut im Original nichts (UX-A L10); Alt+Rad rollt wie ohne Taste
+            // Umschalt+Rad tut im Original nichts (UX-A L10); Alt+Rad rollt wie ohne Taste.
+            // Firepixel option (FB-77): Shift + wheel pans horizontally by the vertical amount
             if *shift {
+                if shift_h {
+                    dx += (delta.x + delta.y) * k;
+                }
                 continue;
             }
             let v = *delta * k;

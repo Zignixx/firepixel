@@ -40,8 +40,9 @@ pub use draw::{
 pub use mask_select::MaskElementTool;
 pub use pathedit::{FreeformTool, KnifeTool, ScrubTool};
 pub use pointer::{
-    ALT_MARQUEE_DESELECT_PREF, CropTool, POINTER_EDITS_POINTS_PREF, POINTER_LASSO_PREF,
-    PointerTool, TransformTool, pointer_edits_points,
+    ALT_MARQUEE_DESELECT_PREF, CropTool, DUPLICATE_WITH_CTRL_DRAG_PREF, POINTER_EDITS_POINTS_PREF,
+    POINTER_LASSO_PREF, PointerTool, SHIFT_MARQUEE_ADDS_ONLY_PREF, TransformTool,
+    pointer_edits_points,
 };
 pub use retouch::RetouchTool;
 pub use text::{TextEditView, TextTool};

@@ -166,6 +166,22 @@ fn page_items(cat: usize) -> &'static [Item] {
                 "dlg-pref-altmarqueedeselects",
                 false,
             ),
+            // own options (FB-75 to FB-77), off = reference
+            Check(
+                fp_engine::tools::DUPLICATE_WITH_CTRL_DRAG_PREF,
+                "dlg-pref-duplicatewithctrldrag",
+                false,
+            ),
+            Check(
+                fp_engine::tools::SHIFT_MARQUEE_ADDS_ONLY_PREF,
+                "dlg-pref-shiftmarqueeaddsonly",
+                false,
+            ),
+            Check(
+                crate::canvas::SHIFT_WHEEL_HORIZONTAL_PREF,
+                "dlg-pref-shiftwheelhorizontal",
+                false,
+            ),
         ],
         2 => &[
             Caption("dlg-pref-cap-guides"),
@@ -1320,7 +1336,10 @@ mod tests {
                             || *k == crate::language::DEV_PREF_KEY
                             // own key (no counterpart in the original's preference list)
                             || *k == crate::canvas::tools::ai_object::PREF_KEY
-                            || *k == fp_engine::tools::ALT_MARQUEE_DESELECT_PREF,
+                            || *k == fp_engine::tools::ALT_MARQUEE_DESELECT_PREF
+                            || *k == fp_engine::tools::DUPLICATE_WITH_CTRL_DRAG_PREF
+                            || *k == fp_engine::tools::SHIFT_MARQUEE_ADDS_ONLY_PREF
+                            || *k == crate::canvas::SHIFT_WHEEL_HORIZONTAL_PREF,
                         "unbekannter Schlüssel {k}"
                     );
                 }

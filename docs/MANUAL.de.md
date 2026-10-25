@@ -133,6 +133,9 @@ Gruppen ebenso wie einzeln gewählte Gruppenkinder –, die Objekte außerhalb b
 keine Verlaufszeile, ein Alt-Klick ohne Ziehen lässt die Auswahl stehen, die Lasso-Kontur wirkt genauso
 und der Zeiger zeigt den Pfeil mit „−“ statt „+“. Alt-Ziehen an einem Objekt zieht weiterhin eine Kopie,
 Umschalt+Alt schaltet beim Zeiger weiterhin um.
+Mit **Voreinstellungen ▸ Bearbeitung ▸ Mit Strg-Ziehen duplizieren statt mit Alt-Ziehen** (`Firepixel_DuplicateWithCtrlDrag`, Vorgabe aus) zieht Strg-Ziehen der Auswahl eine Kopie (Zeiger mit „+“) und Alt-Ziehen verschiebt ohne Kopie, Alt behält seine übrigen Aufgaben (Alt-Klick wählt das Kind einer Gruppe, Alt-Rahmen, Alt+Pfeiltaste dupliziert).
+Mit **Voreinstellungen ▸ Bearbeitung ▸ Umschalt-Auswahlrahmen fügt nur hinzu** (`Firepixel_ShiftMarqueeAddsOnly`, Vorgabe aus) fügt der Umschalt-Rahmen des Zeigers jedes Objekt darin hinzu statt es umzuschalten (Zeiger mit „+“), und der Alt-Rahmen von Zeiger und Teilauswahl entfernt Objekte, solange die Option an ist, auch ohne die Option zum Aufheben per Alt-Ziehen.
+Mit **Voreinstellungen ▸ Bearbeitung ▸ Umschalt + Mausrad rollt waagerecht** (`Firepixel_ShiftWheelHorizontal`, Vorgabe aus) rollt Umschalt + Mausrad die Leinwand waagerecht um den Betrag, den das Rad senkrecht rollt; unabhängig davon zeigen Listen-Bedienfelder wie Ebenen eine waagerechte Bildlaufleiste, wenn tief verschachtelte Zeilen breiter als das Bedienfeld sind, und Umschalt + Mausrad über der Liste rollt sie seitwärts.
 
 **Bitmap-Werkzeuge:** Der **Pinsel** malt Pixel: Ein Strich, der auf einer Bitmap beginnt, malt in
 diese Bitmap (ohne Zusatztaste, gewählt oder nicht) und wählt sie; ein Strich, der auf leerer Fläche

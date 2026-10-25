@@ -128,6 +128,9 @@ selected groups and selected group children alike — while the objects outside 
 row is written, an Alt-click without a drag keeps the selection, the lasso outline works the same way and
 the cursor shows the arrow with "−" instead of "+". Alt-dragging an object still drags a copy, and
 Shift+Alt with the Pointer still toggles.
+With **Preferences ▸ Edit ▸ Duplicate with Ctrl-drag instead of Alt-drag** (`Firepixel_DuplicateWithCtrlDrag`, default off) Ctrl-dragging the selection drags a copy (cursor "+") and Alt-dragging moves it without a copy, while Alt keeps its other roles (Alt-click picks a group's child, Alt-marquee, Alt+arrow duplicates).
+With **Preferences ▸ Edit ▸ Shift-marquee only adds to the selection** (`Firepixel_ShiftMarqueeAddsOnly`, default off) the Pointer's Shift-marquee adds every object inside instead of toggling it (cursor "+"), and the Alt-marquee of the Pointer and the Subselection removes objects while the option is on, even without the Alt-drag deselect option.
+With **Preferences ▸ Edit ▸ Shift + wheel scrolls horizontally** (`Firepixel_ShiftWheelHorizontal`, default off) Shift + mouse wheel pans the canvas sideways by the amount the wheel scrolls vertically; independent of it, list panels such as Layers show a horizontal scroll bar when deeply nested rows are wider than the panel, and Shift + wheel over the list scrolls it sideways.
 
 **Bitmap tools:** the **Brush** paints pixels: a stroke that starts on a bitmap paints into that
 bitmap (no modifier key needed, selected or not) and selects it; a stroke that starts on empty space

@@ -798,6 +798,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         // selected sublayer element is highlighted like a selected object
                         let (cur_row, tint_row) = row_marks(sl.id);
                         let hl = sel || cur_row;
+                        common::want_width(
+                            ui,
+                            SUB_INDENT * (depth + 1) as f32 + 78.0 + MIN_NAME_W + 22.0,
+                        );
                         let (r2, resp2) = common::row_tinted(ui, 23.0, hl, tint_row);
                         if scroll_to_current && active_layer == Some(sl.id) {
                             ui.scroll_to_rect(r2, None);
@@ -1007,6 +1011,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     // (pages with thousands of objects built every row each frame)
                     let next =
                         Rect::from_min_size(ui.cursor().min, vec2(ui.available_width(), erow_h));
+                    common::want_width(
+                        ui,
+                        78.0 + THUMB_INDENT * depth as f32 + tpx + 6.0 + MIN_NAME_W,
+                    );
                     let renaming_row = rename
                         .as_ref()
                         .is_some_and(|k| matches!(k, RowKind::Element { id, .. } if *id == e.id));
@@ -1189,6 +1197,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         pos2(thumb.right() + 6.0, r2.top() + 5.0),
                         pos2(r2.right() - 4.0, r2.bottom() - 5.0),
                     );
+                    common::want_width(ui, nr.left() - r2.left() + MIN_NAME_W);
                     let renaming = rename
                         .as_ref()
                         .is_some_and(|k| matches!(k, RowKind::Element { id, .. } if *id == e.id));
@@ -1573,6 +1582,9 @@ fn paint_mask_off(p: &egui::Painter, r: Rect) {
 /// Einrückung einer Unterebene (Aufklapper/Ordner) bzw. ihrer Objekt-Miniaturen je Stufe, gemessen am
 /// Original (panel-layers/01: Aufklapper 50 → 78 px, Miniatur 82 → 98 px).
 const SUB_INDENT: f32 = 28.0;
+/// Width a row keeps for the start of its name and its toggles; a deeper indented row asks the
+/// list for more width and the list scrolls horizontally (FB-77).
+const MIN_NAME_W: f32 = 72.0;
 const THUMB_INDENT: f32 = 16.0;
 
 /// Key of a sublayer row in the set of flipped rows (apart from layer ids).
@@ -2154,6 +2166,10 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
     for it in items {
         let e = &it.el;
         let next = Rect::from_min_size(ui.cursor().min, vec2(ui.available_width(), tc.row_h));
+        common::want_width(
+            ui,
+            tc.thumb_x - next.left() + TREE_INDENT * it.level as f32 + tc.tpx + 6.0 + MIN_NAME_W,
+        );
         let renaming = tc
             .rename
             .as_ref()
@@ -2276,6 +2292,7 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
             pos2(thumb.right() + 6.0, r.top() + 5.0),
             pos2(r.right() - 4.0, r.bottom() - 5.0),
         );
+        common::want_width(ui, nr.left() - r.left() + MIN_NAME_W);
         let toggles = RowToggles {
             group: group_toggle(e).map(|_| is_open(e.id.0)),
             mask: e.element_mask().map(|_| is_open(mask_key(e.id))),
