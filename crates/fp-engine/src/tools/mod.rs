@@ -508,6 +508,8 @@ pub struct ToolContext<'a> {
     pub has_document: bool,
     pub page: usize,
     pub frame: usize,
+    /// Current layer of the document (`None` without document).
+    pub layer: Option<fp_model::LayerId>,
     pub selection: &'a Selection,
     pub zoom: f64,
     pub prefs: &'a Preferences,

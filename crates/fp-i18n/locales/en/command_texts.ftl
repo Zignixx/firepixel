@@ -621,6 +621,7 @@ cmdtext-transparenz-beibehalten-nur-auf-deckende-f5132f = Preserve transparency:
 cmdtext-endpunkt-weglassen-vorgabe-aus-echte-zue-cbdfd5 = omit the end point (default off: real strokes paint up to and including the end point)
 cmdtext-zufalls-startwert-des-zugs-natuerliche-p-8b1c3d = Random seed of the stroke (natural brushes; default derived from the points)
 cmdtext-in-ein-neues-bitmap-malen-auch-wenn-eine-2f28b1 = paint into a new bitmap even if a bitmap is selected (stroke outside the bitmap)
+cmdtext-press-point-of-the-tool-fb-65-a-stroke-t-bec472 = press point of the tool (FB-65): a stroke that starts on a bitmap paints into it, selected or not
 cmdtext-werkzeug-vorgabe-pinsel = Tool (default: brush)
 cmdtext-aelterer-aufruf-strich-als-zeichenbefehl-a11103 = older call: stroke as a drawing command {"{"}command: tool.shape, params{"}"} – the brush is built from it
 cmdtext-rand-0-hart-1-anti-alias-2-weiche-kante = Edge: 0 hard, 1 anti-alias, 2 feather

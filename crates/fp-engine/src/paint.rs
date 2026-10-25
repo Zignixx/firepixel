@@ -754,6 +754,56 @@ pub fn target_bitmap(
         })
 }
 
+/// FB-65: bitmap a Brush or Pencil stroke pressed at `at` paints into. A stroke that starts on a
+/// bitmap (the topmost object under the point, on a shown and unlocked layer, not locked itself)
+/// paints into it, selected or not; otherwise the selected bitmap ([`target_bitmap`]). A selected
+/// bitmap inside a group (a mask being painted, a subselected bitmap) stays the target.
+pub fn stroke_target(
+    doc: &Document,
+    page: usize,
+    frame: usize,
+    selection: &[ElementId],
+    at: Option<fp_geom::Point>,
+) -> Option<(ElementId, Arc<fp_model::Element>)> {
+    let sel = target_bitmap(doc, page, selection);
+    if let Some((id, _)) = &sel
+        && docops::find_on_page(doc, page, *id).is_some_and(|p| in_group(doc, &p))
+    {
+        return sel;
+    }
+    let hit = at
+        .and_then(|p| {
+            docops::hits_at(
+                doc,
+                page,
+                frame,
+                p,
+                &crate::geometry::BasicGeometry,
+                &docops::HitOptions::default(),
+            )
+            .into_iter()
+            .next()
+        })
+        .and_then(|path| doc.element_at(&path).cloned())
+        .filter(|e| matches!(e.kind, ElementKind::Bitmap(_)));
+    hit.map(|e| (e.id, e)).or(sel)
+}
+
+/// Is the element at `path` inside a group or a mask (not only inside sublayers)?
+fn in_group(doc: &Document, path: &fp_model::traverse::ElementPath) -> bool {
+    use fp_model::traverse::PathStep;
+    (1..path.steps.len()).any(|k| {
+        let prefix = fp_model::traverse::ElementPath {
+            steps: path.steps[..k].to_vec(),
+            ..path.clone()
+        };
+        !matches!(path.steps[k], PathStep::Child(_))
+            || doc
+                .element_at(&prefix)
+                .is_some_and(|e| !matches!(e.kind, ElementKind::SubLayer(_)))
+    })
+}
+
 impl LivePaint {
     /// Beginnt einen Malvorgang (rechnet den ersten Abdruck).
     pub fn new(

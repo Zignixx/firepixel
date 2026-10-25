@@ -744,16 +744,82 @@ pub fn bottom_unlocked_layer(doc: &Document, page: usize) -> Option<LayerId> {
 /// The current layer for the chosen layer `want` (RE spec 65 rule 3): the first unlocked layer in
 /// flat order from `want` upward (`want` itself first, sublayers inheriting their parent's lock,
 /// the web layer included), then from flat index 0 up to below `want`; with every layer locked flat
-/// index 0. `None` when `want` is not in the page's flat list.
+/// index 0. FB-64: moving away from `want`, the web layer only when every other layer is locked.
+/// `None` when `want` is not in the page's flat list.
 pub fn resolve_layer(doc: &Document, page: usize, frame: usize, want: LayerId) -> Option<LayerId> {
     let list = flat_layers(doc, page, frame);
     let at = list.iter().position(|l| l.id == want)?;
-    list[at..]
-        .iter()
-        .chain(&list[..at])
-        .find(|l| !l.locked)
+    let order = || list[at..].iter().chain(&list[..at]);
+    // FB-64: moving away from a locked layer skips the web layer while another layer is
+    // unlocked (paint tools cannot use it); a chosen unlocked web layer stays current
+    order()
+        .find(|l| !l.locked && (!l.web || l.id == want))
+        .or_else(|| order().find(|l| !l.locked))
         .or_else(|| list.first())
         .map(|l| l.id)
+}
+
+/// The paint target was refused: no visible, unlocked normal layer on the page (FB-64).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NoPaintLayer;
+
+/// Layer a paint tool puts a new bitmap into (FB-64): `current` when it is a normal (non-web)
+/// layer or sublayer that is shown and unlocked in the state (sublayers inherit their parent's
+/// lock and visibility); otherwise the nearest such layer below it in flat order, else above it;
+/// without a current layer on the page the topmost such layer. `Ok(None)` when the page has no
+/// normal layer at all ([`insert_element`] then creates one); `Err` when none qualifies.
+pub fn paint_target_layer(
+    doc: &Document,
+    page: usize,
+    frame: usize,
+    current: Option<LayerId>,
+) -> Result<Option<LayerId>, NoPaintLayer> {
+    // (id, paintable, web) in flat order
+    fn subs(
+        l: &Layer,
+        frame: usize,
+        locked: bool,
+        shown: bool,
+        out: &mut Vec<(LayerId, bool, bool)>,
+    ) {
+        let Some(cel) = l.cel(frame).or_else(|| l.cel(0)) else {
+            return;
+        };
+        for e in cel.elements.iter().rev() {
+            if let ElementKind::SubLayer(sl) = &e.kind {
+                let lk = locked || e.common.locked || sl.cel(frame).is_some_and(|c| c.locked);
+                let sh = shown && e.common.visible && sl.is_shown(frame);
+                out.push((sl.id, !lk && sh, false));
+                subs(sl, frame, lk, sh, out);
+            }
+        }
+    }
+    let mut list = Vec::new();
+    for (_, l) in own_layers(doc, page) {
+        let web = l.kind == LayerKind::Web;
+        let locked = l.cel(frame).is_some_and(|c| c.locked);
+        let shown = l.is_shown(frame);
+        list.push((l.id, !web && !locked && shown, web));
+        subs(&l, frame, locked, shown, &mut list);
+    }
+    if list.iter().all(|(_, _, web)| *web) {
+        return Ok(None);
+    }
+    let found = match current.and_then(|c| list.iter().position(|(id, _, _)| *id == c)) {
+        Some(at) if list[at].1 => Some(list[at].0),
+        Some(at) => list[..at]
+            .iter()
+            .rev()
+            .chain(&list[at + 1..])
+            .find(|(_, ok, _)| *ok)
+            .map(|(id, _, _)| *id),
+        None => list
+            .iter()
+            .rev()
+            .find(|(_, ok, _)| *ok)
+            .map(|(id, _, _)| *id),
+    };
+    found.map(Some).ok_or(NoPaintLayer)
 }
 
 /// Does the layer `l` (or one of its sublayers, at any depth) have the id `id`?

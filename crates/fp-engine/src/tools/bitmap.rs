@@ -941,7 +941,10 @@ impl BrushTool {
         self.deselect_only = false;
         self.painted = false;
         self.offset = 0.0;
-        let mut target = crate::paint::target_bitmap(ctx.doc, ctx.page, &ctx.selection.elements);
+        // FB-65: a Brush or Pencil stroke that starts on a bitmap paints into it
+        let at = (self.id != ToolId::Eraser).then_some(pos);
+        let mut target =
+            crate::paint::stroke_target(ctx.doc, ctx.page, ctx.frame, &ctx.selection.elements, at);
         let mut base = target.as_ref().and_then(|(_, e)| match &e.kind {
             ElementKind::Bitmap(b) => docops::bitmap_image(b),
             _ => None,
@@ -950,6 +953,9 @@ impl BrushTool {
             .as_ref()
             .and_then(|b| b.get(pos.x.floor() as i32, pos.y.floor() as i32));
         self.params = self.job_params(ctx, start_px);
+        if let Some(a) = at {
+            self.params["at"] = json!([a.x, a.y]);
+        }
         self.live = None;
         if self.id == ToolId::Brush {
             // gerade Größen +1/+1 (echte Züge r02/r13/r16: Größe 10 → 56,146–506,156 für 60→500)
@@ -980,6 +986,12 @@ impl BrushTool {
         self.points = vec![pos];
         // Radiergummi ohne (ungesperrte) Bitmap: nichts zu radieren, der Befehl meldet es
         if self.id == ToolId::Eraser && target.is_none() {
+            return;
+        }
+        // FB-64: no visible unlocked layer for a new bitmap → no live stroke (the command refuses)
+        if target.is_none()
+            && docops::paint_target_layer(ctx.doc, ctx.page, ctx.frame, ctx.layer).is_err()
+        {
             return;
         }
         let mut p = self.params.clone();

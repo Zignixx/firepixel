@@ -160,7 +160,8 @@ fn softness_changes_the_edge() {
         counts.push(alpha_counts(&image(&s, id)));
         // Mitte voll deckend
         assert_eq!(px(&s, id, 190, 100)[3], 255, "Mitte deckt (Weichheit {soft})");
-        ex(&mut s, "select.none", json!({}));
+        // FB-65: the next stroke would start on this bitmap and paint into it
+        ex(&mut s, "edit.clear", json!({}));
     }
     let (hard, soft) = (counts[0], counts[1]);
     assert!(soft.1 > hard.1 * 4, "weiche Kante hat viel mehr halbdeckende Pixel: hart {hard:?}, weich {soft:?}");
@@ -234,12 +235,13 @@ fn preserve_transparency_paints_only_on_opaque_pixels() {
     s.tools.options.keep_transparency = false;
     stroke(&mut s, &[(40.0, 200.0), (340.0, 200.0)]);
     assert_eq!(px(&s, b, 300, 200), [0, 0, 255, 255]);
-    // auf leerer Fläche ohne Bitmap: nichts zu malen, kein Verlaufsschritt
+    // auf leerer Fläche ohne Bitmap: nichts zu malen, kein Verlaufsschritt (FB-65: below the
+    // bitmap, a stroke pressed on it would paint into it)
     ex(&mut s, "select.none", json!({}));
     s.tools.options.keep_transparency = true;
     let n = steps(&s);
     let before = doc(&s);
-    stroke(&mut s, &[(40.0, 250.0), (340.0, 250.0)]);
+    stroke(&mut s, &[(40.0, 292.0), (340.0, 292.0)]);
     assert_eq!(steps(&s), n);
     assert_eq!(doc(&s), before);
 }
@@ -269,7 +271,8 @@ fn texture_and_amount_are_visible_in_the_stroke() {
         let row: Vec<u8> = (100..300).map(|x| px(&s, id, x, 100)[3]).collect();
         let (mn, mx) = (*row.iter().min().unwrap_or(&0), *row.iter().max().unwrap_or(&0));
         spreads.push(mx - mn);
-        ex(&mut s, "select.none", json!({}));
+        // FB-65: the next stroke would start on this bitmap and paint into it
+        ex(&mut s, "edit.clear", json!({}));
     }
     assert_eq!(spreads[0], 0, "Menge 0: keine Textur");
     assert!(spreads[1] > 100, "Menge 100: Streifen sichtbar ({})", spreads[1]);

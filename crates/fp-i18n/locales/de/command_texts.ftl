@@ -621,6 +621,7 @@ cmdtext-transparenz-beibehalten-nur-auf-deckende-f5132f = Transparenz beibehalte
 cmdtext-endpunkt-weglassen-vorgabe-aus-echte-zue-cbdfd5 = Endpunkt weglassen (Vorgabe aus: echte Züge malen bis einschließlich Endpunkt)
 cmdtext-zufalls-startwert-des-zugs-natuerliche-p-8b1c3d = Zufalls-Startwert des Zugs (natürliche Pinsel; Vorgabe aus den Punkten)
 cmdtext-in-ein-neues-bitmap-malen-auch-wenn-eine-2f28b1 = in ein neues Bitmap malen, auch wenn eine Bitmap ausgewählt ist (Zug außerhalb der Bitmap)
+cmdtext-press-point-of-the-tool-fb-65-a-stroke-t-bec472 = Druckpunkt des Werkzeugs (FB-65): ein Zug, der auf einer Bitmap beginnt, malt in sie, ob ausgewählt oder nicht
 cmdtext-werkzeug-vorgabe-pinsel = Werkzeug (Vorgabe: Pinsel)
 cmdtext-aelterer-aufruf-strich-als-zeichenbefehl-a11103 = älterer Aufruf: Strich als Zeichenbefehl {"{"}command: tool.shape, params{"}"} – der Pinsel wird daraus gebildet
 cmdtext-rand-0-hart-1-anti-alias-2-weiche-kante = Rand: 0 hart, 1 Anti-Alias, 2 weiche Kante

@@ -729,6 +729,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                             }
                         }
                     });
+                    // FB-65: a bitmap hit under the press point becomes the selected one
+                    select_target(d, target.id);
                     let out = CommandOutput::doc();
                     Ok(match label {
                         Some(k) => out.labeled(fp_i18n::t(k)),
@@ -963,9 +965,19 @@ fn replace_or_red_eye(
     let prefs = s.prefs.clone();
     let breaks = crate::paint::parse_breaks(p.get("breaks"));
     let mut changed = false;
-    with_doc(s, |d| {
-        let (path, _) = bitmap_for(d, pts.first().copied(), &BasicGeometry)
-            .ok_or_else(|| sel_err("err-sel-no-bitmap-under-stroke"))?;
+    let empty_bitmap = with_doc(s, |d| {
+        let Some((path, target)) = bitmap_for(d, pts.first().copied(), &BasicGeometry) else {
+            // FB-65: Red Eye on empty space inserts an empty bitmap (bitmap mode), like the
+            // reference; the other tools do nothing there
+            if mode != "redEye" {
+                return Err(sel_err("err-sel-no-bitmap-under-stroke"));
+            }
+            super::bitmap::use_paint_layer(d)?;
+            super::edit::insert_bitmap(d, &RgbaImage::empty_at(0, 0))?;
+            d.bitmap_mode = true;
+            return Ok(true);
+        };
+        select_target(d, target.id);
         let sel = d
             .selection
             .pixels
@@ -1013,10 +1025,11 @@ fn replace_or_red_eye(
                 }
             }
         });
-        Ok(())
+        Ok(false)
     })?;
     let out = CommandOutput::doc();
     Ok(match mode {
+        _ if empty_bitmap => out.labeled(fp_i18n::t("msg-step-insert-empty-bitmap")),
         "redEye" if !changed => out.labeled(fp_i18n::t("msg-step-edit-bitmap")),
         "redEye" => out.labeled(fp_i18n::t("msg-step-red-eye")),
         _ => out.labeled(fp_i18n::t("msg-step-replace-color")),
@@ -1454,5 +1467,13 @@ fn retouch(img: &mut RgbaImage, pts: &[Point], prm: &Retouch, sel: Option<&fp_ra
         if keep != img.bounds() {
             *img = img.cropped(keep);
         }
+    }
+}
+
+/// FB-65: the bitmap a retouch stroke works on becomes the selected one (a bitmap hit under the
+/// press point; a selected target stays as it is).
+fn select_target(d: &mut crate::session::DocumentState, id: ElementId) {
+    if !d.selection.elements.contains(&id) {
+        d.selection.set(vec![id]);
     }
 }

@@ -295,6 +295,7 @@ fn apply_paint_job(
     s: &mut Session,
     job: crate::paint::PaintJob,
     new_bitmap: bool,
+    at: Option<Point>,
 ) -> Result<CommandOutput> {
     with_doc(s, |d| {
         let sel = d
@@ -303,10 +304,11 @@ fn apply_paint_job(
             .clone()
             .filter(|_| d.selection.has_pixels());
         // Pinselzug außerhalb der gewählten Bitmap (`newBitmap`): neues Bitmap wie im Original
+        // FB-65: with the press point (the tools) a stroke that starts on a bitmap paints into it
         let target = if new_bitmap {
             None
         } else {
-            crate::paint::target_bitmap(&d.doc, d.page, &d.selection.elements)
+            crate::paint::stroke_target(&d.doc, d.page, d.frame, &d.selection.elements, at)
         };
         match target.and_then(|(id, e)| docops::find_on_page(&d.doc, d.page, id).map(|p| (p, e))) {
             Some((path, e)) => {
@@ -323,6 +325,11 @@ fn apply_paint_job(
                         set_bitmap_image(b, &out);
                     }
                 });
+                // FB-65: the bitmap painted into becomes the selected one (also when it was hit)
+                if !d.selection.elements.contains(&e.id) {
+                    d.selection.set(vec![e.id]);
+                }
+                Ok(CommandOutput::doc_with(json!({"target": e.id.0})))
             }
             None => {
                 if job.tool == crate::paint::PaintTool::Eraser {
@@ -331,36 +338,28 @@ fn apply_paint_job(
                 let Some(out) = crate::paint::paint_into(&job, None, sel.as_ref()) else {
                     return Ok(CommandOutput::session());
                 };
-                // B-2b BA-039: gesperrte aktive Ebene → ohne Rückfrage auf die nächste freie Ebene
-                // darunter, die danach aktiv ist
-                if let Some(l) = unlocked_layer_below(d) {
-                    d.layer = Some(l);
-                }
-                insert_bitmap(d, &out)?;
+                // B-2b BA-039, FB-64: a locked or hidden current layer (or the web layer) → without
+                // asking the nearest visible unlocked layer below (else above), current afterwards;
+                // none → refused, no change
+                use_paint_layer(d)?;
+                let id = insert_bitmap(d, &out)?;
+                Ok(CommandOutput::doc_with(json!({"target": id.0})))
             }
         }
-        Ok(CommandOutput::doc())
     })
 }
 
-/// Ist die aktive Ebene im aktuellen Status gesperrt, die nächste nicht gesperrte normale Ebene
-/// darunter (sonst `None`: Ziel bleibt die aktive Ebene).
-fn unlocked_layer_below(d: &DocumentState) -> Option<fp_model::LayerId> {
-    let active = d.layer?;
-    let layers = docops::own_layers(&d.doc, d.page);
-    let locked = |l: &fp_model::layer::Layer| {
-        let ci = if l.shared_across_frames { 0 } else { d.frame };
-        l.cels.get(ci).is_some_and(|c| c.locked)
-    };
-    let idx = layers.iter().position(|(_, l)| l.id == active)?;
-    if !locked(&layers[idx].1) {
-        return None;
+/// Makes the layer a paint tool's new bitmap goes into current ([`docops::paint_target_layer`],
+/// FB-64); `Err` with the status-bar message when no layer can take it.
+pub(crate) fn use_paint_layer(d: &mut DocumentState) -> Result<()> {
+    match docops::paint_target_layer(&d.doc, d.page, d.frame, d.layer) {
+        Ok(Some(l)) if d.layer != Some(l) => d.choose_layer(Some(l)),
+        Ok(_) => {}
+        Err(docops::NoPaintLayer) => {
+            return Err(EngineError::Failed(fp_i18n::t("err-paint-no-layer")));
+        }
     }
-    layers[..idx]
-        .iter()
-        .rev()
-        .find(|(_, l)| l.kind == fp_model::layer::LayerKind::Normal && !locked(l))
-        .map(|(_, l)| l.id)
+    Ok(())
 }
 
 /// Pinsel aus einem älteren `draw`-Parameter (`tool.shape` mit Strich-/Pinselvorgabe).
@@ -468,6 +467,7 @@ fn paint_mask(d: &mut DocumentState, cov: Mask, color: Argb, opacity: u8) -> Res
             });
         }
         None => {
+            use_paint_layer(d)?;
             let mut out = RgbaImage::new(tb)?;
             fp_raster::composite_color(&mut out, color.to_rgba8(), &cov, &opt);
             insert_bitmap(d, &out)?;
@@ -590,6 +590,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("seed", ParamKind::Integer { min: Some(0), max: None }, "Zufalls-Startwert des Zugs (natürliche Pinsel; Vorgabe aus den Punkten)")
             .opt("velocities", ParamKind::Json, "Geschwindigkeit je Punkt (VELf in px/ms, 1/256-Schritte, aus der Zeigerbewegung; Vorgabe 0,125)")
             .opt("newBitmap", ParamKind::Bool, "in ein neues Bitmap malen, auch wenn eine Bitmap ausgewählt ist (Zug außerhalb der Bitmap)")
+            .opt("at", ParamKind::Point, "press point of the tool (FB-65): a stroke that starts on a bitmap paints into it, selected or not")
             .opt("tool", ParamKind::Enum { values: vec!["brush".into(), "pencil".into()] }, "Werkzeug (Vorgabe: Pinsel)")
             .opt("draw", ParamKind::Json, "älterer Aufruf: Strich als Zeichenbefehl {command: tool.shape, params} – der Pinsel wird daraus gebildet")
             .opt("breaks", ParamKind::Json, BREAKS_PARAM_TEXT)
@@ -599,7 +600,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 legacy_draw_brush(&mut v);
                 let tool = if p.opt_str("tool")?.as_deref() == Some("pencil") { crate::paint::PaintTool::Pencil } else { crate::paint::PaintTool::Brush };
                 let job = crate::paint::PaintJob::from_params(tool, &v, s.tools.stroke_color, s.tools.options.brush_size);
-                apply_paint_job(s, job, p.opt_bool("newBitmap")?.unwrap_or(false))
+                let at = p.opt_point("at")?;
+                apply_paint_job(s, job, p.opt_bool("newBitmap")?.unwrap_or(false), at)
             }),
     );
     r.add(
@@ -656,7 +658,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                     Ok(())
                 })?;
-                apply_paint_job(s, job, false)
+                apply_paint_job(s, job, false, None)
             }),
     );
     r.add(

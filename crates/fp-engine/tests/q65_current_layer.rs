@@ -371,11 +371,13 @@ fn s17_s22_marquee_over_one_or_two_objects() {
 fn s24_select_all_with_one_selectable_object_and_the_lock_rule() {
     let mut m = mkn();
     let w = web(&m.s);
-    // locking L2, then the current L3 → the web layer becomes current (rule 7)
+    // locking L2, then the current L3 → rule 7 wraps to the unlocked L1; FB-64: the web layer
+    // only when every other layer is locked
     lock(&mut m.s, m.l[1], true);
     assert_eq!(cur(&m.s), m.l[2]);
     lock(&mut m.s, m.l[2], true);
-    assert_eq!(cur(&m.s), w);
+    assert_ne!(cur(&m.s), w);
+    assert_eq!(cur(&m.s), m.l[0]);
     // Select All finds only r1 → L1
     ex(&mut m.s, "select.all", json!({}));
     assert_eq!(sel(&m.s), [m.r[0]]);

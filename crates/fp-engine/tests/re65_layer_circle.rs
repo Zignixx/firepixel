@@ -465,9 +465,9 @@ fn u_lock_rule_cases() {
         ("U1", &[Cur(2), Lock(2)], 3),
         ("U2", &[Cur(2), Hide(3), Lock(2)], 3),
         ("U3", &[Cur(2), Lock(3), Lock(2)], 4),
-        ("U4", &[Cur(2), Lock(3), Lock(4), Lock(5), Lock(2)], 6),
+        ("U4", &[Cur(2), Lock(3), Lock(4), Lock(5), Lock(2)], 0), // FB-64: not the web layer
         ("U5", &[Cur(2), Lock(3), Lock(4), Lock(5), Lock(6), Lock(2)], 0),
-        ("U6", &[Cur(5), Lock(5)], 6),
+        ("U6", &[Cur(5), Lock(5)], 0), // FB-64: not the web layer
         ("U7", &[Cur(5), Lock(6), Lock(5)], 0),
         ("U8", &[Cur(0), Lock(0)], 2),
         ("U9", &[Cur(1), Lock(1)], 2),
@@ -490,7 +490,7 @@ fn u_lock_rule_cases() {
     assert_eq!(run_u(&[Cur(3), Lock(3), Cur(5), Unlock(3)]), [3, 4, 5, 5], "U16");
     assert_eq!(run_u(&[Cur(2), Lock(2), Lock(3), Unlock(2), Unlock(3)]), [2, 3, 4, 2, 2], "U19");
     assert_eq!(run_u(&[Cur(2), Lock(2), Lock(3), Unlock(3), Unlock(2)]), [2, 3, 4, 3, 2], "U20");
-    assert_eq!(run_u(&[Cur(5), Lock(5), Lock(6), Unlock(6)]), [5, 6, 0, 6], "U22");
+    assert_eq!(run_u(&[Cur(5), Lock(5), Lock(6), Unlock(6)]), [5, 0, 0, 0], "U22 (FB-64)");
     assert_eq!(run_u(&[Cur(1), LockSubElement(true), LockSubElement(false)]), [1, 2, 1], "S1 in the panel");
 }
 

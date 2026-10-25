@@ -1808,6 +1808,7 @@ impl Session {
             has_document: has_doc,
             page,
             frame,
+            layer: active.and_then(|d| d.layer),
             selection: sel,
             zoom,
             prefs: &self.prefs,
