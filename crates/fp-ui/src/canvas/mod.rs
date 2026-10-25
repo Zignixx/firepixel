@@ -4212,6 +4212,7 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let mut x = sr.left() - 6.0 - 7.0 * 22.0 - 16.0;
     let y = rect.center().y - bsize.y / 2.0;
     let multi = frames > 1;
+    let playing = st.session.ui.playing;
     let items: [(Icon, String, bool, Option<Action>); 3] = [
         (
             Icon::FirstFrame,
@@ -4219,7 +4220,28 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             multi && frame > 0,
             Some(Action::SetFrame(0)),
         ),
-        (Icon::Play, fp_i18n::t("ui-state-play"), multi, None),
+        // FB-63: Play runs View ▸ Play/Stop; while the animation plays the button shows Stop
+        if playing {
+            (
+                Icon::Stop,
+                fp_i18n::t("ui-state-stop"),
+                true,
+                Some(Action::Run(
+                    "view.togglePlayback".into(),
+                    serde_json::json!({}),
+                )),
+            )
+        } else {
+            (
+                Icon::Play,
+                fp_i18n::t("ui-state-play"),
+                multi,
+                Some(Action::Run(
+                    "view.togglePlayback".into(),
+                    serde_json::json!({}),
+                )),
+            )
+        },
         (
             Icon::LastFrame,
             fp_i18n::t("ui-state-last"),
@@ -4236,7 +4258,7 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             bsize,
             11.0,
             ButtonLook {
-                selected: false,
+                selected: icon == Icon::Stop,
                 enabled: en,
                 group: Some(ToolGroup::View),
             },

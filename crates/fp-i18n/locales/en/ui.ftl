@@ -83,6 +83,7 @@ ui-zoom-fit-selection = Fit Selection
 ui-zoom-fit-all = Fit All
 ui-state-first = First State
 ui-state-play = Play/Stop
+ui-state-stop = Stop Playback
 ui-state-last = Last State
 ui-state-prev = Previous State
 ui-state-next = Next State

@@ -140,6 +140,8 @@ pub struct AppState {
     pub batch: Option<Box<crate::batch::Studio>>,
     /// Importieren: gewählte Datei wartet auf den Platzierungszeiger (Klick setzt, Ziehen skaliert; CT-C-05).
     pub place_import: Option<crate::canvas::PlaceImport>,
+    /// Animation playback on the canvas (FB-63).
+    pub playback: crate::playback::Playback,
 }
 
 impl AppState {
@@ -183,6 +185,7 @@ impl AppState {
             pending_drop: None,
             batch: None,
             place_import: None,
+            playback: crate::playback::Playback::default(),
         };
         st.sync_panels_to_engine();
         st

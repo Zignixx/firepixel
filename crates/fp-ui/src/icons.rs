@@ -121,6 +121,8 @@ pub enum Icon {
     FirstFrame,
     PrevFrame,
     Play,
+    /// Stop (the Play button while an animation plays, FB-63).
+    Stop,
     NextFrame,
     LastFrame,
     ExitBitmapMode,
@@ -1536,6 +1538,7 @@ fn draw(p: &Pen, icon: Icon) {
             Some(fg),
             &[(4.0, 2.5), (13.0, 8.0), (4.0, 13.5)],
         ),
+        Icon::Stop => p.rect(4.0, 4.0, 8.0, 8.0, Some(fg), None),
         Icon::NextFrame => {
             p.rect(3.0, 3.0, 2.0, 10.0, Some(fg), None);
             p.poly(Some(fg), None, &[(7.0, 3.0), (13.0, 8.0), (7.0, 13.0)]);
@@ -1848,6 +1851,7 @@ pub const ALL_ICONS: &[Icon] = &[
     Icon::FirstFrame,
     Icon::PrevFrame,
     Icon::Play,
+    Icon::Stop,
     Icon::NextFrame,
     Icon::LastFrame,
     Icon::ExitBitmapMode,

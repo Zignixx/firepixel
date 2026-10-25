@@ -31,6 +31,7 @@ image-preview-view-2 = 2 Preview Windows
 image-preview-view-4 = 4 Preview Windows
 image-preview-first-frame = First frame
 image-preview-play = Play/Stop
+image-preview-play-rendering = Rendering state { $n }/{ $m } …
 image-preview-last-frame = Last frame
 image-preview-current-frame = Current frame
 image-preview-prev-frame = Previous frame

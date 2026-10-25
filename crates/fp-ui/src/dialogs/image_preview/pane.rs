@@ -297,12 +297,21 @@ pub struct Pane {
     /// Zuletzt gerechnete Ergebnisse (Abspielen, Statuswechsel, Werkzeug „Exportbereich“ ein/aus:
     /// schon gerechnete Status bzw. Einstellungen werden nicht noch einmal gerechnet).
     pub(super) recent: Vec<Arc<PaneResult>>,
+    /// Playback (FB-63): job rendering a state ahead of the shown one. It is not cancelled when
+    /// the shown state changes, only when playback stops or the settings change.
+    pub(super) prefetch: Option<Job>,
+    /// Number of states of the document (sizes the cache so that one pass fits, FB-63).
+    pub(super) frames: usize,
 }
 
-/// So viele Ergebnisse merkt sich ein Feld.
+/// So viele Ergebnisse merkt sich ein Feld (mindestens; bei mehr Status Status + 8).
 pub const RECENT: usize = 48;
-/// … und höchstens so viele Bildpunkte zusammen (große Bilder: weniger Einträge).
+/// … und höchstens so viele Bildpunkte zusammen (große Bilder: weniger Einträge), mindestens;
+/// reicht das nicht für alle Status, wächst die Grenze bis [`RECENT_PIXELS_MAX`] (FB-63).
 pub const RECENT_PIXELS: usize = 16 * 1024 * 1024;
+/// Obergrenze der Bildpunkte im Zwischenspeicher eines Feldes (256 MB RGBA); darüber werden die
+/// am längsten nicht gezeigten Ergebnisse verworfen (LRU).
+pub const RECENT_PIXELS_MAX: usize = 64 * 1024 * 1024;
 
 impl Pane {
     pub fn new(settings: OptimizeSettings) -> Pane {
@@ -316,6 +325,8 @@ impl Pane {
             pending_since: None,
             texture: None,
             recent: Vec::new(),
+            prefetch: None,
+            frames: 1,
         }
     }
 
@@ -331,7 +342,7 @@ impl Pane {
 
     fn remember(&mut self, r: Arc<PaneResult>) {
         self.recent.retain(|x| x.key != r.key);
-        self.recent.push(r);
+        self.recent.push(Arc::clone(&r));
         // höchstens RECENT Ergebnisse und zusammen höchstens RECENT_PIXELS Bildpunkte
         let px = |v: &[Arc<PaneResult>]| {
             v.iter()
@@ -339,11 +350,113 @@ impl Pane {
                 .map(|i| i.width() * i.height())
                 .sum::<usize>()
         };
-        while self.recent.len() > 1
-            && (self.recent.len() > RECENT || px(&self.recent) > RECENT_PIXELS)
-        {
+        let (max_n, max_px) = self.cache_limits(&r);
+        while self.recent.len() > 1 && (self.recent.len() > max_n || px(&self.recent) > max_px) {
             self.recent.remove(0);
         }
+    }
+
+    /// Cache limits (entries, pixels) for results like `r`: room for one pass through all
+    /// states (frame count × frame pixels), at least [`RECENT`]/[`RECENT_PIXELS`], at most
+    /// [`RECENT_PIXELS_MAX`] pixels.
+    pub(super) fn cache_limits(&self, r: &PaneResult) -> (usize, usize) {
+        let frame_px = r
+            .image
+            .as_ref()
+            .map(|i| i.width() * i.height())
+            .unwrap_or(0);
+        let need = self.frames.saturating_add(8).saturating_mul(frame_px);
+        (
+            RECENT.max(self.frames + 8),
+            need.clamp(RECENT_PIXELS, RECENT_PIXELS_MAX),
+        )
+    }
+
+    /// Cached result with this key; marks it as recently used (LRU).
+    pub(super) fn cached(&mut self, key: u64) -> Option<Arc<PaneResult>> {
+        let i = self.recent.iter().position(|r| r.key == key)?;
+        let r = self.recent.remove(i);
+        self.recent.push(Arc::clone(&r));
+        Some(r)
+    }
+
+    /// Is the result with this key ready (cached or shown)?
+    pub fn has_result(&self, key: u64) -> bool {
+        self.result.as_ref().is_some_and(|r| r.key == key)
+            || self.recent.iter().any(|r| r.key == key)
+    }
+
+    /// Key of the export job of this pane for state `frame`.
+    pub(super) fn frame_key(&self, base: &JobInput, frame: usize, uncropped: bool) -> u64 {
+        let kind = JobKind::Export(Box::new(self.job_settings(uncropped)));
+        worker::settings_key(base.doc_key, base.page, frame, &kind)
+    }
+
+    /// Playback (FB-63): renders the states ahead of the shown one, one job at a time in play
+    /// order (`order` = the states after the shown one), so that the shown state changes only to
+    /// states already rendered. `order` empty = not playing: a running prefetch job is cancelled.
+    pub(super) fn prefetch(
+        &mut self,
+        ctx: &egui::Context,
+        base: &JobInput,
+        cache: &Arc<worker::RenderCache>,
+        uncropped: bool,
+        order: &[usize],
+    ) {
+        if let Some(j) = &self.prefetch
+            && let Some(r) = j.poll()
+        {
+            let key = j.key;
+            self.prefetch = None;
+            if let Some(r) = r
+                && r.key == key
+            {
+                self.remember(Arc::new(r));
+            }
+        }
+        if !self.show_preview || order.is_empty() {
+            self.prefetch = None;
+            return;
+        }
+        let keys: Vec<(usize, u64)> = order
+            .iter()
+            .map(|&f| (f, self.frame_key(base, f, uncropped)))
+            .collect();
+        if let Some(j) = &self.prefetch
+            && !keys.iter().any(|(_, k)| *k == j.key)
+        {
+            // settings or document changed: the job renders something no longer needed
+            self.prefetch = None;
+        }
+        // the shown state first (its own job), then one state ahead at a time
+        if self.prefetch.is_some() || self.job.is_some() || self.pending_since.is_some() {
+            return;
+        }
+        // look ahead only as far as the cache holds (else it would drop what comes next)
+        let room = match self.result.as_deref() {
+            Some(r) => {
+                let (n, px) = self.cache_limits(r);
+                let fp = r
+                    .image
+                    .as_ref()
+                    .map(|i| i.width() * i.height())
+                    .unwrap_or(0);
+                px.checked_div(fp).map_or(n, |k| n.min(k))
+            }
+            None => order.len(),
+        }
+        .saturating_sub(1)
+        .max(1);
+        let Some(&(frame, key)) = keys.iter().take(room).find(|(_, k)| !self.has_result(*k)) else {
+            return;
+        };
+        let input = JobInput {
+            kind: JobKind::Export(Box::new(self.job_settings(uncropped))),
+            key,
+            frame,
+            ..base.clone()
+        };
+        self.prefetch = Some(worker::spawn(input, Arc::clone(cache), ctx));
     }
 
     /// Wird für dieses Feld gerade gerechnet (oder wartet eine Änderung auf ihren Auftrag)?
@@ -388,9 +501,17 @@ impl Pane {
         let key = worker::settings_key(base.doc_key, base.page, base.frame, &kind);
         // schon einmal gerechnet (anderer Status, Werkzeug gewechselt): sofort zeigen
         if self.result.as_ref().is_none_or(|r| r.key != key)
-            && let Some(r) = self.recent.iter().find(|r| r.key == key).cloned()
+            && let Some(r) = self.cached(key)
         {
             self.result = Some(r);
+        }
+        // playback rendered this state ahead: take its result instead of a second job
+        if self.result.as_ref().is_none_or(|r| r.key != key)
+            && self.prefetch.as_ref().is_some_and(|j| j.key == key)
+            && self.job.is_none()
+        {
+            ctx.request_repaint_after(Duration::from_millis(20));
+            return;
         }
         let done = self.result.as_ref().is_some_and(|r| r.key == key);
         let running = self.job.as_ref().is_some_and(|j| j.key == key);

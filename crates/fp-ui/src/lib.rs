@@ -42,6 +42,7 @@ pub mod menu_kbd;
 pub mod menu_scroll;
 pub mod os_clipboard;
 pub mod panels;
+pub mod playback; // FB-63: animation playback on the canvas
 pub mod preview;
 pub mod screen_mode; // TW-158: Standard / full screen with menus / full screen
 mod start_window;
@@ -271,6 +272,8 @@ impl FirepixelApp {
         input::handle(&ctx, st);
         // KI-Steuerkanal (MCP-Brücke, AU): Aufträge im UI-Thread abarbeiten
         crate::bridge::frame(&ctx, st);
+        // FB-63: animation playback (advances the state after its delay)
+        playback::frame(&ctx, st);
         // the selection the pop-up sliders of this frame start from (FB-46)
         inspector::preview::publish_target(&ctx, st);
         appbar::resize_edges(&ctx);

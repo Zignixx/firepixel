@@ -152,6 +152,8 @@ pub struct ImagePreview {
     pub playing: bool,
     /// Zeitpunkt (Zeit der Oberfläche) des nächsten Statuswechsels beim Abspielen.
     pub next_tick: Option<f64>,
+    /// Playback waits for this state to be rendered (large documents, first pass, FB-63).
+    pub play_wait: Option<usize>,
     /// Größe der Seite in Dokumentpixeln (Bezug für Skalieren und Exportbereich).
     pub doc_size: (usize, usize),
     /// Laufendes Ziehen mit dem Werkzeug „Exportbereich“: Feld, Griff, Bereich und Druckpunkt beim
@@ -259,6 +261,7 @@ impl ImagePreview {
             frames: 1,
             playing: false,
             next_tick: None,
+            play_wait: None,
             doc_size: (1, 1),
             crop_drag: None,
             wheel_acc: 0.0,
@@ -512,10 +515,41 @@ impl ImagePreview {
         self.center = Some(o + c / f);
     }
 
+    /// Playback (FB-63): the states after the shown one in play order (exported states of the
+    /// active pane's setting, wrapping, the shown state last); empty when not playing.
+    pub fn play_order(&self) -> Vec<usize> {
+        if !self.playing || self.frames <= 1 {
+            return Vec::new();
+        }
+        let s = &self.panes[self.active].settings;
+        let mut out = Vec::new();
+        let mut f = self.frame;
+        for _ in 0..self.frames {
+            f = animation_tab::next_frame(s, self.frames, f);
+            if out.contains(&f) {
+                break;
+            }
+            out.push(f);
+        }
+        out
+    }
+
+    /// Is state `frame` ready in every visible pane that shows the export preview (FB-63)?
+    pub fn frame_ready(&self, base: &JobInput, frame: usize) -> bool {
+        self.mode.panes().iter().all(|&i| {
+            let p = &self.panes[i];
+            let uncropped = self.tool == Tool::ExportArea && i == self.active;
+            !p.show_preview || p.has_result(p.frame_key(base, frame, uncropped))
+        })
+    }
+
     fn update_jobs(&mut self, ctx: &egui::Context, base: &JobInput) {
+        let order = self.play_order();
         for &i in self.mode.panes() {
             // Werkzeug „Exportbereich“: das aktive Feld zeigt das ganze Bild (§6)
             let uncropped = self.tool == Tool::ExportArea && i == self.active;
+            self.panes[i].frames = self.frames;
+            self.panes[i].prefetch(ctx, base, &self.cache, uncropped, &order);
             self.panes[i].update(ctx, base, &self.cache, uncropped);
         }
         let need_orig = self
@@ -642,7 +676,6 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     d.doc_size = fp_export::render::page_rect(&doc.doc, doc.page)
         .map(|r| (r.width().max(1) as usize, r.height().max(1) as usize))
         .unwrap_or((1, 1));
-    animation_tab::tick(&mut d, ctx);
     let base = JobInput {
         doc: Arc::clone(&doc.doc),
         renderer: Arc::clone(&st.renderer),
@@ -653,6 +686,7 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
         kind: JobKind::Original,
         key: 0,
     };
+    animation_tab::tick(&mut d, ctx, &base);
     poll_palette_io(&mut d);
     poll_size_job(&mut d);
     let outcome = draw(ctx, st, &mut d);
@@ -1250,6 +1284,12 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
                 }
             }
         }
+        // FB-63: playback waits for the next state of a large document
+        if let Some(f) = d.play_wait
+            && d.panes[i].show_preview
+        {
+            paint_play_wait(ui, lay.image, f, d.frames);
+        }
         pane::paint_frame(ui, lay.frame, d.active == i);
         let busy = d.panes[i].is_busy();
         let act = pane::header(ui, i, lay, &d.panes[i], entries, busy);
@@ -1275,6 +1315,30 @@ fn draw_panes(ui: &mut egui::Ui, d: &mut ImagePreview, area: Rect, entries: &[pa
             d.preset_name = Some((i, name));
         }
     }
+}
+
+/// Busy cue of the playback (FB-63): "Rendering state n/m …" at the top left of the image area.
+fn paint_play_wait(ui: &egui::Ui, area: Rect, frame: usize, frames: usize) {
+    let theme = Theme::current(ui.ctx());
+    let text = fp_i18n::tr!(
+        "image-preview-play-rendering",
+        n = frame + 1,
+        m = frames.max(1)
+    );
+    let p = ui.painter().with_clip_rect(area.intersect(ui.clip_rect()));
+    let galley = p.layout_no_wrap(text, theme.ui_font(), theme.colors.text);
+    let r = Rect::from_min_size(
+        area.min + egui::vec2(6.0, 6.0),
+        galley.size() + egui::vec2(10.0, 6.0),
+    );
+    p.rect_filled(r, 3.0, crate::theme::with_alpha(theme.colors.frame_bg, 230));
+    p.rect_stroke(
+        r,
+        3.0,
+        egui::Stroke::new(1.0, theme.colors.line_mid),
+        egui::StrokeKind::Inside,
+    );
+    p.galley(r.min + egui::vec2(5.0, 3.0), galley, theme.colors.text);
 }
 
 /// Bildschirmpunkte je Zeilen-Rastung beim Bildlauf (wie im Dokumentfenster).

@@ -1650,6 +1650,30 @@ impl Session {
         Ok(())
     }
 
+    /// Animation playback (FB-63): shows state `index` of the active document like
+    /// `state.setCurrent` (current layer per RE spec 65 rule 3, selection cleared, the Pages and
+    /// States panels follow), but as a view change: no History row, no paused stroke applied.
+    /// `false` if there is no document, the index is out of range or already current.
+    pub fn show_state(&mut self, index: usize) -> bool {
+        self.end_live_text_view();
+        let Some(d) = self.active_mut() else {
+            return false;
+        };
+        if index >= d.frame_count() || d.frame == index {
+            return false;
+        }
+        let id = d.id;
+        d.frame = index;
+        d.adopt_resolved_layer();
+        let had_selection = !d.selection.is_empty();
+        d.selection.clear();
+        if had_selection {
+            self.events.push(SessionEvent::SelectionChanged(id));
+        }
+        self.events.push(SessionEvent::LocationChanged(id));
+        true
+    }
+
     /// Springt im Verlauf (Klick im Verlauf-Bedienfeld).
     pub fn history_go_to(&mut self, position: usize) -> Result<()> {
         self.apply_paused_stroke()?;

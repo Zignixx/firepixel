@@ -106,7 +106,13 @@ pub fn next_frame(s: &OptimizeSettings, frames: usize, from: usize) -> usize {
 
 /// Abspielen weiterführen: nach der Verzögerung des gezeigten Status (Einstellung des aktiven
 /// Feldes) zum nächsten exportierten Status. Zeitbasis ist die Zeit der Oberfläche.
-pub fn tick(d: &mut ImagePreview, ctx: &egui::Context) {
+///
+/// FB-63: the next state is shown only once it is rendered in every visible pane (the panes
+/// render the states ahead while playing, see `Pane::prefetch`); until then the shown state stays
+/// and [`ImagePreview::play_wait`] names the state that is rendered (busy cue). Small documents
+/// render a state well within its delay and play exactly as before.
+pub fn tick(d: &mut ImagePreview, ctx: &egui::Context, base: &super::worker::JobInput) {
+    d.play_wait = None;
     if !d.playing {
         d.next_tick = None;
         return;
@@ -120,8 +126,16 @@ pub fn tick(d: &mut ImagePreview, ctx: &egui::Context) {
     let delay = |f: usize| (frame_info(s, f).delay.max(1) as f64) / 100.0;
     let due = *d.next_tick.get_or_insert(now + delay(d.frame));
     if now + 1e-6 >= due {
-        d.frame = next_frame(s, d.frames, d.frame);
-        d.next_tick = Some(now + delay(d.frame));
+        let next = next_frame(s, d.frames, d.frame);
+        let next_delay = delay(next);
+        if !d.frame_ready(base, next) {
+            // the worker repaints when a job finishes; the timer is only a safety net
+            d.play_wait = Some(next);
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
+            return;
+        }
+        d.frame = next;
+        d.next_tick = Some(now + next_delay);
     }
     let wait = d.next_tick.map(|n| (n - now).max(0.0)).unwrap_or(0.0);
     ctx.request_repaint_after(std::time::Duration::from_secs_f64(wait.min(1.0)));

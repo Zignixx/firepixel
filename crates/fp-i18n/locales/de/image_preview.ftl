@@ -31,6 +31,7 @@ image-preview-view-2 = 2 Vorschaufenster
 image-preview-view-4 = 4 Vorschaufenster
 image-preview-first-frame = Gehe zu erstem Status
 image-preview-play = Abspielen / Stoppen
+image-preview-play-rendering = Status { $n }/{ $m } wird berechnet …
 image-preview-last-frame = Gehe zu letztem Status
 image-preview-current-frame = Aktueller Status
 image-preview-prev-frame = Vorheriger Status

@@ -89,6 +89,12 @@ path = "tests/all.rs"
 name = "ux_b_comparison"
 path = "tests/ux_b_comparison.rs"
 
+# FB-63: holds the Image Preview jobs (worker::hold_jobs) and counts cancelled jobs process-wide
+# (worker::counters); jobs of other files would be held and their cancels counted
+[[test]]
+name = "playback_fb63"
+path = "tests/playback_fb63.rs"
+
 # stellt die prozessweite KI-Modellsuche auf einen leeren Ordner um (fp_ai::models::set_search_override)
 [[test]]
 name = "ai_kittest_missing"
