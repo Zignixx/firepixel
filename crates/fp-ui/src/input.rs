@@ -346,6 +346,7 @@ fn history_key_pressed(ctx: &egui::Context, st: &AppState) -> bool {
 
 /// Verarbeitet die Tastatureingaben dieses Frames.
 pub fn handle(ctx: &egui::Context, st: &mut AppState) {
+    crate::panels::pages::track_focus(ctx);
     let editing = st.session.tool_is_editing_text();
     st.space_down = ctx.input(|i| i.key_down(Key::Space)) && !ctx.text_edit_focused() && !editing;
     // FB-46: Undo / Redo with an open colour pop-up first discard it like Esc (the pending colour
@@ -485,6 +486,16 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
                         fp_engine::StrokePause::Paused => continue,
                         fp_engine::StrokePause::Idle => {}
                     }
+                }
+                // FB-68: Delete with the page list focused deletes the selected pages
+                if key == Key::Delete
+                    && !ctrl
+                    && !modifiers.alt
+                    && !modifiers.shift
+                    && crate::panels::pages::delete_key_target(ctx)
+                {
+                    st.push(Action::Run("page.delete".into(), json!({})));
+                    continue;
                 }
                 // Werkzeugtasten (Pfeile, Entf, Esc, Eingabe) zuerst an das Werkzeug; nur wenn es
                 // nichts tut, an die Menükürzel (z. B. Pfeil = Verschieben ohne Auswahl)

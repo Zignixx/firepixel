@@ -1128,6 +1128,7 @@ cmd-page-delete = Delete Page
 cmd-page-duplicate = Duplicate Page
 cmd-page-rename = Rename Page
 cmd-page-setCurrent = Go to Page
+cmd-page-select = Change Page Selection
 cmd-state-add = Add State
 cmd-state-delete = Delete State
 cmd-state-duplicate = Duplicate State

@@ -1108,3 +1108,60 @@ pub fn adjust_menu(st: &AppState, nodes: &mut [crate::menu::Node]) {
         }
     }
 }
+
+/// FB-68 (Firepixel extension, approved): Delete Page from the Pages panel (footer button,
+/// context menu, panel menu, Delete key) with every page selected first asks "Delete all
+/// pages?": a warning and the page that stays (default: the first), Delete / Cancel. The kept
+/// page stays with its content, all others go in one History row (`page.delete` with `pages`
+/// and `keep`). Scripts, CLI and batch never see the dialog (the engine keeps the first page).
+/// `true`: the dialog took over.
+pub fn intercept_delete_all_pages(st: &mut AppState, name: &str, params: &Value) -> bool {
+    if !matches!(name, "page.delete" | "panel.pages.delete") || params.get("keep").is_some() {
+        return false;
+    }
+    let Some(d) = st.session.active() else {
+        return false;
+    };
+    let n = d.doc.pages.len();
+    let list: Vec<usize> = if let Some(v) = params.get("pages").and_then(|v| v.as_array()) {
+        v.iter()
+            .filter_map(|x| x.as_u64().map(|i| i as usize))
+            .collect()
+    } else if let Some(i) = params.get("index").and_then(|v| v.as_u64()) {
+        vec![i as usize]
+    } else {
+        d.selected_pages()
+    };
+    let all = (0..n).all(|i| list.contains(&i));
+    if n < 2 || !all {
+        return false;
+    }
+    let names: Vec<String> = d
+        .doc
+        .pages
+        .iter()
+        .map(|p| p.display_name().to_string())
+        .collect();
+    let items: Vec<&str> = names.iter().map(String::as_str).collect();
+    let values = (0..n).map(|i| json!(i)).collect();
+    let form = FormDialog::new(
+        "pages-delete-all",
+        t("dlg-pages-delete-all-title").as_str(),
+        "page.delete",
+        vec![
+            Field::note(t("dlg-pages-delete-all-text").as_str()),
+            Field::choice_of(
+                "keep",
+                t("dlg-pages-delete-all-keep").as_str(),
+                &items,
+                values,
+                0,
+            ),
+        ],
+    )
+    .with_base(json!({ "pages": (0..n).collect::<Vec<_>>() }))
+    .with_ok_label(&t("dlg-btn-delete"))
+    .with_width(380.0);
+    st.dialogs.form = Some(form);
+    true
+}

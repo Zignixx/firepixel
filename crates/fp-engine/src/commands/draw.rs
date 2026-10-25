@@ -1801,37 +1801,33 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("page.delete")
             .label("Seite löschen")
-            .requires(&[Requirement::Document, Requirement::MultiplePages])
+            .requires(DOC)
             .opt(
                 "index",
                 ParamKind::Integer {
                     min: Some(0),
                     max: None,
                 },
-                "Seitenindex (Vorgabe: aktuelle)",
+                "Seitenindex (Vorgabe: gewählte Seiten)",
+            )
+            .opt(
+                "pages",
+                ParamKind::Json,
+                "Seitenindizes [0, 2, …] (Vorgabe: gewählte Seiten)",
+            )
+            .opt(
+                "keep",
+                ParamKind::Integer {
+                    min: Some(0),
+                    max: None,
+                },
+                "Seite, die bleibt, wenn alle Seiten gelöscht würden (Vorgabe: erste)",
             )
             .run(|s, p| {
-                with_doc(s, |d| {
-                    let i = p
-                        .opt_i64("index")?
-                        .map(|v| v.max(0) as usize)
-                        .unwrap_or(d.page);
-                    if i >= d.doc.pages.len() || d.doc.pages.len() <= 1 {
-                        return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
-                    }
-                    d.remember_page_layer();
-                    let doc = Arc::make_mut(&mut d.doc);
-                    doc.pages.remove(i);
-                    if doc.current_page >= doc.pages.len() {
-                        doc.current_page = doc.pages.len() - 1;
-                    }
-                    doc.invalidate_root_copy();
-                    d.page = d.page.min(d.doc.pages.len() - 1);
-                    d.frame = 0;
-                    d.layer = docops::top_normal_layer(&d.doc, d.page);
-                    d.selection.clear();
-                    Ok(CommandOutput::doc())
-                })
+                let list = page_list_param(p)?;
+                let keep = p.opt_i64("keep")?.map(|v| v.max(0) as usize);
+                let grid = s.prefs.new_document_grid();
+                with_doc(s, |d| delete_pages(d, list, keep, grid))
             }),
     );
     r.add(
@@ -1844,43 +1840,79 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     min: Some(0),
                     max: None,
                 },
-                "Seitenindex",
+                "Seitenindex (Vorgabe: gewählte Seiten)",
+            )
+            .opt(
+                "pages",
+                ParamKind::Json,
+                "Seitenindizes [0, 2, …] (Vorgabe: gewählte Seiten)",
             )
             .run(|s, p| {
-                with_doc(s, |d| {
-                    let i = p
-                        .opt_i64("index")?
-                        .map(|v| v.max(0) as usize)
-                        .unwrap_or(d.page);
-                    d.remember_page_layer();
-                    let doc = Arc::make_mut(&mut d.doc);
-                    let mut pg = (**doc
-                        .pages
-                        .get(i)
-                        .ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?)
-                    .clone();
-                    let mut idg = take_ids(doc);
-                    for slot in &mut pg.root.layers {
-                        if let LayerSlot::Own(l) = slot {
-                            Arc::make_mut(l).reassign_ids(&mut idg);
+                let list = page_list_param(p)?;
+                with_doc(s, |d| duplicate_pages(d, list))
+            }),
+    );
+    // FB-68 (RE spec 71 §4): multi-selection of the Pages panel. A plain click makes the page
+    // current and alone selected; Shift selects the range from the current page (the anchor, it
+    // stays current); Ctrl adds or removes one page. Every click is a History row "Change Page
+    // Selection" like in the reference.
+    r.add(
+        cmd("page.select")
+            .label("Seitenauswahl ändern")
+            .requires(DOC)
+            .param(
+                "index",
+                ParamKind::Integer {
+                    min: Some(0),
+                    max: None,
+                },
+                "Seitenindex",
+            )
+            .opt_default(
+                "mode",
+                ParamKind::Enum {
+                    values: ["single", "range", "toggle"]
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect(),
+                },
+                json!("single"),
+                "single = nur diese Seite (wird aktuell), range = Bereich ab der aktuellen Seite, toggle = Seite hinzu oder weg",
+            )
+            .run(|s, p| {
+                let i = p.usize("index")?;
+                let mode = p.opt_str("mode")?.unwrap_or_else(|| "single".into());
+                if s.active().is_some_and(|d| i >= d.doc.pages.len()) {
+                    return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
+                }
+                match mode.as_str() {
+                    "range" | "toggle" => {
+                        s.force_history_step();
+                        with_doc(s, |d| {
+                            let sel = page_selection_after(d.page, &d.selected_pages(), i, &mode);
+                            d.set_page_selection(sel);
+                            Ok(CommandOutput::doc_with(json!({"pages": d.selected_pages()}))
+                                .labeled(fp_i18n::t("msg-step-change-page-selection")))
+                        })
+                    }
+                    // "single" (the parameter check admits only the three values)
+                    _ => {
+                        if s.active().is_some_and(|d| d.page != i) {
+                            s.execute("page.setCurrent", json!({"index": i}))
+                                .map(|o| CommandOutput {
+                                    effect: crate::command::Effect::None,
+                                    ..o
+                                })
+                        } else {
+                            s.force_history_step();
+                            with_doc(s, |d| {
+                                d.page_selection.clear();
+                                Ok(CommandOutput::doc_with(json!({"pages": [i]}))
+                                    .labeled(fp_i18n::t("msg-step-change-page-selection")))
+                            })
                         }
                     }
-                    doc.ids = idg;
-                    pg.id = Some(fp_model::Guid::new_random());
-                    // RE spec 70 §2.2: "<name> Copy", then "Copy 1", "Copy 2" … (FB-50)
-                    pg.name = Some(docops::page_copy_name(doc, pg.display_name()));
-                    pg.is_master = Some(false);
-                    doc.pages.insert(i + 1, Arc::new(pg));
-                    // the model's current page (owner of the stored root copy) keeps its page
-                    if i < doc.current_page {
-                        doc.current_page += 1;
-                    }
-                    d.page = i + 1;
-                    d.frame = 0;
-                    d.layer = docops::top_normal_layer(&d.doc, d.page);
-                    d.selection.clear();
-                    Ok(CommandOutput::doc_with(json!({"page": i + 1})))
-                })
+                }
             }),
     );
     r.add(
@@ -1938,6 +1970,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     // starts on the bottom-most unlocked layer
                     d.remember_page_layer();
                     d.page = i;
+                    // RE spec 71 §4.2: a page change ends the multi-selection
+                    d.page_selection.clear();
                     d.frame = 0;
                     d.enter_page_layer();
                     d.selection.clear();
@@ -2160,6 +2194,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     docops::move_page(Arc::make_mut(&mut d.doc), from, to)
                         .ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-page")))?;
                     d.page = docops::moved_index(d.page, from, to);
+                    // RE spec 71 §4.2: dragging moves only the dragged page, then the selection
+                    // is the current page alone
+                    d.page_selection.clear();
                     Ok(CommandOutput::doc())
                 })
             }),
@@ -2372,4 +2409,150 @@ pub(crate) fn scale_stroke_width(e: &mut Element, f: f32) {
             b.diameter = ((b.diameter as f32) * f).round().max(1.0) as i32;
         }
     });
+}
+
+/// Pages named by `pages` (list of indices) or `index` (one index); `None` = the pages selected in
+/// the Pages panel (FB-68).
+fn page_list_param(p: &Params) -> Result<Option<Vec<usize>>> {
+    if let Some(v) = p.parse::<Vec<i64>>("pages")? {
+        return Ok(Some(v.into_iter().map(|i| i.max(0) as usize).collect()));
+    }
+    Ok(p.opt_i64("index")?.map(|i| vec![i.max(0) as usize]))
+}
+
+/// RE spec 71 §4.3: the selected pages after a Shift (`range`) or Ctrl (`toggle`) click on page
+/// `i`; the current page `anchor` stays selected and current.
+pub(crate) fn page_selection_after(
+    anchor: usize,
+    selected: &[usize],
+    i: usize,
+    mode: &str,
+) -> Vec<usize> {
+    match mode {
+        "range" => (anchor.min(i)..=anchor.max(i)).collect(),
+        "toggle" => {
+            let mut v: Vec<usize> = selected.to_vec();
+            if let Some(k) = v.iter().position(|&x| x == i) {
+                // the anchor cannot be toggled off (it is the page shown)
+                if i != anchor {
+                    v.remove(k);
+                }
+            } else {
+                v.push(i);
+            }
+            v.sort_unstable();
+            v
+        }
+        _ => vec![i],
+    }
+}
+
+/// `page.delete` (FB-68, RE spec 71 §4.3): removes `list` (default: the selected pages) in one
+/// History row. When that would remove every page, page `keep` (default the first) stays with
+/// its content; deleting the only page leaves an empty "Page 1".
+fn delete_pages(
+    d: &mut DocumentState,
+    list: Option<Vec<usize>>,
+    keep: Option<usize>,
+    grid: fp_model::Grid,
+) -> Result<CommandOutput> {
+    let n = d.doc.pages.len();
+    let mut del = list.unwrap_or_else(|| d.selected_pages());
+    if del.iter().any(|&i| i >= n) {
+        return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
+    }
+    del.sort_unstable();
+    del.dedup();
+    if del.is_empty() {
+        return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
+    }
+    d.remember_page_layer();
+    if n == 1 {
+        // the only page: an empty "Page 1" takes its place
+        let doc = Arc::make_mut(&mut d.doc);
+        let name = fp_i18n::tr!("msg-default-page", n = "1");
+        let at = doc.add_page_after(0, &name);
+        if let Some(pg) = doc.pages.get_mut(at) {
+            Arc::make_mut(pg).root.grid = Some(grid);
+        }
+        doc.pages.remove(0);
+        doc.current_page = 0;
+        doc.invalidate_root_copy();
+        d.page = 0;
+    } else {
+        if del.len() == n {
+            let k = keep.unwrap_or(del[0]);
+            if k >= n {
+                return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
+            }
+            del.retain(|&i| i != k);
+        }
+        let doc = Arc::make_mut(&mut d.doc);
+        let mut model_current = doc.current_page;
+        for &i in del.iter().rev() {
+            doc.pages.remove(i);
+            if i < model_current {
+                model_current -= 1;
+            }
+        }
+        let len = doc.pages.len();
+        doc.current_page = model_current.min(len - 1);
+        doc.invalidate_root_copy();
+        let below = del.iter().filter(|&&i| i < d.page).count();
+        d.page = if del.contains(&d.page) {
+            del[0].min(len - 1)
+        } else {
+            d.page - below
+        };
+    }
+    d.page_selection.clear();
+    d.frame = 0;
+    d.layer = docops::top_normal_layer(&d.doc, d.page);
+    d.layer_choice = None;
+    d.selection.clear();
+    Ok(CommandOutput::doc_with(json!({"page": d.page})))
+}
+
+/// `page.duplicate` (FB-68, RE spec 71 §4.3): every page of `list` (default: the selected pages)
+/// is copied directly after itself in one History row; the first copy becomes current and alone
+/// selected.
+fn duplicate_pages(d: &mut DocumentState, list: Option<Vec<usize>>) -> Result<CommandOutput> {
+    let mut src = list.unwrap_or_else(|| d.selected_pages());
+    src.sort_unstable();
+    src.dedup();
+    let n = d.doc.pages.len();
+    if src.is_empty() || src.iter().any(|&i| i >= n) {
+        return Err(EngineError::NotFound(fp_i18n::t("err-nf-page")));
+    }
+    d.remember_page_layer();
+    let doc = Arc::make_mut(&mut d.doc);
+    for &i in src.iter().rev() {
+        let mut pg = (*doc.pages[i]).clone();
+        let mut idg = take_ids(doc);
+        for slot in &mut pg.root.layers {
+            if let LayerSlot::Own(l) = slot {
+                Arc::make_mut(l).reassign_ids(&mut idg);
+            }
+        }
+        doc.ids = idg;
+        pg.id = Some(fp_model::Guid::new_random());
+        // RE spec 70 §2.2: "<name> Copy", then "Copy 1", "Copy 2" … (FB-50)
+        pg.name = Some(docops::page_copy_name(doc, pg.display_name()));
+        pg.is_master = Some(false);
+        doc.pages.insert(i + 1, Arc::new(pg));
+        // the model's current page (owner of the stored root copy) keeps its page
+        if i < doc.current_page {
+            doc.current_page += 1;
+        }
+    }
+    let copies: Vec<usize> = src.iter().enumerate().map(|(k, &i)| i + k + 1).collect();
+    d.page = copies[0];
+    d.page_selection.clear();
+    d.frame = 0;
+    d.layer = docops::top_normal_layer(&d.doc, d.page);
+    d.layer_choice = None;
+    d.selection.clear();
+    Ok(CommandOutput::doc_with(
+        json!({"page": copies[0], "pages": copies}),
+    ))
 }

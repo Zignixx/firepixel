@@ -1,7 +1,8 @@
 //! Seiten-Bedienfeld (`CPageInspectorPanel`, Vorlage 6306): Seitenliste mit Miniaturen (fp-render),
 //! Nummer und Name, Masterseite (Kennzeichen, als Masterseite festlegen), Umbenennen per
 //! Doppelklick, Zähler „n Seiten“, Neue/Doppelte Seite, Seite löschen, Kontextmenü der Zeilen (7026),
-//! Zeile auf „Neue Seite“ ziehen = Seite duplizieren (RE spec 70 §2).
+//! Zeile auf „Neue Seite“ ziehen = Seite duplizieren (RE spec 70 §2). Mehrfachauswahl mit
+//! Umschalt/Strg, Löschen und Duplizieren aller gewählten Seiten (FB-68, RE spec 71 §4).
 
 use super::common::{self, FooterButton};
 use super::thumbs;
@@ -13,6 +14,37 @@ use serde_json::json;
 use std::sync::Arc;
 
 const RENAME: &str = "pages-rename";
+/// FB-68: the page list has the keyboard focus (a row was clicked last): Delete deletes the
+/// selected pages ([`delete_key_target`]).
+const FOCUS: &str = "pages-list-focus";
+/// Rectangle of the page list in the last frame (a press outside it ends the focus).
+const LIST_RECT: &str = "pages-list-rect";
+
+/// FB-68: a press outside the page list ends its keyboard focus; call once per frame before the
+/// keys are handled.
+pub fn track_focus(ctx: &egui::Context) {
+    let press = ctx.input(|i| {
+        i.pointer
+            .any_pressed()
+            .then(|| i.pointer.interact_pos())
+            .flatten()
+    });
+    if let Some(p) = press {
+        let inside = ctx
+            .data(|d| d.get_temp::<Rect>(Id::new(LIST_RECT)))
+            .is_some_and(|r| r.contains(p));
+        if !inside {
+            ctx.data_mut(|d| d.insert_temp(Id::new(FOCUS), false));
+        }
+    }
+}
+
+/// FB-68: Delete with the page list focused (a row was clicked last) deletes the selected pages
+/// like the panel's Delete button.
+pub fn delete_key_target(ctx: &egui::Context) -> bool {
+    ctx.data(|d| d.get_temp::<bool>(Id::new(FOCUS)))
+        .unwrap_or(false)
+}
 
 /// Ungültige Zeichen in Seitennamen (String 104).
 pub const INVALID_CHARS: &[char] = &['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
@@ -31,6 +63,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     };
     let doc = Arc::clone(&d.doc);
     let (doc_id, doc_gen, current) = (d.id, d.generation, d.page);
+    // FB-68 (RE spec 71 §4): several pages can be selected; the current page is the anchor
+    let selected = d.selected_pages();
+    let multi = selected.len() > 1;
+    let mods = ui.input(|i| i.modifiers);
     let n = doc.pages.len();
     let mut actions = Vec::new();
     let rename: Option<usize> = ui.data(|dd| dd.get_temp(Id::new(RENAME)));
@@ -50,8 +86,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let mut menu_rows = Vec::new();
     let list = common::list_frame(ui, "pages-list", common::FOOTER_H, |ui| {
         for (i, pg) in doc.pages.iter().enumerate() {
+            // the current page: bold name, blue-framed thumbnail; every selected page: highlight
             let sel = i == current;
-            let (rect, resp) = common::row(ui, row_h, sel);
+            let in_sel = selected.contains(&i);
+            let (rect, resp) = common::row(ui, row_h, in_sel);
             row_rects.push(rect);
             if resp.drag_started() && rename != Some(i) {
                 drag_start = Some(i);
@@ -158,18 +196,42 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     Align2::LEFT_CENTER,
                     &label,
                     font,
-                    if sel { c.list_selected_text } else { c.text },
+                    if in_sel { c.list_selected_text } else { c.text },
                     nr.width(),
                 );
             }
-            if resp.clicked() && i != current {
-                actions.push(Action::SetPage(i));
+            if resp.clicked() || resp.secondary_clicked() {
+                ui.data_mut(|dd| dd.insert_temp(Id::new(FOCUS), true));
             }
-            // RE spec 70 §2.3 point 3: a right-click makes the row current first (its own
-            // History row "Change Page Selection"), then the context menu (resource 7026, the
-            // entries of the panel menu) acts on it
-            if resp.secondary_clicked() && i != current {
-                actions.push(Action::SetPage(i));
+            // RE spec 71 §4.2: Shift = range from the current page, Ctrl = add/remove this page,
+            // a plain click = this page alone (current); each click is a History row "Change
+            // Page Selection"
+            if resp.clicked() {
+                let mode = if mods.shift {
+                    Some("range")
+                } else if mods.command || mods.ctrl {
+                    Some("toggle")
+                } else if i != current || multi {
+                    Some("single")
+                } else {
+                    None
+                };
+                if let Some(mode) = mode {
+                    actions.push(Action::Run(
+                        "page.select".into(),
+                        json!({"index": i, "mode": mode}),
+                    ));
+                }
+            }
+            // RE spec 70 §2.3 point 3 / 71 §4.2: a right-click on an unselected row selects it
+            // alone (its own History row "Change Page Selection"); on a selected row the
+            // multi-selection stays. Then the context menu (resource 7026, the entries of the
+            // panel menu) acts on the selection
+            if resp.secondary_clicked() && !in_sel {
+                actions.push(Action::Run(
+                    "page.select".into(),
+                    json!({"index": i, "mode": "single"}),
+                ));
             }
             menu_rows.push(resp.clone());
             if resp.double_clicked() {
@@ -177,6 +239,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             }
         }
     });
+    ui.data_mut(|dd| dd.insert_temp(Id::new(LIST_RECT), list));
     for r in &menu_rows {
         common::resource_context_menu(r, st, "7026");
     }
@@ -227,7 +290,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         FooterButton {
             glyph: Glyph::Trash,
             tip: &tip_del,
-            enabled: n > 1,
+            // FB-68 (RE spec 71 §4.3): deletes the selected pages; the only page becomes an
+            // empty "Page 1", so the button is always enabled
+            enabled: n > 0,
             action: Some(Action::Run("page.delete".into(), json!({}))),
         },
     ];

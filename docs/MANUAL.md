@@ -500,6 +500,14 @@ Important panels:
   current; it is named "<name> copy", then "<name> copy 1", "copy 2" … (the copy of a copy counts on
   from the original name). Clicking or right-clicking a row makes that page current first, which is a
   History step "Change Page Selection" of its own.
+  Several pages can be selected: Shift+click selects the range from the current page, Ctrl+click adds
+  or removes one page; the current page stays shown and bold, every click is a "Change Page Selection"
+  step. *Delete Page* (button, menus or the Delete key in the list) removes all selected pages in one
+  step, *Duplicate Page* copies each selected page directly after itself; *Rename Page* and *Set as
+  Master Page* are grey while several pages are selected, and dragging moves only the dragged page.
+  Deleting the only page leaves an empty "Page 1". When every page is selected, Firepixel asks
+  "Delete all pages?" and lets you choose the page that stays (scripts keep the first page, or the
+  page given as `keep`).
 - **Optimize:** export format and colors.
 - **History:** step back, replay steps or save them as a command.
 - **URL:** URLs for slices, hotspots and buttons. The ≡ menu has *Add Used URLs to Library* (from the

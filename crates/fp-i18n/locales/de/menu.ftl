@@ -1128,6 +1128,7 @@ cmd-page-delete = Seite löschen
 cmd-page-duplicate = Seite duplizieren
 cmd-page-rename = Seite umbenennen
 cmd-page-setCurrent = Seite wechseln
+cmd-page-select = Seitenauswahl ändern
 cmd-state-add = Status hinzufügen
 cmd-state-delete = Status löschen
 cmd-state-duplicate = Status duplizieren

@@ -25,6 +25,8 @@ pub struct Snapshot {
     pub selection: Selection,
     /// Aktuelle Seite, Status und Ebene (gehören zum Verlauf, weil Befehle sie ändern).
     pub page: usize,
+    /// Further pages selected in the Pages panel (FB-68, [`crate::DocumentState::page_selection`]).
+    pub pages: Vec<usize>,
     pub frame: usize,
     pub layer: Option<fp_model::LayerId>,
     /// Toolbox stroke and fill colours, set only for steps that changed them (Swap Colours,

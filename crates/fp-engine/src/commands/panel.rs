@@ -5784,6 +5784,25 @@ fn last_kept(
     add_fw(r, id, c);
 }
 
+/// Like [`alias`], but disabled while several pages are selected in the Pages panel (FB-68,
+/// RE spec 71 §4.2: Rename Page, Set as Master Page).
+fn single_page_alias(
+    r: &mut CommandRegistry,
+    id: u32,
+    name: &str,
+    label: &str,
+    target: &'static str,
+) {
+    let c = cmd(name)
+        .label(label)
+        .describe(&fp_i18n::tr!("msg-panel-alias", target = target))
+        .available(move |s| {
+            s.command_state(target).0 && !s.active().is_some_and(|d| d.multiple_pages_selected())
+        })
+        .run(move |s, p| s.execute(target, merged(&json!({}), p)).map(passthrough));
+    add_fw(r, id, c);
+}
+
 fn alias(
     r: &mut CommandRegistry,
     id: u32,
@@ -7392,21 +7411,23 @@ fn register_page_menu(r: &mut CommandRegistry) {
         "page.duplicate",
         json!({}),
     );
-    last_kept(
+    // FB-68 (RE spec 71 §4.3): deletes all selected pages in one row; deleting the only page
+    // leaves an empty "Page 1", so the entry is always enabled
+    alias(
         r,
         35802,
         "panel.pages.delete",
         "Seite löschen",
         "page.delete",
-        |d| d.doc.pages.len() > 1,
+        json!({}),
     );
-    alias(
+    // FB-68: disabled while several pages are selected
+    single_page_alias(
         r,
         35803,
         "panel.pages.rename",
         "Seite umbenennen",
         "page.rename",
-        json!({}),
     );
     add_fw(
         r,
@@ -7480,13 +7501,12 @@ fn register_page_menu(r: &mut CommandRegistry) {
                 })
             }),
     );
-    alias(
+    single_page_alias(
         r,
         35813,
         "panel.pages.setMaster",
         "Als Masterseite festlegen",
         "pi.page.setMaster",
-        json!({}),
     );
     add_fw(
         r,
@@ -7515,7 +7535,8 @@ fn register_page_menu(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let path = p.str("path")?;
                 let d = s.doc()?;
-                let pages: Vec<usize> = p.parse("pages")?.unwrap_or_else(|| vec![d.page]);
+                // FB-68: "Export Selected Page(s)" exports the pages selected in the panel
+                let pages: Vec<usize> = p.parse("pages")?.unwrap_or_else(|| d.selected_pages());
                 let er = crate::export_backend::ExportRenderer::new(s.renderer());
                 let mut written = Vec::new();
                 for &pi in &pages {

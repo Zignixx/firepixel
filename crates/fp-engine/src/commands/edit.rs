@@ -1114,6 +1114,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         Arc::make_mut(pg).root.grid = Some(grid);
                     }
                     d.page = at;
+                    // the new page is current and alone selected (FB-68)
+                    d.page_selection.clear();
                     d.frame = 0;
                     // a new page starts on its flat layer 0 (RE spec 65 P8)
                     d.choose_layer(

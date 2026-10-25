@@ -1165,3 +1165,9 @@ dlg-url-export-title = URLs exportieren
 dlg-filter-url-list = URL-Liste (*.htm, *.txt)
 dlg-filter-url-htm = HTML (*.htm)
 dlg-filter-url-txt = Text (*.txt)
+
+# FB-68: delete all pages (Firepixel extension)
+dlg-pages-delete-all-title = Alle Seiten löschen?
+dlg-pages-delete-all-text = Alle Seiten sind ausgewählt. Eine Seite bleibt mit ihrem Inhalt erhalten, alle anderen werden gelöscht.
+dlg-pages-delete-all-keep = Seite behalten:
+dlg-btn-delete = Löschen

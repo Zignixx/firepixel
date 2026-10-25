@@ -576,6 +576,8 @@ pub struct FormDialog {
     /// Nur während des Zeichnens: OK/Abbrechen hat die eigene Anordnung schon selbst an ihrer Stelle
     /// der Tab-Folge gezeichnet ([`ok_cancel`]); `Some(Some(true))` = OK gedrückt.
     pub pressed: Option<Option<bool>>,
+    /// Own text of the OK button (e.g. "Delete"), `None` = "OK".
+    pub ok_label: Option<String>,
 }
 
 /// Eigene Anordnung eines Formulars (Felder an den Stellen der Vorlage, z. B. Raster bearbeiten,
@@ -657,7 +659,17 @@ impl FormDialog {
             side_order: SideOrder::FieldsFirst,
             slider_tabs: true,
             pressed: None,
+            ok_label: None,
         }
+    }
+    /// Own text of the OK button (e.g. "Delete" in "Delete all pages?").
+    pub fn with_ok_label(mut self, label: &str) -> FormDialog {
+        self.ok_label = Some(label.into());
+        self
+    }
+    /// Text of the OK button.
+    pub fn ok_text(&self) -> String {
+        self.ok_label.clone().unwrap_or_else(|| t("btn-ok"))
     }
     /// Tab-Folge der Filteranordnung (siehe [`SideOrder`]).
     pub fn with_side_order(mut self, o: SideOrder) -> FormDialog {
@@ -986,7 +998,7 @@ impl FormDialog {
             }
         }
         let label_w = 130f32.max((lw + 8.0).ceil());
-        let (ok, cancel) = (t("btn-ok"), t("btn-cancel"));
+        let (ok, cancel) = (self.ok_text(), t("btn-cancel"));
         let buttons = super::button_row_w(ctx, &[&ok, &cancel], 76.0, 8.0)
             + 16.0
             + if self.preview {
@@ -2097,7 +2109,7 @@ pub fn show_form(ctx: &egui::Context, st: &mut AppState, d: &mut FormDialog) -> 
             }
         }
         let valid = d.valid();
-        let (ok_l, cancel_l) = (t("btn-ok"), t("btn-cancel"));
+        let (ok_l, cancel_l) = (d.ok_text(), t("btn-cancel"));
         let b = match custom {
             Some((_, b)) => b.to_vec(),
             None => super::button_row(

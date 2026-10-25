@@ -703,3 +703,7 @@ cmdtext-kontur-x-y-wird-geschlossen = Outline [[x, y], …] (closed automaticall
 cmdtext-history-row-edit-bitmap-when-bitmap-mode-92f058 = History row "Edit Bitmap" when bitmap mode starts (choosing a bitmap tool with a bitmap selected, a stroke on a bitmap, a Pointer double-click)
 cmdtext-with-row-write-the-row-even-when-bitmap-942cd5 = with `row`: write the row even when bitmap mode is already on (second row of the Pointer double-click)
 cmdtext-with-row-write-the-row-exit-bitmap-mode-6c5ec9 = with `row`: write the row "Exit Bitmap Mode" twice (Escape in bitmap mode without a pixel selection)
+cmdtext-seitenindex-vorgabe-gewaehlte-seiten = Page index (default: the selected pages)
+cmdtext-seitenindizes-0-2-vorgabe-gewaehlte-seiten = Page indices [0, 2, …] (default: the selected pages)
+cmdtext-seite-die-bleibt-wenn-alle-seiten-geloes-a6c88f = Page that stays when all pages would be deleted (default: the first)
+cmdtext-single-nur-diese-seite-wird-aktuell-rang-713897 = single = only this page (becomes current), range = range from the current page, toggle = add or remove the page

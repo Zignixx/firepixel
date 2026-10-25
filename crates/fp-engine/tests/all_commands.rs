@@ -25,6 +25,8 @@ use std::sync::{Arc, OnceLock};
 
 type Setup = Box<dyn Fn(&mut Session) -> Value>;
 type Check = Box<dyn Fn(&Session, &Value) -> Result<(), String>>;
+/// Page, state, layer, bitmap mode and selected pages of the active document.
+type Loc = (usize, usize, Option<fp_model::LayerId>, bool, Vec<usize>);
 
 struct Case {
     params: Value,
@@ -278,7 +280,7 @@ struct Snap {
     active: Option<u64>,
     doc: Option<Arc<Document>>,
     sel: Option<fp_engine::Selection>,
-    loc: Option<(usize, usize, Option<fp_model::LayerId>, bool)>,
+    loc: Option<Loc>,
     view: Option<fp_engine::ViewState>,
     undo: usize,
     session: String,
@@ -291,7 +293,7 @@ fn snap(s: &Session) -> Snap {
         active: s.active_id().map(|i| i.0),
         doc: d.map(|d| Arc::clone(&d.doc)),
         sel: d.map(|d| d.selection.clone()),
-        loc: d.map(|d| (d.page, d.frame, d.layer, d.bitmap_mode)),
+        loc: d.map(|d| (d.page, d.frame, d.layer, d.bitmap_mode, d.selected_pages())),
         view: d.map(|d| d.view.clone()),
         undo: d.map(|d| d.history.undo_count()).unwrap_or(0),
         session: format!("{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}", s.prefs, s.tools.active, s.tools.stroke_color, s.tools.fill_color, s.tools.options, s.ui, s.clipboard, s.last_filter.as_ref().map(|c| &c.command)),
@@ -821,6 +823,11 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
             Value::Null
         })),
         "page.setCurrent" => rs(json!({"index": 0}), Box::new(|s: &mut Session| {
+            ex(s, "page.add", json!({}));
+            Value::Null
+        })),
+        // FB-68: Shift+click in the Pages panel, range from the current second page to the first
+        "page.select" => rs(json!({"index": 0, "mode": "range"}), Box::new(|s: &mut Session| {
             ex(s, "page.add", json!({}));
             Value::Null
         })),

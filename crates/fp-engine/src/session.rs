@@ -251,6 +251,9 @@ pub struct DocumentState {
     pub view: ViewState,
     /// Aktuelle Seite.
     pub page: usize,
+    /// FB-68 (RE spec 71 §4): pages selected in the Pages panel besides the current one (sorted;
+    /// empty = only the current page). Read it through [`DocumentState::selected_pages`].
+    pub page_selection: Vec<usize>,
     /// Aktueller Status.
     pub frame: usize,
     /// Aktive Ebene.
@@ -342,6 +345,7 @@ impl DocumentState {
             selection: Selection::default(),
             view: ViewState::from_prefs(prefs),
             page,
+            page_selection: Vec::new(),
             frame: 0,
             layer,
             layer_choice: None,
@@ -383,6 +387,7 @@ impl DocumentState {
             doc: Arc::clone(&self.doc),
             selection: self.selection.clone(),
             page: self.page,
+            pages: self.page_selection.clone(),
             frame: self.frame,
             layer: self.layer,
             tool_colors: None,
@@ -393,6 +398,7 @@ impl DocumentState {
         self.doc = s.doc;
         self.selection = s.selection;
         self.page = s.page.min(self.doc.pages.len().saturating_sub(1));
+        self.page_selection = s.pages;
         self.frame = s.frame;
         self.layer = s.layer;
     }
@@ -439,6 +445,40 @@ impl DocumentState {
             id: self.doc.pages.get(page).and_then(|p| p.id.clone()),
             index: page,
         }
+    }
+
+    /// FB-68 (RE spec 71 §4): the pages selected in the Pages panel, sorted, always with the
+    /// current page (the anchor of a range); indices outside the document are left out.
+    pub fn selected_pages(&self) -> Vec<usize> {
+        let n = self.doc.pages.len();
+        let mut v: Vec<usize> = self
+            .page_selection
+            .iter()
+            .copied()
+            .chain(std::iter::once(self.page))
+            .filter(|&i| i < n)
+            .collect();
+        v.sort_unstable();
+        v.dedup();
+        v
+    }
+
+    /// More than one page selected in the Pages panel (FB-68: Rename Page and Set as Master Page
+    /// are disabled then).
+    pub fn multiple_pages_selected(&self) -> bool {
+        self.selected_pages().len() > 1
+    }
+
+    /// Sets the selected pages (the current page stays selected); stores only the others.
+    pub fn set_page_selection(&mut self, pages: impl IntoIterator<Item = usize>) {
+        let n = self.doc.pages.len();
+        let mut v: Vec<usize> = pages
+            .into_iter()
+            .filter(|&i| i < n && i != self.page)
+            .collect();
+        v.sort_unstable();
+        v.dedup();
+        self.page_selection = v;
     }
 
     /// RE spec 65 rule 3: notes the chosen layer of the current page before it is left.
@@ -1286,8 +1326,10 @@ impl Session {
         }
         let doc_changed = !Arc::ptr_eq(&before.doc, &d.doc);
         let sel_changed = before.selection != d.selection;
-        let loc_changed =
-            before.page != d.page || before.frame != d.frame || before.layer != d.layer;
+        let loc_changed = before.page != d.page
+            || before.pages != d.page_selection
+            || before.frame != d.frame
+            || before.layer != d.layer;
         let forced = std::mem::take(&mut self.force_step) && !grouping;
         if !doc_changed && !sel_changed && !loc_changed && !forced {
             return;

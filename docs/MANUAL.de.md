@@ -542,6 +542,14 @@ Wichtige Bedienfelder:
   direkt hinter ihre Quelle und macht sie aktuell; sie heißt „<Name> Kopie“, dann „<Name> Kopie 1“,
   „Kopie 2“ … (die Kopie einer Kopie zählt vom ursprünglichen Namen weiter). Ein Klick oder Rechtsklick
   auf eine Zeile macht die Seite vorher aktuell, ein eigener Verlaufsschritt „Seitenauswahl ändern“.
+  Mehrere Seiten lassen sich auswählen: Umschalt+Klick wählt den Bereich ab der aktuellen Seite,
+  Strg+Klick nimmt eine Seite hinzu oder heraus; die aktuelle Seite bleibt angezeigt und fett, jeder
+  Klick ist ein Schritt „Seitenauswahl ändern“. *Seite löschen* (Schaltfläche, Menüs oder Entf in der
+  Liste) entfernt alle ausgewählten Seiten in einem Schritt, *Seite duplizieren* kopiert jede
+  ausgewählte Seite direkt hinter sich; *Seite umbenennen* und *Als Masterseite festlegen* sind bei
+  Mehrfachauswahl grau, Ziehen verschiebt nur die gezogene Seite. Wird die einzige Seite gelöscht,
+  bleibt eine leere „Seite 1“. Sind alle Seiten ausgewählt, fragt Firepixel „Alle Seiten löschen?“ und
+  lässt die Seite wählen, die bleibt (Skripte behalten die erste Seite oder die mit `keep` genannte).
 - **Optimieren:** Exportformat und Farben.
 - **Verlauf:** Schritte zurückspulen, wiederholen oder als Befehl speichern.
 - **URL:** URLs für Slices, Hotspots und Schaltflächen. Das Menü ≡ enthält *Verwendete URLs in

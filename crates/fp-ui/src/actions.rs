@@ -583,6 +583,10 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
     if crate::dialogs::warning::intercept_insert_web(st, name, &params) {
         return;
     }
+    // Delete Page with every page selected: "Delete all pages?" with the page that stays (FB-68)
+    if crate::dialogs::panel_menus::intercept_delete_all_pages(st, name, &params) {
+        return;
+    }
     // Befehle ohne Parameter aus Menü/Kürzel: zugehörigen Dialog öffnen (dialoge.json)
     let empty = params.as_object().is_none_or(|o| o.is_empty()) || params.is_null();
     if empty && crate::dialogs::open_for_command(st, name) {

@@ -703,3 +703,7 @@ cmdtext-kontur-x-y-wird-geschlossen = Kontur [[x, y], …] (wird geschlossen)
 cmdtext-history-row-edit-bitmap-when-bitmap-mode-92f058 = Protokollzeile „Bitmap bearbeiten“, wenn der Bitmapmodus beginnt (Bitmap-Werkzeug bei gewählter Bitmap, Strich auf eine Bitmap, Doppelklick mit dem Zeiger)
 cmdtext-with-row-write-the-row-even-when-bitmap-942cd5 = mit `row`: die Zeile auch schreiben, wenn der Bitmapmodus schon an ist (zweite Zeile des Zeiger-Doppelklicks)
 cmdtext-with-row-write-the-row-exit-bitmap-mode-6c5ec9 = mit `row`: die Zeile „Bitmapmodus beenden“ zweimal schreiben (Escape im Bitmapmodus ohne Pixelauswahl)
+cmdtext-seitenindex-vorgabe-gewaehlte-seiten = Seitenindex (Vorgabe: gewählte Seiten)
+cmdtext-seitenindizes-0-2-vorgabe-gewaehlte-seiten = Seitenindizes [0, 2, …] (Vorgabe: gewählte Seiten)
+cmdtext-seite-die-bleibt-wenn-alle-seiten-geloes-a6c88f = Seite, die bleibt, wenn alle Seiten gelöscht würden (Vorgabe: erste)
+cmdtext-single-nur-diese-seite-wird-aktuell-rang-713897 = single = nur diese Seite (wird aktuell), range = Bereich ab der aktuellen Seite, toggle = Seite hinzu oder weg
