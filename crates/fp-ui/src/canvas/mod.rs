@@ -3414,7 +3414,12 @@ fn preview_stack(
                     generation,
                     rect: *rect,
                     quad: *quad,
-                    ids: if *copy { Vec::new() } else { ids.clone() },
+                    // a pixel copy keeps the bitmap id: the preview lingers like a move
+                    ids: if *copy && !*pixels {
+                        Vec::new()
+                    } else {
+                        ids.clone()
+                    },
                     pixels: *pixels,
                 });
                 if !preview_drag || layers_drawn {
@@ -3442,7 +3447,7 @@ fn preview_stack(
                         &st.renderer,
                         &d.doc,
                         (generation, page_i, frame_i),
-                        *bid,
+                        (*bid, *copy),
                         m,
                         view.zoom,
                         (need_hole, need_cluster),

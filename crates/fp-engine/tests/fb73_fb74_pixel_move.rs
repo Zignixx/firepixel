@@ -1,12 +1,13 @@
-//! FB-73 / FB-74 (TW-241): moving the selected pixels of a bitmap. A Pointer / Subselection drag
-//! inside the pixel selection and a Ctrl drag of the Marquee show the live preview of the selected
-//! pixels only (`Overlay::Ghost` with `pixels`), the release moves the pixels; the arrow keys with
-//! a pixel selection move the pixels inside the bitmap (1 px, Shift 10 px), consecutive presses
-//! are one History row; without a pixel selection the object nudge stays.
+//! FB-73 / FB-74 (TW-241, RE spec 71 section 6): moving the selected pixels of a bitmap. A
+//! Pointer drag inside the pixel selection and a Ctrl drag of the Marquee show the live preview of
+//! the selected pixels only (`Overlay::Ghost` with `pixels`), the release moves the pixels (row
+//! "Move"); a Subselection drag moves a copy, the original stays (row "Duplicate"); the arrow keys
+//! with a pixel selection move only the marquee (1 px, Shift 10 px, consecutive presses one History
+//! row); without a pixel selection the object nudge stays.
 
 use crate::common;
 use common::*;
-use fp_engine::tools::{ToolId, ToolKey};
+use fp_engine::tools::{Cursor, ToolId, ToolKey};
 use fp_engine::{Overlay, Session, ToolEvent};
 use fp_geom::IRect;
 use fp_model::{ElementId, ElementKind};
@@ -62,11 +63,17 @@ fn pixel_ghost(s: &mut Session) -> Option<(Vec<u64>, fp_geom::Rect, [fp_geom::Po
     })
 }
 
-/// FB-74: arrow keys with a pixel selection move the selected pixels (not the object), Shift 10
-/// px; consecutive presses are one History row; one undo restores pixels and marquee.
+/// FB-74 (RE spec 71 section 6.3): arrow keys with a pixel selection move only the marquee (1
+/// px, Shift 10 px), the pixels stay, whatever tool is active; consecutive presses are one
+/// History row "Move"; one undo restores the marquee.
 #[test]
-fn fb74_arrow_keys_move_the_selected_pixels() {
-    for t in [ToolId::Pointer, ToolId::Subselection] {
+fn fb74_arrow_keys_move_only_the_marquee() {
+    for t in [
+        ToolId::Pointer,
+        ToolId::Subselection,
+        ToolId::Marquee,
+        ToolId::Lasso,
+    ] {
         let (mut s, id) = setup();
         s.set_tool(t).unwrap_or_else(|e| panic!("{e}"));
         let before_rows = rows(&s);
@@ -76,6 +83,7 @@ fn fb74_arrow_keys_move_the_selected_pixels() {
             fp_engine::docops::element_bounds(&d.doc, &e).expect("bounds")
         };
         let b0 = bounds(&s);
+        let img0 = image(&s, id);
         events(
             &mut s,
             &[
@@ -90,22 +98,18 @@ fn fb74_arrow_keys_move_the_selected_pixels() {
             "{t:?} marquee moved"
         );
         assert_eq!(bounds(&s), b0, "{t:?} object bounds unchanged");
-        // the vacated columns / rows are transparent, the moved pixels opaque
-        assert_eq!(alpha(&s, id, 100, 120), 0, "{t:?} hole left");
-        assert_eq!(alpha(&s, id, 120, 105), 0, "{t:?} hole top");
-        assert_eq!(alpha(&s, id, 151, 159), 255, "{t:?} moved pixels");
-        assert_eq!(alpha(&s, id, 20, 20), 255, "{t:?} rest of the bitmap stays");
+        assert!(image(&s, id) == img0, "{t:?} pixels unchanged");
         assert_eq!(rows(&s), before_rows + 1, "{t:?} one History row");
+        let label = s
+            .active()
+            .and_then(|d| d.history.undo_label())
+            .unwrap_or_default();
+        assert_eq!(label, fp_i18n::t("msg-step-move"), "{t:?} row name");
         ex(&mut s, "edit.undo", json!({}));
         assert_eq!(
             pixel_bounds(&s),
             Some(IRect::new(100, 100, 150, 150)),
             "{t:?} undo"
-        );
-        assert_eq!(
-            alpha(&s, id, 100, 120),
-            255,
-            "{t:?} undo restores the pixels"
         );
     }
 }
@@ -191,4 +195,78 @@ fn fb73_marquee_ctrl_drag_previews_and_moves_the_pixels() {
     events(&mut s, &[ToolEvent::up(140.0, 130.0)]);
     assert_eq!(pixel_bounds(&s), Some(IRect::new(130, 110, 180, 160)));
     assert_eq!(alpha(&s, id, 175, 120), 255, "pixels stay");
+}
+
+/// FB-73 (RE spec 71 section 6.2): a Subselection drag inside the pixel selection moves a copy of
+/// the selected pixels (preview without a hole), the release inserts the copy at the offset into
+/// the same bitmap, the original stays, the marquee follows the copy; one row "Duplicate".
+#[test]
+fn fb73_subselection_drag_duplicates_the_pixels() {
+    let (mut s, id) = setup();
+    s.set_tool(ToolId::Subselection)
+        .unwrap_or_else(|e| panic!("{e}"));
+    let before_rows = rows(&s);
+    let ids0 = s
+        .active()
+        .map(|d| d.selection.elements.clone())
+        .unwrap_or_default();
+    // inside the selection the Subselection shows the arrow with the copy badge (section 6.4)
+    let c = s
+        .tool_event(&ToolEvent::drag(125.0, 125.0))
+        .map(|r| r.cursor);
+    assert_eq!(c.ok(), Some(Cursor::Copy), "hover cursor inside");
+    events(
+        &mut s,
+        &[
+            ToolEvent::down(120.0, 120.0),
+            ToolEvent::drag(200.0, 125.0),
+            ToolEvent::drag(420.0, 130.0),
+        ],
+    );
+    let copy = s.tool_feedback().into_iter().find_map(|o| match o {
+        Overlay::Ghost {
+            pixels: true, copy, ..
+        } => Some(copy),
+        _ => None,
+    });
+    assert_eq!(copy, Some(true), "the preview moves a copy");
+    events(&mut s, &[ToolEvent::up(420.0, 130.0)]);
+    assert_eq!(
+        pixel_bounds(&s),
+        Some(IRect::new(400, 110, 450, 160)),
+        "marquee on the copy"
+    );
+    assert_eq!(alpha(&s, id, 105, 105), 255, "original stays");
+    assert_eq!(alpha(&s, id, 120, 120), 255, "original stays");
+    assert_eq!(alpha(&s, id, 440, 150), 255, "copy at the offset");
+    assert_eq!(
+        alpha(&s, id, 440, 170),
+        0,
+        "only the selected block was copied"
+    );
+    let img = image(&s, id);
+    assert_eq!(
+        (img.bounds().right, img.bounds().bottom),
+        (450, 300),
+        "the bitmap grows"
+    );
+    assert_eq!(rows(&s), before_rows + 1, "one History row");
+    let label = s
+        .active()
+        .and_then(|d| d.history.undo_label())
+        .unwrap_or_default();
+    assert_eq!(label, fp_i18n::t("msg-step-duplicate"));
+    assert_eq!(
+        s.active()
+            .map(|d| d.selection.elements.clone())
+            .unwrap_or_default(),
+        ids0,
+        "the same bitmap, no new object"
+    );
+    ex(&mut s, "edit.undo", json!({}));
+    assert_eq!(
+        pixel_bounds(&s),
+        Some(IRect::new(100, 100, 150, 150)),
+        "undo"
+    );
 }

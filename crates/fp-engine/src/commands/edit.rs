@@ -375,24 +375,21 @@ fn duplicate(s: &mut Session, offset: (f32, f32)) -> Result<CommandOutput> {
     })
 }
 
-/// Arrow-key nudge (`edit.move` with `nudge`, `edit.nudge.*`): with a pixel selection on a
-/// selected bitmap the selected pixels move inside the bitmap like a Pointer drag in the
-/// selection (FB-74; consecutive key presses merge into one History row in the session, TW-148).
-/// A bitmap selection tool moves only the marquee, a copy duplicates, everything else is
-/// [`move_selection`].
+/// Arrow-key nudge (`edit.move` with `nudge`, `edit.nudge.*`): with a pixel selection only the
+/// marquee moves, the pixels stay, whatever tool is active (RE spec 71 section 6.3, FB-74;
+/// consecutive key presses merge into one History row "Move" in the session, TW-148). A copy
+/// duplicates, everything else is [`move_selection`].
 fn nudge_selection(s: &mut Session, dx: f32, dy: f32, copy: bool) -> Result<CommandOutput> {
-    use crate::tools::ToolId as T;
-    let marquee_tool = matches!(
-        s.tools.active,
-        T::Marquee | T::OvalMarquee | T::Lasso | T::PolygonLasso | T::MagicWand
-    );
-    let d = s.doc()?;
-    if !copy && !marquee_tool && d.selection.has_pixels() && !selected_bitmaps(d).is_empty() {
-        let (dx, dy) = (dx.round() as i32, dy.round() as i32);
-        if dx == 0 && dy == 0 {
-            return Ok(CommandOutput::doc());
-        }
-        return with_doc(s, |d| super::select::move_selected_pixels(d, dx, dy));
+    if !copy && s.doc()?.selection.has_pixels() {
+        return with_doc(s, |d| {
+            if let Some(m) = &mut d.selection.pixels {
+                let b = m.bounds().translate(dx.round() as i32, dy.round() as i32);
+                if let Ok(nm) = Mask::from_raw(b, m.data().to_vec()) {
+                    *m = nm;
+                }
+            }
+            Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move")))
+        });
     }
     move_selection(s, dx, dy, copy)
 }

@@ -400,9 +400,9 @@ fn ghost(ctx: &ToolContext, rect: Rect, quad: [Point; 4], copy: bool) -> Overlay
 }
 
 /// Live preview of a pixel move by `(dx, dy)` (rounded like the commit, FB-73): the selected
-/// pixels of the first selected bitmap move, the rest of it stays. `None` without a pixel
-/// selection or a selected bitmap.
-pub(crate) fn pixel_ghost(ctx: &ToolContext, dx: f32, dy: f32) -> Option<Overlay> {
+/// pixels of the first selected bitmap move, the rest of it stays (with the hole, or unchanged
+/// for a `copy`, RE spec 71 section 6.2). `None` without a pixel selection or a selected bitmap.
+pub(crate) fn pixel_ghost(ctx: &ToolContext, dx: f32, dy: f32, copy: bool) -> Option<Overlay> {
     let m = ctx
         .selection
         .pixels
@@ -418,7 +418,7 @@ pub(crate) fn pixel_ghost(ctx: &ToolContext, dx: f32, dy: f32) -> Option<Overlay
         ids: vec![id.0],
         rect: b,
         quad: b.translate(dx, dy).corners(),
-        copy: false,
+        copy,
         pixels: true,
     })
 }
@@ -906,6 +906,16 @@ impl PointerTool {
     /// objects and empty canvas); Shift and Ctrl add nothing.
     fn hover(&mut self, p: Point, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {
         let mut r = self.hover_plain(p, ctx);
+        // inside a pixel selection the Subselection shows the arrow with the copy badge (a drag
+        // duplicates the pixels), the Pointer its plain arrow (RE spec 71 section 6.4)
+        if self.id == ToolId::Subselection
+            && !ev.mods.alt
+            && drags_pixels(ctx, p, false)
+            && pixel_ghost(ctx, 0.0, 0.0, true).is_some()
+        {
+            r.cursor = Cursor::Copy;
+            self.hover_cursor = Cursor::Copy;
+        }
         if self.id == ToolId::Pointer && ev.mods.alt && r.cursor == Cursor::Arrow {
             r.cursor = Cursor::Subselect;
             self.hover_cursor = Cursor::Subselect;
@@ -1370,11 +1380,16 @@ impl PointerTool {
                 };
                 self.overlay = Vec::new();
                 // inside a pixel selection only the selected pixels move (FB-73)
+                // (the Subselection drags a copy, the original stays: RE spec 71 section 6.2)
+                let dup = self.id == ToolId::Subselection;
                 let pixel = drags_pixels(ctx, start, copy)
-                    .then(|| pixel_ghost(ctx, cur.x - start.x, cur.y - start.y))
+                    .then(|| pixel_ghost(ctx, cur.x - start.x, cur.y - start.y, dup))
                     .flatten();
                 if let Some(g) = pixel {
                     self.overlay.push(g);
+                    self.overlay.extend(guides);
+                    let c = if dup { Cursor::Copy } else { Cursor::Move };
+                    return ToolResponse::with_overlay(self.overlay.clone(), c);
                 } else if let Some(b) = bounds {
                     let q = b.translate(cur.x - start.x, cur.y - start.y);
                     self.overlay.push(ghost(ctx, b, q.corners(), copy));
@@ -1698,10 +1713,12 @@ impl PointerTool {
                     return ToolResponse::default();
                 }
                 // Ziehen im Auswahlrahmen einer Bitmap verschiebt die ausgewählten Pixel (PAR 06/16)
+                // (the Subselection duplicates them: row "Duplicate", RE spec 71 section 6.2)
                 if drags_pixels(ctx, start, copy) {
+                    let dup = self.id == ToolId::Subselection;
                     return ToolResponse::commit(vec![Invocation::new(
                         "select.movePixels",
-                        json!({"dx": dx.round(), "dy": dy.round()}),
+                        json!({"dx": dx.round(), "dy": dy.round(), "copy": dup}),
                     )]);
                 }
                 // Alt-Ziehen heißt im Original „Duplizieren“ (PAR 08/03)

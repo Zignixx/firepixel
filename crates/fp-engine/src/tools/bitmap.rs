@@ -91,7 +91,7 @@ pub(crate) fn selection_hover_cursor(
 /// with Ctrl (`pixels`) the live preview of the moved pixels like the Pointer (FB-73).
 fn marquee_move_overlay(ctx: &ToolContext, from: Point, to: Point, pixels: bool) -> Vec<Overlay> {
     let (dx, dy) = ((to.x - from.x).round(), (to.y - from.y).round());
-    if pixels && let Some(g) = super::pointer::pixel_ghost(ctx, dx, dy) {
+    if pixels && let Some(g) = super::pointer::pixel_ghost(ctx, dx, dy, false) {
         return vec![g];
     }
     ctx.selection

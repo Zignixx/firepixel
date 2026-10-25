@@ -181,7 +181,9 @@ impl GhostCache {
     /// Live preview of a pixel move (FB-73) of the selected pixels `mask` of the bitmap `id`:
     /// (the bitmap with the hole, the selected pixels alone), each limited to the part in view
     /// (`need_hole`, `need_cluster`: document pixels before the move, see [`needed_part`]) plus a
-    /// margin like [`Self::drag_sprites`]. Cached per generation, bitmap and mask.
+    /// margin like [`Self::drag_sprites`]. Cached per generation, bitmap and mask. `copy`
+    /// (Subselection drag, RE spec 71 section 6.2): the bitmap stays unchanged (no hole) and a
+    /// copy of the selected pixels moves.
     #[allow(clippy::too_many_arguments)] // Kontext der Vorschau (egui, Renderer, Dokument, Lage)
     pub fn pixel_sprites(
         &mut self,
@@ -189,7 +191,7 @@ impl GhostCache {
         r: &fp_render::Renderer,
         doc: &Document,
         (generation, page, frame): (u64, usize, usize),
-        id: u64,
+        (id, copy): (u64, bool),
         mask: &fp_raster::Mask,
         zoom: f64,
         (need_hole, need_cluster): (Option<IRect>, Option<IRect>),
@@ -204,6 +206,7 @@ impl GhostCache {
                 mk.2 as u64,
                 mk.3 as u64,
                 mk.4 as u64,
+                copy as u64,
             ],
         );
         let fresh = self.pixels.as_ref().is_some_and(|p| p.key == key);
@@ -225,8 +228,10 @@ impl GhostCache {
             });
             let e = fp_engine::docops::element_on_page(doc, page, ElementId(id));
             let split = e.as_ref().and_then(|e| match &e.kind {
-                fp_model::ElementKind::Bitmap(b) => fp_engine::docops::bitmap_image(b)
-                    .map(|img| fp_engine::docops::cut_selected_pixels(&img, mask)),
+                fp_model::ElementKind::Bitmap(b) => fp_engine::docops::bitmap_image(b).map(|img| {
+                    let (hole, cluster) = fp_engine::docops::cut_selected_pixels(&img, mask);
+                    (if copy { img } else { hole }, cluster)
+                }),
                 _ => None,
             });
             let render = |img: &fp_raster::RgbaImage, need: Option<IRect>, name: &str| {

@@ -146,19 +146,25 @@ fn set_pixels(d: &mut DocumentState, m: Option<Mask>, mode: SelectMode, feather:
 }
 
 /// Hebt die Pixel unter der Maske aus dem Bild und setzt sie um `(dx, dy)` versetzt wieder ein
-/// (Bild wächst bei Bedarf; das Loch wird transparent).
+/// (Bild wächst bei Bedarf; das Loch wird transparent). `copy` (Subselection drag, RE spec 71
+/// section 6.2): the original pixels stay, a copy is placed at the offset.
 pub(crate) fn move_pixels(
     img: &fp_raster::RgbaImage,
     m: &Mask,
     dx: i32,
     dy: i32,
+    copy: bool,
 ) -> fp_raster::RgbaImage {
     let ib = img.bounds();
     let src = m.bounds().intersect(&ib);
     let nb = ib.union(&src.translate(dx, dy));
-    // the hole (the same cut the live drag preview shows, FB-73)
-    let (hole, _) = docops::cut_selected_pixels(img, m);
-    let Ok(mut out) = hole.extended_to(nb) else {
+    // the hole (the same cut the live drag preview shows, FB-73); a copy keeps the original
+    let base = if copy {
+        img.clone()
+    } else {
+        docops::cut_selected_pixels(img, m).0
+    };
+    let Ok(mut out) = base.extended_to(nb) else {
         return img.clone();
     };
     for y in src.top..src.bottom {
@@ -187,12 +193,14 @@ pub(crate) fn move_pixels(
 }
 
 /// Moves the selected pixels of the selected bitmap by `(dx, dy)`: the hole stays transparent,
-/// the marquee moves along (PAR 06/16). Used by `select.movePixels` (Pointer / Ctrl+marquee drag)
-/// and by the arrow keys with a pixel selection (FB-74).
+/// the marquee moves along (PAR 06/16); row "Move". Used by `select.movePixels` (Pointer /
+/// Ctrl+marquee drag). `copy` (Subselection drag, RE spec 71 section 6.2): the original stays, the
+/// copy lands at the offset with the marquee on it; row "Duplicate".
 pub(crate) fn move_selected_pixels(
     d: &mut DocumentState,
     dx: i32,
     dy: i32,
+    copy: bool,
 ) -> Result<CommandOutput> {
     let geo = crate::geometry::BasicGeometry;
     let Some(m) = d
@@ -209,7 +217,7 @@ pub(crate) fn move_selected_pixels(
     };
     let img = docops::bitmap_image(b)
         .ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
-    let out = move_pixels(&img, &m, dx, dy);
+    let out = move_pixels(&img, &m, dx, dy, copy);
     let doc = Arc::make_mut(&mut d.doc);
     docops::edit_at(doc, &path, |e| {
         if let ElementKind::Bitmap(b) = &mut e.kind {
@@ -221,7 +229,11 @@ pub(crate) fn move_selected_pixels(
     {
         *pm = nm;
     }
-    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move")))
+    Ok(CommandOutput::doc().labeled(fp_i18n::t(if copy {
+        "msg-step-duplicate"
+    } else {
+        "msg-step-move"
+    })))
 }
 
 /// Weiche Kante wie beim Aufziehen eines Rahmens (gemessen 06/19: Rahmen + `f` px nach außen).
@@ -1301,9 +1313,15 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 },
                 "Verschiebung y",
             )
+            .opt(
+                "copy",
+                ParamKind::Bool,
+                "move a copy, the original stays (Subselection drag, row Duplicate)",
+            )
             .run(|s, p| {
                 let (dx, dy) = (p.f64("dx")?.round() as i32, p.f64("dy")?.round() as i32);
-                with_doc(s, |d| move_selected_pixels(d, dx, dy))
+                let copy = p.bool_or("copy", false)?;
+                with_doc(s, |d| move_selected_pixels(d, dx, dy, copy))
             }),
     );
     r.add(
