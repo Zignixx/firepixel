@@ -1628,6 +1628,36 @@ pub fn bitmap_image(b: &BitmapElem) -> Option<RgbaImage> {
     RgbaImage::from_rgba_bytes(r, &rgba).ok()
 }
 
+/// Splits a bitmap image at a pixel selection (FB-73): the image with the selected pixels cut
+/// out (alpha · (1 − mask), the hole a pixel move leaves) and the selected pixels alone (alpha ·
+/// mask, cropped to the selection), both in document coordinates. The live drag preview of a
+/// pixel move draws the first in place and the second at the offset.
+pub fn cut_selected_pixels(img: &RgbaImage, m: &fp_raster::Mask) -> (RgbaImage, RgbaImage) {
+    let mut hole = img.clone();
+    let src = m.bounds().intersect(&img.bounds());
+    for y in src.top..src.bottom {
+        for x in src.left..src.right {
+            let k = m.get(x, y) as u32;
+            if k == 0 {
+                continue;
+            }
+            if let Some(p) = img.get(x, y) {
+                let a = (p[3] as u32 * (255 - k) + 127) / 255;
+                hole.set_pixel(x, y, fp_color::Rgba8::new(p[0], p[1], p[2], a as u8));
+            }
+        }
+    }
+    let r = img.bounds().intersect(&m.tight_bounds());
+    let mut cluster = img.cropped(r);
+    let (l, t) = cluster.origin();
+    let w = cluster.width().max(1);
+    for (i, px) in cluster.data_mut().iter_mut().enumerate() {
+        let (x, y) = (l + (i % w) as i32, t + (i / w) as i32);
+        px[3] = ((px[3] as u32 * m.get(x, y) as u32 + 127) / 255) as u8;
+    }
+    (hole, cluster)
+}
+
 /// Ersetzt die Pixel einer Bitmap (Lage aus den Bildgrenzen, Effekt-Ergebnis verworfen).
 pub fn set_bitmap_image(b: &mut BitmapElem, img: &RgbaImage) {
     let r = img.bounds();

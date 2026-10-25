@@ -25,6 +25,8 @@ pub struct Linger {
     pub rect: fp_geom::Rect,
     pub quad: [Point; 4],
     pub ids: Vec<u64>,
+    /// A pixel move (FB-73): [`GhostCache::pixels`] instead of [`GhostCache::drag`].
+    pub pixels: bool,
 }
 
 /// Vorschau-Texturen eines Dokuments.
@@ -42,6 +44,55 @@ pub struct GhostCache {
     /// Objekt mit live gezogenen Füllgriffen (Zeiger, re 40 §1).
     pub fill: Option<Sprite>,
     pub linger: Option<Linger>,
+    /// Vorschau einer Pixelverschiebung (FB-73); `None` = keine.
+    pub pixels: Option<PixelGhost>,
+}
+
+/// A preview texture limited to a part of its full extent (BA-097).
+#[derive(Default)]
+pub struct Clipped {
+    pub sprite: Option<Sprite>,
+    /// Part (document pixels) the texture is limited to; `None` = whole.
+    pub clip: Option<IRect>,
+    /// Bounds of the whole preview.
+    pub full: IRect,
+}
+
+impl Clipped {
+    /// Does the texture hold the part `need`?
+    fn covers(&self, need: Option<IRect>) -> bool {
+        clip_covers(self.clip, self.full, need)
+    }
+}
+
+/// Live preview of a pixel move (FB-73): the bitmap with the selected pixels cut out (drawn in
+/// place: what the committed move leaves behind) and the selected pixels alone (drawn at the
+/// offset).
+pub struct PixelGhost {
+    /// Key (generation, bitmap, selection mask).
+    pub key: u64,
+    pub hole: Clipped,
+    pub cluster: Clipped,
+}
+
+/// Does a texture limited to `clip` (of the whole `full`) hold the part `need`?
+fn clip_covers(clip: Option<IRect>, full: IRect, need: Option<IRect>) -> bool {
+    match (clip, need) {
+        (None, _) => true,
+        (Some(_), None) => false,
+        (Some(c), Some(n)) => {
+            let n = n.intersect(&full);
+            n.is_empty() || c.intersect(&n) == n
+        }
+    }
+}
+
+/// The part a texture for `need` is cut to: `need` plus half its size on each side (BA-097).
+fn clip_around(need: Option<IRect>) -> Option<IRect> {
+    need.map(|n| {
+        let (mx, my) = ((n.width() / 2) as i32, (n.height() / 2) as i32);
+        IRect::new(n.left - mx, n.top - my, n.right + mx, n.bottom + my)
+    })
 }
 
 fn hash_ids(generation: u64, ids: &[u64]) -> u64 {
@@ -96,19 +147,9 @@ impl GhostCache {
             .collect();
         let key = hash_ids(generation, &flat);
         let fresh = !self.drag.is_empty() && self.drag_key == key;
-        let covered = match (self.drag_clip, need) {
-            (None, _) => true,
-            (Some(_), None) => false,
-            (Some(c), Some(n)) => {
-                let n = n.intersect(&self.drag_full);
-                n.is_empty() || c.intersect(&n) == n
-            }
-        };
+        let covered = clip_covers(self.drag_clip, self.drag_full, need);
         if !fresh || !covered {
-            let clip = need.map(|n| {
-                let (mx, my) = ((n.width() / 2) as i32, (n.height() / 2) as i32);
-                IRect::new(n.left - mx, n.top - my, n.right + mx, n.bottom + my)
-            });
+            let clip = clip_around(need);
             let mut full = IRect::default();
             self.drag = runs
                 .iter()
@@ -135,6 +176,100 @@ impl GhostCache {
             self.drag_full = full;
         }
         &self.drag
+    }
+
+    /// Live preview of a pixel move (FB-73) of the selected pixels `mask` of the bitmap `id`:
+    /// (the bitmap with the hole, the selected pixels alone), each limited to the part in view
+    /// (`need_hole`, `need_cluster`: document pixels before the move, see [`needed_part`]) plus a
+    /// margin like [`Self::drag_sprites`]. Cached per generation, bitmap and mask.
+    #[allow(clippy::too_many_arguments)] // Kontext der Vorschau (egui, Renderer, Dokument, Lage)
+    pub fn pixel_sprites(
+        &mut self,
+        ctx: &egui::Context,
+        r: &fp_render::Renderer,
+        doc: &Document,
+        (generation, page, frame): (u64, usize, usize),
+        id: u64,
+        mask: &fp_raster::Mask,
+        zoom: f64,
+        (need_hole, need_cluster): (Option<IRect>, Option<IRect>),
+    ) -> (Option<&Sprite>, Option<&Sprite>) {
+        let mk = super::overlay::mask_key(mask);
+        let key = hash_ids(
+            generation,
+            &[
+                id,
+                mk.0 as u64,
+                mk.1 as u64,
+                mk.2 as u64,
+                mk.3 as u64,
+                mk.4 as u64,
+            ],
+        );
+        let fresh = self.pixels.as_ref().is_some_and(|p| p.key == key);
+        let redo_hole = !fresh
+            || !self
+                .pixels
+                .as_ref()
+                .is_some_and(|p| p.hole.covers(need_hole));
+        let redo_cluster = !fresh
+            || !self
+                .pixels
+                .as_ref()
+                .is_some_and(|p| p.cluster.covers(need_cluster));
+        if redo_hole || redo_cluster {
+            let mut pg = self.pixels.take().filter(|_| fresh).unwrap_or(PixelGhost {
+                key,
+                hole: Clipped::default(),
+                cluster: Clipped::default(),
+            });
+            let e = fp_engine::docops::element_on_page(doc, page, ElementId(id));
+            let split = e.as_ref().and_then(|e| match &e.kind {
+                fp_model::ElementKind::Bitmap(b) => fp_engine::docops::bitmap_image(b)
+                    .map(|img| fp_engine::docops::cut_selected_pixels(&img, mask)),
+                _ => None,
+            });
+            let render = |img: &fp_raster::RgbaImage, need: Option<IRect>, name: &str| {
+                let mut c = Clipped::default();
+                let Some(e) = e.as_ref() else { return c };
+                let mut el = (**e).clone();
+                if let fp_model::ElementKind::Bitmap(b) = &mut el.kind {
+                    fp_engine::docops::set_bitmap_image(b, img);
+                }
+                let clip = clip_around(need);
+                let (out, full) =
+                    super::render::render_elements_in(r, doc, frame, &[Arc::new(el)], clip);
+                c.clip = clip;
+                c.full = full;
+                c.sprite = out.map(|img| Sprite {
+                    key,
+                    texture: texture_of(ctx, name, &img, zoom),
+                    bounds: img.bounds(),
+                });
+                c
+            };
+            if let Some((hole, cluster)) = &split {
+                if redo_hole {
+                    pg.hole = render(hole, need_hole, "canvas-ghost-pixels-hole");
+                }
+                if redo_cluster {
+                    pg.cluster = if cluster.width() > 0 && cluster.height() > 0 {
+                        render(cluster, need_cluster, "canvas-ghost-pixels")
+                    } else {
+                        Clipped::default()
+                    };
+                }
+            } else {
+                pg.hole = Clipped::default();
+                pg.cluster = Clipped::default();
+            }
+            pg.key = key;
+            self.pixels = Some(pg);
+        }
+        match &self.pixels {
+            Some(p) => (p.hole.sprite.as_ref(), p.cluster.sprite.as_ref()),
+            None => (None, None),
+        }
     }
 
     /// Vorschau eines Elements mit live gezogenen Füllgriffen; `key` beschreibt den Inhalt.

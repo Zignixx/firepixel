@@ -156,21 +156,11 @@ pub(crate) fn move_pixels(
     let ib = img.bounds();
     let src = m.bounds().intersect(&ib);
     let nb = ib.union(&src.translate(dx, dy));
-    let Ok(mut out) = img.extended_to(nb) else {
+    // the hole (the same cut the live drag preview shows, FB-73)
+    let (hole, _) = docops::cut_selected_pixels(img, m);
+    let Ok(mut out) = hole.extended_to(nb) else {
         return img.clone();
     };
-    for y in src.top..src.bottom {
-        for x in src.left..src.right {
-            let k = m.get(x, y) as u32;
-            if k == 0 {
-                continue;
-            }
-            if let Some(p) = img.get(x, y) {
-                let a = (p[3] as u32 * (255 - k) + 127) / 255;
-                out.set_pixel(x, y, fp_color::Rgba8::new(p[0], p[1], p[2], a as u8));
-            }
-        }
-    }
     for y in src.top..src.bottom {
         for x in src.left..src.right {
             let k = m.get(x, y) as u32;
@@ -194,6 +184,44 @@ pub(crate) fn move_pixels(
         }
     }
     out
+}
+
+/// Moves the selected pixels of the selected bitmap by `(dx, dy)`: the hole stays transparent,
+/// the marquee moves along (PAR 06/16). Used by `select.movePixels` (Pointer / Ctrl+marquee drag)
+/// and by the arrow keys with a pixel selection (FB-74).
+pub(crate) fn move_selected_pixels(
+    d: &mut DocumentState,
+    dx: i32,
+    dy: i32,
+) -> Result<CommandOutput> {
+    let geo = crate::geometry::BasicGeometry;
+    let Some(m) = d
+        .selection
+        .pixels
+        .clone()
+        .filter(|_| d.selection.has_pixels())
+    else {
+        return Err(sel_err("err-sel-empty-pixels"));
+    };
+    let (path, e) = bitmap_for(d, None, &geo).ok_or_else(|| sel_err("err-sel-no-bitmap"))?;
+    let ElementKind::Bitmap(b) = &e.kind else {
+        return Err(sel_err("err-sel-no-bitmap"));
+    };
+    let img = docops::bitmap_image(b)
+        .ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
+    let out = move_pixels(&img, &m, dx, dy);
+    let doc = Arc::make_mut(&mut d.doc);
+    docops::edit_at(doc, &path, |e| {
+        if let ElementKind::Bitmap(b) = &mut e.kind {
+            docops::set_bitmap_image(b, &out);
+        }
+    });
+    if let Some(pm) = d.selection.pixels.as_mut()
+        && let Ok(nm) = Mask::from_raw(pm.bounds().translate(dx, dy), pm.data().to_vec())
+    {
+        *pm = nm;
+    }
+    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move")))
 }
 
 /// Weiche Kante wie beim Aufziehen eines Rahmens (gemessen 06/19: Rahmen + `f` px nach außen).
@@ -1275,40 +1303,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             )
             .run(|s, p| {
                 let (dx, dy) = (p.f64("dx")?.round() as i32, p.f64("dy")?.round() as i32);
-                let geo = Arc::new(crate::geometry::BasicGeometry);
-                with_doc(s, |d| {
-                    // ausgewählte Pixel verschieben: Loch bleibt transparent, Rahmen wandert mit (PAR 06/16)
-                    let Some(m) = d
-                        .selection
-                        .pixels
-                        .clone()
-                        .filter(|_| d.selection.has_pixels())
-                    else {
-                        return Err(sel_err("err-sel-empty-pixels"));
-                    };
-                    let (path, e) = bitmap_for(d, None, geo.as_ref())
-                        .ok_or_else(|| sel_err("err-sel-no-bitmap"))?;
-                    let ElementKind::Bitmap(b) = &e.kind else {
-                        return Err(sel_err("err-sel-no-bitmap"));
-                    };
-                    let img = docops::bitmap_image(b).ok_or_else(|| {
-                        EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short"))
-                    })?;
-                    let out = move_pixels(&img, &m, dx, dy);
-                    let doc = Arc::make_mut(&mut d.doc);
-                    docops::edit_at(doc, &path, |e| {
-                        if let ElementKind::Bitmap(b) = &mut e.kind {
-                            docops::set_bitmap_image(b, &out);
-                        }
-                    });
-                    if let Some(pm) = d.selection.pixels.as_mut()
-                        && let Ok(nm) =
-                            Mask::from_raw(pm.bounds().translate(dx, dy), pm.data().to_vec())
-                    {
-                        *pm = nm;
-                    }
-                    Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move")))
-                })
+                with_doc(s, |d| move_selected_pixels(d, dx, dy))
             }),
     );
     r.add(

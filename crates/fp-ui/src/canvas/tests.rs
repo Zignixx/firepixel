@@ -205,6 +205,80 @@ fn moving_hides_original_and_shows_ghost() {
     assert_eq!((bnd.left, bnd.top), (110.0, 60.0));
 }
 
+/// FB-73 (TW-241): a Pointer drag inside a pixel selection of a bitmap previews only the
+/// selected pixels: the moved sprite covers the selection bounds (not the whole bitmap), the
+/// bitmap stays in place with the hole, the marching ants move along; the release moves the pixels.
+#[test]
+fn pixel_selection_drag_previews_only_the_selected_pixels() {
+    let mut h = harness();
+    {
+        let s = &mut h.state_mut().state.session;
+        let img = fp_raster::RgbaImage::filled(
+            fp_geom::IRect::from_xywh(0, 0, 400, 300),
+            fp_color::Rgba8::new(200, 40, 40, 255),
+        )
+        .expect("image");
+        s.clipboard.clear();
+        s.clipboard.pixels = Some(img);
+        s.execute("edit.paste", json!({})).expect("paste");
+        s.execute(
+            "select.pixels",
+            json!({"shape": "rect", "rect": [100, 100, 150, 150]}),
+        )
+        .expect("marquee");
+    }
+    set_tool(&mut h, ToolId::Pointer);
+    h.run_steps(2);
+    let (a, b) = (at(&h, 120.0, 120.0), at(&h, 140.0, 130.0));
+    mv(&mut h, a);
+    button(&mut h, a, PointerButton::Primary, true, Modifiers::NONE);
+    mv(&mut h, a + egui::vec2(10.0, 5.0));
+    mv(&mut h, b);
+    h.run_steps(2);
+    {
+        let cc = h.state().state.canvases.values().next().expect("canvas");
+        assert!(
+            cc.feedback
+                .iter()
+                .any(|o| matches!(o, Overlay::Ghost { pixels: true, .. })),
+            "{:?}",
+            cc.feedback
+        );
+        assert!(
+            cc.ghosts.drag.iter().all(Option::is_none),
+            "no whole-object preview"
+        );
+        let pg = cc.ghosts.pixels.as_ref().expect("pixel preview");
+        let cl = pg.cluster.sprite.as_ref().expect("selected pixels");
+        assert_eq!(
+            (
+                cl.bounds.left,
+                cl.bounds.top,
+                cl.bounds.right,
+                cl.bounds.bottom
+            ),
+            (100, 100, 150, 150),
+            "the moved sprite covers only the selection"
+        );
+        assert!(pg.hole.sprite.is_some(), "bitmap with the hole in place");
+        assert!(
+            cc.shown.is_some_and(|k| k.variant != 0),
+            "original bitmap hidden in the background image"
+        );
+    }
+    button(&mut h, b, PointerButton::Primary, false, Modifiers::NONE);
+    h.run_steps(3);
+    let d = h.state().state.session.active().expect("d");
+    assert_eq!(
+        d.selection.pixels.as_ref().map(|m| m.tight_bounds()),
+        Some(fp_geom::IRect::new(120, 110, 170, 160)),
+        "marquee moved with the pixels"
+    );
+    let cc = h.state().state.canvases.values().next().expect("canvas");
+    assert!(cc.shown.is_some_and(|k| k.variant == 0), "complete again");
+    assert!(cc.ghosts.pixels.is_none(), "preview dropped");
+}
+
 #[test]
 fn shared_layer_element_moves_with_mouse() {
     let mut h = harness();

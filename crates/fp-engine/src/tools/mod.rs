@@ -307,11 +307,18 @@ pub enum Overlay {
     /// Vorschau beim Ziehen („Vorschau beim Ziehen“): die Elemente `ids` werden vom Rechteck `rect`
     /// auf das Viereck `quad` (LO, RO, RU, LU) abgebildet; die Originale blendet die UI aus.
     /// `copy` = Alt-Ziehen: das Original bleibt stehen.
+    ///
+    /// `pixels` (FB-73): a move of the selected pixels of the bitmap `ids[0]` (Pointer or
+    /// Subselection drag inside a pixel selection, Ctrl+drag of a bitmap selection tool): `rect`
+    /// is the selection bounds, only the selected pixels move to `quad`, the rest of the bitmap
+    /// stays in place with the hole the move leaves.
     Ghost {
         ids: Vec<u64>,
         rect: Rect,
         quad: [Point; 4],
         copy: bool,
+        #[serde(default)]
+        pixels: bool,
     },
     /// Abdunkeln außerhalb des Rechtecks (Zuschneiden, Exportbereich).
     Shade { rect: Rect },

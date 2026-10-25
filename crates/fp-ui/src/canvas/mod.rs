@@ -2630,9 +2630,14 @@ fn overlays(
     }
     // Auswahl: Rahmen mit Eckgriffen
     // Während des Ziehens wandert der Auswahlrahmen mit der Vorschau (Rechteck → Viereck der Vorschau)
+    // (a pixel move keeps the object frame in place, FB-73)
     let moving: Option<(Vec<u64>, fp_geom::Matrix3)> = feedback.iter().find_map(|o| match o {
         Overlay::Ghost {
-            ids, rect, quad, ..
+            ids,
+            rect,
+            quad,
+            pixels: false,
+            ..
         } => fp_geom::Matrix3::rect_to_quad(rect, quad).map(|m| (ids.clone(), m)),
         _ => None,
     });
@@ -2830,10 +2835,24 @@ fn overlays(
     {
         let cc = st.canvases.entry(id).or_default();
         let outlines = overlay::ants_for(&mut cc.ants, m);
+        // the marching ants move with the dragged pixels (FB-73)
+        let (ox, oy) = feedback
+            .iter()
+            .find_map(|o| match o {
+                Overlay::Ghost {
+                    rect,
+                    quad,
+                    pixels: true,
+                    ..
+                } => Some((quad[0].x - rect.left, quad[0].y - rect.top)),
+                _ => None,
+            })
+            .unwrap_or((0.0, 0.0));
+        let ants_spp = |p: Point| spp(Point::new(p.x + ox, p.y + oy));
         overlay::paint_ants(
             painter,
             outlines,
-            &spp,
+            &ants_spp,
             time,
             c.marquee_a,
             c.marquee_b,
@@ -3344,6 +3363,7 @@ fn preview_stack(
                 rect,
                 quad,
                 copy,
+                pixels,
             } => {
                 had_ghost = true;
                 cc.ghosts.linger = Some(ghost::Linger {
@@ -3351,6 +3371,7 @@ fn preview_stack(
                     rect: *rect,
                     quad: *quad,
                     ids: if *copy { Vec::new() } else { ids.clone() },
+                    pixels: *pixels,
                 });
                 if !preview_drag || layers_drawn {
                     continue;
@@ -3365,6 +3386,44 @@ fn preview_stack(
                 }
                 let runs: Vec<Vec<u64>> = plan.runs.iter().map(|r| r.ids.clone()).collect();
                 let layers = if ready { cc.layers.clone() } else { Vec::new() };
+                // FB-73: a pixel move shows the bitmap with the hole in place and only the
+                // selected pixels at the offset (each limited to the view, BA-097)
+                if *pixels && let (Some(bid), Some(m)) = (ids.first(), d.selection.pixels.as_ref())
+                {
+                    let visible = view.visible_rect();
+                    let need_hole = ghost::needed_part(*rect, &rect.corners(), visible);
+                    let need_cluster = ghost::needed_part(*rect, quad, visible);
+                    let (hole, cluster) = cc.ghosts.pixel_sprites(
+                        &ctx,
+                        &st.renderer,
+                        &d.doc,
+                        (generation, page_i, frame_i),
+                        *bid,
+                        m,
+                        view.zoom,
+                        (need_hole, need_cluster),
+                    );
+                    for i in 0..runs.len().max(layers.len()).max(1) {
+                        if i == 0 {
+                            if let Some(s) = hole {
+                                ghost::paint_at(&page_painter, s, &spp);
+                            }
+                            if let Some(s) = cluster {
+                                ghost::paint_mapped(
+                                    &page_painter,
+                                    s,
+                                    *rect,
+                                    quad,
+                                    Color32::WHITE,
+                                    &spp,
+                                );
+                            }
+                        }
+                        paint_layer(&page_painter, &layers, i, tr);
+                    }
+                    layers_drawn = true;
+                    continue;
+                }
                 // BA-097: only the part in view (plus a margin) goes into the texture
                 let need = ghost::needed_part(*rect, quad, view.visible_rect());
                 let sprites = cc.ghosts.drag_sprites(
@@ -3420,7 +3479,30 @@ fn preview_stack(
     let mut lingering = false;
     if !had_ghost && let Some(l) = &cc.ghosts.linger {
         let waiting = cc.shown.is_some_and(|k| k.variant != 0) && !l.ids.is_empty();
-        if waiting && preview_drag {
+        if waiting && preview_drag && l.pixels {
+            // FB-73: the pixel move stays until the new background is there
+            for i in 0..cc.layers.len().max(1) {
+                if i == 0
+                    && let Some(p) = &cc.ghosts.pixels
+                {
+                    if let Some(s) = &p.hole.sprite {
+                        ghost::paint_at(&page_painter, s, &spp);
+                    }
+                    if let Some(s) = &p.cluster.sprite {
+                        ghost::paint_mapped(
+                            &page_painter,
+                            s,
+                            l.rect,
+                            &l.quad,
+                            Color32::WHITE,
+                            &spp,
+                        );
+                    }
+                }
+                paint_layer(&page_painter, &cc.layers, i, tr);
+            }
+            lingering = true;
+        } else if waiting && preview_drag {
             for i in 0..cc.ghosts.drag.len().max(cc.layers.len()) {
                 if let Some(Some(s)) = cc.ghosts.drag.get(i) {
                     ghost::paint_mapped(&page_painter, s, l.rect, &l.quad, Color32::WHITE, &spp);
@@ -3431,6 +3513,7 @@ fn preview_stack(
         } else {
             cc.ghosts.linger = None;
             cc.ghosts.drag.clear();
+            cc.ghosts.pixels = None;
         }
     }
     // Schichten gehören zum angezeigten Hintergrundbild: ohne laufende Vorschau einfach darüber

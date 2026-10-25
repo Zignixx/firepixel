@@ -86,9 +86,13 @@ pub(crate) fn selection_hover_cursor(
     badge_cursor(base, mode_from(ev))
 }
 
-/// Drag of the marquee inside the pixel selection: dashed outline of the moved selection bounds.
-fn marquee_move_overlay(ctx: &ToolContext, from: Point, to: Point) -> Vec<Overlay> {
+/// Drag of the marquee inside the pixel selection: dashed outline of the moved selection bounds;
+/// with Ctrl (`pixels`) the live preview of the moved pixels like the Pointer (FB-73).
+fn marquee_move_overlay(ctx: &ToolContext, from: Point, to: Point, pixels: bool) -> Vec<Overlay> {
     let (dx, dy) = ((to.x - from.x).round(), (to.y - from.y).round());
+    if pixels && let Some(g) = super::pointer::pixel_ghost(ctx, dx, dy) {
+        return vec![g];
+    }
     ctx.selection
         .pixels
         .as_ref()
@@ -366,7 +370,7 @@ impl ToolMachine for MarqueeTool {
             }
             PointerKind::Move if self.moving.is_some() => {
                 let (s, pixels) = self.moving.unwrap_or((p, false));
-                self.overlay = marquee_move_overlay(ctx, s, p);
+                self.overlay = marquee_move_overlay(ctx, s, p, pixels);
                 ToolResponse::with_overlay(self.overlay.clone(), move_cursor(pixels))
             }
             PointerKind::Up if self.moving.is_some() => {
@@ -500,7 +504,7 @@ impl ToolMachine for LassoTool {
                     marquee_move_release(from, p, pixels)
                 }
                 _ => ToolResponse::with_overlay(
-                    marquee_move_overlay(ctx, from, p),
+                    marquee_move_overlay(ctx, from, p, pixels),
                     move_cursor(pixels),
                 ),
             };
@@ -661,7 +665,7 @@ impl ToolMachine for WandTool {
                     marquee_move_release(from, p, pixels)
                 }
                 _ => ToolResponse::with_overlay(
-                    marquee_move_overlay(ctx, from, p),
+                    marquee_move_overlay(ctx, from, p, pixels),
                     move_cursor(pixels),
                 ),
             };

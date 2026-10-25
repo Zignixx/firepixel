@@ -375,6 +375,28 @@ fn duplicate(s: &mut Session, offset: (f32, f32)) -> Result<CommandOutput> {
     })
 }
 
+/// Arrow-key nudge (`edit.move` with `nudge`, `edit.nudge.*`): with a pixel selection on a
+/// selected bitmap the selected pixels move inside the bitmap like a Pointer drag in the
+/// selection (FB-74; consecutive key presses merge into one History row in the session, TW-148).
+/// A bitmap selection tool moves only the marquee, a copy duplicates, everything else is
+/// [`move_selection`].
+fn nudge_selection(s: &mut Session, dx: f32, dy: f32, copy: bool) -> Result<CommandOutput> {
+    use crate::tools::ToolId as T;
+    let marquee_tool = matches!(
+        s.tools.active,
+        T::Marquee | T::OvalMarquee | T::Lasso | T::PolygonLasso | T::MagicWand
+    );
+    let d = s.doc()?;
+    if !copy && !marquee_tool && d.selection.has_pixels() && !selected_bitmaps(d).is_empty() {
+        let (dx, dy) = (dx.round() as i32, dy.round() as i32);
+        if dx == 0 && dy == 0 {
+            return Ok(CommandOutput::doc());
+        }
+        return with_doc(s, |d| super::select::move_selected_pixels(d, dx, dy));
+    }
+    move_selection(s, dx, dy, copy)
+}
+
 /// Verschiebt die Auswahl (Pfeiltasten, Zeiger-Ziehen; `copy` = mit Alt eine Kopie ziehen).
 pub(crate) fn move_selection(
     s: &mut Session,
@@ -886,7 +908,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                 }
                 super::with_targets(s, p, |s, p| {
-                    let out = move_selection(s, p.f64("dx")? as f32, p.f64("dy")? as f32, copy)?;
+                    let (dx, dy) = (p.f64("dx")? as f32, p.f64("dy")? as f32);
+                    // a nudge of explicit `ids` stays an object move
+                    let out = if nudge && p.opt_ids("ids")?.is_none_or(|v| v.is_empty()) {
+                        nudge_selection(s, dx, dy, copy)?
+                    } else {
+                        move_selection(s, dx, dy, copy)?
+                    };
                     // the first Alt+arrow press creates the copy: row "Duplicate"
                     Ok(if copy && nudge {
                         out.labeled(fp_i18n::t("msg-step-duplicate"))
@@ -909,7 +937,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         r.add(
             cmd(name)
                 .requires(&[Requirement::Document, Requirement::SelectionOrPixels])
-                .run(move |s, _| move_selection(s, dx, dy, false)),
+                .run(move |s, _| nudge_selection(s, dx, dy, false)),
         );
     }
 

@@ -395,7 +395,44 @@ fn ghost(ctx: &ToolContext, rect: Rect, quad: [Point; 4], copy: bool) -> Overlay
         rect,
         quad,
         copy,
+        pixels: false,
     }
+}
+
+/// Live preview of a pixel move by `(dx, dy)` (rounded like the commit, FB-73): the selected
+/// pixels of the first selected bitmap move, the rest of it stays. `None` without a pixel
+/// selection or a selected bitmap.
+pub(crate) fn pixel_ghost(ctx: &ToolContext, dx: f32, dy: f32) -> Option<Overlay> {
+    let m = ctx
+        .selection
+        .pixels
+        .as_ref()
+        .filter(|_| ctx.selection.has_pixels())?;
+    let id = ctx.selection.elements.iter().find(|id| {
+        docops::element_on_page(ctx.doc, ctx.page, **id)
+            .is_some_and(|e| matches!(e.kind, ElementKind::Bitmap(_)))
+    })?;
+    let b = m.tight_bounds().to_rect();
+    let (dx, dy) = (dx.round(), dy.round());
+    Some(Overlay::Ghost {
+        ids: vec![id.0],
+        rect: b,
+        quad: b.translate(dx, dy).corners(),
+        copy: false,
+        pixels: true,
+    })
+}
+
+/// Does a Pointer / Subselection drag that started at `start` move the selected pixels (the
+/// press was inside the pixel selection, no Alt copy; PAR 06/16)?
+fn drags_pixels(ctx: &ToolContext, start: Point, copy: bool) -> bool {
+    !copy
+        && ctx.selection.has_pixels()
+        && ctx
+            .selection
+            .pixels
+            .as_ref()
+            .is_some_and(|m| m.get(start.x.floor() as i32, start.y.floor() as i32) > 0)
 }
 
 // ------------------------------------------------------------------ Zeiger
@@ -1332,7 +1369,13 @@ impl PointerTool {
                     shift_latched,
                 };
                 self.overlay = Vec::new();
-                if let Some(b) = bounds {
+                // inside a pixel selection only the selected pixels move (FB-73)
+                let pixel = drags_pixels(ctx, start, copy)
+                    .then(|| pixel_ghost(ctx, cur.x - start.x, cur.y - start.y))
+                    .flatten();
+                if let Some(g) = pixel {
+                    self.overlay.push(g);
+                } else if let Some(b) = bounds {
                     let q = b.translate(cur.x - start.x, cur.y - start.y);
                     self.overlay.push(ghost(ctx, b, q.corners(), copy));
                 }
@@ -1647,14 +1690,7 @@ impl PointerTool {
                     return ToolResponse::default();
                 }
                 // Ziehen im Auswahlrahmen einer Bitmap verschiebt die ausgewählten Pixel (PAR 06/16)
-                if !copy
-                    && ctx.selection.has_pixels()
-                    && ctx
-                        .selection
-                        .pixels
-                        .as_ref()
-                        .is_some_and(|m| m.get(start.x.floor() as i32, start.y.floor() as i32) > 0)
-                {
+                if drags_pixels(ctx, start, copy) {
                     return ToolResponse::commit(vec![Invocation::new(
                         "select.movePixels",
                         json!({"dx": dx.round(), "dy": dy.round()}),
