@@ -1013,7 +1013,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     // the open group and mask toggles of this row and the rows below it
                     let mut tree: Vec<TreeItem> = Vec::new();
                     if tree_on {
-                        tree_items(e, 0, None, &is_tree_open, &mut tree);
+                        tree_items(e, 0, 0, None, &is_tree_open, &mut tree);
                     }
                     let tc = TreeCtx {
                         st,
@@ -1166,75 +1166,18 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     let mut mask_hit: Option<(Rect, Rect, fp_model::ElementId)> = None;
                     let thumb = match &mask_thumb {
                         Some(m) if tpx > 0.0 => {
-                            // verknüpfte Maske: Kettensymbol zwischen den Miniaturen wie im Original (N35)
-                            let linked =
-                                matches!(&e.kind, ElementKind::Group(g) if g.mask_flags.linked);
-                            let gap = if linked { 12.0 } else { 6.0 };
-                            let mt = Rect::from_min_size(
-                                pos2(thumb.right() + gap, thumb.top()),
-                                thumb.size(),
+                            let (mt, chain) = mask_thumb_pair(
+                                ui,
+                                st,
+                                &theme,
+                                doc_id,
+                                &doc,
+                                e,
+                                m,
+                                thumb,
+                                &selected_set,
                             );
-                            mask_hit = Some((
-                                mt,
-                                Rect::from_min_max(
-                                    pos2(thumb.right(), thumb.top()),
-                                    pos2(mt.left(), mt.bottom()),
-                                ),
-                                m.id,
-                            ));
-                            if linked && ui.is_rect_visible(mt) {
-                                let cx = thumb.right() + gap / 2.0;
-                                let cy = thumb.center().y;
-                                let s = Stroke::new(1.0, c.icon_fg);
-                                for dy in [-2.5f32, 2.5] {
-                                    let link =
-                                        Rect::from_center_size(pos2(cx, cy + dy), vec2(4.0, 7.0));
-                                    ui.painter().rect_stroke(link, 2.0, s, StrokeKind::Inside);
-                                }
-                            }
-                            if ui.is_rect_visible(mt) {
-                                ui.painter().rect_filled(mt, 0.0, Color32::BLACK);
-                                if let Some(tex) = thumbs::mask_thumb(
-                                    ui.ctx(),
-                                    st,
-                                    doc_id,
-                                    &doc,
-                                    e,
-                                    m,
-                                    (tpx as u32 * 2).max(16),
-                                ) {
-                                    let ts = tex.size_vec2();
-                                    let s = (mt.width() / ts.x).min(mt.height() / ts.y);
-                                    ui.painter().image(
-                                        tex.id(),
-                                        Rect::from_center_size(mt.center(), ts * s),
-                                        Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-                                        Color32::WHITE,
-                                    );
-                                }
-                                // selected mask (mask editing, RE spec 68 section 7): bright
-                                // green frame around the mask thumbnail
-                                let mask_sel = mask_selected(&selected_set, m);
-                                ui.painter().rect_stroke(
-                                    mt,
-                                    0.0,
-                                    Stroke::new(
-                                        if mask_sel { 2.0 } else { 1.0 },
-                                        if mask_sel {
-                                            MASK_EDIT_FRAME
-                                        } else {
-                                            c.list_border
-                                        },
-                                    ),
-                                    StrokeKind::Inside,
-                                );
-                                // disabled mask: red X over the mask thumbnail (RE spec 68
-                                // section 8, M-10)
-                                if matches!(&e.kind, ElementKind::Group(g) if !g.mask_flags.enabled)
-                                {
-                                    paint_mask_off(ui.painter(), mt);
-                                }
-                            }
+                            mask_hit = Some((mt, chain, m.id));
                             mt
                         }
                         _ => thumb,
@@ -1270,8 +1213,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         };
                         let toggles = if tree_on {
                             RowToggles {
-                                group: fp_engine::docops::tree_children(e)
-                                    .map(|_| is_tree_open(e.id.0)),
+                                group: group_toggle(e).map(|_| is_tree_open(e.id.0)),
                                 mask: e.element_mask().map(|_| is_tree_open(mask_key(e.id))),
                             }
                         } else {
@@ -1539,6 +1481,75 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
 
 /// Frame of the mask thumbnail while the mask is being edited (bright green, RE spec 68 section 7).
 const MASK_EDIT_FRAME: Color32 = Color32::from_rgb(0x33, 0xE0, 0x33);
+
+/// The mask half of the row of a masked object (re 31 section 5.3): the chain icon of a linked
+/// mask after the object thumbnail `thumb`, the mask thumbnail (framed green while the mask is
+/// edited, a red X while it is disabled). Shared by the object rows and, Firepixel extension
+/// FB-78, the rows of masked objects inside the group tree. Returns the mask thumbnail rect and
+/// the rect of the chain between the thumbnails.
+#[allow(clippy::too_many_arguments)]
+fn mask_thumb_pair(
+    ui: &Ui,
+    st: &AppState,
+    theme: &Theme,
+    doc_id: fp_engine::DocId,
+    doc: &Arc<fp_model::Document>,
+    e: &Element,
+    m: &Arc<Element>,
+    thumb: Rect,
+    selected: &std::collections::HashSet<fp_model::ElementId>,
+) -> (Rect, Rect) {
+    let c = &theme.colors;
+    // verknüpfte Maske: Kettensymbol zwischen den Miniaturen wie im Original (N35)
+    let linked = matches!(&e.kind, ElementKind::Group(g) if g.mask_flags.linked);
+    let gap = if linked { 12.0 } else { 6.0 };
+    let mt = Rect::from_min_size(pos2(thumb.right() + gap, thumb.top()), thumb.size());
+    let chain = Rect::from_min_max(
+        pos2(thumb.right(), thumb.top()),
+        pos2(mt.left(), mt.bottom()),
+    );
+    if linked && ui.is_rect_visible(mt) {
+        let cx = thumb.right() + gap / 2.0;
+        let cy = thumb.center().y;
+        let s = Stroke::new(1.0, c.icon_fg);
+        for dy in [-2.5f32, 2.5] {
+            let link = Rect::from_center_size(pos2(cx, cy + dy), vec2(4.0, 7.0));
+            ui.painter().rect_stroke(link, 2.0, s, StrokeKind::Inside);
+        }
+    }
+    if ui.is_rect_visible(mt) {
+        ui.painter().rect_filled(mt, 0.0, Color32::BLACK);
+        let size = (thumb.width() as u32 * 2).max(16);
+        if let Some(tex) = thumbs::mask_thumb(ui.ctx(), st, doc_id, doc, e, m, size) {
+            let ts = tex.size_vec2();
+            let s = (mt.width() / ts.x).min(mt.height() / ts.y);
+            ui.painter().image(
+                tex.id(),
+                Rect::from_center_size(mt.center(), ts * s),
+                Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                Color32::WHITE,
+            );
+        }
+        // selected mask (mask editing, RE spec 68 section 7): bright green frame around the
+        // mask thumbnail
+        let mask_sel = mask_selected(selected, m);
+        ui.painter().rect_stroke(
+            mt,
+            0.0,
+            if mask_sel {
+                Stroke::new(2.0, MASK_EDIT_FRAME)
+            } else {
+                Stroke::new(1.0, c.list_border)
+            },
+            StrokeKind::Inside,
+        );
+        // disabled mask: red X over the mask thumbnail (RE spec 68 section 8, M-10)
+        if matches!(&e.kind, ElementKind::Group(g) if !g.mask_flags.enabled) {
+            paint_mask_off(ui.painter(), mt);
+        }
+    }
+    (mt, chain)
+}
 
 /// Is the mask `m` (or, for a group mask, one of its descendants) selected?
 fn mask_selected(selected: &std::collections::HashSet<fp_model::ElementId>, m: &Element) -> bool {
@@ -1840,7 +1851,8 @@ fn mask_key(id: fp_model::ElementId) -> u64 {
 /// What a row of the group tree stands for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TreeRole {
-    /// An object listed under a group row (FB-60): a click selects it like the Subselection tool.
+    /// An object listed under a group row (FB-60) or the content of a masked object (FB-80): a
+    /// click selects it like the Subselection tool.
     Child,
     /// An object of the mask of `owner` (FB-61): a click selects the mask for editing like a click
     /// on the mask thumbnail; `in_group`: one of the objects of a mask group (then subselected);
@@ -1861,71 +1873,94 @@ struct TreeItem {
     role: TreeRole,
     /// The masked object of a "Bitmap mask" row (its mask thumbnail).
     owner: Option<Arc<Element>>,
+    /// Bracket kind per tree line (bit `j`: the line of level `j + 1`): set = a mask bracket
+    /// (double line, FB-84) for a mask element row and the rows nested below it, clear = the
+    /// single line of content and group rows.
+    mask_lines: u64,
 }
 
-/// The rows of the group tree below the row of `e` (at `level`) in display order: the contents
-/// of an open group toggle, then the objects of an open mask toggle, each nested level below its
-/// row. `inherit`: the role of the row of `e` (objects inside a mask group stay mask objects).
+/// The group toggle "›" of a row: the objects of a group. A masked object has none; its mask
+/// toggle lists its mask elements and its content (FB-81).
+fn group_toggle(e: &Element) -> Option<&[Arc<Element>]> {
+    if e.element_mask().is_some() {
+        None
+    } else {
+        fp_engine::docops::tree_children(e)
+    }
+}
+
+/// The rows of the group tree below the row of `e` (at `level`, tree lines `lines`) in display
+/// order, each nested level below its row: the contents of an open group toggle; for an open
+/// mask toggle (FB-81, FB-84) first the mask element(s) with the mask bracket, then the content
+/// object(s) of the masked object — also the one content of a masked single object — with the
+/// normal bracket. `inherit`: the role of the row of `e` (objects inside a mask group stay mask
+/// objects).
 fn tree_items(
     e: &Arc<Element>,
     level: usize,
+    lines: u64,
     inherit: Option<TreeRole>,
     open: &dyn Fn(u64) -> bool,
     out: &mut Vec<TreeItem>,
 ) {
-    if open(e.id.0)
-        && let Some(cs) = fp_engine::docops::tree_children(e)
+    let mask_bit = 1u64 << level.min(63);
+    let content_lines = lines & !mask_bit;
+    // the role of a content row: the inherited mask role inside a mask, else a child
+    let content_role = match inherit {
+        Some(TreeRole::Mask { owner, .. }) => TreeRole::Mask {
+            owner,
+            in_group: true,
+            bitmap: false,
+        },
+        _ => TreeRole::Child,
+    };
+    let push = |out: &mut Vec<TreeItem>, c: &Arc<Element>, role, owner, lines: u64| {
+        out.push(TreeItem {
+            level: level + 1,
+            el: Arc::clone(c),
+            role,
+            owner,
+            mask_lines: lines,
+        });
+        // a "Bitmap mask" row has no rows of its own
+        if !matches!(role, TreeRole::Mask { bitmap: true, .. }) {
+            tree_items(c, level + 1, lines, Some(role), open, out);
+        }
+    };
+    if let Some(cs) = group_toggle(e)
+        && open(e.id.0)
     {
-        let role = match inherit {
-            Some(TreeRole::Mask { owner, .. }) => TreeRole::Mask {
-                owner,
-                in_group: true,
-                bitmap: false,
-            },
-            _ => TreeRole::Child,
-        };
         for c in cs {
-            out.push(TreeItem {
-                level: level + 1,
-                el: Arc::clone(c),
-                role,
-                owner: None,
-            });
-            tree_items(c, level + 1, Some(role), open, out);
+            push(out, c, content_role, None, content_lines);
         }
     }
-    if open(mask_key(e.id))
-        && let Some(m) = fp_engine::docops::mask_members(e)
-    {
+    if !open(mask_key(e.id)) {
+        return;
+    }
+    if let Some(m) = fp_engine::docops::mask_members(e) {
         let mask = |in_group, bitmap| TreeRole::Mask {
             owner: e.id,
             in_group,
             bitmap,
         };
+        let ml = lines | mask_bit;
         match m {
-            fp_engine::docops::MaskMembers::Bitmap(x) => out.push(TreeItem {
-                level: level + 1,
-                el: Arc::clone(x),
-                role: mask(false, true),
-                owner: Some(Arc::clone(e)),
-            }),
-            fp_engine::docops::MaskMembers::Single(x) => out.push(TreeItem {
-                level: level + 1,
-                el: Arc::clone(x),
-                role: mask(false, false),
-                owner: None,
-            }),
+            fp_engine::docops::MaskMembers::Bitmap(x) => {
+                push(out, x, mask(false, true), Some(Arc::clone(e)), ml);
+            }
+            fp_engine::docops::MaskMembers::Single(x) => {
+                push(out, x, mask(false, false), None, ml);
+            }
             fp_engine::docops::MaskMembers::Group(cs) => {
                 for c in cs {
-                    out.push(TreeItem {
-                        level: level + 1,
-                        el: Arc::clone(c),
-                        role: mask(true, false),
-                        owner: None,
-                    });
-                    tree_items(c, level + 1, Some(mask(true, false)), open, out);
+                    push(out, c, mask(true, false), None, ml);
                 }
             }
+        }
+    }
+    if let Some(cs) = fp_engine::docops::mask_content(e) {
+        for c in cs {
+            push(out, c, content_role, None, content_lines);
         }
     }
 }
@@ -2109,7 +2144,8 @@ struct TreeOut<'a> {
 }
 
 /// Paints the rows of the group tree `items` below an object row (FB-59 to FB-61): indented one
-/// step per level with a thin line at the left, eye and lock (objects of groups), thumbnail,
+/// step per level with a thin line at the left (a double line for mask elements, FB-84), eye
+/// and lock (objects of groups), thumbnail (with the mask thumbnail of a masked object, FB-78),
 /// name and the row's own toggles. Rows outside the visible part only take their place
 /// (BA-099). The rows are no drag sources and no drop targets.
 fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[TreeItem]) {
@@ -2126,7 +2162,12 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
             ui.advance_cursor_after_rect(next);
             continue;
         }
-        let sel = tc.selected.contains(&e.id);
+        // like an object row (RE spec 70 section 4.3): the own thumbnail framed blue when the
+        // object is selected, the row highlighted while its mask is edited as well (FB-78)
+        let obj_sel = tc.selected.contains(&e.id);
+        let sel = obj_sel
+            || e.element_mask()
+                .is_some_and(|m| mask_selected(tc.selected, m.element));
         let yellow = !sel
             && !tc.selected.is_empty()
             && fp_engine::docops::has_selected_descendant(e, &|id| tc.selected.contains(&id));
@@ -2161,13 +2202,17 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
                 true,
             );
         }
-        // the tree line: one thin vertical line per level at the left of the indented part
+        // the tree line: one thin vertical line per level at the left of the indented part; a
+        // mask bracket is a double line (FB-84)
         for j in 0..it.level {
-            ui.painter().vline(
-                tc.thumb_x + TREE_INDENT * j as f32 + 6.5,
-                r.y_range(),
-                Stroke::new(1.0, c.list_border),
-            );
+            let x = tc.thumb_x + TREE_INDENT * j as f32 + 6.5;
+            let st = Stroke::new(1.0, c.list_border);
+            if it.mask_lines & (1u64 << j.min(63)) != 0 {
+                ui.painter().vline(x - 1.5, r.y_range(), st);
+                ui.painter().vline(x + 1.5, r.y_range(), st);
+            } else {
+                ui.painter().vline(x, r.y_range(), st);
+            }
         }
         let thumb = Rect::from_min_size(
             pos2(tc.thumb_x + TREE_INDENT * it.level as f32, r.top() + 3.0),
@@ -2199,7 +2244,7 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
             ui.painter().rect_stroke(
                 thumb,
                 0.0,
-                if sel {
+                if obj_sel {
                     Stroke::new(2.0, c.focus)
                 } else {
                     Stroke::new(1.0, c.list_border)
@@ -2207,12 +2252,32 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
                 StrokeKind::Inside,
             );
         }
+        // FB-78: a masked object shows the mask half of an object row (chain, mask thumbnail)
+        let mut mask_hit: Option<(Rect, Rect, fp_model::ElementId)> = None;
+        let thumb = match e.element_mask() {
+            Some(m) if tc.tpx > 0.0 && !bitmap_mask => {
+                let (mt, chain) = mask_thumb_pair(
+                    ui,
+                    tc.st,
+                    tc.theme,
+                    tc.doc_id,
+                    tc.doc,
+                    e,
+                    m.element,
+                    thumb,
+                    tc.selected,
+                );
+                mask_hit = Some((mt, chain, m.element.id));
+                mt
+            }
+            _ => thumb,
+        };
         let nr = Rect::from_min_max(
             pos2(thumb.right() + 6.0, r.top() + 5.0),
             pos2(r.right() - 4.0, r.bottom() - 5.0),
         );
         let toggles = RowToggles {
-            group: fp_engine::docops::tree_children(e).map(|_| is_open(e.id.0)),
+            group: group_toggle(e).map(|_| is_open(e.id.0)),
             mask: e.element_mask().map(|_| is_open(mask_key(e.id))),
         };
         let mut hits = (None, None);
@@ -2253,8 +2318,31 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
         if resp.clicked()
             && let Some(p) = resp.interact_pointer_pos()
         {
+            let row_locked = child && e.common.locked;
             if let Some(k) = toggle_at(hits, e.id, p) {
                 out.toggles.push(k);
+            } else if let Some((mt, _, mid)) = mask_hit.filter(|(mt, chain, _)| {
+                tc.editable && !row_locked && (mt.contains(p) || chain.contains(p))
+            }) {
+                // FB-78: the mask thumbnail edits the mask like on an object row (the masked
+                // object, then Edit Mask), the chain toggles the link
+                if mt.contains(p) {
+                    *out.click = Some(TreeClick {
+                        id: mid,
+                        top: tc.top,
+                        role: TreeRole::Mask {
+                            owner: e.id,
+                            in_group: false,
+                            bitmap: false,
+                        },
+                        toggle: false,
+                    });
+                } else {
+                    out.actions.push(Action::Run(
+                        "modify.mask.link".into(),
+                        json!({"ids": [e.id.0]}),
+                    ));
+                }
             } else if child && eye.contains(p) && tc.editable {
                 out.actions.push(Action::Run(
                     "element.setVisible".into(),
@@ -2265,7 +2353,7 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
                     "element.setLocked".into(),
                     json!({"ids": [e.id.0], "locked": !e.common.locked}),
                 ));
-            } else if tc.editable && p.x > lock.right() && !(child && e.common.locked) {
+            } else if tc.editable && p.x > lock.right() && !row_locked {
                 *out.click = Some(TreeClick {
                     id: e.id,
                     top: tc.top,

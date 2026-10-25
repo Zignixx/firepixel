@@ -2780,21 +2780,37 @@ pub fn mask_members(e: &Element) -> Option<MaskMembers<'_>> {
     })
 }
 
+/// Firepixel extension (FB-80, FB-81): the content objects of a masked object `e` — the one
+/// content of a masked single object as well as the objects of a mask group over several
+/// objects (`None`: `e` is not masked). Each is an element of its own: `select.set` with its id
+/// selects it alone, so it is moved, transformed or painted into without the mask.
+pub fn mask_content(e: &Element) -> Option<&[Arc<Element>]> {
+    e.element_mask()?;
+    match &e.kind {
+        ElementKind::Group(g) if !g.children.is_empty() => Some(g.children.as_slice()),
+        _ => None,
+    }
+}
+
 /// Is `id` the mask of `e` or an object inside that mask?
 pub fn mask_contains(e: &Element, id: ElementId) -> bool {
     mask_has_selected(e, &|x| x == id)
 }
 
 /// Firepixel extension (FB-60): is an object listed under the row of `e` selected — a child of
-/// [`tree_children`] at any depth, or the mask (or a mask member) of such a child? The Layers
+/// [`tree_children`] (of a masked object: of [`mask_content`], FB-80) at any depth, or the mask (or a mask member) of such a child? The Layers
 /// panel tints the row of `e` pale yellow then (a child subselected, `e` itself not selected).
 /// The mask of `e` itself does not count (mask editing has its own marks on the row).
 pub fn has_selected_descendant(e: &Element, selected: &dyn Fn(ElementId) -> bool) -> bool {
-    tree_children(e).is_some_and(|cs| {
-        cs.iter().any(|c| {
-            selected(c.id) || mask_has_selected(c, selected) || has_selected_descendant(c, selected)
+    mask_content(e)
+        .or_else(|| tree_children(e))
+        .is_some_and(|cs| {
+            cs.iter().any(|c| {
+                selected(c.id)
+                    || mask_has_selected(c, selected)
+                    || has_selected_descendant(c, selected)
+            })
         })
-    })
 }
 
 /// Is the mask of `e` or an object inside it selected (`false`: `e` is not masked)?

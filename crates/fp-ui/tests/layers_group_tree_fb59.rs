@@ -37,16 +37,21 @@ struct Ids {
     m1: u64,
     m2: u64,
     gm_owner: u64,
+    z: u64,
+    zm: u64,
+    z_owner: u64,
 }
 
 /// Which test document: `Groups` = group "Grp" of group "Inner" (N1, N2) and "A" above "X"
 /// masked by the path "M", without thumbnails (20 px rows, the whole tree fits the list);
 /// `Masks` = "Y" masked by a group of "M1", "M2", "BM" with a bitmap mask, "X" masked by "M"
-/// (thumbnails 24 px).
+/// (thumbnails 24 px); `Nested` = group "GZ" of "Z" masked by the path "ZM" and "W", "X"
+/// masked by "M" (thumbnails 24 px).
 #[derive(Clone, Copy, PartialEq)]
 enum Doc {
     Groups,
     Masks,
+    Nested,
 }
 
 fn harness(doc: Doc) -> (H, Ids) {
@@ -69,8 +74,15 @@ fn harness(doc: Doc) -> (H, Ids) {
     let m = rect(&mut s, "M", 310.0, 30.0);
     ex(&mut s, "select.set", json!({"ids": [x, m]}));
     let mg = ex(&mut s, "modify.mask.groupAsMask", json!({}))["id"].as_u64().expect("mask group");
-    let mut ids = Ids { a: 0, n1: 0, n2: 0, inner: 0, grp: 0, x, m, mg, bm: 0, bm_mask: 0, y: 0, m1: 0, m2: 0, gm_owner: 0 };
-    if doc == Doc::Groups {
+    let mut ids = Ids { a: 0, n1: 0, n2: 0, inner: 0, grp: 0, x, m, mg, bm: 0, bm_mask: 0, y: 0, m1: 0, m2: 0, gm_owner: 0, z: 0, zm: 0, z_owner: 0 };
+    if doc == Doc::Nested {
+        ids.z = rect(&mut s, "Z", 20.0, 20.0);
+        ids.zm = rect(&mut s, "ZM", 30.0, 30.0);
+        ex(&mut s, "select.set", json!({"ids": [ids.z, ids.zm]}));
+        ids.z_owner = ex(&mut s, "modify.mask.groupAsMask", json!({}))["id"].as_u64().expect("mask group");
+        let w = rect(&mut s, "W", 100.0, 20.0);
+        group(&mut s, &[ids.z_owner, w], "GZ");
+    } else if doc == Doc::Groups {
         s.prefs.set("LayersList_ThumbnailSize", fp_engine::prefs::PrefValue::Int(0));
         ids.a = rect(&mut s, "A", 20.0, 20.0);
         ids.n1 = rect(&mut s, "N1", 100.0, 20.0);
@@ -103,7 +115,11 @@ fn harness(doc: Doc) -> (H, Ids) {
         .with_step_dt(1.0 / 60.0)
         .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
     h.run_steps(4);
-    let first = if doc == Doc::Groups { "Grp" } else { "Y" };
+    let first = match doc {
+        Doc::Groups => "Grp",
+        Doc::Masks => "Y",
+        Doc::Nested => "GZ",
+    };
     for _ in 0..2 {
         if find(&h, first).is_some() {
             break;
@@ -112,7 +128,11 @@ fn harness(doc: Doc) -> (H, Ids) {
         click_at(&mut h, tab.center(), Modifiers::NONE);
         h.run_steps(30);
     }
-    let rows: &[&str] = if doc == Doc::Groups { &["Grp", "X"] } else { &["Y", "BM", "X"] };
+    let rows: &[&str] = match doc {
+        Doc::Groups => &["Grp", "X"],
+        Doc::Masks => &["Y", "BM", "X"],
+        Doc::Nested => &["GZ", "X"],
+    };
     for n in rows {
         assert!(find(&h, n).is_some(), "Layers panel shows row {n}: {:?}", panel_texts(&h));
     }
@@ -173,6 +193,20 @@ fn row(h: &H, label: &str) -> Rect {
     find(h, label).unwrap_or_else(|| panic!("row {label}: {:?}", panel_texts(h)))
 }
 
+/// All rows with the label in the Layers panel column, top to bottom (an object row and the
+/// content row below its mask rows share the label, FB-81).
+fn rows_of(h: &H, label: &str) -> Vec<Rect> {
+    let Some(right) = find(h, label) else { return Vec::new() };
+    let mut v: Vec<Rect> = panel_texts(h).into_iter().filter(|(t, r)| t == label && (r.left() - right.left()).abs() < 120.0).map(|(_, r)| r).collect();
+    v.sort_by(|a, b| a.top().total_cmp(&b.top()));
+    v
+}
+
+/// The first (topmost) row with the label: the object row itself.
+fn top_row(h: &H, label: &str) -> Rect {
+    rows_of(h, label).first().copied().unwrap_or_else(|| panic!("row {label}: {:?}", panel_texts(h)))
+}
+
 /// Click on the name of a row.
 fn click(h: &mut H, label: &str, m: Modifiers) {
     let p = row(h, label).center();
@@ -181,13 +215,13 @@ fn click(h: &mut H, label: &str, m: Modifiers) {
 
 /// Click on the group toggle "›" right after the name of a row.
 fn click_group_toggle(h: &mut H, label: &str) {
-    let r = row(h, label);
+    let r = top_row(h, label);
     click_at(h, Pos2::new(r.right() + 9.0, r.center().y), Modifiers::NONE);
 }
 
 /// Click on the circled mask arrow after the name of a row (`group`: the row has a "›" too).
 fn click_mask_toggle(h: &mut H, label: &str, group: bool) {
-    let r = row(h, label);
+    let r = top_row(h, label);
     let x = r.right() + 4.0 + if group { 14.0 } else { 0.0 } + 7.0;
     click_at(h, Pos2::new(x, r.center().y), Modifiers::NONE);
 }
@@ -329,7 +363,7 @@ fn mask_member_rows_select_the_mask_for_editing() {
     // vector mask of one path: the circled arrow lists it, a click edits the mask
     assert!(find(&h, "M").is_none());
     click_mask_toggle(&mut h, "X", false);
-    let (x, m) = (row(&h, "X"), row(&h, "M"));
+    let (x, m) = (top_row(&h, "X"), row(&h, "M"));
     assert!(m.top() > x.top() && m.left() >= x.left() - 40.0, "mask row below the object");
     click(&mut h, "M", Modifiers::NONE);
     assert_eq!(selection(&h), vec![ids.m], "the mask is selected for editing");
@@ -502,4 +536,153 @@ fn switch_off_mask_thumbnail_edits_like_the_reference() {
     assert!(framed(&h, mask_thumb, egui::Color32::from_rgb(0x33, 0xE0, 0x33)), "mask thumbnail framed green");
     assert!(!framed(&h, obj_thumb, focus), "the object thumbnail is not framed blue then");
     assert!(find(&h, "M").is_none(), "no extra rows");
+}
+
+/// Small rect outlines in the icon colour (the two links of the chain icon) around `p`.
+fn chain_at(h: &H, p: Pos2) -> bool {
+    let col = fp_ui::theme::Theme::current(&h.ctx).colors.icon_fg;
+    fn strokes(shape: &egui::epaint::Shape, col: egui::Color32, out: &mut Vec<Rect>) {
+        match shape {
+            egui::epaint::Shape::Rect(r) if r.stroke.color == col && r.stroke.width > 0.0 => out.push(r.rect),
+            egui::epaint::Shape::Vec(v) => v.iter().for_each(|s| strokes(s, col, out)),
+            _ => {}
+        }
+    }
+    let mut rs = Vec::new();
+    for c in &h.output().shapes {
+        strokes(&c.shape, col, &mut rs);
+    }
+    rs.iter().filter(|r| r.width() < 6.0 && r.height() < 9.0 && r.expand(3.0).contains(p)).count() >= 2
+}
+
+/// Number of tree-line strokes (thin vertical lines) in the indentation step just left of the
+/// thumbnail of the row with the text rect `label` (24 px thumbnails): 1 = content bracket,
+/// 2 = mask bracket (FB-84).
+fn bracket_lines(h: &H, label: Rect) -> usize {
+    let col = fp_ui::theme::Theme::current(&h.ctx).colors.list_border;
+    let thumb_left = label.left() - 6.0 - 24.0;
+    let (x0, x1) = (thumb_left - fp_ui::panels::layers::TREE_INDENT, thumb_left);
+    fn lines(shape: &egui::epaint::Shape, col: egui::Color32, out: &mut Vec<Rect>) {
+        match shape {
+            egui::epaint::Shape::LineSegment { points, stroke } if stroke.color == col => out.push(Rect::from_two_pos(points[0], points[1])),
+            egui::epaint::Shape::Vec(v) => v.iter().for_each(|s| lines(s, col, out)),
+            _ => {}
+        }
+    }
+    let mut ls = Vec::new();
+    for c in &h.output().shapes {
+        lines(&c.shape, col, &mut ls);
+    }
+    let y = label.center().y;
+    ls.iter().filter(|r| r.width() < 0.5 && r.height() > 10.0 && r.left() > x0 && r.left() < x1 && r.top() <= y && r.bottom() >= y).count()
+}
+
+fn blue_at(h: &H, p: Pos2) -> bool {
+    let col = fp_ui::theme::Theme::current(&h.ctx).colors.list_selected_bg;
+    let mut rs = Vec::new();
+    for cs in &h.output().shapes {
+        fills(&cs.shape, col, &mut rs);
+    }
+    rs.iter().any(|r| r.contains(p) && r.width() > 100.0)
+}
+
+fn bounds(h: &H, id: u64) -> fp_model::Rect {
+    let d = h.state().state.session.active().expect("d");
+    let e = fp_engine::docops::element_on_page(&d.doc, d.page, fp_model::ElementId(id)).expect("el");
+    fp_engine::docops::element_bounds(&d.doc, &e).expect("bounds")
+}
+
+/// FB-78: a masked object inside a group has the look and the click targets of a masked object
+/// row: object thumbnail, chain, mask thumbnail (framed green while the mask is edited), the
+/// mask toggle; the mask thumbnail edits the mask, the name selects the masked object.
+#[test]
+fn masked_object_inside_a_group_has_the_mask_row_look() {
+    let (mut h, ids) = harness(Doc::Nested);
+    click_group_toggle(&mut h, "GZ");
+    let z = row(&h, "Z");
+    assert!(z.left() > top_row(&h, "GZ").left() + 40.0, "one level deeper, two thumbnails");
+    let mask_thumb = Pos2::new(z.left() - 6.0 - 12.0, z.center().y);
+    let chain = Pos2::new(z.left() - 6.0 - 24.0 - 6.0, z.center().y);
+    let obj_thumb = Pos2::new(z.left() - 6.0 - 24.0 - 12.0 - 12.0, z.center().y);
+    assert!(chain_at(&h, chain), "chain icon between the thumbnails");
+    let focus = fp_ui::theme::Theme::current(&h.ctx).colors.focus;
+    let green = egui::Color32::from_rgb(0x33, 0xE0, 0x33);
+    // the name: the masked object, its own thumbnail framed blue
+    click(&mut h, "Z", Modifiers::NONE);
+    assert_eq!(selection(&h), vec![ids.z_owner]);
+    assert!(framed(&h, obj_thumb, focus), "object thumbnail framed blue");
+    assert!(yellow(&h, "GZ"));
+    // the mask thumbnail: mask editing, framed green
+    click_at(&mut h, mask_thumb, Modifiers::NONE);
+    assert_eq!(selection(&h), vec![ids.zm], "the mask path is selected for editing");
+    assert!(framed(&h, mask_thumb, green), "mask thumbnail framed green");
+    assert!(blue(&h, "Z"), "the row stays highlighted while its mask is edited");
+    // the mask toggle of the nested row lists the mask first, then the content
+    click_mask_toggle(&mut h, "Z", false);
+    let zs = rows_of(&h, "Z");
+    assert_eq!(zs.len(), 2, "masked row and content row: {:?}", panel_texts(&h));
+    let zm = row(&h, "ZM");
+    assert!(zs[0].top() < zm.top() && zm.top() < zs[1].top(), "mask row above the content row");
+    assert_eq!(bracket_lines(&h, zm), 2, "mask bracket");
+    assert_eq!(bracket_lines(&h, zs[1]), 1, "content bracket");
+    click_at(&mut h, zs[1].center(), Modifiers::NONE);
+    assert_eq!(selection(&h), vec![ids.z], "the content alone");
+}
+
+/// FB-80, FB-81, FB-84: every masked object lists its mask element(s) first (double bracket),
+/// then its content (single bracket), also a single vector or bitmap; a click on the content
+/// row selects the content alone, on the mask row the mask.
+#[test]
+fn masked_single_objects_list_mask_then_content() {
+    let (mut h, ids) = harness(Doc::Masks);
+    // vector content under a vector mask
+    click_mask_toggle(&mut h, "X", false);
+    let xs = rows_of(&h, "X");
+    assert_eq!(xs.len(), 2, "object row and content row: {:?}", panel_texts(&h));
+    let m = row(&h, "M");
+    assert!(xs[0].top() < m.top() && m.top() < xs[1].top(), "mask first, then content");
+    assert!((m.left() - xs[1].left()).abs() < 0.5, "same level");
+    assert_eq!(bracket_lines(&h, m), 2, "mask bracket: double line");
+    assert_eq!(bracket_lines(&h, xs[1]), 1, "content bracket: single line");
+    let n0 = undo_count(&h);
+    click_at(&mut h, xs[1].center(), Modifiers::NONE);
+    assert_eq!(selection(&h), vec![ids.x], "the content alone (FB-80)");
+    assert_eq!(undo_count(&h), n0, "like a Subselection click: no History row");
+    assert!(yellow(&h, "X"), "the masked object row is tinted while its content is selected");
+    assert!(blue_at(&h, rows_of(&h, "X")[1].center()), "content row highlighted");
+    // moving the selection moves the content only
+    let (x0, m0) = (bounds(&h, ids.x), bounds(&h, ids.m));
+    h.state_mut().state.session.execute("edit.move", json!({"dx": 10.0, "dy": 0.0})).expect("move");
+    h.run_steps(3);
+    assert!((bounds(&h, ids.x).left - x0.left - 10.0).abs() < 0.01, "content moved");
+    assert!((bounds(&h, ids.m).left - m0.left).abs() < 0.01, "mask stays");
+    click(&mut h, "M", Modifiers::NONE);
+    assert_eq!(selection(&h), vec![ids.m], "the mask row selects the mask");
+    click_mask_toggle(&mut h, "X", false);
+    // bitmap content under a bitmap mask: the same rows
+    click_mask_toggle(&mut h, "BM", false);
+    let bs = rows_of(&h, "BM");
+    assert_eq!(bs.len(), 2, "{:?}", panel_texts(&h));
+    let bmask = row(&h, "Bitmap-Maske");
+    assert!(bs[0].top() < bmask.top() && bmask.top() < bs[1].top());
+    assert_eq!(bracket_lines(&h, bmask), 2);
+    assert_eq!(bracket_lines(&h, bs[1]), 1);
+    click_at(&mut h, bs[1].center(), Modifiers::NONE);
+    let content = {
+        let d = h.state().state.session.active().expect("d");
+        let e = fp_engine::docops::element_on_page(&d.doc, d.page, fp_model::ElementId(ids.bm)).expect("bm");
+        fp_engine::docops::mask_content(&e).expect("content")[0].id.0
+    };
+    assert_eq!(selection(&h), vec![content]);
+    click_mask_toggle(&mut h, "BM", false);
+    // a group mask: mask members first, then the content
+    click_mask_toggle(&mut h, "Y", false);
+    let ys = rows_of(&h, "Y");
+    assert_eq!(ys.len(), 2, "{:?}", panel_texts(&h));
+    let (m1, m2) = (row(&h, "M1"), row(&h, "M2"));
+    assert!(m1.top().max(m2.top()) < ys[1].top(), "both mask members above the content");
+    assert_eq!(bracket_lines(&h, m1), 2);
+    assert_eq!(bracket_lines(&h, ys[1]), 1);
+    click_at(&mut h, ys[1].center(), Modifiers::NONE);
+    assert_eq!(selection(&h), vec![ids.y]);
 }

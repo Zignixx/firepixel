@@ -132,3 +132,42 @@ fn group_tree_switch_is_a_preference_without_history() {
     ex(&mut s, "panel.layers.groupTree", json!({}));
     assert!(fp_engine::session::layers_group_tree(&s.prefs));
 }
+
+/// FB-80 (Firepixel extension): the content of a masked single object is an element of its own
+/// (the one child of the mask group); selecting it alone moves it without the mask, like the
+/// children of a mask group over several objects (vector and bitmap mask alike).
+#[test]
+fn content_of_a_masked_single_object_is_selectable_alone() {
+    let bounds = |s: &Session, id: u64| {
+        let d = s.active().expect("doc");
+        docops::element_bounds(&d.doc, &el(s, id)).expect("bounds")
+    };
+    // vector mask
+    let mut s = session();
+    let (a, m) = (rect(&mut s, 10.0), rect(&mut s, 20.0));
+    ex(&mut s, "select.set", json!({"ids": [a, m]}));
+    let mg = ex(&mut s, "modify.mask.groupAsMask", json!({}))["id"].as_u64().expect("mask group");
+    let e = el(&s, mg);
+    assert_eq!(ids(docops::mask_content(&e)), vec![a], "the content is listed");
+    let (a0, m0) = (bounds(&s, a), bounds(&s, m));
+    ex(&mut s, "select.set", json!({"ids": [a]}));
+    assert_eq!(s.active().expect("d").selection.elements, vec![ElementId(a)]);
+    ex(&mut s, "edit.move", json!({"dx": 15.0, "dy": 0.0}));
+    let (a1, m1) = (bounds(&s, a), bounds(&s, m));
+    assert!((a1.left - a0.left - 15.0).abs() < 0.01, "content moved: {a0:?} -> {a1:?}");
+    assert!((m1.left - m0.left).abs() < 0.01, "mask stays: {m0:?} -> {m1:?}");
+    assert!(docops::has_selected_descendant(&el(&s, mg), &|id| id.0 == a), "row tinted");
+    // bitmap mask
+    let mut s = session();
+    let a = rect(&mut s, 10.0);
+    ex(&mut s, "select.set", json!({"ids": [a]}));
+    let out = ex(&mut s, "panel.layers.addMask", json!({}));
+    let e = el(&s, out["id"].as_u64().expect("masked object"));
+    let content = ids(docops::mask_content(&e));
+    assert_eq!(content.len(), 1, "one content object");
+    let a0 = bounds(&s, content[0]);
+    ex(&mut s, "select.set", json!({"ids": [content[0]]}));
+    ex(&mut s, "edit.move", json!({"dx": 0.0, "dy": 12.0}));
+    let a1 = bounds(&s, content[0]);
+    assert!((a1.top - a0.top - 12.0).abs() < 0.01, "content moved: {a0:?} -> {a1:?}");
+}
