@@ -12,6 +12,7 @@ use egui_kittest::kittest::{By, NodeT, Queryable};
 use egui_kittest::Harness;
 use fp_ui::app_state::{AppState, UiSettings};
 use fp_ui::inspector::fonts;
+use fp_ui::inspector::preview::PreviewValue;
 use fp_ui::theme::ThemeKind;
 use fp_ui::FirepixelApp;
 use serde_json::json;
@@ -158,6 +159,16 @@ fn list_open(h: &H) -> bool {
     egui::Popup::is_any_open(&h.ctx)
 }
 
+/// PostScript name of the font the open list is previewing on the canvas (`None` when the
+/// highlight is the text's current family, or the list is closed).
+fn preview_font(h: &H) -> Option<String> {
+    let p = st(h).inspector_preview.as_ref()?;
+    let PreviewValue::Text(v) = &p.value else {
+        return None;
+    };
+    v.get("font").and_then(|x| x.as_str()).map(str::to_string)
+}
+
 fn text_debug(h: &H, id: u64) -> String {
     let d = st(h).session.active().expect("Dokument");
     let e = fp_engine::docops::element_on_page(&d.doc, d.page, fp_model::ElementId(id)).expect("Element");
@@ -213,6 +224,7 @@ fn inspector_search_filter_arrows_enter() {
     assert!(h.ctx.text_edit_focused(), "Suchfeld hat sofort den Fokus");
     // ohne Tippen: die aktuelle Schrift ist markiert und in Sicht, nur sichtbare Zeilen gezeichnet
     assert_eq!(fonts::marked_family(&h.ctx).as_deref(), Some("Arial"));
+    assert!(preview_font(&h).is_none(), "the current family is not previewed again");
     let r0 = rows(&h);
     assert!(r0.iter().any(|(l, s)| l == "Arial" && *s), "Arial in Sicht und als aktuell gekennzeichnet: {r0:?}");
     if fams.len() > 60 {
@@ -228,6 +240,13 @@ fn inspector_search_filter_arrows_enter() {
     key(&mut h, Key::ArrowDown);
     key(&mut h, Key::ArrowUp);
     assert_eq!(fonts::marked_family(&h.ctx).as_deref(), Some(all[hits[1]]), "↓↑: wieder der zweite");
+    let marked = all[hits[1]];
+    let ps = fonts::ps_name(marked, &fonts::lookup("Arial").1);
+    assert_eq!(
+        preview_font(&h).as_deref(),
+        Some(ps.as_str()),
+        "highlighted family is previewed on the canvas"
+    );
     // weiter tippen: der Filter wird enger; Rücktaste macht ihn wieder weiter
     type_text(&mut h, "ial");
     let narrow = fonts::filter_names(&all, "arial");
@@ -254,6 +273,7 @@ fn inspector_search_filter_arrows_enter() {
     let r2 = rows(&h);
     assert!(r2.iter().any(|(l, _)| !l.to_lowercase().contains(q)), "ungefiltert: {r2:?}");
     key(&mut h, Key::Escape);
+    assert!(preview_font(&h).is_none(), "Esc drops the live preview");
     // Rückgängig stellt Arial wieder her
     fp_ui::app_state::AppState::push(&mut h.state_mut().state, fp_ui::app_state::Action::Run("edit.undo".into(), json!({})));
     h.run_steps(3);

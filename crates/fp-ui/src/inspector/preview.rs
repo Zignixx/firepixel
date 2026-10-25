@@ -13,7 +13,8 @@
 //! Sliders with a preview (FB-09/FB-10, extended by FB-21/FB-22): opacity, stroke size, stroke edge
 //! softness, fill edge feather, fill and stroke texture amount, and the text fields font size,
 //! tracking, leading, indent, space before/after and horizontal scale (selected text objects; with
-//! the text editor open only the field shows the pending value).
+//! the text editor open only the field shows the pending value). The open font list previews
+//! the highlighted family on the selected text the same way (no history step until Enter or a click).
 //!
 //! Extended by FB-28/FB-29 (TW-205/TW-206): the Layers panel's opacity slider, the pending alpha
 //! (and colour) of the fill and stroke colour pop-ups of the inspector, the Tools panel and the

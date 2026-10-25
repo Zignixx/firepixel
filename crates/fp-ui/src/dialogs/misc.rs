@@ -329,6 +329,7 @@ pub fn show_text_editor(ctx: &egui::Context, st: &mut AppState) {
             ) {
                 d.font = crate::inspector::fonts::ps_name(names[i], &style);
             }
+            crate::inspector::obj_quads::preview_marked_font(ui.ctx(), st, &family, &style);
             if let Some(v) = fields::number(
                 ui,
                 "te-size",

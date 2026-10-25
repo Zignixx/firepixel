@@ -387,6 +387,10 @@ pub fn family_combo(
                 area = area.vertical_scroll_offset(off);
             }
             let pointer_moved = ui.input(|i| i.pointer.delta() != egui::Vec2::ZERO);
+            // A wheel or scrollbar scroll moves new rows under a still pointer. That should
+            // retarget the highlight (and the live canvas preview); a parked pointer must not,
+            // or it would steal ↑/↓.
+            let scrolled = ui.input(|i| i.smooth_scroll_delta().y != 0.0);
             let font = theme.ui_font();
             let so = area.show_rows(ui, ROW_H, shown.len(), |ui, rows| {
                 for &i in &shown[rows] {
@@ -395,7 +399,7 @@ pub fn family_combo(
                         vec2(ui.available_width().max(60.0), ROW_H),
                         Sense::click(),
                     );
-                    if rresp.hovered() && pointer_moved {
+                    if rresp.hovered() && (pointer_moved || scrolled) {
                         s.mark = Some(i);
                     }
                     let p = ui.painter();
