@@ -466,9 +466,10 @@ fn escape_discards_the_stroke() {
         "Esc mitten im Zug: Strich vollständig gemalt"
     );
     // der nächste Zug malt wieder
+    // choosing the Brush again writes its row "Stroke Color" (RE spec 72 §1)
     tool(&mut s, ToolId::Brush);
     stroke(&mut s, &[(50.0, 100.0), (250.0, 100.0)]);
-    assert_eq!(steps(&s), n0 + 3);
+    assert_eq!(steps(&s), n0 + 4);
 }
 
 #[test]

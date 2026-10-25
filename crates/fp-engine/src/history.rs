@@ -34,6 +34,23 @@ pub struct Snapshot {
     /// come back only when no selected object supplies tool attributes; otherwise the toolbox
     /// follows the restored selection (Q-58, `Session::follow_selection_or`).
     pub tool_colors: Option<(fp_color::Argb, fp_color::Argb)>,
+    /// Bitmap mode and the bitmaps worked on in it (FB-87, TW-249): undoing the row that started
+    /// bitmap mode ("Edit Bitmap") ends it, Redo enters it again.
+    pub bitmap_mode: bool,
+    /// See [`crate::DocumentState::bitmap_worked`].
+    pub bitmap_worked: Vec<fp_model::ElementId>,
+}
+
+/// Command name of the rows "Brush Stroke" / "Stroke Color" that choosing the Brush or Pencil
+/// writes (RE spec 72 §1). They change nothing and have no undo step of their own: Edit ▸ Undo and
+/// Redo move over them together with the step before them, the Edit menu names that step (§2.4).
+pub const TOOL_STROKE_ROW: &str = "tool.strokeRow";
+
+impl HistoryStep {
+    /// A row bound to the step before it ([`TOOL_STROKE_ROW`]).
+    pub fn attached(&self) -> bool {
+        self.command == TOOL_STROKE_ROW
+    }
 }
 
 /// Befehle, nach deren Rückgängigmachen keine Objekte gewählt sind (im Original gemessen: Einfügen).
@@ -162,6 +179,26 @@ impl History {
         Some(snap)
     }
 
+    /// Edit ▸ Undo (RE spec 72 §2.4): like [`History::undo`], but a row bound to the step before
+    /// it ([`HistoryStep::attached`]) goes back together with that step.
+    pub fn undo_step(&mut self) -> Option<Snapshot> {
+        let mut snap = self.undo()?;
+        while self.redo.last().is_some_and(HistoryStep::attached) && !self.undo.is_empty() {
+            snap = self.undo()?;
+        }
+        Some(snap)
+    }
+
+    /// Edit ▸ Redo (RE spec 72 §2.4): like [`History::redo`]; the rows bound to the redone step
+    /// come back with it.
+    pub fn redo_step(&mut self) -> Option<Snapshot> {
+        let mut snap = self.redo()?;
+        while self.redo.last().is_some_and(HistoryStep::attached) {
+            snap = self.redo()?;
+        }
+        Some(snap)
+    }
+
     /// Wiederholt den zuletzt zurückgenommenen Schritt und liefert den Zustand danach.
     pub fn redo(&mut self) -> Option<Snapshot> {
         let step = self.redo.pop()?;
@@ -219,7 +256,14 @@ impl History {
 
     /// Beschriftung des nächsten Rückgängig-Schritts (Menütext „Rückgängig …“).
     pub fn undo_label(&self) -> Option<&str> {
-        self.undo.last().map(|s| s.label.as_str())
+        // a bound row goes back with the step before it: the menu names that step (RE spec 72)
+        let mut it = self.undo.iter().rev().peekable();
+        while let Some(s) = it.next() {
+            if !s.attached() || it.peek().is_none() {
+                return Some(s.label.as_str());
+            }
+        }
+        None
     }
 
     /// Beschriftung des nächsten Wiederholen-Schritts.

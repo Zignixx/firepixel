@@ -308,6 +308,7 @@ msg-step-fill = Fill
 msg-step-edit-fill = Edit Fill
 msg-step-fill-color = Fill Color
 msg-step-stroke-color = Stroke Color
+msg-step-brush-stroke = Brush Stroke
 msg-step-brush-and-fill = Brush and Fill
 msg-step-repeat-filter = Repeat Filter
 msg-step-spelling = Spelling

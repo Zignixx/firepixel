@@ -7,12 +7,28 @@ use fp_engine::tools::ToolId;
 use fp_engine::{Session, ToolEvent, ToolKey};
 use serde_json::json;
 
+/// History rows without the rows of choosing the Brush or Pencil ("Stroke Color", "Brush
+/// Stroke", RE spec 72 §1; tested in `fb87_bitmap_mode_undo`).
 fn labels(s: &Session) -> Vec<String> {
-    s.active().map(|d| d.history.labels()).unwrap_or_default()
+    s.active()
+        .map(|d| {
+            d.history
+                .steps()
+                .iter()
+                .filter(|st| !st.attached())
+                .map(|st| st.label.clone())
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
+/// Executed rows without the Brush/Pencil choice rows (see [`labels`]).
 fn rows(s: &Session) -> usize {
-    s.active().expect("doc").history.undo_count()
+    let d = s.active().expect("doc");
+    d.history.steps()[..d.history.undo_count()]
+        .iter()
+        .filter(|st| !st.attached())
+        .count()
 }
 
 fn mode(s: &Session) -> bool {

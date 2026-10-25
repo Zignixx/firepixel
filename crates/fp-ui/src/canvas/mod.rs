@@ -999,9 +999,20 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     // Objekten darunter (Hintergrundbild) und darüber (durchsichtige Schichten)
     let mut text_hidden: Vec<u64> = Vec::new();
     let mut source: Option<(Vec<u64>, bool, bool)> = None;
+    // FB-87 / TW-241: a pixel move of a bitmap with opacity, blend mode or live effects renders the
+    // moved bitmap as the element itself (render-only document copy), not as ghost sprites
+    let live_px = preview_drag
+        .then(|| {
+            st.session
+                .active()
+                .and_then(|d| ghost::live_pixels(&feedback, &d.doc, d.page))
+        })
+        .flatten();
     for o in &feedback {
         match o {
-            Overlay::Ghost { ids, copy, .. } if preview_drag && source.is_none() => {
+            Overlay::Ghost { ids, copy, .. }
+                if preview_drag && source.is_none() && live_px.is_none() =>
+            {
                 source = Some((ids.clone(), *copy, true))
             }
             // BA-039: a stroke on a bitmap the page draws directly is composited in place (full
@@ -1122,6 +1133,15 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             crate::inspector::preview::live_path_key(generation, page, t, cs)
         }),
     );
+    let live_px_mask = live_px.and_then(|lp| {
+        d.selection
+            .pixels
+            .as_ref()
+            .filter(|_| d.selection.has_pixels())
+            .map(|m| (lp, ghost::live_pixels_key(generation, page, &lp, m)))
+    });
+    let preview =
+        crate::inspector::preview::combined_key(preview, live_px_mask.map_or(0, |(_, k)| k));
     let cc = st.canvases.entry(id).or_default();
     // Ergebnisse des Threads übernehmen
     let gamma = view.gamma_preview;
@@ -1198,9 +1218,18 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         let docarc = if preview != 0 {
             let base = crate::inspector::preview::preview_doc(st, id, generation, page, &docarc)
                 .unwrap_or(docarc);
-            match live_path {
+            let base = match live_path {
                 Some((t, cs)) => crate::inspector::preview::apply_live_path(&base, page, t, cs),
                 None => base,
+            };
+            match (
+                live_px_mask,
+                st.session
+                    .active()
+                    .and_then(|d| d.selection.pixels.as_ref()),
+            ) {
+                (Some((lp, _)), Some(m)) => ghost::apply_live_pixels(&base, page, &lp, m),
+                _ => base,
             }
         } else {
             docarc
@@ -3417,6 +3446,12 @@ fn preview_stack(
                 pixels,
             } => {
                 had_ghost = true;
+                // FB-87: drawn by the canvas image itself (moved bitmap in a render-only copy)
+                if *pixels && preview_drag && ghost::live_pixels(feedback, &d.doc, page_i).is_some()
+                {
+                    cc.ghosts.linger = None;
+                    continue;
+                }
                 cc.ghosts.linger = Some(ghost::Linger {
                     generation,
                     rect: *rect,

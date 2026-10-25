@@ -407,6 +407,8 @@ impl DocumentState {
             frame: self.frame,
             layer: self.layer,
             tool_colors: None,
+            bitmap_mode: self.bitmap_mode,
+            bitmap_worked: self.bitmap_worked.clone(),
         }
     }
 
@@ -417,6 +419,8 @@ impl DocumentState {
         self.page_selection = s.pages;
         self.frame = s.frame;
         self.layer = s.layer;
+        self.bitmap_mode = s.bitmap_mode;
+        self.bitmap_worked = s.bitmap_worked;
     }
 
     /// The chosen layer of the current page (RE spec 65 rule 3): set by a layer row, the selection
@@ -750,6 +754,11 @@ pub struct Session {
     /// Commands of a tool response are running (a canvas stroke, not a script or MCP call): a
     /// paint stroke then starts bitmap mode (RE spec 71 §1.3).
     in_tool_commands: bool,
+    /// RE spec 72 §1.3: the stroke the last Brush/Pencil choice made current (`None` = none yet).
+    paint_stroke: Option<fp_model::Brush>,
+    /// The stroke of the vector a bitmap-tool choice just deselected (`Some(None)` = no stroke),
+    /// for the Brush/Pencil row of the same choice.
+    stroke_row_current: Option<Option<fp_model::Brush>>,
     next_doc: u64,
     untitled: u32,
 }
@@ -808,6 +817,8 @@ impl Session {
             group_log: Vec::new(),
             force_step: false,
             in_tool_commands: false,
+            paint_stroke: None,
+            stroke_row_current: None,
             next_doc: 1,
             untitled: 0,
             prefs,
@@ -1257,6 +1268,19 @@ impl Session {
                 }
             }
         }
+        // FB-87: the row this command wrote keeps bitmap mode and the worked bitmaps as they are
+        // now (the worked list is updated just above, after the row was written)
+        if self.group_depth == 0
+            && out.effect == Effect::Document
+            && self.history_rows() > rows_before
+            && let Some(d) = self.active_mut()
+        {
+            let (mode, worked) = (d.bitmap_mode, d.bitmap_worked.clone());
+            if let Some(top) = d.history.top_mut() {
+                top.after.bitmap_mode = mode;
+                top.after.bitmap_worked = worked;
+            }
+        }
         if self.group_depth > 0 {
             self.group_log.push(RecordedCommand {
                 command: name.into(),
@@ -1473,9 +1497,15 @@ impl Session {
             return;
         };
         d.bitmap_mode = true;
-        let Some(top) = d.history.top() else {
+        let Some(top) = d.history.top_mut() else {
             return;
         };
+        // FB-87: "Edit Bitmap" switches the mode on, the stroke row starts in bitmap mode; undoing
+        // "Edit Bitmap" ends the mode, Redo enters it again
+        let before = top.before.clone();
+        top.before.bitmap_mode = true;
+        let mut after = before.clone();
+        after.bitmap_mode = true;
         let key = "msg-step-edit-bitmap";
         let step = crate::history::HistoryStep {
             label: fp_i18n::with_ui_language(|| fp_i18n::t(key)),
@@ -1483,8 +1513,8 @@ impl Session {
             command: "modify.editBitmap".into(),
             params: serde_json::json!({}),
             recordable: true,
-            before: top.before.clone(),
-            after: top.before.clone(),
+            before,
+            after,
         };
         d.history.insert_below_top(step);
         let id = d.id;
@@ -1644,7 +1674,7 @@ impl Session {
             .map(|t| t.after.layer);
         let mut snap = d
             .history
-            .undo()
+            .undo_step()
             .ok_or(EngineError::History("err-req-can-undo"))?;
         if let Some(l) = keep_layer {
             snap.layer = l;
@@ -1819,7 +1849,7 @@ impl Session {
         let d = self.doc_mut()?;
         let snap = d
             .history
-            .redo()
+            .redo_step()
             .ok_or(EngineError::History("err-req-can-redo"))?;
         self.apply_history_snapshot(snap);
         Ok(())
@@ -1948,6 +1978,14 @@ impl Session {
             } else if paint_tool && leaves_bitmap && painted {
                 self.execute("modify.exitBitmapMode", serde_json::json!({"step": true}))?;
             }
+            // RE spec 72 §1.2: a bitmap tool chosen with vector objects (and no bitmap) selected
+            // clears the selection and leaves the objects unchanged; the Brush/Pencil row compares
+            // the tool's stroke with the one of the deselected object
+            self.stroke_row_current = if leaves_bitmap {
+                None
+            } else {
+                self.deselect_vectors_for_bitmap_tool()
+            };
             // RE spec 71 §1.3: choosing a bitmap tool while a bitmap is selected starts bitmap
             // mode at once (one row "Edit Bitmap", no stroke needed)
             let starts_mode = !leaves_bitmap
@@ -1956,6 +1994,9 @@ impl Session {
                 });
             if starts_mode {
                 self.execute("modify.editBitmap", serde_json::json!({"row": true}))?;
+            }
+            if !leaves_bitmap {
+                self.bitmap_tool_chosen(id);
             }
             self.tools.active = id;
             self.tools.machine = tools::make_machine(id);
@@ -1970,6 +2011,91 @@ impl Session {
             }
         }
         Ok(resp)
+    }
+
+    /// RE spec 72 §1.2: a bitmap tool chosen while vector objects and no bitmap are selected
+    /// clears the selection (no row); the objects stay unchanged. Returns the stroke of the first
+    /// selected object (`Some(None)` = it has no stroke), `None` when nothing was deselected.
+    fn deselect_vectors_for_bitmap_tool(&mut self) -> Option<Option<fp_model::Brush>> {
+        let d = self.active_mut()?;
+        if d.selection.elements.is_empty() || !crate::commands::edit::selected_bitmaps(d).is_empty()
+        {
+            return None;
+        }
+        let stroke = crate::docops::paths_sorted(&d.doc, d.page, &d.selection.elements)
+            .into_iter()
+            .find_map(|p| d.doc.element_at(&p).cloned())
+            .and_then(|e| crate::docops::path_attrs_of(&e).and_then(|a| a.brush.clone()));
+        d.selection.clear();
+        let id = d.id;
+        self.events.push(SessionEvent::SelectionChanged(id));
+        Some(stroke)
+    }
+
+    /// FB-87 / TW-265 (RE spec 72 §1.3, §1.5): choosing the Brush or the Pencil writes one row
+    /// that changes no object: "Brush Stroke" when the tool's stroke differs from the current
+    /// stroke (the deselected vector's, else the stroke the last Brush/Pencil choice made
+    /// current, else the toolbox stroke), otherwise "Stroke Color", but no second "Stroke Color"
+    /// right after one. The rows are bound to the step before them (`TOOL_STROKE_ROW`, §2.4).
+    /// Each tool keeps its own stroke (the simpler rule §1.5 allows). Other bitmap tools write no
+    /// row.
+    fn bitmap_tool_chosen(&mut self, id: ToolId) {
+        let deselected = self.stroke_row_current.take();
+        if !matches!(id, ToolId::Brush | ToolId::Pencil) || self.group_depth > 0 {
+            return;
+        }
+        let tool = if id == ToolId::Pencil {
+            let mut b = fp_model::Brush::basic(1);
+            b.antialiased = self.tools.options.pencil_antialias;
+            b
+        } else {
+            crate::commands::panel::tool_brush(&self.tools.options)
+        };
+        let current = deselected.unwrap_or_else(|| {
+            Some(
+                self.paint_stroke
+                    .clone()
+                    .unwrap_or_else(|| crate::commands::panel::tool_brush(&self.tools.options)),
+            )
+        });
+        self.paint_stroke = Some(tool.clone());
+        let brush_row = current.as_ref() != Some(&tool);
+        let key = if brush_row {
+            "msg-step-brush-stroke"
+        } else {
+            "msg-step-stroke-color"
+        };
+        let params = if brush_row {
+            serde_json::json!({"brush": serde_json::to_value(&tool).unwrap_or_default()})
+        } else {
+            serde_json::json!({"brushColor": self.tools.stroke_color.to_rgba8().to_hex_rgba()})
+        };
+        let Some(d) = self.active_mut() else {
+            return;
+        };
+        let repeated = d.history.redo_count() == 0
+            && d.history.top().is_some_and(|t| {
+                t.attached()
+                    && t.key
+                        == Some(crate::history::StepKey::Text(
+                            "msg-step-stroke-color".into(),
+                        ))
+            });
+        if !brush_row && repeated {
+            return;
+        }
+        let now = d.snapshot();
+        d.history.push(crate::history::HistoryStep {
+            label: fp_i18n::with_ui_language(|| fp_i18n::t(key)),
+            key: Some(crate::history::StepKey::Text(key.into())),
+            command: crate::history::TOOL_STROKE_ROW.into(),
+            params,
+            recordable: false,
+            before: now.clone(),
+            after: now,
+        });
+        let id = d.id;
+        self.events.push(SessionEvent::HistoryChanged(id));
     }
 
     /// Werkzeug per Tastenkürzel (aktives Set; mehrfach gleiches Kürzel schaltet durch).

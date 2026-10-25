@@ -304,10 +304,11 @@ fn escape_mid_stroke_and_after() {
     assert_eq!(sha16(&render(&s)), "db9c8103846f1a9f", "Bild unverändert");
     // the Brush chosen again with B1 selected starts bitmap mode ("Edit Bitmap"); Escape ends it
     // with two rows "Exit Bitmap Mode" (RE spec 71 §1.3, §1.4; replaces the older FV-11 reading)
+    // + the row "Stroke Color" of the Brush choice (RE spec 72 §1)
     s.set_tool(ToolId::Brush).expect("Pinsel");
-    assert_eq!(steps(&s), n0 + 3);
+    assert_eq!(steps(&s), n0 + 4);
     events(&mut s, &[ToolEvent::key(ToolKey::Escape)]);
-    assert_eq!(steps(&s), n0 + 5);
+    assert_eq!(steps(&s), n0 + 6);
     assert_eq!(s.tools.active, ToolId::Pointer);
 }
 
@@ -381,8 +382,9 @@ fn stroke_just_outside_grows_selected_bitmap() {
     );
 }
 
-/// 01/06: T04, Vektor R1 (ohne Strich) gewählt: neues Bitmap mit 1-px-Strich (Inspektor zeigt den
-/// Strich des Vektors), R1 unverändert.
+/// 01/06: T04, Vektor R1 (ohne Strich) gewählt: neues Bitmap, R1 unverändert. RE spec 72 §1.2: the
+/// Brush chosen with a vector selected deselects it, the Brush paints with its own stroke (here
+/// the 10 px set by the test; the 1 px of the 01/06 reading was that run's Brush stroke).
 #[test]
 fn vector_selected_paints_with_its_stroke() {
     let Some(mut s) = open_par("par_vector.fw.png") else {
@@ -397,6 +399,11 @@ fn vector_selected_paints_with_its_stroke() {
     select(&mut s, &[r1]);
     let before = el(&s, r1);
     brush(&mut s, "Einfach/Präzise abger.", 10);
+    assert_eq!(
+        s.active().map(|d| d.selection.elements.clone()),
+        Some(vec![]),
+        "vector deselected"
+    );
     drag(&mut s, (60.0, 85.0), (140.0, 85.0), false);
     assert_eq!(el(&s, r1), before);
     let nb = top_elements(&s)[0].clone();
@@ -406,7 +413,7 @@ fn vector_selected_paints_with_its_stroke() {
     let r = fp_engine::docops::bitmap_image(b)
         .expect("Bild")
         .alpha_bounds();
-    assert_eq!(r.height(), 1, "1-px-Strich ({r:?})");
+    assert!(r.height() >= 8, "the Brush's own 10 px stroke ({r:?})");
 }
 
 /// 02/13: Spitzen 3 / Spitzenabstand 50 spreizt die Spuren (Original Ersatz 31,114–523,177),

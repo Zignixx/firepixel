@@ -192,6 +192,31 @@ pub(crate) fn move_pixels(
     out
 }
 
+/// Render-only copy edit for the live pixel-move preview (FB-87, TW-241): the pixels of the
+/// bitmap `id` on `page` under `mask` move by `(dx, dy)` exactly like `select.movePixels` does
+/// (`copy`: the original stays). The caller renders the copy as the element itself, so opacity,
+/// blend mode and live effects apply to the moved result once. No history, no dirty flag; returns
+/// whether the bitmap was found.
+pub fn preview_move_pixels(
+    doc: &mut fp_model::Document,
+    page: usize,
+    id: ElementId,
+    mask: &Mask,
+    (dx, dy): (i32, i32),
+    copy: bool,
+) -> bool {
+    docops::edit_by_id(doc, page, id, |e| {
+        if let ElementKind::Bitmap(b) = &mut e.kind
+            && let Some(img) = docops::bitmap_image(b)
+        {
+            let out = move_pixels(&img, mask, dx, dy, copy);
+            docops::set_bitmap_image(b, &out);
+            e.cache = None;
+        }
+    })
+    .is_some()
+}
+
 /// Moves the selected pixels of the selected bitmap by `(dx, dy)`: the hole stays transparent,
 /// the marquee moves along (PAR 06/16); row "Move". Used by `select.movePixels` (Pointer /
 /// Ctrl+marquee drag). `copy` (Subselection drag, RE spec 71 section 6.2): the original stays, the

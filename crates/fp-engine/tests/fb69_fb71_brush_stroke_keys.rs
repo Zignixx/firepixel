@@ -38,6 +38,10 @@ fn px(img: &fp_raster::RgbaImage, x: i32, y: i32) -> [u8; 4] {
 
 fn hard_brush(s: &mut Session) {
     s.set_tool(ToolId::Brush).expect("tool");
+    // the row of choosing the Brush (RE spec 72 §1) is not part of these counts
+    if let Some(d) = s.active_mut() {
+        d.history.clear();
+    }
     let stroke: Value = json!({"preset": "Einfach/Präzise abger.", "width": 12, "softness": 0});
     s.tools.options.brush_size = 12.0;
     s.tools.options.new_stroke = Some(stroke);

@@ -334,6 +334,106 @@ impl GhostCache {
     }
 }
 
+// ------------------------------------------------- FB-87: pixel move through the element pipeline
+
+/// Does a pixel move of this element need the element's own render pipeline for an exact live
+/// preview (TW-241)? With opacity below 100 %, another blend mode or live effects, the bitmap
+/// with the hole and the moved pixels drawn as two separate sprites would apply them twice.
+pub fn pixel_move_needs_pipeline(e: &Element) -> bool {
+    matches!(e.kind, fp_model::ElementKind::Bitmap(_))
+        && (e.common.opacity != fp_color::Opacity::default()
+            || e.common.blend != fp_model::BlendMode::default()
+            || e.common
+                .effects
+                .as_ref()
+                .is_some_and(|l| !l.effects.is_empty()))
+}
+
+/// A live pixel move that renders through the element pipeline (FB-87): the bitmap, the offset
+/// (whole pixels, like the commit) and whether a copy moves.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LivePixels {
+    pub id: ElementId,
+    pub dx: i32,
+    pub dy: i32,
+    pub copy: bool,
+}
+
+/// The pixel move in the tool feedback that needs the element pipeline
+/// ([`pixel_move_needs_pipeline`]); `None` for none or one the sprites show exactly.
+pub fn live_pixels(
+    feedback: &[fp_engine::tools::Overlay],
+    doc: &Document,
+    page: usize,
+) -> Option<LivePixels> {
+    feedback.iter().find_map(|o| match o {
+        fp_engine::tools::Overlay::Ghost {
+            ids,
+            rect,
+            quad,
+            copy,
+            pixels: true,
+        } => {
+            let id = ElementId(*ids.first()?);
+            let e = fp_engine::docops::element_on_page(doc, page, id)?;
+            pixel_move_needs_pipeline(&e).then(|| LivePixels {
+                id,
+                dx: (quad[0].x - rect.left).round() as i32,
+                dy: (quad[0].y - rect.top).round() as i32,
+                copy: *copy,
+            })
+        }
+        _ => None,
+    })
+}
+
+/// Non-zero render key of a live pixel move (generation, page, bitmap, offset, mask).
+pub fn live_pixels_key(
+    generation: u64,
+    page: usize,
+    lp: &LivePixels,
+    mask: &fp_raster::Mask,
+) -> u64 {
+    let mk = super::overlay::mask_key(mask);
+    hash_ids(
+        generation ^ 0x5049_5845_4c53,
+        &[
+            page as u64,
+            lp.id.0,
+            lp.dx as i64 as u64,
+            lp.dy as i64 as u64,
+            lp.copy as u64,
+            mk.0 as u64,
+            mk.1 as u64,
+            mk.2 as u64,
+            mk.3 as u64,
+            mk.4 as u64,
+        ],
+    ) | 1
+}
+
+/// `doc` with the live pixel move applied (a copy; the session's document is not touched).
+pub fn apply_live_pixels(
+    doc: &Arc<Document>,
+    page: usize,
+    lp: &LivePixels,
+    mask: &fp_raster::Mask,
+) -> Arc<Document> {
+    let mut out = (**doc).clone();
+    if fp_engine::commands::preview_move_pixels(
+        &mut out,
+        page,
+        lp.id,
+        mask,
+        (lp.dx, lp.dy),
+        lp.copy,
+    ) {
+        Arc::new(out)
+    } else {
+        Arc::clone(doc)
+    }
+}
+
 /// Teil einer Vorschau (Dokumentpixel vor dem Ziehen), der im Sichtbereich `visible`
 /// (Dokumentkoordinaten) landet, wenn `rect` auf `quad` abgebildet wird (BA-097); `None` bei
 /// projektiver Abbildung (dann ganz).

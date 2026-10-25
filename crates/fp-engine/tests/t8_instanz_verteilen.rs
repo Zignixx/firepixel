@@ -29,6 +29,8 @@ fn tw65_name_only_under_object_layout() {
         assert!(!apply_header_rule(&mut s, true), "{t:?}");
     }
     let _ = s.set_tool(ToolId::Pointer);
+    // the bitmap tools deselected the instance (RE spec 72 §1.2): select it again
+    select(&mut s, &[id]);
     assert!(!apply_header_rule(&mut s, false), "hidden inspector names nothing");
     assert_eq!(el(&s, id).common.name, None);
     assert!(apply_header_rule(&mut s, true));

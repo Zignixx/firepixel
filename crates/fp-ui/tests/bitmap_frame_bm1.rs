@@ -79,6 +79,8 @@ fn auswahlrahmen_liegt_um_die_sichtbaren_pixel() {
     // Bleistift zum Zeiger ein eigener Schritt „Bitmapmodus beenden“, also zwei Schritte zurück
     h.state_mut().state.session.execute("edit.undo", json!({})).expect("Rückgängig Bitmapmodus");
     h.state_mut().state.session.execute("edit.undo", json!({})).expect("Rückgängig Zug");
+    // RE spec 72 §2: bitmap mode is on again until "Edit Bitmap" (with the Pencil's row) is undone
+    h.state_mut().state.session.execute("edit.undo", json!({})).expect("Rückgängig Bitmap bearbeiten");
     h.state_mut().state.session.execute("select.set", json!({"ids": [id.0]})).expect("Auswahl");
     h.run_steps(2);
     assert_eq!(frame(&h), Some([100.0, 50.0, 200.0, 150.0]));

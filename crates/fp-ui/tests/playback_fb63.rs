@@ -183,13 +183,18 @@ fn canvas_play_button_plays_states_with_their_delays() {
 fn canvas_playback_follows_loop_setting_and_stops_on_state_change() {
     let _g = lock();
     let mut h = harness();
-    // play once: stops on the last state
+    // RE spec 72 §3.2: the loop setting is for the export only; "no loop" still plays endlessly
     st(&mut h).push(Action::Run("pi.state.loop".into(), json!({"loop": -1})));
     h.run_steps(2);
     st(&mut h).push(Action::Run("view.togglePlayback".into(), json!({})));
     let (seen, _) = observe(&mut h, 90);
-    assert_eq!(seen, vec![0, 1, 2], "one pass");
-    assert!(!st(&mut h).session.ui.playing, "stopped at the end");
+    assert!(
+        seen.len() > 3 && seen[..4] == [0, 1, 2, 0],
+        "loops: {seen:?}"
+    );
+    assert!(st(&mut h).session.ui.playing, "still playing");
+    st(&mut h).push(Action::Run("view.togglePlayback".into(), json!({})));
+    h.run_steps(2);
     // a state added while playing stops the playback
     st(&mut h).push(Action::Run("pi.state.loop".into(), json!({"loop": 0})));
     st(&mut h).push(Action::Run("view.togglePlayback".into(), json!({})));

@@ -214,6 +214,8 @@ fn no_paintable_layer_refuses_without_change_or_history_row() {
     assert_eq!((count(&s), rows(&s)), (n, h));
     // the brush shows no live stroke and the release changes nothing either
     s.set_tool(ToolId::Brush).expect("brush");
+    // choosing the Brush writes its own row (RE spec 72 §1); the refused stroke writes none
+    let h = rows(&s);
     s.tools.options.brush_size = 10.0;
     let _ = s.tool_event(&ToolEvent::down(100.0, 300.0));
     let _ = s.tool_event(&ToolEvent::drag(200.0, 300.0));

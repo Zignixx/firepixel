@@ -434,9 +434,17 @@ fn animation_delay_playback_and_frame_choice() {
         }
     }
     assert!(dlg(&mut h).playing, "spielt");
-    assert!(seen.len() >= 3 && seen[..3] == [0, 1, 0], "Folge {seen:?}");
+    // RE spec 72 §3.2: Play shows the next included state at once (in the click's frame or the
+    // next one)
+    let (k, shown) = if seen.first() == Some(&0) {
+        assert!(switch_at[0] < 0.1, "jumps at once: {switch_at:?}");
+        (1, switch_at[0])
+    } else {
+        (0, 0.0)
+    };
+    assert!(seen.len() >= k + 3 && seen[k..k + 3] == [1, 0, 1], "Folge {seen:?}");
     assert!(!seen.contains(&2), "ausgeblendeter Status wird übersprungen");
-    let dt = switch_at[1] - switch_at[0];
+    let dt = switch_at[k] - shown;
     assert!((0.45..0.6).contains(&dt), "Status 2 steht 50/100 s: {dt:.3}");
     click(&mut h, &fp_i18n::t("image-preview-play"));
     assert!(!dlg(&mut h).playing, "gestoppt");

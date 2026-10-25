@@ -279,6 +279,87 @@ fn pixel_selection_drag_previews_only_the_selected_pixels() {
     assert!(cc.ghosts.pixels.is_none(), "preview dropped");
 }
 
+/// FB-87 (TW-241): a pixel move of a bitmap at 50 % opacity previews through the element's own
+/// pipeline: no separate hole/pixel sprites, the canvas image is rendered from a copy with the
+/// pixels moved, and it equals the committed result.
+#[test]
+fn pixel_drag_on_half_opaque_bitmap_previews_the_committed_result() {
+    let mut h = harness();
+    {
+        let s = &mut h.state_mut().state.session;
+        let img = fp_raster::RgbaImage::filled(
+            fp_geom::IRect::from_xywh(50, 50, 200, 150),
+            fp_color::Rgba8::new(200, 40, 40, 255),
+        )
+        .expect("image");
+        s.clipboard.clear();
+        s.clipboard.pixels = Some(img);
+        s.execute("edit.paste", json!({})).expect("paste");
+        s.execute("element.setOpacity", json!({"opacity": 50}))
+            .expect("opacity");
+        s.execute(
+            "select.pixels",
+            json!({"shape": "rect", "rect": [100, 100, 150, 150]}),
+        )
+        .expect("marquee");
+    }
+    set_tool(&mut h, ToolId::Pointer);
+    h.run_steps(3);
+    let before = {
+        let cc = h.state().state.canvases.values().next().expect("canvas");
+        cc.shown_image.clone().expect("image")
+    };
+    let (a, b) = (at(&h, 120.0, 120.0), at(&h, 140.0, 130.0));
+    mv(&mut h, a);
+    button(&mut h, a, PointerButton::Primary, true, Modifiers::NONE);
+    mv(&mut h, a + egui::vec2(10.0, 5.0));
+    mv(&mut h, b);
+    h.run_steps(3);
+    let during = {
+        let cc = h.state().state.canvases.values().next().expect("canvas");
+        assert!(
+            cc.feedback
+                .iter()
+                .any(|o| matches!(o, Overlay::Ghost { pixels: true, .. })),
+            "{:?}",
+            cc.feedback
+        );
+        assert!(cc.ghosts.pixels.is_none(), "no separate hole/pixel sprites");
+        let k = cc.shown.expect("shown");
+        assert!(k.preview != 0, "rendered from the moved copy");
+        assert_eq!(k.variant, 0, "the bitmap is not hidden");
+        cc.shown_image.clone().expect("image")
+    };
+    assert_ne!(
+        during.as_bytes(),
+        before.as_bytes(),
+        "the preview shows the move"
+    );
+    button(&mut h, b, PointerButton::Primary, false, Modifiers::NONE);
+    h.run_steps(4);
+    let d = h.state().state.session.active().expect("d");
+    assert_eq!(
+        d.selection.pixels.as_ref().map(|m| m.tight_bounds()),
+        Some(fp_geom::IRect::new(120, 110, 170, 160)),
+        "pixels moved by (20, 10)"
+    );
+    let cc = h.state().state.canvases.values().next().expect("canvas");
+    assert_eq!(cc.shown.map(|k| k.preview), Some(0), "committed render");
+    let after = cc.shown_image.clone().expect("image");
+    assert_eq!(during.bounds(), after.bounds());
+    let max = during
+        .as_bytes()
+        .iter()
+        .zip(after.as_bytes())
+        .map(|(x, y)| x.abs_diff(*y))
+        .max()
+        .unwrap_or(0);
+    assert!(
+        max <= 2,
+        "preview equals the committed render (max diff {max})"
+    );
+}
+
 #[test]
 fn shared_layer_element_moves_with_mouse() {
     let mut h = harness();

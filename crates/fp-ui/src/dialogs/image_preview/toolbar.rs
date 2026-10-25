@@ -180,7 +180,8 @@ pub(super) fn show(ui: &mut Ui, d: &mut ImagePreview, origin: egui::Pos2) {
     x += 21.0;
     if play_button(ui, a(x), d.playing, multi) {
         d.playing = !d.playing;
-        d.next_tick = None;
+        // RE spec 72 §3.2: Play shows the next included state at once (due at time 0)
+        d.next_tick = d.playing.then_some(0.0);
     }
     x += 21.0;
     if tool_button(

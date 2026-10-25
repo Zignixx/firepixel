@@ -504,3 +504,21 @@ fn tip(ui: &Ui, id: &str, r: Rect, key: &str) {
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, text.as_str()));
     resp.on_hover_text(text);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{OptimizeSettings, frame_info_mut, next_frame};
+
+    /// FB-87: Image Preview playback skips the states excluded from export, in state order.
+    #[test]
+    fn playback_order_skips_excluded_states() {
+        let mut s = OptimizeSettings::default();
+        frame_info_mut(&mut s, 1).visible = false;
+        frame_info_mut(&mut s, 3).visible = false;
+        let mut order = vec![0];
+        for _ in 0..4 {
+            order.push(next_frame(&s, 5, *order.last().expect("state")));
+        }
+        assert_eq!(order, vec![0, 2, 4, 0, 2]);
+    }
+}

@@ -39,7 +39,7 @@ pub use export::PageSetup;
 pub use file::{load_document, save_document};
 pub use filters::{FILTERS, whole_numbers_as_ints};
 pub use modify::preview_set_contours;
-pub use select::restore_bitmap_selection_preview;
+pub use select::{preview_move_pixels, restore_bitmap_selection_preview};
 pub(crate) use text::store_font_default as text_store_font_default;
 pub use text::{
     convert_leading, effective_alignment, leading_field_value, new_text_pref_attrs,
