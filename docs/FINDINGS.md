@@ -1077,7 +1077,7 @@ selection move only the marquee (FB-74, F105b), a Brush stroke paints into the b
 Still open: the hands-on checks [VERIFICATION.md](VERIFICATION.md) A4-85 to A4-95; the reference's extra rows "Stroke
 Color" / "Brush Stroke" when the Brush or Pencil is chosen (FB-62, not built); Undo does not switch bitmap mode off;
 a drag with several pages selected; a real large .fw.png for the playback (FB-63). Workspace tests for the merged tree:
-pending (GT-2b). The 99 rows: new are TW-241 and TW-244 to TW-253, all fixed or done, pending the click-test; the
+3436 passed, 0 failed, 142 ignored (GT-2b, `b4ca66e8`). The 99 rows: new are TW-241 and TW-244 to TW-253, all fixed or done, pending the click-test; the
 other rows as listed above.
 
 | ID | Area | What is open (expected vs. current) |
