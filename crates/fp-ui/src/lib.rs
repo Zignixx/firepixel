@@ -785,4 +785,3 @@ pub fn run(files: Vec<PathBuf>, design: Option<ThemeKind>) -> eframe::Result {
     crate::bridge::shutdown();
     r
 }
-

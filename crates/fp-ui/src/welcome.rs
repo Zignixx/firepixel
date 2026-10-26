@@ -301,7 +301,11 @@ pub(crate) fn paint_banner(p: &egui::Painter, r: Rect, theme: &Theme, narrow: bo
     };
     let text_end = x
         + ui_kit::text_w(p.ctx(), tagline, &theme.font(12.5))
-            .max(ui_kit::text_w(p.ctx(), fp_i18n::DISPLAY_NAME, &theme.bold(name_size)))
+            .max(ui_kit::text_w(
+                p.ctx(),
+                fp_i18n::DISPLAY_NAME,
+                &theme.bold(name_size),
+            ))
             .min(max_w)
         + sp::L;
     for j in 0..rows {
