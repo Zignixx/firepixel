@@ -10,6 +10,8 @@
 //! - Reine Auswahländerungen sind eigene Schritte („Alles auswählen“ = `CSelectAllUndoable`).
 //! - Nach dem Abschluss eines Schritts wird der Redo-Stapel geleert; ist der Undo-Stapel länger als
 //!   `MaxUndos`, fällt **genau der älteste** Schritt weg (`@00513690`, Laufzeit T6: 2, 4, 5, 5, 5 …).
+//!   Rows bound to the step before them ([`HistoryStep::attached`]) do not count and are dropped
+//!   together with their step (FB-100).
 //! - Jeder Schritt speichert Befehlsnamen und Parameter, damit „Schritte wiederholen“, „Schritte
 //!   kopieren“ und „Als Befehl speichern“ funktionieren ([`History::export`]).
 
@@ -136,9 +138,30 @@ impl History {
         self.undo.push(step);
         // Das Original entfernt je Abschluss genau einen Schritt; bei verkleinertem MaxUndos bleibt der
         // Stapel so lange länger, bis weitere Schritte folgen (A). Wir kürzen sofort auf die Grenze.
-        while self.undo.len() > self.max_undos {
-            self.undo.remove(0);
-            self.dropped += 1;
+        self.trim_steps(self.max_undos);
+    }
+
+    /// Undo steps that count against `MaxUndos`: rows bound to the step before them
+    /// ([`HistoryStep::attached`]) have no undo step of their own and do not count (FB-100).
+    pub fn real_undo_count(&self) -> usize {
+        self.undo.iter().filter(|s| !s.attached()).count()
+    }
+
+    /// Drops the oldest steps until at most `n` real steps remain. A dropped step takes its
+    /// attached rows with it: those directly after it, and any before the first real step
+    /// (FB-100). `dropped` counts every removed row.
+    fn trim_steps(&mut self, n: usize) {
+        while self.real_undo_count() > n {
+            let lead = self.undo.iter().take_while(|s| s.attached()).count();
+            let tail = self
+                .undo
+                .iter()
+                .skip(lead + 1)
+                .take_while(|s| s.attached())
+                .count();
+            let k = lead + 1 + tail;
+            self.undo.drain(..k);
+            self.dropped += k;
         }
     }
 
@@ -147,10 +170,7 @@ impl History {
     pub(crate) fn insert_below_top(&mut self, step: HistoryStep) {
         let at = self.undo.len().saturating_sub(1);
         self.undo.insert(at, step);
-        while self.undo.len() > self.max_undos {
-            self.undo.remove(0);
-            self.dropped += 1;
-        }
+        self.trim_steps(self.max_undos);
     }
 
     /// Letzter Schritt zum Zusammenfassen mit einem Folgeschritt (z. B. Pfeiltasten); nur, wenn
@@ -334,12 +354,10 @@ impl History {
         self.after_redo = false;
     }
 
-    /// Kürzt auf die letzten `n` Schritte (Speicherknappheit, `TrimHistorySteps`).
+    /// Kürzt auf die letzten `n` Schritte (Speicherknappheit, `TrimHistorySteps`); attached rows
+    /// do not count and go with their step (FB-100).
     pub fn trim_to(&mut self, n: usize) {
-        while self.undo.len() > n {
-            self.undo.remove(0);
-            self.dropped += 1;
-        }
+        self.trim_steps(n);
         self.redo.clear();
     }
 }

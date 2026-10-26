@@ -770,6 +770,10 @@ pub struct Session {
     /// the other one (`None` = the tool's own stroke from its options).
     brush_stroke_memory: Option<fp_model::Brush>,
     pencil_stroke_memory: Option<fp_model::Brush>,
+    /// The stroke the active Brush or Pencil had in its options when it was chosen or last
+    /// followed (TW-265): a difference means the inspector changed the tool's stroke while it was
+    /// active, see [`Session::follow_tool_stroke_options`].
+    tool_stroke_seen: Option<fp_model::Brush>,
     /// RE spec 72 §1.2: the Brush or Pencil used last (the first B press from another tool
     /// selects it; `None` = the Brush).
     last_brush_or_pencil: Option<ToolId>,
@@ -835,6 +839,7 @@ impl Session {
             stroke_row_current: None,
             brush_stroke_memory: None,
             pencil_stroke_memory: None,
+            tool_stroke_seen: None,
             last_brush_or_pencil: None,
             next_doc: 1,
             untitled: 0,
@@ -2085,6 +2090,7 @@ impl Session {
     /// (z. B. Text übernehmen). Liefert die Antwort des alten Werkzeugs.
     pub fn set_tool(&mut self, id: ToolId) -> Result<ToolResponse> {
         self.end_live_text_view();
+        self.follow_tool_stroke_options();
         let mut resp = ToolResponse::default();
         if id != self.tools.active {
             let old_resp = self.with_tool_ctx(|m, ctx| m.finish(ctx));
@@ -2140,6 +2146,8 @@ impl Session {
                 self.last_brush_or_pencil = Some(id);
             }
             self.tools.active = id;
+            self.tool_stroke_seen =
+                matches!(id, ToolId::Brush | ToolId::Pencil).then(|| self.own_tool_stroke(id));
             self.tools.machine = tools::make_machine(id);
             self.with_tool_ctx(|m, ctx| m.activated(ctx));
             if let Some(g) = tools::info(id).map(|i| i.flyout) {
@@ -2244,6 +2252,28 @@ impl Session {
         });
         let id = d.id;
         self.events.push(SessionEvent::HistoryChanged(id));
+    }
+
+    /// TW-265 (RE spec 72 §1.4): when the stroke options of the active Brush or Pencil changed
+    /// since it was chosen (Property Inspector, `pi.tool.brush`, the toolbox attributes), the
+    /// changed stroke becomes the current stroke and the one the tool remembers, so the next
+    /// direct switch or choice compares with it. Changes made while another tool is active leave
+    /// the memory alone (the tool restores its own stroke when chosen again).
+    pub fn follow_tool_stroke_options(&mut self) {
+        let id = self.tools.active;
+        if !matches!(id, ToolId::Brush | ToolId::Pencil) {
+            return;
+        }
+        let Some(seen) = self.tool_stroke_seen.as_ref() else {
+            return;
+        };
+        let now = self.own_tool_stroke(id);
+        if *seen == now {
+            return;
+        }
+        self.paint_stroke = Some(now.clone());
+        *self.stroke_memory_mut(id) = Some(now.clone());
+        self.tool_stroke_seen = Some(now);
     }
 
     /// The stroke a Brush or Pencil choice takes from the tool's options (no memory).
