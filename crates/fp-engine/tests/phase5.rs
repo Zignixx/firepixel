@@ -9,10 +9,7 @@ use serde_json::json;
 use std::path::PathBuf;
 
 fn tmp(name: &str) -> PathBuf {
-    let d = std::env::temp_dir().join("fp_phase5").join(name);
-    let _ = std::fs::remove_dir_all(&d);
-    let _ = std::fs::create_dir_all(&d);
-    d
+    fp_i18n::profile::unique_temp_dir(&format!("phase5-{name}"))
 }
 
 fn base() -> (Session, ElementId, ElementId) {

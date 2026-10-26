@@ -31,7 +31,7 @@ fn harness() -> H {
     let mut a = FirepixelApp::with_session(&ctx, session(), UiSettings::default(), false);
     a.state.sync_render = true;
     a.state.os_clipboard = false;
-    let tmp = std::env::temp_dir().join("fp-ibd-dialogs-enter");
+    let tmp = fp_i18n::profile::unique_temp_dir("dialogs-enter");
     let _ = std::fs::create_dir_all(&tmp);
     a.state.file_override = Some(fp_ui::files::FilePickOverride { open: vec![tmp.join("nicht-vorhanden.png")], save: Some(tmp.join("ausgabe.png")) });
     a.state.dialogs.panel_sel.styles = vec!["Stil 1".into()];

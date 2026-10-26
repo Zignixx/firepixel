@@ -265,6 +265,11 @@ get their own temporary profile automatically; writing to the real profile from 
     rendering and teardown (`tests/gpu_common`, `canvas::tests::gpu`); never `.wgpu()` directly.
   - Absolute performance thresholds are asserted only with `FP_PERF_ASSERT=1`; without it the test checks
     the relative work (for example the area recomputed per move) and prints the time.
+- Temporary files: never a fixed name under `%TEMP%` (tests run in parallel threads of one binary and in
+  several processes at once). Use `fp_i18n::profile::unique_temp_dir("<english-tag>")`, which returns a new
+  empty folder `%TEMP%\firepixel-test-files\<pid>\<tag>-<n>` per call (folders of old processes are pruned);
+  keep one folder in a `OnceLock` when several calls of a test must share it. Program outputs under
+  `%TEMP%\Firepixel` (e-mail draft, quick help, scan) use `export::unique_temp_dir` for the same reason.
 - Parity runs against the reference application: [PARITY.md](PARITY.md).
 - Behaviour descriptions and measurements of the reference application, the test corpus and the comparison
   run data are kept outside this repository (they describe a third-party program and use files that cannot be

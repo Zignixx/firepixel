@@ -132,6 +132,27 @@ pub fn use_test_profile() -> PathBuf {
     redirected_root().unwrap_or(root)
 }
 
+/// Unique, empty folder for the files of one test: `%TEMP%\firepixel-test-files\<pid>\<tag>-<n>`.
+/// Tests run in parallel threads and processes, so fixed names under `%TEMP%` collide
+/// ("file in use", "path not found"). The folder of this process is emptied on the first call;
+/// folders of earlier processes older than 12 hours are removed. `tag` stays English.
+pub fn unique_temp_dir(tag: &str) -> PathBuf {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static BASE: OnceLock<PathBuf> = OnceLock::new();
+    static N: AtomicU64 = AtomicU64::new(0);
+    let base = BASE.get_or_init(|| {
+        let b = std::env::temp_dir().join("firepixel-test-files");
+        prune_old(&b);
+        let d = b.join(std::process::id().to_string());
+        let _ = std::fs::remove_dir_all(&d);
+        d
+    });
+    let d = base.join(format!("{tag}-{}", N.fetch_add(1, Ordering::Relaxed)));
+    let _ = std::fs::remove_dir_all(&d);
+    let _ = std::fs::create_dir_all(&d);
+    d
+}
+
 fn prune_old(base: &Path) {
     let Ok(rd) = std::fs::read_dir(base) else {
         return;

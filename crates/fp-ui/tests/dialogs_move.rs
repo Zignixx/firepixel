@@ -31,7 +31,7 @@ fn harness(size: egui::Vec2, theme: ThemeKind) -> Harness<'static, FirepixelApp>
     let settings = UiSettings { theme, ..UiSettings::default() };
     let mut a = FirepixelApp::with_session(&ctx, session(), settings, false);
     a.state.sync_render = true;
-    let tmp = std::env::temp_dir().join("fp-ibd-dialogs-move");
+    let tmp = fp_i18n::profile::unique_temp_dir("dialogs-move");
     let _ = std::fs::create_dir_all(&tmp);
     a.state.file_override = Some(fp_ui::files::FilePickOverride { open: vec![tmp.join("nicht-vorhanden.png")], save: Some(tmp.join("ausgabe.png")) });
     a.state.dialogs.panel_sel.styles = vec!["Stil 1".into()];

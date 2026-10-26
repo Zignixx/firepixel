@@ -248,9 +248,7 @@ fn eigene_testskripte() {
         dir.display()
     );
     // wie im Original endet der Ausgabeordner auf „_testdateien“ (Skripte leiten Nachbarordner daraus ab)
-    let out_dir = std::env::temp_dir()
-        .join("fp_script_fwsteuerung")
-        .join("_testdateien");
+    let out_dir = fp_i18n::profile::unique_temp_dir("script-control").join("_testdateien");
     let _ = std::fs::remove_dir_all(&out_dir);
     let _ = std::fs::create_dir_all(&out_dir);
     let mut runs = Vec::new();

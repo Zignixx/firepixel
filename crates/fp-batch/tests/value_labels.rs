@@ -301,13 +301,7 @@ fn kontext_maszstab_ausserhalb_und_in_der_vorschau() {
 }
 
 fn dir(name: &str) -> PathBuf {
-    let d = std::env::temp_dir()
-        .join("firepixel-batch11a")
-        .join(std::process::id().to_string())
-        .join(name);
-    let _ = std::fs::remove_dir_all(&d);
-    std::fs::create_dir_all(&d).expect("Ordner");
-    d
+    fp_i18n::profile::unique_temp_dir(&format!("batch11a-{name}"))
 }
 
 /// PNG: deckendes Rechteck mittig auf transparentem Grund (`w`×`h`).

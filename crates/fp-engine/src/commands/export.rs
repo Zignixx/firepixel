@@ -327,6 +327,16 @@ pub fn temp_dir(kind: &str) -> PathBuf {
     d
 }
 
+/// Unique folder below [`temp_dir`] for one output (`%TEMP%\Firepixel\<kind>\<pid>-<n>`):
+/// parallel processes and threads (tests) never write the same file.
+pub fn unique_temp_dir(kind: &str) -> PathBuf {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static N: AtomicU64 = AtomicU64::new(0);
+    let d = temp_dir(kind).join(format!("{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+    let _ = std::fs::create_dir_all(&d);
+    d
+}
+
 /// Ordner der Browser-Vorschau eines Dokuments: je Prozess eindeutig (parallele Instanzen
 /// überschreiben sich nicht, CT-1b MN-4), `%TEMP%\Firepixel\Preview\<pid>-doc<n>`.
 pub fn preview_dir(doc: u64) -> PathBuf {
@@ -1290,10 +1300,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let base = base_name_of(s)?;
                     let d = s.doc()?;
                     let page = d.page;
+                    let out_dir = unique_temp_dir("Email");
                     let (file_name, data) = match kind {
                         0 => {
                             let doc = Arc::clone(&d.doc);
-                            let tmp = temp_dir("Email").join(format!("{base}.fw.png"));
+                            let tmp = out_dir.join(format!("{base}.fw.png"));
                             super::file::save_document(s, &doc, page, &tmp)?;
                             (format!("{base}.fw.png"), std::fs::read(&tmp)?)
                         }
@@ -1311,7 +1322,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     };
                     let ext = file_name.rsplit('.').next().unwrap_or("");
                     let eml = build_eml(&p.opt_str("to")?.unwrap_or_default(), &file_name, &format!("Anhang: {file_name}"), &file_name, mime_of(ext), &data);
-                    let path = temp_dir("Email").join(format!("{base}.eml"));
+                    let path = out_dir.join(format!("{base}.eml"));
                     std::fs::write(&path, eml)?;
                     if launch_allowed(p)? {
                         open_with_system(&path, None)?;

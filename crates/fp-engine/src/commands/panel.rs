@@ -9208,8 +9208,8 @@ mod tests {
     }
 
     fn tmp(name: &str) -> String {
-        let d = std::env::temp_dir().join("fp-ibd-panel-tests");
-        let _ = std::fs::create_dir_all(&d);
+        static D: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+        let d = D.get_or_init(|| fp_i18n::profile::unique_temp_dir("panel-tests"));
         d.join(name).to_string_lossy().to_string()
     }
 

@@ -12,7 +12,7 @@
 //! * Durchsuchen: listet öffnbare Bilddateien eines Ordners (Ersatz für den externen Dateibrowser).
 //! * Scannen: Windows-Bilderfassung (WIA) über PowerShell; das erfasste Bild wird ein neues Dokument.
 
-use super::export::{open_with_system, temp_dir};
+use super::export::{open_with_system, unique_temp_dir};
 use crate::command::{CommandOutput, CommandRegistry, ParamKind, Params, cmd};
 use crate::error::{EngineError, Result};
 use crate::session::{Session, SessionEvent};
@@ -250,7 +250,7 @@ pub fn help_file() -> PathBuf {
     if let Some(f) = find_help(&dirs, &fp_i18n::current_language()) {
         return f;
     }
-    let f = temp_dir("Help").join("QUICK_HELP.md");
+    let f = unique_temp_dir("Help").join("QUICK_HELP.md");
     let _ = std::fs::write(&f, builtin_help());
     f
 }
@@ -864,7 +864,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let file = match p.opt_str("file")? {
                     Some(f) => PathBuf::from(f),
                     None => {
-                        let out = temp_dir("Scan").join("scan.png");
+                        let out = unique_temp_dir("Scan").join("scan.png");
                         let _ = std::fs::remove_file(&out);
                         let target = out.to_string_lossy().replace('\'', "''");
                         // FormatID PNG; Gerät aus „Scanner auswählen“ wird vom Windows-Dialog vorgeschlagen

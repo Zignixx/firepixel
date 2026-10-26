@@ -57,7 +57,7 @@ fn rect(s: &mut fp_engine::Session, name: &str, r: [i32; 4], c: &str) -> u64 {
 
 /// Graue Bitmap 100×100 bei (200, 200) importieren (ausgewählt).
 fn bitmap(h: &mut H) -> String {
-    let dir = std::env::temp_dir().join("fp_uxa");
+    let dir = fp_i18n::profile::unique_temp_dir("uxa");
     let _ = std::fs::create_dir_all(&dir);
     let p = dir.join("grau.png");
     let img: Vec<u8> = [136u8, 136, 136, 255].repeat(100 * 100);
@@ -1362,7 +1362,7 @@ fn cases() -> Vec<Case> {
         // ---------------- Drag & Drop ----------------
         ("D01 Datei auf Leinwand ablegen (offenes Dokument)", || {
             let mut h = basis();
-            let dir = std::env::temp_dir().join("fp_uxa_drop");
+            let dir = fp_i18n::profile::unique_temp_dir("uxa-drop");
             let _ = std::fs::create_dir_all(&dir);
             let p = dir.join("drop.png");
             let img = vec![255u8; 20 * 10 * 4];

@@ -247,9 +247,7 @@ fn export_session() -> fp_engine::Session {
 /// stellen erst auf der letzten Seite; Zurück geht zurück; Ergebnis in Zwischenablage und Ordner.
 #[test]
 fn tw22_copy_html_wizard_pages_and_finish() {
-    let dir = std::env::temp_dir().join("fp-f1-copy-html");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).expect("Ordner");
+    let dir = fp_i18n::profile::unique_temp_dir("f1-copy-html");
     let mut h = harness_with(export_session());
     h.state_mut().state.file_override = Some(fp_ui::files::FilePickOverride { open: vec![], save: Some(dir.join("x.htm")) });
     open(&mut h, "edit.copyHtmlCode");
@@ -355,7 +353,7 @@ fn tw23_popup_editor_wizard_navigation() {
 /// (relativ zum Dokumentordner, sonst voller Pfad mit „/“).
 #[test]
 fn tw29_html_setup_browse_background() {
-    let img = std::env::temp_dir().join("fp-f1-bg").join("hg.png");
+    let img = fp_i18n::profile::unique_temp_dir("f1-bg").join("hg.png");
     let mut h = harness_with(export_session());
     h.state_mut().state.file_override = Some(fp_ui::files::FilePickOverride { open: vec![img.clone()], save: None });
     open(&mut h, "file.htmlSetup");

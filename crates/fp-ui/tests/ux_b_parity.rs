@@ -64,7 +64,7 @@ fn harness(k: usize) -> H {
     let ctx = egui::Context::default();
     let mut a = FirepixelApp::with_session(&ctx, session(k), UiSettings::default(), false);
     a.state.sync_render = true;
-    let tmp = std::env::temp_dir().join("fp-uxb-paritaet");
+    let tmp = fp_i18n::profile::unique_temp_dir("uxb-parity");
     let _ = std::fs::create_dir_all(&tmp);
     a.state.file_override = Some(fp_ui::files::FilePickOverride { open: vec![], save: Some(tmp.join("p.fw.png")) });
     let mut h = Harness::builder().with_size(egui::vec2(1600.0, 1000.0)).with_pixels_per_point(1.0).with_step_dt(1.0 / 60.0).with_max_steps(12).build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), a);

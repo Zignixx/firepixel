@@ -109,9 +109,8 @@ fn serial() -> std::sync::MutexGuard<'static, ()> {
 }
 
 fn tmp() -> PathBuf {
-    let d = std::env::temp_dir().join("fp_all_commands");
-    let _ = std::fs::create_dir_all(&d);
-    d
+    static D: OnceLock<PathBuf> = OnceLock::new();
+    D.get_or_init(|| fp_i18n::profile::unique_temp_dir("all-commands")).clone()
 }
 
 fn renderer() -> Option<Arc<dyn fp_engine::render::PageRenderer>> {

@@ -228,7 +228,7 @@ fn t4_animation() {
         let same = ours == fw;
         if !same {
             let g = read_gif(&dir.join(name)).unwrap();
-            let tmp = std::env::temp_dir().join(format!("fp_t4_{name}"));
+            let tmp = fp_i18n::profile::unique_temp_dir("t4").join(name);
             let _ = std::fs::write(&tmp, &ours);
             let o = read_gif(&tmp).unwrap();
             println!(

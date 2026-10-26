@@ -41,7 +41,7 @@ fn harness() -> H {
     let mut app = FirepixelApp::with_session(&ctx, s, UiSettings::default(), false);
     app.state.sync_render = true;
     app.state.os_clipboard = false;
-    let tmp = std::env::temp_dir().join(format!("fp-i18n-dialoge-{}", std::process::id()));
+    let tmp = fp_i18n::profile::unique_temp_dir("i18n-dialogs");
     let _ = std::fs::create_dir_all(&tmp);
     app.state.file_override = Some(fp_ui::files::FilePickOverride {
         open: vec![tmp.join("nicht-vorhanden.png")],

@@ -17,7 +17,7 @@ fn harness_with(s: fp_engine::Session) -> H {
     let mut app = FirepixelApp::with_session(&ctx, s, UiSettings::default(), false);
     app.state.sync_render = true;
     app.state.os_clipboard = false;
-    let tmp = std::env::temp_dir().join("fp-ibd-dialogs-ux");
+    let tmp = fp_i18n::profile::unique_temp_dir("dialogs-ux");
     let _ = std::fs::create_dir_all(&tmp);
     app.state.file_override = Some(fp_ui::files::FilePickOverride { open: vec![tmp.join("nicht-vorhanden.fw.png")], save: Some(tmp.join("ausgabe.png")) });
     let mut h = Harness::builder().with_size(egui::vec2(1600.0, 1000.0)).with_pixels_per_point(1.0).with_max_steps(12).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);

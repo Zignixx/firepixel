@@ -34,7 +34,7 @@ fn harness_with(s: Session) -> H {
     let ctx = egui::Context::default();
     let mut a = FirepixelApp::with_session(&ctx, s, UiSettings::default(), false);
     a.state.sync_render = true;
-    let tmp = std::env::temp_dir().join("fp-uxb");
+    let tmp = fp_i18n::profile::unique_temp_dir("uxb");
     let _ = std::fs::create_dir_all(&tmp);
     a.state.file_override = Some(fp_ui::files::FilePickOverride {
         open: vec![],
