@@ -673,23 +673,62 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 Ok(CommandOutput::session_with(json!({"layout": "tabs"})))
             }),
     );
-    r.add(cmd("window.duplicateWindow").requires(super::DOC).run(|s, _| {
-        let id = s.doc()?.id;
-        s.ui.extra_windows.push(id);
-        s.emit(SessionEvent::PanelsChanged);
-        Ok(CommandOutput::session_with(json!({"doc": id.0, "windows": s.ui.extra_windows.iter().filter(|d| **d == id).count() + 1})))
-    }));
+    // FB-97 / TW-272: Duplicate Window splits the document window into two panes side by side
+    // (each with its own page, state, zoom and scroll, `crate::view_pane`); the new right pane
+    // gets the focus. Already split: nothing changes.
+    r.add(
+        cmd("window.duplicateWindow")
+            .requires(super::DOC)
+            .run(|s, _| {
+                let d = s.doc_mut()?;
+                let id = d.id;
+                d.split_view();
+                let pane = d.live_pane();
+                s.emit(SessionEvent::PanelsChanged);
+                Ok(CommandOutput::session_with(
+                    json!({"doc": id.0, "panes": 2, "pane": pane}),
+                ))
+            }),
+    );
     r.add(
         cmd("window.closeDuplicate")
             .label("Zusätzliches Fenster schließen")
             .requires(super::DOC)
+            .available(|s| s.active().is_some_and(|d| d.is_split()))
             .run(|s, _| {
-                let id = s.doc()?.id;
-                if let Some(i) = s.ui.extra_windows.iter().rposition(|d| *d == id) {
-                    s.ui.extra_windows.remove(i);
-                }
+                // the pane without the focus closes; the focused one fills the window again
+                let closed = s.doc_mut()?.unsplit();
                 s.emit(SessionEvent::PanelsChanged);
-                Ok(CommandOutput::session())
+                Ok(CommandOutput::session_with(
+                    json!({"closed": closed, "panes": 1}),
+                ))
+            }),
+    );
+    r.add(
+        cmd("window.focusPane")
+            .label("Ansichtsbereich wählen")
+            .requires(super::DOC)
+            .param(
+                "pane",
+                ParamKind::Integer {
+                    min: Some(0),
+                    max: Some(1),
+                },
+                "Bereich der geteilten Ansicht (0 links, 1 rechts)",
+            )
+            .run(|s, p| {
+                let pane = p.usize("pane")?;
+                if !s.doc()?.is_split() {
+                    return Err(EngineError::Failed(fp_i18n::t("err-view-not-split")));
+                }
+                let changed = s.focus_pane(pane)?;
+                let d = s.doc()?;
+                Ok(CommandOutput::session_with(json!({
+                    "pane": d.live_pane(),
+                    "changed": changed,
+                    "page": d.page,
+                    "zoom": d.view.zoom,
+                })))
             }),
     );
 

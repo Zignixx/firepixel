@@ -286,6 +286,9 @@ pub struct DocumentState {
     /// RE spec 59 section 2.3: the tool fill "none" belongs to the document; whether it was none
     /// when this document was left (a new or opened document starts with a solid fill).
     pub tool_fill_none: bool,
+    /// FB-97 / TW-272: the document is shown in two panes (Window ▸ Duplicate Window); the
+    /// fields above hold the focused pane, this the other one ([`crate::view_pane`]).
+    pub split: Option<crate::view_pane::SplitView>,
 }
 
 /// A page in [`DocumentState::page_layers`]: its GUID (stays with the page when pages are moved),
@@ -358,6 +361,7 @@ impl DocumentState {
             flattened: false,
             selection_history: Default::default(),
             tool_fill_none: false,
+            split: None,
         }
     }
 
@@ -931,6 +935,24 @@ impl Session {
                 .push(SessionEvent::ActiveDocumentChanged(Some(id)));
         }
         Ok(())
+    }
+
+    /// FB-97 / TW-272: gives pane `pane` (0 left, 1 right) of the active document's split view
+    /// the focus ([`DocumentState::focus_pane`]); a running tool operation belongs to the pane
+    /// left and is finished first. Returns `true` if the focus changed.
+    pub fn focus_pane(&mut self, pane: usize) -> Result<bool> {
+        let d = self.doc()?;
+        if !d.is_split() || pane > 1 || d.live_pane() == pane {
+            return Ok(false);
+        }
+        let _ = self.finish_tool();
+        self.tools.machine = tools::make_machine(self.tools.active);
+        self.tools.held = None;
+        let changed = self.doc_mut()?.focus_pane(pane);
+        if changed {
+            self.events.push(SessionEvent::PanelsChanged);
+        }
+        Ok(changed)
     }
 
     /// Fügt ein Dokument hinzu und aktiviert es.

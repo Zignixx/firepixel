@@ -407,7 +407,8 @@ fn snap(s: &Session) -> Snap {
         view: d.map(|d| d.view.clone()),
         undo: d.map(|d| d.history.undo_count()).unwrap_or(0),
         session: format!(
-            "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
+            "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
+            d.map(|d| &d.split),
             s.prefs,
             s.tools.active,
             s.tools.stroke_color,
@@ -1650,6 +1651,14 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
         ),
         "window.closeDuplicate" => rs(
             json!({}),
+            Box::new(|s: &mut Session| {
+                ex(s, "window.duplicateWindow", json!({}));
+                Value::Null
+            }),
+        ),
+        // FB-97: the split view's left pane gets the focus back
+        "window.focusPane" => rs(
+            json!({"pane": 0}),
             Box::new(|s: &mut Session| {
                 ex(s, "window.duplicateWindow", json!({}));
                 Value::Null

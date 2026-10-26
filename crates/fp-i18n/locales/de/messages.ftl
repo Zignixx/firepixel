@@ -681,3 +681,4 @@ dlg-mask-delete-bitmap = Vor dem Entfernen Maske auf Bitmap anwenden?
 dlg-mask-delete-vector = Möchten Sie die Maske vor dem Entfernen anwenden? Durch das Anwenden werden Objekt und Maske in ein einzelnes Bitmap-Bild konvertiert.
 btn-mask-discard = Verwerfen
 btn-mask-apply = Anwenden
+err-view-not-split = Die Ansicht ist nicht geteilt (Fenster ▸ Fenster duplizieren)

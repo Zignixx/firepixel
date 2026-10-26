@@ -1005,6 +1005,7 @@ cmd-window-answers = Antworten
 cmd-view-togglePlayback = Abspielen/Stopp
 cmd-window-tabs = Als Registerkarten
 cmd-window-closeDuplicate = Zusätzliches Fenster schließen
+cmd-window-focusPane = Ansichtsbereich wählen
 cmd-file-twainSelect = Twain auswählen
     .description = Twain-Gerät auswählen
 cmd-file-twainAcquire = Twain importieren

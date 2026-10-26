@@ -61,6 +61,7 @@ pub mod url_library;
 #[cfg(feature = "vector")]
 pub mod vector_backend;
 pub mod view;
+pub mod view_pane;
 pub mod warnings;
 
 pub use command::{
@@ -76,4 +77,5 @@ pub use shortcuts::{Shortcut, ShortcutSet};
 pub use tool_follow::ToolStyle;
 pub use tools::{Modifiers, Overlay, StrokePause, ToolEvent, ToolId, ToolKey, ToolResponse};
 pub use view::ViewState;
+pub use view_pane::{SplitView, ViewPane};
 pub use warnings::{TargetWarning, WarningChoice};

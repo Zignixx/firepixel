@@ -681,3 +681,4 @@ dlg-mask-delete-bitmap = Apply the mask to the bitmap before removing it?
 dlg-mask-delete-vector = Do you want to apply the mask before removing it? Applying converts the object and its mask into a single bitmap image.
 btn-mask-discard = Discard
 btn-mask-apply = Apply
+err-view-not-split = The view is not split (Window ▸ Duplicate Window)

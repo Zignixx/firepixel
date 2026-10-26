@@ -1005,6 +1005,7 @@ cmd-window-answers = Answers
 cmd-view-togglePlayback = Play/Stop
 cmd-window-tabs = Consolidate as Tabs
 cmd-window-closeDuplicate = Close Duplicate Window
+cmd-window-focusPane = Focus View Pane
 cmd-file-twainSelect = Twain Select
     .description = Selects a Twain device
 cmd-file-twainAcquire = Twain Acquire
