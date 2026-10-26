@@ -18,7 +18,7 @@ use serde_json::{Value, json};
 type H = Harness<'static, FirepixelApp>;
 
 const RED_X: Color32 = Color32::from_rgb(0xE0, 0x20, 0x20);
-const GREEN_FRAME: Color32 = Color32::from_rgb(0x33, 0xE0, 0x33);
+const GREEN_FRAME: Color32 = Color32::from_rgb(0x66, 0xFF, 0x00);
 
 fn ex(s: &mut fp_engine::Session, c: &str, p: Value) -> Value {
     s.execute(c, p).unwrap_or_else(|e| panic!("{c}: {e}")).value
@@ -199,12 +199,37 @@ fn mask_thumbnail_click_selects_the_mask_with_green_frame() {
     // the mask thumbnail is the thumbnail directly left of the row name
     let name = text_rect(&h, "B1").expect("row");
     let thumb = Pos2::new(name.left() - 6.0 - 8.0, name.center().y);
+    let grey = fp_ui::theme::Theme::current(&h.ctx).colors.list_border;
+    let normal = frames(&h, grey).into_iter().find(|(r, _)| r.contains(thumb) && r.width() < 60.0).expect("normal mask thumbnail frame");
+    assert_eq!(normal.1, 1.0, "normal frame 1 px");
     click(&mut h, thumb);
     assert_eq!(selection(&h), vec![m], "the mask thumbnail selects the mask");
     let rows_after = h.state().state.session.active().expect("d").history.undo_count();
     assert_eq!(rows_after, rows_before + 1, "one History row (the mask-select command)");
     h.run_steps(10);
     assert!(colored(&h, GREEN_FRAME) >= 1, "bright green frame around the mask thumbnail");
+    // RE spec 73 §6: 2 px #66FF00 in place of the normal frame, 1 px larger on each side (the
+    // image area stays); the normal frame is gone
+    let green = frames(&h, GREEN_FRAME).into_iter().find(|(r, _)| r.contains(thumb)).expect("green frame");
+    assert_eq!(green.1, 2.0, "edit frame 2 px");
+    assert_eq!(green.0, normal.0.expand(1.0), "edit frame grows 1 px outward");
+    assert!(!frames(&h, grey).iter().any(|(r, _)| *r == normal.0), "no normal frame while editing");
+}
+
+/// Rectangle frames of a colour: (rect, stroke width).
+fn frames(h: &H, col: Color32) -> Vec<(egui::Rect, f32)> {
+    fn walk(shape: &egui::epaint::Shape, col: Color32, out: &mut Vec<(egui::Rect, f32)>) {
+        match shape {
+            egui::epaint::Shape::Rect(r) if r.stroke.color == col && r.stroke.width > 0.0 => out.push((r.rect, r.stroke.width)),
+            egui::epaint::Shape::Vec(v) => v.iter().for_each(|s| walk(s, col, out)),
+            _ => {}
+        }
+    }
+    let mut v = Vec::new();
+    for cs in &h.output().shapes {
+        walk(&cs.shape, col, &mut v);
+    }
+    v
 }
 
 fn button(h: &H, label: &str) -> Option<egui::Rect> {

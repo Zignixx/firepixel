@@ -1,8 +1,9 @@
-//! TW-225 rest, RE spec 68 §4.2 rule 5, §4.1 `e9`/`e10`, §7: a bitmap mask with "Show fill and
-//! stroke" (Paste Inside onto a bitmap, alpha channel) lies under the content, but not while the
-//! mask is in bitmap editing ([`Renderer::render_device_editing`]), with or without a stroke;
-//! after the edit the underlay is back. With the option off there is no underlay in any state.
-//! Path masks are not affected. The caches of one renderer never mix the two looks.
+//! TW-225 rest, FB-90, RE spec 73 §0.5 and §7 (supersedes RE spec 68 §4.2 rule 5 and §4.1
+//! `e9`/`e10`): a bitmap mask with "Show fill and stroke" (Paste Inside onto a bitmap, alpha
+//! channel) lies under the content in every state: at rest, while the mask is in bitmap editing
+//! ([`Renderer::render_device_editing`]) and during a stroke (live). With the option off there is
+//! no underlay in any state. Path masks are not affected. The caches of one renderer give the same
+//! look with and without the edit state.
 
 use std::sync::Arc;
 
@@ -80,7 +81,7 @@ fn stroke() -> Arc<RgbaImage> {
 }
 
 #[test]
-fn bitmap_mask_underlay_hidden_for_the_whole_edit() {
+fn bitmap_mask_underlay_stays_for_the_whole_edit() {
     // default options: element cache and tile cache on, one renderer for all states
     let r = Renderer::new(RenderOptions::default());
     let (doc, mid) = bitmap_doc(true);
@@ -93,18 +94,12 @@ fn bitmap_mask_underlay_hidden_for_the_whole_edit() {
         "underlay where the content has no pixels"
     );
     assert_eq!(before.get(40, 50), white);
+    assert_eq!(alpha(&before, 10, 50), 0, "outside the mask");
     let editing = device(&r, &doc, Some(mid));
     assert_eq!(
-        alpha(&editing, 60, 50),
-        0,
-        "no underlay while the mask is edited"
+        editing, before,
+        "the underlay stays while the mask is edited: the same look as at rest"
     );
-    assert_eq!(
-        editing.get(40, 50),
-        white,
-        "the content stays masked by the bitmap"
-    );
-    assert_eq!(alpha(&editing, 10, 50), 0, "outside the mask");
     let ov = PixelOverride {
         id: mid,
         image: stroke(),
@@ -113,14 +108,14 @@ fn bitmap_mask_underlay_hidden_for_the_whole_edit() {
         .render_region_with(&doc, 0, 0, IRect::new(0, 0, 100, 100), 1.0, &ov)
         .expect("mask bitmap found")
         .image;
-    assert_eq!(alpha(&during, 60, 50), 0, "no underlay during a stroke");
-    assert_eq!(during.get(10, 50), white, "the stroke reveals live");
-    let after = device(&r, &doc, None);
     assert_eq!(
-        after.get(60, 50),
+        during.get(60, 50),
         red,
-        "after the edit the underlay is back"
+        "the underlay stays during a stroke"
     );
+    assert_eq!(during.get(10, 50), white, "the stroke reveals live");
+    assert_eq!(during.get(40, 50), white);
+    let after = device(&r, &doc, None);
     assert_eq!(after, before, "the look without editing is unchanged");
     assert_eq!(
         device(&r, &doc, Some(mid)),
@@ -130,7 +125,7 @@ fn bitmap_mask_underlay_hidden_for_the_whole_edit() {
     assert_eq!(
         r.render_page(&doc, 0, 0).image.get(60, 50),
         red,
-        "page renders (export) never edit"
+        "page renders (export)"
     );
 }
 

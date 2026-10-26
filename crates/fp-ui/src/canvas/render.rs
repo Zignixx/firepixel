@@ -157,8 +157,8 @@ pub struct RenderKey {
     pub gamma: bool,
     /// Key of the inspector slider preview rendered into this image (0 = none, FB-09/FB-10).
     pub preview: u64,
-    /// Bitmap mask in bitmap editing (0 = none): its mask group is drawn without the "Show fill
-    /// and stroke" underlay (RE spec 68 §4.2 rule 5, TW-225).
+    /// Bitmap mask in bitmap editing (0 = none); the "Show fill and stroke" underlay stays
+    /// visible (RE spec 73 §7, TW-225, FB-90).
     pub mask_edit: u64,
     /// FB-97 / TW-272: pane of the split view the image is for (0 = left or the only one).
     pub pane: usize,

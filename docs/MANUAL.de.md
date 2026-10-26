@@ -398,10 +398,12 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
 - **Malen auf einer Bitmapmaske** (Pinsel, Bleistift, Radiergummi) wirkt in beiden Modi live: Weiß deckt auf,
   Schwarz blendet aus, das maskierte Element ändert sich während des Zugs, der Pinselumriss ist rot, jeder Zug
   ist eine Zeile *Pinsel*. Die Malwerkzeuge zeigen die Radios *Alphakanal* / *Graustufen* der Maske, die den
-  Modus umschalten. Solange eine Bitmapmaske zum Bearbeiten gewählt ist, ist ihre Unterlage *Füllung und
-  Pinselstrich anzeigen* ausgeblendet und nur der von der Maske beschnittene Inhalt sichtbar (wie im Vorbild); die
-  Unterlage kehrt nach *Bitmapmodus beenden* oder dem Abwählen zurück. Der maskierte Inhalt selbst behält sein
-  Aussehen.
+  Modus umschalten. Die Unterlage *Füllung und Pinselstrich anzeigen* bleibt sichtbar, während eine
+  Bitmapmaske bearbeitet und bemalt wird; das maskierte Objekt behält sein Aussehen. Im Ebenen-Bedienfeld zeigt die
+  Objektminiatur eines maskierten Objekts das maskierte Ergebnis mit Unterlage, wenn *Füllung und Pinselstrich
+  anzeigen* im Modus *Alphakanal* / *Pfadumriss* an ist, sonst den Inhalt allein, die Maskenminiatur die Maske grau
+  auf Schwarz (eine Vektormaske mit Feder-Symbol), beide auf die Arbeitsfläche bezogen und nach jedem Zug
+  aktualisiert, und die Maskenminiatur der bearbeiteten Maske bekommt einen 2 px breiten grünen Rahmen.
 - *Auswählen ▸ Auswahl umkehren* kehrt nur eine Pixelauswahl um; ohne sie erscheint eine Warnung, und
   die gewählten Objekte bleiben unverändert.
 - *Text ▸ Größe ▸ Größer / Kleiner* ändern die Größe um genau 1 pt (24 → 25 → 24), bei gewählten Texten

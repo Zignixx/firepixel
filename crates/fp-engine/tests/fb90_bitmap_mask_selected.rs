@@ -115,8 +115,8 @@ fn a_selected_bitmap_mask_keeps_the_masked_look() {
     check("paste as mask", s, g);
 
     // Paste Inside onto a bitmap (the FB-90 recording): the mask bitmap is also drawn as the
-    // "Show fill and stroke" underlay; the content keeps its look, only the underlay is left out
-    // during the edit (RE spec 68 §4.1 `e9`/`e10`, §4.2 rule 5) and is back afterwards
+    // "Show fill and stroke" underlay; content and underlay keep their look during the edit and
+    // afterwards (RE spec 73 §0.5 and §7, superseding RE spec 68 §4.1 `e9`/`e10`)
     let mut s = doc_session(200.0, 200.0);
     let target = bitmap(&mut s, 20, 20, 120, 120, [255, 0, 0, 255]);
     let content = bitmap(&mut s, 60, 60, 40, 40, [0, 0, 255, 255]);
@@ -143,16 +143,18 @@ fn a_selected_bitmap_mask_keeps_the_masked_look() {
     );
     assert_eq!(
         px(&s, 30, 30),
-        vec![255; 4],
-        "paste inside: no underlay while editing (white page)"
+        under.clone(),
+        "paste inside: the underlay stays while editing"
     );
     let _ = s.execute("modify.exitBitmapMode", json!({}));
     select(&mut s, &[]);
     assert_eq!(
         (px(&s, 80, 80), px(&s, 30, 30)),
         (inside, under),
-        "paste inside: back after the edit"
+        "paste inside: unchanged after the edit"
     );
+    // and the whole page stays the same in every way of selecting the mask
+    check("paste inside", s, g);
 
     // the same masks switched to the alpha channel (Modify Mask rows as in the report)
     for mode in ["path", "image", "path"] {

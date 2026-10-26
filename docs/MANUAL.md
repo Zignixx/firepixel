@@ -367,10 +367,12 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   History row *Modify Mask*. The colour wells show grey (the luma) while a mask is selected.
 - **Painting on a bitmap mask** (brush, pencil, eraser) works live in both modes: white reveals, black hides,
   the masked element updates during the stroke, the brush outline is red, and each stroke is one *Brush*
-  row. The painting tools show the mask's *Alpha channel* / *Grayscale* radios, which switch the mode. While a
-  bitmap mask is selected for editing, its *Show fill and stroke* underlay is hidden and only the content clipped
-  by the mask shows (as in the reference); the underlay returns after *Exit Bitmap Mode* or deselecting. The masked
-  content itself keeps its look.
+  row. The painting tools show the mask's *Alpha channel* / *Grayscale* radios, which switch the mode. The *Show
+  fill and stroke* underlay stays visible while a bitmap mask is edited and painted, so the masked object keeps its
+  look. In the Layers panel the object thumbnail of a masked object shows the masked result with the underlay when
+  *Show fill and stroke* is on in *Alpha channel* / *Path outline* mode and the content alone otherwise, the mask
+  thumbnail shows the mask in grey on black (a vector mask with a pen badge), both related to the canvas and
+  updated when a stroke ends, and the mask thumbnail of the mask being edited gets a 2 px green frame.
 - *Select ▸ Select Inverse* inverts a pixel selection only; without one it shows a warning and leaves
   the selected objects alone.
 - *Text ▸ Size ▸ Larger / Smaller* change the size by exactly 1 pt (24 → 25 → 24), on selected texts

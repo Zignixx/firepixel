@@ -1,8 +1,9 @@
-//! TW-225 rest, RE spec 68 §4.2 rule 5, §4.1 `e9`/`e10`, §7: the "Show fill and stroke" underlay of
-//! a bitmap mask (Paste Inside onto a bitmap) is not drawn while the mask is in bitmap editing,
-//! for the whole edit and not only during strokes; after leaving the edit (stop button) it is back
-//! and the option itself stays on. The canvas asks [`DocumentState::bitmap_mask_edit`] for the
-//! mask being edited; vector masks are not affected.
+//! TW-225 rest, FB-90, RE spec 73 §0.5 and §7 (supersedes RE spec 68 §4.2 rule 5 and §4.1
+//! `e9`/`e10`): a bitmap mask (Paste Inside onto a bitmap) is in bitmap editing for the whole edit
+//! and not only during strokes; the "Show fill and stroke" option stays on and its underlay stays
+//! visible throughout (the canvas passes [`DocumentState::bitmap_mask_edit`] to the renderer, which
+//! keeps the look and only bypasses the element cache of the mask's containers). After leaving
+//! the edit (stop button) there is no mask edit; vector masks are never a mask edit.
 
 use crate::common;
 use common::*;
@@ -76,11 +77,7 @@ fn bitmap_mask_edit_lasts_for_the_whole_bitmap_editing() {
         Some(vec![m]),
         "the mask stays selected after the stop button"
     );
-    assert_eq!(
-        mask_edit(&s),
-        None,
-        "after leaving the edit the underlay is back"
-    );
+    assert_eq!(mask_edit(&s), None, "after leaving the edit");
     assert!(show_attrs(&s, g));
 }
 
@@ -96,11 +93,7 @@ fn vector_masks_and_plain_bitmaps_are_no_mask_edit() {
         s.active().map(|d| d.selection.elements.clone()),
         Some(vec![m])
     );
-    assert_eq!(
-        mask_edit(&s),
-        None,
-        "a vector mask keeps its underlay while selected"
-    );
+    assert_eq!(mask_edit(&s), None, "a vector mask is no bitmap mask edit");
 
     let mut s = doc_session(200.0, 200.0);
     let b = bitmap(&mut s, 0, 0, 50, 50, [0, 0, 255, 255]);

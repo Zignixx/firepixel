@@ -15,7 +15,7 @@ use serde_json::{Value, json};
 
 type H = Harness<'static, FirepixelApp>;
 
-const GREEN_FRAME: Color32 = Color32::from_rgb(0x33, 0xE0, 0x33);
+const GREEN_FRAME: Color32 = Color32::from_rgb(0x66, 0xFF, 0x00);
 
 fn ex(s: &mut fp_engine::Session, c: &str, p: Value) -> Value {
     s.execute(c, p).unwrap_or_else(|e| panic!("{c}: {e}")).value

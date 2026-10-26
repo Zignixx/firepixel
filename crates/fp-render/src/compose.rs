@@ -130,15 +130,14 @@ pub(crate) struct State {
     pub symbols: Vec<fp_model::SymbolId>,
     /// Replaced pixels of one bitmap (live paint preview, BA-039).
     pub over: Option<Arc<Override>>,
-    /// Bitmap mask in bitmap editing (RE spec 68 §4.2 rule 5, §7): its mask group draws no
-    /// "Show fill and stroke" underlay while it is being edited.
+    /// Bitmap mask in bitmap editing (RE spec 68 §7): the containers of the mask are not cached
+    /// while it is being edited. The "Show fill and stroke" underlay stays visible (RE spec 73
+    /// §0.5, §7, FB-90).
     pub edit: Option<Arc<MaskEdit>>,
 }
 
-/// A bitmap mask being edited plus the containers that hold it (their looks are not cached while
-/// the edit lasts, so the look with and without the underlay never mix in the caches).
+/// The containers of a bitmap mask being edited (their looks are not cached while the edit lasts).
 pub(crate) struct MaskEdit {
-    pub id: u64,
     pub ancestors: std::collections::HashSet<u64>,
 }
 
@@ -337,7 +336,6 @@ impl Renderer {
             edit: edit.and_then(|id| {
                 let (_, ancestors) = find_bitmap(doc, page, id)?;
                 Some(Arc::new(MaskEdit {
-                    id: id.0,
                     ancestors: ancestors.into_iter().collect(),
                 }))
             }),
@@ -429,10 +427,11 @@ impl Renderer {
         self.render_device_editing(doc, page, frame, clip, anchor, zoom, dev, None)
     }
 
-    /// Like [`Self::render_device`] while the bitmap mask `edit` is in bitmap editing: its mask
-    /// group then draws no "Show fill and stroke" underlay (RE spec 68 §4.2 rule 5, §4.1
-    /// `e9`/`e10`: hidden for the whole edit, back after leaving it). `None` = no mask edit; an id
-    /// that is no bitmap drawn on the page changes nothing.
+    /// Like [`Self::render_device`] while the bitmap mask `edit` is in bitmap editing: the look is
+    /// the same, the "Show fill and stroke" underlay stays visible (RE spec 73 §0.5, §7, FB-90;
+    /// supersedes RE spec 68 §4.1 `e9`/`e10`); only the containers of the mask bypass the element
+    /// cache for the edit. `None` = no mask edit; an id that is no bitmap on the page changes
+    /// nothing.
     #[allow(clippy::too_many_arguments)] // Dokument, Lage, Gitter, Ausschnitt, Maske
     pub fn render_device_editing(
         &self,
@@ -1333,14 +1332,9 @@ impl Renderer {
         let masked = g.kind.is_mask() && g.mask_flags.enabled;
         if masked && let Some(me) = g.effective_mask() {
             // Pfadumriss mit „Füllung und Pinselstrich anzeigen“ (Flags 0x01 und 0x10, re 26 §3.1);
-            // not while the mask bitmap is being edited (bitmap editing, RE spec 68 §4.2 rule 5,
-            // §4.1 `e9`/`e10`) nor while it is painted (live preview); the flag itself stays on
-            let painting_mask = st.over.as_ref().is_some_and(|o| o.id == me.id.0);
-            let editing_mask = st.edit.as_ref().is_some_and(|m| m.id == me.id.0);
-            let show = g.kind == GroupKind::VectorMask
-                && !g.mask_flags.hide_attrs
-                && !painting_mask
-                && !editing_mask;
+            // the underlay also stays while a bitmap mask is edited and while it is painted (live,
+            // RE spec 73 §0.5 and §7, FB-90; supersedes RE spec 68 §4.2 rule 5 and §4.1 `e9`/`e10`)
+            let show = g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs;
             let mask = self.mask_values(doc, e, g, me, show, st, rep);
             let invert = mask_invert(g, me);
             let b = img.bounds();

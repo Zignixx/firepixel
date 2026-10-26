@@ -533,7 +533,7 @@ fn switch_off_mask_thumbnail_edits_like_the_reference() {
     click_at(&mut h, mask_thumb, Modifiers::NONE);
     assert_eq!(selection(&h), vec![ids.m], "the mask path is selected");
     assert!(blue(&h, "X"), "the row stays highlighted while its mask is edited");
-    assert!(framed(&h, mask_thumb, egui::Color32::from_rgb(0x33, 0xE0, 0x33)), "mask thumbnail framed green");
+    assert!(framed(&h, mask_thumb, egui::Color32::from_rgb(0x66, 0xFF, 0x00)), "mask thumbnail framed green");
     assert!(!framed(&h, obj_thumb, focus), "the object thumbnail is not framed blue then");
     assert!(find(&h, "M").is_none(), "no extra rows");
 }
@@ -606,7 +606,7 @@ fn masked_object_inside_a_group_has_the_mask_row_look() {
     let obj_thumb = Pos2::new(z.left() - 6.0 - 24.0 - 12.0 - 12.0, z.center().y);
     assert!(chain_at(&h, chain), "chain icon between the thumbnails");
     let focus = fp_ui::theme::Theme::current(&h.ctx).colors.focus;
-    let green = egui::Color32::from_rgb(0x33, 0xE0, 0x33);
+    let green = egui::Color32::from_rgb(0x66, 0xFF, 0x00);
     // the name: the masked object, its own thumbnail framed blue
     click(&mut h, "Z", Modifiers::NONE);
     assert_eq!(selection(&h), vec![ids.z_owner]);

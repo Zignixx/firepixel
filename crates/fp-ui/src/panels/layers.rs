@@ -1139,15 +1139,15 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     // rechnete und lud jedes Bild sonst ständig Miniaturen nach)
                     if tpx > 0.0 && ui.is_rect_visible(thumb) {
                         crate::widgets::checker(ui.painter(), thumb, 4.0, &theme);
-                        if let Some(tex) = thumbs::element_thumb(
-                            ui.ctx(),
-                            st,
-                            doc_id,
-                            doc_gen,
-                            &doc,
-                            e,
-                            (tpx as u32 * 2).max(16),
-                        ) {
+                        let size = (tpx as u32 * 2).max(16);
+                        // a masked object: canvas-related, with or without the mask and its
+                        // underlay (RE spec 73 §0.1)
+                        let tex = if e.element_mask().is_some() {
+                            thumbs::masked_object_thumb(ui.ctx(), st, doc_id, &doc, e, size)
+                        } else {
+                            thumbs::element_thumb(ui.ctx(), st, doc_id, doc_gen, &doc, e, size)
+                        };
+                        if let Some(tex) = tex {
                             let ts = tex.size_vec2();
                             let s = (thumb.width() / ts.x).min(thumb.height() / ts.y);
                             ui.painter().image(
@@ -1488,8 +1488,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     }
 }
 
-/// Frame of the mask thumbnail while the mask is being edited (bright green, RE spec 68 section 7).
-const MASK_EDIT_FRAME: Color32 = Color32::from_rgb(0x33, 0xE0, 0x33);
+/// Frame of the mask thumbnail while the mask is being edited: 2 px #66FF00 in place of the
+/// normal 1 px frame, growing 1 px outward (RE spec 73 §0.4 and §6; RE spec 68 section 7).
+pub const MASK_EDIT_FRAME: Color32 = Color32::from_rgb(0x66, 0xFF, 0x00);
 
 /// The mask half of the row of a masked object (re 31 section 5.3): the chain icon of a linked
 /// mask after the object thumbnail `thumb`, the mask thumbnail (framed green while the mask is
@@ -1539,25 +1540,50 @@ fn mask_thumb_pair(
                 Color32::WHITE,
             );
         }
-        // selected mask (mask editing, RE spec 68 section 7): bright green frame around the
-        // mask thumbnail
-        let mask_sel = mask_selected(selected, m);
-        ui.painter().rect_stroke(
-            mt,
-            0.0,
-            if mask_sel {
-                Stroke::new(2.0, MASK_EDIT_FRAME)
-            } else {
-                Stroke::new(1.0, c.list_border)
-            },
-            StrokeKind::Inside,
-        );
+        // a vector mask (path, group) carries the pen badge bottom right, a bitmap mask none
+        // (RE spec 73 §0.3)
+        if !matches!(m.kind, ElementKind::Bitmap(_)) {
+            paint_pen_badge(ui.painter(), mt);
+        }
+        // selected mask (mask editing, RE spec 68 section 7, RE spec 73 §6): the 2 px green
+        // frame covers the normal frame line and 1 px outside it, the image area stays; the same
+        // for bitmap and vector masks
+        if mask_selected(selected, m) {
+            ui.painter().rect_stroke(
+                mt.expand(1.0),
+                0.0,
+                Stroke::new(2.0, MASK_EDIT_FRAME),
+                StrokeKind::Inside,
+            );
+        } else {
+            ui.painter()
+                .rect_stroke(mt, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
+        }
         // disabled mask: red X over the mask thumbnail (RE spec 68 section 8, M-10)
         if matches!(&e.kind, ElementKind::Group(g) if !g.mask_flags.enabled) {
             paint_mask_off(ui.painter(), mt);
         }
     }
     (mt, chain)
+}
+
+/// Size of the pen badge of a vector mask thumbnail (about 10 × 10 like the reference).
+pub const PEN_BADGE: f32 = 10.0;
+
+/// Pen badge bottom right in the mask thumbnail `r` of a vector mask (RE spec 73 §0.3): a white
+/// box with a black border and a black pen nib.
+fn paint_pen_badge(p: &egui::Painter, r: Rect) {
+    let b = Rect::from_min_size(
+        r.right_bottom() - vec2(PEN_BADGE + 1.0, PEN_BADGE + 1.0),
+        vec2(PEN_BADGE, PEN_BADGE),
+    );
+    p.rect_filled(b, 0.0, Color32::WHITE);
+    p.rect_stroke(b, 0.0, Stroke::new(1.0, Color32::BLACK), StrokeKind::Inside);
+    let ink = Stroke::new(1.5, Color32::BLACK);
+    let (l, t) = (b.left(), b.top());
+    p.line_segment([pos2(l + 2.5, t + 7.5), pos2(l + 7.0, t + 3.0)], ink);
+    p.line_segment([pos2(l + 2.5, t + 7.5), pos2(l + 3.0, t + 5.0)], ink);
+    p.line_segment([pos2(l + 2.5, t + 7.5), pos2(l + 5.0, t + 7.0)], ink);
 }
 
 /// Is the mask `m` (or, for a group mask, one of its descendants) selected?
@@ -2244,7 +2270,19 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
                 }
                 _ => {
                     crate::widgets::checker(ui.painter(), thumb, 4.0, tc.theme);
-                    thumbs::element_thumb(ui.ctx(), tc.st, tc.doc_id, tc.doc_gen, tc.doc, e, size)
+                    if e.element_mask().is_some() {
+                        thumbs::masked_object_thumb(ui.ctx(), tc.st, tc.doc_id, tc.doc, e, size)
+                    } else {
+                        thumbs::element_thumb(
+                            ui.ctx(),
+                            tc.st,
+                            tc.doc_id,
+                            tc.doc_gen,
+                            tc.doc,
+                            e,
+                            size,
+                        )
+                    }
                 }
             };
             if let Some(tex) = tex {

@@ -1163,7 +1163,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     };
     let (generation, page, frame, docarc) =
         (d.generation, d.page, d.frame, std::sync::Arc::clone(&d.doc));
-    // bitmap mask in bitmap editing: no fill/stroke underlay (RE spec 68 §4.2 rule 5, TW-225)
+    // bitmap mask in bitmap editing (own render key; the underlay stays, RE spec 73 §7, TW-225)
     let mask_edit = d.bitmap_mask_edit().map_or(0, |m| m.0);
     // pending inspector slider value (FB-09/FB-10): rendered from a preview copy of the document
     let preview = crate::inspector::preview::preview_key(st, id, generation, page);

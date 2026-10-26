@@ -1,6 +1,8 @@
 //! FB-90 (TW-268, RE spec 68 §4.2, §7): selecting a bitmap mask (mask thumbnail = Edit Mask,
 //! Subselection) starts bitmap editing of the mask; the masked object must keep its look on the
 //! canvas while the mask is selected and after deselecting. Pixel checks in the rendered window.
+//! With Paste Inside the "Show fill and stroke" underlay stays visible while the mask is edited
+//! (RE spec 73 §0.5 and §7, superseding RE spec 68 §4.1 `e9`/`e10`).
 
 use egui::Pos2;
 use egui_kittest::Harness;
@@ -154,4 +156,82 @@ fn selected_bitmap_mask_keeps_the_masked_object_fb90() {
         let after = rgb(&mut h, &PTS).expect("image");
         assert_eq!(after, before, "{mode}: after deselecting");
     }
+}
+
+/// Blue bitmap 60..140 pasted inside the red bitmap 20..180 (alpha channel, "Show fill and
+/// stroke" on: the red mask bitmap is the underlay where the content has no pixels).
+fn paste_inside_page() -> (Session, u64) {
+    let mut s = Session::default();
+    s.execute(
+        "file.new",
+        json!({"width": 200, "height": 200, "background": "#ffffff"}),
+    )
+    .expect("document");
+    let target = paste(
+        &mut s,
+        fp_geom::IRect::new(20, 20, 180, 180),
+        [255, 0, 0, 255],
+    );
+    let content = paste(
+        &mut s,
+        fp_geom::IRect::new(60, 60, 140, 140),
+        [0, 0, 255, 255],
+    );
+    s.execute("select.set", json!({"ids": [content]}))
+        .expect("select");
+    s.execute("edit.cut", json!({})).expect("cut");
+    s.execute("select.set", json!({"ids": [target]}))
+        .expect("select");
+    let g = s
+        .execute("edit.pasteInside", json!({}))
+        .expect("paste inside")
+        .value;
+    let g = g["id"]
+        .as_u64()
+        .or_else(|| g["ids"][0].as_u64())
+        .expect("group");
+    s.execute("select.set", json!({"ids": []}))
+        .expect("deselect");
+    (s, g)
+}
+
+#[test]
+fn paste_inside_underlay_stays_while_the_mask_is_edited_fb90() {
+    let (s, g) = paste_inside_page();
+    let mut h = harness(s);
+    let pts = [(100.0, 100.0), (30.0, 30.0), (10.0, 10.0)];
+    let Some(before) = rgb(&mut h, &pts) else {
+        return;
+    };
+    assert!(
+        before[0][2] > 200 && before[0][0] < 50,
+        "blue content inside: {before:?}"
+    );
+    assert!(
+        before[1][0] > 200 && before[1][2] < 50,
+        "red underlay where the content has no pixels: {before:?}"
+    );
+    ex(&mut h, "select.set", json!({"ids": [g]}));
+    ex(&mut h, "panel.layers.editMask", json!({}));
+    assert!(
+        h.state()
+            .state
+            .session
+            .active()
+            .is_some_and(|d| d.bitmap_mask_edit().is_some()),
+        "mask in bitmap editing"
+    );
+    let during = rgb(&mut h, &pts).expect("image");
+    assert_eq!(
+        during, before,
+        "the underlay stays while the mask is edited"
+    );
+    let _ = h
+        .state_mut()
+        .state
+        .session
+        .execute("modify.exitBitmapMode", json!({}));
+    ex(&mut h, "select.set", json!({"ids": []}));
+    let after = rgb(&mut h, &pts).expect("image");
+    assert_eq!(after, before, "after the edit");
 }

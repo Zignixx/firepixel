@@ -282,9 +282,10 @@ fn black_dab_on_grayscale_bitmap_mask_hides() {
 }
 
 #[test]
-fn alpha_channel_bitmap_mask_paints_live_without_the_underlay() {
+fn alpha_channel_bitmap_mask_paints_live_with_the_underlay() {
     // alpha channel ("mask to path") + show fill and stroke (Paste Inside): the bitmap lies under
-    // the content, but not while it is painted; the stroke's alpha masks live
+    // the content, also while it is painted (RE spec 73 §0.5 and §7, FB-90); the stroke's alpha
+    // masks live
     let mut doc = new_doc();
     let mut tiles = 1;
     let px: Vec<u8> = (0..100 * 100)
@@ -339,9 +340,9 @@ fn alpha_channel_bitmap_mask_paints_live_without_the_underlay() {
         .render_region_with(&doc, 0, 0, IRect::new(0, 0, 100, 100), 1.0, &ov)
         .expect("mask bitmap found");
     assert_eq!(
-        alpha(&out.image, 60, 50),
-        0,
-        "no underlay while the mask is painted"
+        out.image.get(60, 50),
+        Some([255, 0, 0, 255]),
+        "the underlay stays while the mask is painted"
     );
     assert_eq!(
         out.image.get(10, 50),

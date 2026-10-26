@@ -185,9 +185,104 @@ pub fn element_thumb(
     )
 }
 
-/// Miniatur der Maske eines maskierten Objekts (Ebenen-Bedienfeld): weiß = sichtbar wie im Original.
-/// Grayscale mode: the luma of the mask object (red fill → dark grey, RE spec 68 §1.1); mask
-/// bitmaps are kept in display form in memory (white = visible).
+/// What the object thumbnail of a masked object shows (RE spec 73 §0.1, §7): with "Show fill and
+/// stroke" on in the alpha channel / path outline mode the masked result including the underlay
+/// (as on the canvas); with the underlay off, in the grayscale mode or with the mask disabled the
+/// content alone, unmasked. Any other element is shown as it is. Mask editing changes nothing (the
+/// reference's stretched content while a bitmap mask is edited is not copied).
+pub fn thumb_subject(e: &Arc<Element>) -> Arc<Element> {
+    use fp_model::{ElementKind, GroupKind};
+    match &e.kind {
+        ElementKind::Group(g)
+            if g.kind.is_mask()
+                && g.mask_flags.enabled
+                && !(g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs) =>
+        {
+            let mut c = (**e).clone();
+            if let ElementKind::Group(g) = &mut c.kind {
+                g.mask_flags.enabled = false;
+            }
+            Arc::new(c)
+        }
+        _ => Arc::clone(e),
+    }
+}
+
+/// Image of the object thumbnail of a masked object: [`thumb_subject`] at its place on the page
+/// (canvas-related framing like the mask thumbnail, transparent around it).
+pub fn masked_object_image(
+    r: &fp_render::Renderer,
+    d: &Document,
+    page: usize,
+    e: &Arc<Element>,
+    frame: usize,
+    size: u32,
+) -> Option<RgbaImage> {
+    element_on_page_image(r, d, page, &thumb_subject(e), frame, size)
+}
+
+/// Image of the mask thumbnail (RE spec 73 §0.3): the mask as a grayscale image on black at its
+/// place on the page (canvas-related). Alpha channel / path outline: the alpha of the mask object
+/// → white; grayscale: Rec. 709 luma × alpha of its look (mask bitmaps are kept in display form,
+/// white = visible, so an empty Reveal All mask is all white). Opaque, page format.
+pub fn mask_image(
+    r: &fp_render::Renderer,
+    d: &Document,
+    page: usize,
+    group: &Element,
+    mask: &Arc<Element>,
+    frame: usize,
+    size: u32,
+) -> Option<RgbaImage> {
+    let gray = matches!(&group.kind, fp_model::ElementKind::Group(g) if g.kind == fp_model::GroupKind::BitmapMask);
+    let mut img = r
+        .render_element(d, mask, &fp_render::PointMap::identity(), frame)
+        .image;
+    for p in img.data_mut() {
+        let v = if gray {
+            let l = fp_color::models::luma709(p[0], p[1], p[2]) as u32;
+            ((l * p[3] as u32 + 127) / 255) as u8
+        } else {
+            p[3]
+        };
+        *p = [v, v, v, 255];
+    }
+    place_on_page(d, page, &img, size, fp_color::Rgba8::new(0, 0, 0, 255))
+}
+
+/// Miniatur des Objekts eines maskierten Objekts (Ebenen-Bedienfeld, [`masked_object_image`]).
+/// Updated when the document changes, i.e. on stroke release, not during a stroke (the live
+/// paint pixels are no part of the document).
+pub fn masked_object_thumb(
+    ctx: &Context,
+    st: &AppState,
+    doc: DocId,
+    d: &Arc<Document>,
+    e: &Arc<Element>,
+    size: u32,
+) -> Option<TextureHandle> {
+    let r = Arc::clone(&st.renderer);
+    let (frame, page) = st
+        .session
+        .document(doc)
+        .map(|x| (x.frame, x.page))
+        .unwrap_or((0, 0));
+    let generation = (Arc::as_ptr(e) as usize as u64)
+        ^ (frame as u64)
+        ^ (Arc::as_ptr(d) as usize as u64).rotate_left(29)
+        ^ page_geom(d, page);
+    get(
+        ctx,
+        st,
+        (doc.0, e.id.0 | MASKED_OBJECT, size),
+        generation,
+        || masked_object_image(&r, d, page, e, frame, size),
+    )
+}
+
+/// Miniatur der Maske eines maskierten Objekts (Ebenen-Bedienfeld, [`mask_image`]): weiß =
+/// sichtbar wie im Original, canvas-related; entering the mask edit changes nothing, a stroke
+/// shows on release.
 pub fn mask_thumb(
     ctx: &Context,
     st: &AppState,
@@ -197,46 +292,41 @@ pub fn mask_thumb(
     mask: &Arc<Element>,
     size: u32,
 ) -> Option<TextureHandle> {
-    let gray = matches!(&group.kind, fp_model::ElementKind::Group(g) if g.kind == fp_model::GroupKind::BitmapMask);
-    // Vektormaske (Pfadumriss): Form weiß auf Schwarz wie im Original (N35, Nutzerbild 15)
-    let shape = matches!(&group.kind, fp_model::ElementKind::Group(g) if g.kind == fp_model::GroupKind::VectorMask);
-    if !gray && !shape {
-        return element_thumb(ctx, st, doc, 0, d, mask, size);
-    }
     let r = Arc::clone(&st.renderer);
-    let frame = st.session.document(doc).map(|x| x.frame).unwrap_or(0);
-    let bit = if shape { MASK_SHAPE } else { MASK_INV };
+    let (frame, page) = st
+        .session
+        .document(doc)
+        .map(|x| (x.frame, x.page))
+        .unwrap_or((0, 0));
+    let gray = matches!(&group.kind, fp_model::ElementKind::Group(g) if g.kind == fp_model::GroupKind::BitmapMask);
+    let generation = (Arc::as_ptr(mask) as usize as u64)
+        ^ (frame as u64)
+        ^ (u64::from(gray) << 63)
+        ^ page_geom(d, page);
     get(
         ctx,
         st,
-        (doc.0, mask.id.0 | bit, size),
-        (Arc::as_ptr(mask) as usize as u64) ^ (frame as u64),
-        || {
-            let mut img = r
-                .render_element(d, mask, &fp_render::PointMap::identity(), frame)
-                .image;
-            for p in img.data_mut() {
-                if shape {
-                    p[0] = 255;
-                    p[1] = 255;
-                    p[2] = 255;
-                } else {
-                    let l = fp_color::models::luma709(p[0], p[1], p[2]);
-                    p[0] = l;
-                    p[1] = l;
-                    p[2] = l;
-                }
-            }
-            Some(img)
-        },
+        (doc.0, mask.id.0 | MASK_IMAGE, size),
+        generation,
+        || mask_image(&r, d, page, group, mask, frame, size),
     )
 }
 
-/// Schlüsselbit der Formminiaturen von Vektormasken.
-const MASK_SHAPE: u64 = 1 << 60;
+/// Key part of the canvas of `page` (size and origin).
+fn page_geom(d: &Document, page: usize) -> u64 {
+    d.pages.get(page).map_or(0, |p| {
+        let cv = p.canvas;
+        (u64::from(cv.width.to_bits()) << 32 | u64::from(cv.height.to_bits()))
+            ^ (u64::from(cv.origin.x.to_bits()) << 16)
+            ^ u64::from(cv.origin.y.to_bits()).rotate_left(48)
+    })
+}
 
-/// Schlüsselbit der Graustufen-Maskenminiaturen.
-const MASK_INV: u64 = 1 << 61;
+/// Schlüsselbit der Objektminiaturen maskierter Objekte.
+const MASKED_OBJECT: u64 = 1 << 59;
+
+/// Schlüsselbit der Maskenminiaturen.
+const MASK_IMAGE: u64 = 1 << 61;
 
 /// Schlüsselbit der Miniaturen „Element auf der Seite“ (getrennt von Element-, Seiten- und
 /// Symbolminiaturen im selben Zwischenspeicher).
@@ -288,6 +378,19 @@ pub fn element_on_page_image(
     frame: usize,
     size: u32,
 ) -> Option<RgbaImage> {
+    let out = r.render_element(d, e, &fp_render::PointMap::identity(), frame);
+    place_on_page(d, page, &out.image, size, fp_color::Rgba8::TRANSPARENT)
+}
+
+/// `img` (document coordinates) reduced onto the page format with the longest side `size` (at
+/// most 1:1) at its place, over `base`. `None` without a page.
+fn place_on_page(
+    d: &Document,
+    page: usize,
+    img: &RgbaImage,
+    size: u32,
+    base: fp_color::Rgba8,
+) -> Option<RgbaImage> {
     let cv = &d.pages.get(page)?.canvas;
     let (pw, ph, ox, oy) = (
         cv.width.max(1.0),
@@ -300,10 +403,9 @@ pub fn element_on_page_image(
         ((pw * s).round() as i32).max(1),
         ((ph * s).round() as i32).max(1),
     );
-    let mut canvas = RgbaImage::new(fp_raster::IRect::from_xywh(0, 0, w, h)).ok()?;
-    let out = r.render_element(d, e, &fp_render::PointMap::identity(), frame);
-    if !out.image.is_empty() {
-        let b = out.image.bounds();
+    let mut canvas = RgbaImage::filled(fp_raster::IRect::from_xywh(0, 0, w, h), base).ok()?;
+    if !img.is_empty() {
+        let b = img.bounds();
         let (x0, y0) = (
             ((b.left as f32 - ox) * s).floor() as i32,
             ((b.top as f32 - oy) * s).floor() as i32,
@@ -313,7 +415,7 @@ pub fn element_on_page_image(
             ((b.bottom as f32 - oy) * s).ceil() as i32,
         );
         let mut small = fp_raster::resample::resize(
-            &out.image,
+            img,
             (x1 - x0).max(1) as u32,
             (y1 - y0).max(1) as u32,
             fp_raster::resample::Sampler::Bilinear,
