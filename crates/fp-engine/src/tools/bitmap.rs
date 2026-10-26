@@ -734,6 +734,10 @@ impl ToolMachine for WandTool {
                 }
             }
             ToolInput::Key(ToolKey::Escape) if ctx.has_document => escape_bitmap_mode(ctx),
+            // arrow keys move the marquee as a key nudge like Marquee and Lasso (re 62 §1.8)
+            ToolInput::Key(_) if nudge_marquee(ev, ctx).is_some() => {
+                nudge_marquee(ev, ctx).unwrap_or_default()
+            }
             _ => ToolResponse {
                 cursor: Cursor::Wand,
                 ..ToolResponse::default()

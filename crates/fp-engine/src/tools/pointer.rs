@@ -793,6 +793,13 @@ pub const DUPLICATE_WITH_CTRL_DRAG_PREF: &str = "Firepixel_DuplicateWithCtrlDrag
 /// Shift-marquee toggles each object inside, TW-223).
 pub const SHIFT_MARQUEE_ADDS_ONLY_PREF: &str = "Firepixel_ShiftMarqueeAddsOnly";
 
+/// Preference of the Firepixel arrow-key pixel move (FB-94): `true` = with a pixel selection the
+/// arrow keys move the selected pixels (Alt: a copy) while the Pointer, Select Behind, the
+/// Subselection or the Mask Element Selection is active; the bitmap selection tools keep moving
+/// only the marquee. Default off = the reference (the marquee alone moves with every tool, RE
+/// spec 71 section 6.3).
+pub const ARROW_KEYS_MOVE_PIXELS_PREF: &str = "Firepixel_ArrowKeysMovePixels";
+
 /// Duplicate key of an object drag: Alt (reference) or Ctrl with
 /// [`DUPLICATE_WITH_CTRL_DRAG_PREF`].
 fn dup_key(ev: &ToolEvent, ctx: &ToolContext) -> bool {

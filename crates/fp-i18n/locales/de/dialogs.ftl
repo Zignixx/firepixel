@@ -94,6 +94,7 @@ dlg-pref-altmarqueedeselects = Alt-Ziehen auf leerer Fläche hebt Auswahl auf
 dlg-pref-duplicatewithctrldrag = Mit Strg-Ziehen duplizieren statt mit Alt-Ziehen
 dlg-pref-shiftmarqueeaddsonly = Umschalt-Auswahlrahmen fügt nur hinzu (Alt-Auswahlrahmen entfernt)
 dlg-pref-shiftwheelhorizontal = Umschalt + Mausrad rollt waagerecht
+dlg-pref-arrowkeysmovepixels = Pfeiltasten verschieben die gewählten Pixel mit den Auswahlwerkzeugen
 dlg-pref-cap-guides = Hilfslinien:
 dlg-pref-showguides = Anzeigen
 dlg-pref-lockguides = Sperren

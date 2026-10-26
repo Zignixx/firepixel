@@ -94,6 +94,7 @@ dlg-pref-altmarqueedeselects = Alt-drag on empty canvas deselects
 dlg-pref-duplicatewithctrldrag = Duplicate with Ctrl-drag instead of Alt-drag
 dlg-pref-shiftmarqueeaddsonly = Shift-marquee only adds to the selection (Alt-marquee removes)
 dlg-pref-shiftwheelhorizontal = Shift + wheel scrolls horizontally
+dlg-pref-arrowkeysmovepixels = Arrow keys move the selected pixels with the selection tools
 dlg-pref-cap-guides = Guides:
 dlg-pref-showguides = Show
 dlg-pref-lockguides = Lock

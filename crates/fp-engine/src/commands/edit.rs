@@ -378,8 +378,18 @@ fn duplicate(s: &mut Session, offset: (f32, f32)) -> Result<CommandOutput> {
 /// Arrow-key nudge (`edit.move` with `nudge`, `edit.nudge.*`): with a pixel selection only the
 /// marquee moves, the pixels stay, whatever tool is active (RE spec 71 section 6.3, FB-74;
 /// consecutive key presses merge into one History row "Move" in the session, TW-148). A copy
-/// duplicates, everything else is [`move_selection`].
+/// duplicates, everything else is [`move_selection`]. Firepixel option (FB-94,
+/// [`crate::tools::ARROW_KEYS_MOVE_PIXELS_PREF`]): with a pointer-type tool the selected pixels
+/// move instead (a copy with Alt), see [`arrow_keys_move_pixels`].
 fn nudge_selection(s: &mut Session, dx: f32, dy: f32, copy: bool) -> Result<CommandOutput> {
+    if arrow_keys_move_pixels(s) && s.doc()?.selection.has_pixels() {
+        let (ix, iy) = (dx.round() as i32, dy.round() as i32);
+        let moved = with_doc(s, |d| super::select::move_selected_pixels(d, ix, iy, copy));
+        // no bitmap to take the pixels from: the marquee moves as without the option
+        if let Ok(out) = moved {
+            return Ok(out);
+        }
+    }
     if !copy && s.doc()?.selection.has_pixels() {
         return with_doc(s, |d| {
             if let Some(m) = &mut d.selection.pixels {
@@ -392,6 +402,48 @@ fn nudge_selection(s: &mut Session, dx: f32, dy: f32, copy: bool) -> Result<Comm
         });
     }
     move_selection(s, dx, dy, copy)
+}
+
+/// FB-94: the option is on and the Pointer, Select Behind, the Subselection or the Mask Element
+/// Selection is active, so arrow keys move the selected pixels (the bitmap selection tools keep
+/// moving the marquee alone).
+fn arrow_keys_move_pixels(s: &Session) -> bool {
+    use crate::tools::ToolId as T;
+    s.prefs
+        .get_bool(crate::tools::ARROW_KEYS_MOVE_PIXELS_PREF, false)
+        && matches!(
+            s.tools.active,
+            T::Pointer | T::SelectBehind | T::Subselection | T::MaskElementSelect
+        )
+}
+
+/// FB-94: a further Alt+arrow press right after an Alt+arrow pixel copy. Moving the copy again
+/// would cut it out of the bitmap and leave a hole in the original under it, so the press redoes
+/// the copy from the state before the first press with the summed offset (like one Subselection
+/// drag); the session merges it into the "Duplicate" row. `None` = not this case.
+fn renudge_pixel_copy(s: &mut Session, dx: f32, dy: f32) -> Option<Result<CommandOutput>> {
+    if !arrow_keys_move_pixels(s) {
+        return None;
+    }
+    let d = s.doc().ok()?;
+    if !d.selection.has_pixels() {
+        return None;
+    }
+    let steps = d.history.steps();
+    let top = steps.last()?;
+    let sum =
+        |k: &str, v: f32| top.params.get(k).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32 + v;
+    let (tx, ty) = (sum("dx", dx).round() as i32, sum("dy", dy).round() as i32);
+    let (doc0, sel0) = (top.before.doc.clone(), top.before.selection.clone());
+    Some(with_doc(s, |d| {
+        let keep = (d.doc.clone(), d.selection.clone());
+        d.doc = doc0;
+        d.selection = sel0;
+        super::select::move_selected_pixels(d, tx, ty, true).inspect_err(|_| {
+            d.doc = keep.0;
+            d.selection = keep.1;
+        })
+    }))
 }
 
 /// Verschiebt die Auswahl (Pfeiltasten, Zeiger-Ziehen; `copy` = mit Alt eine Kopie ziehen).
@@ -891,6 +943,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .run(|s, p| {
                 let mut copy = p.bool_or("copy", false)?;
                 let nudge = p.bool_or("nudge", false)?;
+                let mut continued = false;
                 // Alt+arrow right after an Alt+arrow of the same selection moves that copy
                 // again; the session merges the press into the "Duplicate" row (TW-148).
                 if copy && nudge && p.opt_ids("ids")?.is_none_or(|v| v.is_empty()) {
@@ -906,10 +959,14 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         })
                     {
                         copy = false;
+                        continued = true;
                     }
                 }
                 super::with_targets(s, p, |s, p| {
                     let (dx, dy) = (p.f64("dx")? as f32, p.f64("dy")? as f32);
+                    if continued && let Some(Ok(out)) = renudge_pixel_copy(s, dx, dy) {
+                        return Ok(out);
+                    }
                     // a nudge of explicit `ids` stays an object move
                     let out = if nudge && p.opt_ids("ids")?.is_none_or(|v| v.is_empty()) {
                         nudge_selection(s, dx, dy, copy)?

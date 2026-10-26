@@ -182,6 +182,12 @@ fn page_items(cat: usize) -> &'static [Item] {
                 "dlg-pref-shiftwheelhorizontal",
                 false,
             ),
+            // own option (FB-94), off = reference
+            Check(
+                fp_engine::tools::ARROW_KEYS_MOVE_PIXELS_PREF,
+                "dlg-pref-arrowkeysmovepixels",
+                false,
+            ),
         ],
         2 => &[
             Caption("dlg-pref-cap-guides"),
@@ -1339,7 +1345,8 @@ mod tests {
                             || *k == fp_engine::tools::ALT_MARQUEE_DESELECT_PREF
                             || *k == fp_engine::tools::DUPLICATE_WITH_CTRL_DRAG_PREF
                             || *k == fp_engine::tools::SHIFT_MARQUEE_ADDS_ONLY_PREF
-                            || *k == crate::canvas::SHIFT_WHEEL_HORIZONTAL_PREF,
+                            || *k == crate::canvas::SHIFT_WHEEL_HORIZONTAL_PREF
+                            || *k == fp_engine::tools::ARROW_KEYS_MOVE_PIXELS_PREF,
                         "unbekannter Schlüssel {k}"
                     );
                 }
