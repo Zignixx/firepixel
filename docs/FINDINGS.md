@@ -1,6 +1,6 @@
 # Open findings
 
-Last updated: 2026-10-25
+Last updated: 2026-10-26
 
 This file lists the findings that are still **open** in Firepixel: known bugs, deviations from the reference application, postponed features and accepted limitations. Closed findings are not kept here; their history lives in the commit log.
 
@@ -27,7 +27,7 @@ Findings are grouped by their state:
 
 ---
 
-## [F] Fixable now (105)
+## [F] Fixable now (106)
 
 Recounted after F48, runner R-22 and release v0.2.3 (19 Oct 2026); 3 rows open, 8 waiting for confirmation in run 25. The earlier remnants (sprite
 padding default, Shift-constrain for L-shape/arrow line, import rubber band, New Style defaults, text runs, SVG
@@ -1106,6 +1106,26 @@ playback (FB-63). Hands-on checks [VERIFICATION.md](VERIFICATION.md) A4-99 to A4
 tree: 3489 passed, 0 real failures (one wgpu render flake green on rerun), 142 ignored (GT-2d, `df412989`). The 105 rows: new are TW-257 to TW-261 and TW-265, all fixed or done, pending the click-test;
 TW-262 to TW-264 and TW-266 are recorded in `[N]` only; the other rows as listed above.
 
+**Tester feedback, batch 11 (26 Oct 2026): TW-225, TW-249, TW-267, TW-269 / FB-90 to FB-95, fixes F119 to F121.** Six
+reports by E-Man on v0.2.16 and v0.2.17 (macOS); shots and recordings are kept outside the repository. Built on `main`
+after v0.2.17 (26 Oct 2026, commits `e2ccc810..43fe3e6b`): F119 `43fe3e6b` (TW-249 / FB-91, the Exit Bitmap Mode
+button is drawn again; TW-267 / FB-92, the tooltip on the red × of History rows), F120 `ad3a1dd6` (TW-225 / FB-90, no
+behaviour change, regression tests) and F121 `72e42d6d` (TW-269 / FB-94, the arrow-keys option). FB-90 is not a bug:
+what vanishes while a bitmap mask is edited is the mask's "Show fill and stroke" underlay, hidden during bitmap editing
+as in the reference (*RE spec* 68 §4.1, §4.2 rule 5, §7; F111); the masked object keeps its look on every selection
+path (tests `fb90_bitmap_mask_selected` in `fp-engine` and `fp-ui`). FB-91: the button had never actually been drawn
+since F109 (`f2e40af7`, released in v0.2.15): the one-pixel filled squares of its symbol were turned into feathered,
+invisible line segments; it is now one mesh of exact pixel quads. The report "visible in v0.2.15" was mistaken, so this
+fixes a v0.2.15 regression that only looked like one of v0.2.16. FB-92: rows bound to the step before them ("Brush
+Stroke" / "Stroke Color") explain on hover that they have no undo step of their own; other non-replayable rows show
+the generic text. FB-93 (the Pointer point-editing option of F112 tried) is a neutral note, FB-95 is praise; neither
+has a row of its own. Deliberate Firepixel extension (see `[N]`): the option `Firepixel_ArrowKeysMovePixels` (default
+off = reference; on, the arrow keys move the selected pixels with the Pointer, Select Behind, the Subselection and the
+Mask Element Selection, Alt+arrow moves a copy); the Magic Wand now handles the arrow keys itself like Marquee and
+Lasso. Hands-on checks [VERIFICATION.md](VERIFICATION.md) A4-111 to A4-114. Workspace tests for the merged tree:
+pending (GT-2f). The 106 rows: new is TW-267, fixed, pending the click-test; TW-249 and TW-225 updated; TW-269 is
+recorded in `[N]` only; the other rows as listed above.
+
 | ID | Area | What is open (expected vs. current) |
 |---|---|---|
 | TW-138 rest | Text tool defaults, Text menu (*RE spec*, rest) | **Closed** (F49, `439a3ec5`; R3 F52; run 26: `tool-text` and `menu-text` without deviation, quotas and canvas pairs unchanged). The Properties panel (also routed to the open editor) no longer writes the baseline shift default; only the Text tool's own defaults command does (R1). Every font change (Text menu, panel, editor) stores the PostScript name next to the family and puts the family at the front of the recent font list, deduplicated and limited by the preference (R2). Applying a style from the Styles panel to text writes bold/italic/underline, the font, leading and anti-aliasing as text defaults, not the size (R4). R3 measured (RE spec 56, F52): the panel writes indent, spacing before/after, leading (factor, or px with `Text_LeadingMode` 1; switching % to px converts to round(factor · size)), horizontal scale and tracking (`Text_RangeKerning` = field / 100, was the field value) in all three states (nothing selected, pointer selection, open editor) - kept. New rules: activating the Text tool (tool switch, T shortcut, toolbox, switch from another tool) resets indent, spacing, leading (`DefaultLeading`, % mode), tracking, horizontal scale and baseline shift unless `TextEditor_RememberALLSettings` is on; size, style, font and alignment stay, so values set while the Text tool is active survive and values set with the Pointer are lost (R5; the text-tool-only opacity/blend reset is omitted, Firepixel has no such option). New text gets tracking 0 (R6; the reference's first-character kerning is not applied). Every panel field change is its own "Text Change" row, also with nothing selected; an open editor session on existing text ends as one "Text Change" row (R7). Left for the click-test A4-29: for a new text the reference writes two rows ("Text" and "Text Change"), Firepixel one; the leading conversion from px back to % is not measured. |
@@ -1243,7 +1263,7 @@ Wave 4 (18 Oct 2026) closed the rest of the expansion work:
 | BA-109 (BATCH-6) | Batch steps | All steps of the batch spec exist. `ai.upscale` **done** (`9f3a1647`): Real-ESRGAN x4plus/x2plus (BSD-3-Clause) with own CPU inference in `fp-ai` (`esrgan.rs`), models via "Manage AI Models...", preview on a centre detail ([BATCH.md](BATCH.md) §3.4). **`ai.faceBlur` closed** (`4f811360`): built-in Viola-Jones detector with OpenCV's frontal face Haar cascade (Intel licence, embedded, no download; frontal faces only), tests `steps_face` and `fp_ai::face::tests`. `format.multiPage` only combines; splitting multi-page sources stays with `document.pages`/`anim.toFrames`. Runs started in the Batch Studio UI are not checked by the MCP caller gate (the UI keeps the opt-ins of `script.external`/`script.code`). Minor: `fp_raster::Mask::is_empty()` added (`4f811360`). |
 | BA-110 (BATCH-8) | Batch GIF optimizer | Measured with the new opt-in modes `lzw: flexible` and `perceptualPalette` (off by default; figures in [BATCH.md](BATCH.md) §5.6): screen −54.3 %, cartoon −37.9 % (both modes −38.8 %) vs. the export at SSIM ≥ 0.99; the camera pan reaches SSIM 0.99 in no mode (best 0.986). Done (BA-110 rest): lossy LZW with an SSIM bound (`lossyMinSsim`, off by default; cartoon −25.4 % at q 100 / −17.9 % at q 90 vs. `lzw: flexible` at SSIM ≥ 0.99, screen ±0 %, pan stays loss-free) and cancel inside one encode (per frame, search step and LZW row; partial output discarded), BATCH.md §5.6 points 8–9. |
 
-## [N] Not feasible / informational (49)
+## [N] Not feasible / informational (50)
 
 | ID | Area | Note |
 |---|---|---|

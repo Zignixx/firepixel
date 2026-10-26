@@ -365,7 +365,10 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   History row *Modify Mask*. The colour wells show grey (the luma) while a mask is selected.
 - **Painting on a bitmap mask** (brush, pencil, eraser) works live in both modes: white reveals, black hides,
   the masked element updates during the stroke, the brush outline is red, and each stroke is one *Brush*
-  row. The painting tools show the mask's *Alpha channel* / *Grayscale* radios, which switch the mode.
+  row. The painting tools show the mask's *Alpha channel* / *Grayscale* radios, which switch the mode. While a
+  bitmap mask is selected for editing, its *Show fill and stroke* underlay is hidden and only the content clipped
+  by the mask shows (as in the reference); the underlay returns after *Exit Bitmap Mode* or deselecting. The masked
+  content itself keeps its look.
 - *Select ▸ Select Inverse* inverts a pixel selection only; without one it shows a warning and leaves
   the selected objects alone.
 - *Text ▸ Size ▸ Larger / Smaller* change the size by exactly 1 pt (24 → 25 → 24), on selected texts
@@ -560,7 +563,10 @@ Important panels:
   "Delete all pages?" and lets you choose the page that stays (scripts keep the first page, or the
   page given as `keep`).
 - **Optimize:** export format and colors.
-- **History:** step back, replay steps or save them as a command.
+- **History:** step back, replay steps or save them as a command. A red × marks a step that cannot be replayed or
+  saved as a command; hovering the × or the row says why. Rows bound to the step before them (*Brush Stroke* /
+  *Stroke Color* when the Brush or Pencil is chosen) have no undo step of their own and are undone together with
+  that step.
 - **URL:** URLs for slices, hotspots and buttons. The ≡ menu has *Add Used URLs to Library* (from the
   slices, hotspots and buttons of all open documents), *Clear Unused URLs*, *Add URL...*, *Edit URL...*
   and *Delete URL* (both need a selected URL), *New URL Library...*, *Import URLs...* and *Export

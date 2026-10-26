@@ -1,6 +1,6 @@
 # Manual verification
 
-Last updated: 2026-10-25
+Last updated: 2026-10-26
 
 This file is the human click-checklist for Firepixel. Most of Firepixel is checked automatically: unit and integration tests, headless UI tests with image series, and a scripted comparison runner that drives Firepixel and the reference application side by side through the automation bridge (`--mcp`) and compares the results. Some things cannot be covered that way and stay **manual**:
 
@@ -225,8 +225,10 @@ measured in RE spec 72 and fixed or built as Firepixel extensions in F113 to F11
 rows, F114 the mask inspector, the dither slider and the screentone anti-alias, F115 the Ctrl-drag, Shift-marquee and
 Shift+wheel options, F116 the bitmap mode Undo, the Brush/Pencil rows, playback and the pixel preview, F117 the page
 block drag, F118 the Subselection on masked content and the Mask Element Selection tool); none of them was checked in
-a real window, so they are click-test items A4-99 to A4-110. The open checks below come from runs 17 to 38, tester feedback
-batches 6 to 10, the fixes after v0.2.9, RE-30, F79, RE-31, RE-32, RE-33, RE-34, RE-35, RE-36, RE-37 and RE-38,
+a real window, so they are click-test items A4-99 to A4-110. Tester feedback batch 11 (26 Oct 2026, FB-90 to FB-95 by
+E-Man; TW-225, TW-249, TW-267, TW-269) adds A4-111 to A4-114 (F119 the Exit Bitmap Mode button and the History tooltip,
+F120 the mask underlay as information, F121 the arrow-keys option). The open checks below come from runs 17 to 38, tester feedback
+batches 6 to 11, the fixes after v0.2.9, RE-30, F79, RE-31, RE-32, RE-33, RE-34, RE-35, RE-36, RE-37 and RE-38,
 RE spec 71 and the changes after v0.2.13 and v0.2.14.
 
 - [x] **TW-100** (`panel-library-styles/03`) – resolved: run 13 measured equal positions at an integer drop point; the unit counts as equal and the half-pixel case is no longer tracked.
@@ -693,6 +695,18 @@ VER-10.28.
 - [ ] **A4-110** (TW-253, TW-241 / FB-87, F116, RE spec 72 §3, tester feedback batch 10; needs: real window, real mouse, original for comparison)
   **Steps:** Make five states and switch *Include when exporting* off for state 3; press Play in the status bar, wait for two rounds, press Stop; do the same in File ▸ Image Preview. Then set a bitmap to 50 % opacity with a drop shadow, make a marquee selection inside it and drag the pixels with the Pointer; release.
   **Expected:** Playback skips state 3 (its delay does not count), loops endlessly until Stop whatever the loop setting, and Play shows the next state at once; the Image Preview plays the same way. During the pixel drag the moved pixels look exactly like the result after the release (opacity and shadow applied once). Note differences, quoting TW-253 and TW-241.
+- [ ] **A4-111** (TW-249 / FB-91, F119, tester feedback batch 11; needs: real window, real mouse; also on macOS and at 200 % display scaling)
+  **Steps:** Open a document and look at the status bar left of the size box. Double-click a bitmap with the Pointer (bitmap mode), paint a stroke with the Brush, then click the button; Undo.
+  **Expected:** The 10 × 10 Exit Bitmap Mode symbol (circle with a cross) is always visible: grey outside bitmap mode, red in bitmap mode; clicking the red button ends bitmap mode and the symbol turns grey; Undo turns it red again. Sharp at 100 % and 200 % scaling. Note differences, quoting TW-249.
+- [ ] **A4-112** (TW-269 / FB-94, F121, tester feedback batch 11, Firepixel extension; needs: real window, real mouse, real keyboard)
+  **Steps:** Make a marquee selection inside a bitmap. With the option off, press the arrow keys with the Pointer and with the Marquee. Turn on *Preferences ▸ Edit ▸ Arrow keys move the selected pixels with the selection tools*; press arrow and Shift+arrow with the Pointer, Select Behind, the Subselection and the Mask Element Selection; then Alt+arrow twice; then the arrows with the Marquee, Lasso and Magic Wand; read the History each time.
+  **Expected:** Off: the arrows move only the marquee with every tool (as in the reference). On, with the four selection tools: the pixels move 1 px (Shift 10 px), the vacated area is transparent, the marquee follows, consecutive presses form one row "Move"; Alt+arrow moves a copy (row "Duplicate"), the original stays whole. Marquee, Lasso and Magic Wand still move the marquee alone, the Magic Wand in one merged row. Note differences, quoting TW-269.
+- [ ] **A4-113** (TW-267 / FB-92, F119, tester feedback batch 11; needs: real window, real mouse; German and English)
+  **Steps:** Select a vector rectangle and choose the Brush, then the Pencil, so the History shows "Brush Stroke" / "Stroke Color" with a red ×. Hover the × and the row; then hover the × of another non-replayable row. Switch the language and repeat.
+  **Expected:** The bound rows say that the step has no undo step of its own, is undone together with the step before it and cannot be replayed on its own; other rows with a red × say the step cannot be replayed or saved as a command. Both texts translated. Note differences, quoting TW-267.
+- [ ] **A4-114** (TW-225 / FB-90, F120, RE spec 68 §4.1 and §7, tester feedback batch 11, information; needs: real window, real mouse, original for comparison)
+  **Steps:** In both programs paste a small bitmap inside a large bitmap mask with *Show fill and stroke* on (Alpha channel). Select the mask by its thumbnail, paint into it, click the Exit Bitmap Mode button, deselect.
+  **Expected:** While the mask is edited its underlay is hidden and only the masked content clipped by the mask shows, in both programs; the underlay returns after the stop button or deselecting; the masked content looks the same before, during and after. This is the reference's behaviour, not a bug. Note differences, quoting TW-225.
 ---
 
 # Part B – Full catalogue

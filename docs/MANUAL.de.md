@@ -396,7 +396,10 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
 - **Malen auf einer Bitmapmaske** (Pinsel, Bleistift, Radiergummi) wirkt in beiden Modi live: Weiß deckt auf,
   Schwarz blendet aus, das maskierte Element ändert sich während des Zugs, der Pinselumriss ist rot, jeder Zug
   ist eine Zeile *Pinsel*. Die Malwerkzeuge zeigen die Radios *Alphakanal* / *Graustufen* der Maske, die den
-  Modus umschalten.
+  Modus umschalten. Solange eine Bitmapmaske zum Bearbeiten gewählt ist, ist ihre Unterlage *Füllung und
+  Pinselstrich anzeigen* ausgeblendet und nur der von der Maske beschnittene Inhalt sichtbar (wie im Vorbild); die
+  Unterlage kehrt nach *Bitmapmodus beenden* oder dem Abwählen zurück. Der maskierte Inhalt selbst behält sein
+  Aussehen.
 - *Auswählen ▸ Auswahl umkehren* kehrt nur eine Pixelauswahl um; ohne sie erscheint eine Warnung, und
   die gewählten Objekte bleiben unverändert.
 - *Text ▸ Größe ▸ Größer / Kleiner* ändern die Größe um genau 1 pt (24 → 25 → 24), bei gewählten Texten
@@ -609,7 +612,10 @@ Wichtige Bedienfelder:
   bleibt eine leere „Seite 1“. Sind alle Seiten ausgewählt, fragt Firepixel „Alle Seiten löschen?“ und
   lässt die Seite wählen, die bleibt (Skripte behalten die erste Seite oder die mit `keep` genannte).
 - **Optimieren:** Exportformat und Farben.
-- **Verlauf:** Schritte zurückspulen, wiederholen oder als Befehl speichern.
+- **Verlauf:** Schritte zurückspulen, wiederholen oder als Befehl speichern. Ein rotes × kennzeichnet einen Schritt,
+  der nicht wiederholt oder als Befehl gespeichert werden kann; der Tooltip über dem × oder der Zeile nennt den
+  Grund. Zeilen, die an den Schritt davor gebunden sind (*Pinselstrich* / *Strichfarbe* bei der Wahl von Pinsel oder
+  Bleistift), haben keinen eigenen Rückgängig-Schritt und werden mit diesem Schritt zurückgenommen.
 - **URL:** URLs für Slices, Hotspots und Schaltflächen. Das Menü ≡ enthält *Verwendete URLs in
   Bibliothek aufnehmen* (aus den Slices, Hotspots und Schaltflächen aller offenen Dokumente), *Nicht
   verwendete URLs löschen*, *URL hinzufügen...*, *URL bearbeiten...* und *URL löschen* (beide nur mit
