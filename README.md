@@ -30,7 +30,7 @@ every UI tweak). They are attached to [releases](../../releases) and to issues i
 | Stage | feature-complete preview; parity polishing |
 | Parity (scripted comparison, 49 units) | **49 units equal except for design**, 0 real deviations, 0 unclear, 0 under-measured (follow-up run 44 on top of full run 43, 24 Oct 2026) |
 | Proven 1:1 | **100 %** (49 / 49 units); measurement quota 88.0 %; canvas image pairs within 1 %: 195 / 224 |
-| Tests | **3445 passed** (full workspace run on the code of v0.2.16, 25 Oct 2026, GT-2c); the run on the tree with tester feedback batch 10 is 3489 passed, 0 real failures (one wgpu render flake green on rerun), 142 ignored (GT-2d, `df412989`); the run on the tree with tester feedback batch 11 is 3499 passed, 0 failed, 142 ignored (GT-2f, `43fe3e6b`); the run on the tree with batch 12 and the night round is pending (GT-2g); batch and export tests also run on macOS and Linux in CI |
+| Tests | **3445 passed** (full workspace run on the code of v0.2.16, 25 Oct 2026, GT-2c); the run on the tree with tester feedback batch 10 is 3489 passed, 0 real failures (one wgpu render flake green on rerun), 142 ignored (GT-2d, `df412989`); the run on the tree with tester feedback batch 11 is 3499 passed, 0 failed, 142 ignored (GT-2f, `43fe3e6b`); the run on the tree with batch 12 and the night round is 3533 passed, 0 failed, 142 ignored (GT-2g, `1e2fbb98`); batch and export tests also run on macOS and Linux in CI |
 | Open findings | 107 fixable rows (mostly fixed or done and waiting for the click-test or the macOS re-test), 5 deferred items, 53 informational rows (850+ closed) — see [docs/FINDINGS.md](docs/FINDINGS.md) |
 
 Details and method: [docs/STATUS.md](docs/STATUS.md), [docs/PARITY.md](docs/PARITY.md),

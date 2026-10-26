@@ -1145,7 +1145,7 @@ and stroke" underlay **stays visible** while a bitmap mask is edited and painted
 real deviation; F127 reverts the hiding of F111 (the note "FB-90 is not a bug" above and A4-114 are superseded).
 Deliberate Firepixel extensions (see `[N]`): the Ctrl new-bitmap choice, the page per pane and the focus rules of the
 split view, the tooltip options. Test determinism work (BA-117) follows in the same release. Hands-on checks
-[VERIFICATION.md](VERIFICATION.md) A4-115 to A4-119. Workspace tests for the merged tree: pending (GT-2g). The 107
+[VERIFICATION.md](VERIFICATION.md) A4-115 to A4-119. Workspace tests for the merged tree: 3533 passed, 0 failed, 142 ignored (GT-2g, `1e2fbb98`). The 107
 rows: new is TW-273, fixed, pending the click-test; TW-225, TW-226, TW-245 and TW-265 updated; TW-270 to TW-272 are
 recorded in `[N]` only; the other rows as listed above.
 
