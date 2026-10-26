@@ -95,13 +95,16 @@ Frequent shortcuts (set "Firepixel", switchable in *Edit ▸ Keyboard Shortcuts.
 |---|---|---|---|
 | V / 0 | Pointer / Select Behind | A / 1 | Subselection / Mask Element Selection |
 | M | Marquee | L | Lasso |
-| W | Magic Wand | B | Brush |
+| W | Magic Wand | B | Brush / Pencil |
 | P | Pen | U | Rectangle / Ellipse / Polygon |
 | T | Text | N | Line |
 | K | Slice | J | Hotspot |
 | I | Eyedropper | G | Paint Bucket / Gradient |
 | Q | Scale | C | Crop |
 | H / Space | Hand | Z | Zoom |
+
+**B** toggles between Brush and Pencil; the first press from another tool selects the one of the two used
+last (the Brush when neither was used yet).
 
 Shift while dragging constrains proportions and angles, Alt draws from the center. Double-click a
 bitmap to enter bitmap mode; double-click text to edit it. A right-click opens the context menu
@@ -167,7 +170,9 @@ Mode"). Outside bitmap mode the button is grey. Undo of "Edit Bitmap" ends bitma
 and undoing "Exit Bitmap Mode" turns it back on; undoing a stroke keeps it. Choosing the **Brush** or **Pencil**
 writes one History row, "Brush Stroke" when the tool's stroke differs from the current stroke, otherwise "Stroke
 Color" (never a second "Stroke Color" in a row); Edit ▸ Undo and Redo pass over it together with the step before
-it. A selected vector object is deselected and stays unchanged. The **Gradient** tool
+it. A direct switch between Brush and Pencil keeps the current stroke (row "Stroke Color"); after another tool each
+takes the stroke it last had. A stroke that creates a new bitmap writes the row "Insert Empty Bitmap" before "Edit
+Bitmap" and the stroke row. A selected vector object is deselected and stays unchanged. The **Gradient** tool
 has its own colors (default black → white, a click on the swatch opens the gradient editor);
 "Fill selection" and tolerance are separate from the Paint Bucket. **Replace Color** has its own
 "From" and "To" colors (default green → red).
@@ -486,6 +491,8 @@ made in one pane appears in the other at once.
   focused pane.
 - Close a pane with the × in its header or with *Window ▸ Close Duplicate Window* (the focused pane
   stays). The split is not saved with the document or the workspace.
+- There is one split, always side by side. The pane without the focus shows no hover feedback (tool
+  cursor, brush outline, hover frames) until it gets the focus.
 
 ## Panels
 

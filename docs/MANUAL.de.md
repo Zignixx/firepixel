@@ -99,13 +99,16 @@ Häufige Kürzel (Satz „Firepixel“, umschaltbar unter *Bearbeiten ▸ Tastat
 |---|---|---|---|
 | V / 0 | Zeiger / Hintere auswählen | A / 1 | Teilauswahl / Maskenelement-Auswahl |
 | M | Auswahlrahmen | L | Lasso |
-| W | Zauberstab | B | Pinsel |
+| W | Zauberstab | B | Pinsel / Bleistift |
 | P | Stift | U | Rechteck / Ellipse / Polygon |
 | T | Text | N | Linie |
 | K | Segment | J | Hotspot |
 | I | Pipette | G | Farbeimer / Verlauf |
 | Q | Skalieren | C | Zuschneiden |
 | H / Leertaste | Hand | Z | Zoom |
+
+**B** wechselt zwischen Pinsel und Bleistift; der erste Druck aus einem anderen Werkzeug wählt das zuletzt
+benutzte der beiden (den Pinsel, solange keines benutzt wurde).
 
 Umschalt beim Ziehen hält Seitenverhältnisse und Winkel fest, Alt zeichnet von der Mitte aus.
 Doppelklick auf eine Bitmap öffnet den Bitmapmodus; Doppelklick auf Text bearbeitet ihn. Ein
@@ -174,7 +177,9 @@ bearbeiten“ beendet den Bitmapmodus, Wiederholen beginnt ihn erneut, und Rück
 schaltet ihn wieder ein; Rückgängig eines Strichs lässt ihn an. Die Wahl von **Pinsel** oder **Bleistift**
 schreibt eine Verlaufszeile, „Pinselstrich“, wenn der Strich des Werkzeugs vom aktuellen Strich abweicht, sonst
 „Strichfarbe“ (nie zweimal „Strichfarbe“ hintereinander); Bearbeiten ▸ Rückgängig und Wiederholen überspringen
-sie zusammen mit dem Schritt davor. Ein gewähltes Vektorobjekt wird abgewählt und bleibt unverändert. Das Werkzeug
+sie zusammen mit dem Schritt davor. Ein direkter Wechsel zwischen Pinsel und Bleistift behält den aktuellen Strich
+(Zeile „Strichfarbe“); nach einem anderen Werkzeug nimmt jedes den Strich, den es zuletzt hatte. Ein Strich, der eine
+neue Bitmap anlegt, schreibt vor „Bitmap bearbeiten“ und der Strichzeile die Zeile „Leere Bitmap einfügen“. Ein gewähltes Vektorobjekt wird abgewählt und bleibt unverändert. Das Werkzeug
 **Verlauf** hat eigene Farben (Vorgabe Schwarz → Weiß, Klick aufs Farbfeld öffnet den
 Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
 hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
@@ -524,6 +529,8 @@ dasselbe Dokument; eine Änderung in einem Bereich erscheint sofort auch im ande
 - Einen Bereich schließen Sie mit dem × in seiner Kopfleiste oder mit *Fenster ▸ Zusätzliches
   Fenster schließen* (der Bereich mit Fokus bleibt). Die Teilung wird weder im Dokument noch im
   Arbeitsbereich gespeichert.
+- Es gibt eine Teilung, immer nebeneinander. Der Bereich ohne Fokus zeigt keine Rückmeldung beim
+  Überfahren (Werkzeugzeiger, Pinselumriss, Hover-Rahmen), bis er den Fokus erhält.
 
 ## Bedienfelder
 

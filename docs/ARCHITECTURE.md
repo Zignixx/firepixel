@@ -219,6 +219,13 @@ operation and re-checks the pane's page, state, layer and selection against the 
 the other pane). Render jobs carry the pane (`RenderKey::pane`); the render thread keeps the newest job per pane,
 and finished images go to the cache of their pane. The split is not persisted.
 
+Tooltips go through one module, `fp-ui/src/tips.rs` (FB-37, FB-98 / TW-226, TW-271). Widgets attach their tooltip
+with `HoverTip::hover_tip` instead of egui's `on_hover_text`; `TipMode` (Full / names only / off) comes from View ▸
+Tooltips and the preference `Firepixel_TooltipsHideNames`, and in names-only mode only the first line of the text
+(name and shortcut) is shown. The delay before a tooltip opens is the preference `Firepixel_TooltipDelayMs`
+(default 600 ms, clamped to 0–5000); `tips::apply` writes it to the egui style when the wanted timing changes
+(again after the theme rebuilt the style), and the theme no longer sets it.
+
 Animation playback on the canvas is a small driver in the UI frame loop, `fp-ui/src/playback.rs` (FB-63). While
 `ui.playing` is set (View ▸ Play/Stop or the status-bar Play button) `playback::frame` advances the active
 document to the next state after the shown state's own delay (1/100 s), asks egui for a repaint at that time and
