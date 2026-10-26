@@ -1427,13 +1427,13 @@ mod tests {
         let en = |k: &str| fp_i18n::with_language("en", || fp_i18n::t(k));
         assert_eq!(
             de("dlg-pref-tooltipshidenames"),
-            "Werkzeugnamen bei ausgeschalteten Tooltips ebenfalls ausblenden"
+            "Werkzeugnamen ohne QuickInfos auch ausblenden"
         );
         assert_eq!(
             en("dlg-pref-tooltipshidenames"),
             "Hide tool names too when tooltips are off"
         );
-        assert_eq!(de("dlg-pref-tooltipdelay"), "Tooltip-Verzögerung (ms):");
+        assert_eq!(de("dlg-pref-tooltipdelay"), "QuickInfo-Verzögerung (ms):");
         assert_eq!(en("dlg-pref-tooltipdelay"), "Tooltip delay (ms):");
     }
 }

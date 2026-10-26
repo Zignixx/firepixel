@@ -82,13 +82,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     theme.bold(11.0),
                     c.icon_red,
                 );
-                // FB-92: the marker and the row explain the red × on hover
+                // FB-92: the marker and the row explain the red × on hover; an explanation, shown
+                // also with View > Tooltips off (FB-99)
                 let tip = marker_tip(attached.get(i).copied().unwrap_or(false));
                 let m = ui.interact(mr, Id::new("history-marker").with(i), egui::Sense::hover());
                 if m.hovered() {
-                    m.hover_tip(&tip);
+                    m.explain_tip(&tip);
                 } else {
-                    resp = resp.hover_tip(&tip);
+                    resp = resp.explain_tip(&tip);
                 }
             }
             let col = if done { c.text } else { c.text_disabled };

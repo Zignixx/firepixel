@@ -7,6 +7,7 @@
 
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{CursorIcon, Id, Rect, Sense, Stroke, Ui, pos2, vec2};
 use serde_json::json;
 
@@ -189,7 +190,7 @@ fn header_ui(
     );
     let xresp = ui
         .interact(xr, Id::new(("fp-split-close", p)), Sense::click())
-        .on_hover_text(fp_i18n::t("ui-split-close-pane"));
+        .hover_tip(fp_i18n::t("ui-split-close-pane"));
     let xcol = if xresp.hovered() { c.text } else { c.text_weak };
     let k = 3.5;
     for (a, b) in [
@@ -230,7 +231,7 @@ fn header_ui(
             }
         })
         .response
-        .on_hover_text(fp_i18n::t("ui-split-pane-page"));
+        .hover_tip(fp_i18n::t("ui-split-pane-page"));
     if sel != page {
         *request = Some(Request::Page(p, sel));
     }

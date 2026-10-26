@@ -438,10 +438,11 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   (Tooltips) von Knöpfen, Feldern und Bedienfeldern überall (Werkzeugbedienfeld, Symbolleiste, Inspektor,
   Bedienfelder, Dialoge). Aus entfallen nur die Beschreibungszeilen: die kurze erste Zeile mit Name und
   Kürzel bleibt, z. B. „Zeiger (V, 0)“, einzeilige QuickInfos von Bedienfeldknöpfen und Inspektorfeldern
-  bleiben unverändert. Um auch diese auszublenden, *Voreinstellungen ▸ Allgemein ▸ Werkzeugnamen bei
-  ausgeschalteten Tooltips ebenfalls ausblenden* einschalten; *Tooltip-Verzögerung (ms)* auf derselben
+  bleiben unverändert. Um auch diese auszublenden, *Voreinstellungen ▸ Allgemein ▸ Werkzeugnamen ohne
+  QuickInfos auch ausblenden* einschalten; *QuickInfo-Verzögerung (ms)* auf derselben
   Seite legt fest, wie lange der Mauszeiger ruhen muss, bis eine QuickInfo erscheint (Vorgabe 600,
-  0–5000). Die Änderungen wirken sofort.
+  0–5000). Die Änderungen wirken sofort. Erklärende QuickInfos (z. B. am roten × im Verlauf, Gründe
+  für gesperrte Knöpfe, Warnungen) erscheinen unabhängig von diesem Schalter.
 - *Ansicht ▸ Koordinaten-Tag* (Firepixel-Erweiterung, direkt unter QuickInfos; Vorgabe: ein, wird als
   Voreinstellung `Firepixel_CoordinateTag` gemerkt) schaltet die kleine graue Marke dicht unter dem
   Mauszeiger über der Leinwand: mit Rechteck, Ellipse, Linie, Polygon und automatischen Formen die

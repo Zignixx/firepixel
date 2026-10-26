@@ -203,7 +203,7 @@ fn test_module_start(src: &str) -> usize {
 /// Aufrufe, deren Text in der Oberfläche erscheint.
 const UI_SINKS: &[&str] = &[
     "label", "heading", "small", "strong", "weak", "monospace", "code", "button", "small_button", "checkbox", "radio", "radio_value",
-    "selectable_label", "selectable_value", "hyperlink_to", "menu_button", "collapsing", "on_hover_text", "hover_tip", "on_disabled_hover_text",
+    "selectable_label", "selectable_value", "hyperlink_to", "menu_button", "collapsing", "on_hover_text", "hover_tip", "name_tip", "explain_tip", "disabled_explain_tip", "on_disabled_hover_text",
     "on_hover_text_at_pointer", "show_tooltip_text", "text", "set_status", "Status", "item", "fit_label", "push_button", "dialog_frame",
     "text_block", "combo", "button_row", "RichText::new", "Button::new", "Label::new", "Checkbox::new", "SelectableLabel::new",
     "WidgetText::from", "CollapsingHeader::new", "Window::new", "Hyperlink::from_label_and_url", "hint_text", "tooltip", "title",

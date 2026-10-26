@@ -431,7 +431,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
         &start_l,
     );
     let sresp = match &block {
-        Some(why) if !running => sresp.on_disabled_hover_text(why.as_str()),
+        Some(why) if !running => sresp.disabled_explain_tip(why.as_str()),
         _ => sresp.hover_tip(t("batch-ui-start.tooltip")),
     };
     if sresp.clicked() {

@@ -1133,7 +1133,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
                     name_rect.width() - 4.0,
                 );
                 u.interact(name_rect, egui::Id::new(("fp-ai-row", i)), Sense::hover())
-                    .hover_tip(format!("{name}\n{}\n{}", short_source(m), m.display_note()));
+                    .name_tip(format!("{name}\n{}\n{}", short_source(m), m.display_note()));
                 u.painter().text(
                     pos2(rr.left() + cl.task.0, y),
                     egui::Align2::LEFT_CENTER,

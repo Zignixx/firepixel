@@ -538,7 +538,7 @@ fn tool_slot(
         widgets::corner_triangle(ui.painter(), r, col);
     }
     crate::ui_kit::icon_button_info(&resp, true, &tool_title(st, shown), Some(selected));
-    let resp = resp.hover_tip(tool_tooltip(st, shown));
+    let resp = resp.name_tip(tool_tooltip(st, shown));
     // Drücken und Halten (0,4 s) bzw. Klick auf das Dreieck öffnet den Flyout
     let mut open_flyout = false;
     if has_flyout {

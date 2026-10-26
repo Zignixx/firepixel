@@ -11,6 +11,9 @@
 //!   since FB-98 "off" hides only the description lines, the short first line (name and shortcut)
 //!   stays; Preferences ▸ General "Hide tool names too" hides everything; the delay is the
 //!   preference `Firepixel_TooltipDelayMs` (default 600 ms).
+//! - FB-99: explanatory tooltips (red × of the History panel, disabled reasons, warnings) show
+//!   whatever the switch says; in names-only mode a tooltip of several lines whose first line is
+//!   not "Name (keys)" goes completely.
 
 use egui::{Event, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
@@ -361,7 +364,8 @@ fn view_tooltips_switches_widget_tooltips_at_once() {
             .prefs
             .set(fp_ui::tips::HIDE_NAMES_PREF, fp_engine::prefs::PrefValue::Bool(true));
         h.run_steps(1);
-        assert!(h.ctx.global_style().interaction.tooltip_delay.is_infinite(), "nothing opens");
+        // FB-99: the delay stays finite (explanations still open); tool tooltips are not attached
+        assert_eq!(h.ctx.global_style().interaction.tooltip_delay, 0.6, "explanations still open");
         assert!(!rest_and_tooltip_open(&mut h, button.center()), "no tooltip with names hidden too");
         assert!(h.query_by_label(&tip).is_none(), "no tool tooltip text");
         assert_eq!(label_nodes(&h), 1, "only the button carries the name");
@@ -571,4 +575,173 @@ fn text_inspector_controls_carry_the_measured_descriptions() {
     h.run_steps(2);
     let te = egui::Id::new(egui::Id::new(("pi-text", false)).with("track")).with("te");
     assert_eq!(h.ctx.memory(|m| m.focused()), Some(te), "AV field focused");
+}
+
+/// Texts of the drawn text shapes with their rectangles (the History rows paint their labels).
+fn drawn_texts(h: &H) -> Vec<(String, egui::Rect)> {
+    fn walk(s: &egui::epaint::Shape, out: &mut Vec<(String, egui::Rect)>) {
+        match s {
+            egui::epaint::Shape::Text(t) => out.push((
+                t.galley.text().to_string(),
+                egui::Rect::from_min_size(t.pos, t.galley.size()),
+            )),
+            egui::epaint::Shape::Vec(v) => v.iter().for_each(|s| walk(s, out)),
+            _ => {}
+        }
+    }
+    let mut all = Vec::new();
+    for cs in &h.output().shapes {
+        walk(&cs.shape, &mut all);
+    }
+    all
+}
+
+fn click_at(h: &mut H, p: Pos2) {
+    ev(h, Event::PointerMoved(p));
+    press(h, p, true);
+    press(h, p, false);
+    h.run_steps(3);
+}
+
+/// Rests on `at` until `text` is drawn (at most 90 frames); tells whether it appeared.
+fn rest_until_drawn(h: &mut H, at: Pos2, text: &str) -> bool {
+    ev(h, Event::PointerGone);
+    h.run_steps(2);
+    ev(h, Event::PointerMoved(at));
+    for _ in 0..90 {
+        h.step();
+        if drawn_texts(h).iter().any(|(t, _)| t == text) {
+            return true;
+        }
+    }
+    false
+}
+
+/// FB-99: the explanation on the red × of a History row is not a tool description: it shows with
+/// View ▸ Tooltips on, off, and off with "Hide tool names too".
+#[test]
+fn history_marker_tooltip_ignores_the_tooltips_switch() {
+    fp_i18n::with_language("en", || {
+        let mut h = harness();
+        let _ = h.state_mut().state.session.execute(
+            "draw.rectangle",
+            json!({"rect": [40, 40, 160, 130], "fillColor": "#ff0000", "strokeWidth": 0}),
+        );
+        let _ = h.state_mut().state.session.set_tool(ToolId::Brush);
+        h.run_steps(3);
+        let tip = fp_ui::panels::history::marker_tip(true);
+        if !drawn_texts(&h).iter().any(|(t, _)| t == "×") {
+            let title = fp_i18n::t("panel-title-history");
+            let tab = drawn_texts(&h)
+                .into_iter()
+                .filter(|(t, _)| *t == title)
+                .map(|(_, r)| r)
+                .max_by(|a, b| a.center().x.total_cmp(&b.center().x))
+                .expect("History tab");
+            click_at(&mut h, tab.center());
+        }
+        let marker = drawn_texts(&h)
+            .into_iter()
+            .find(|(t, _)| t == "×")
+            .map(|(_, r)| r)
+            .expect("red × of the bound row");
+        assert!(rest_until_drawn(&mut h, marker.center(), &tip), "switch on");
+        h.state_mut().state.run("view.tooltips", json!({}));
+        h.run_steps(1);
+        assert!(!h.state().state.session.ui.tooltips);
+        assert!(rest_until_drawn(&mut h, marker.center(), &tip), "switch off (names only)");
+        h.state_mut()
+            .state
+            .session
+            .prefs
+            .set(fp_ui::tips::HIDE_NAMES_PREF, fp_engine::prefs::PrefValue::Bool(true));
+        h.run_steps(1);
+        assert_eq!(fp_ui::tips::mode(&h.ctx), fp_ui::tips::TipMode::Off);
+        assert!(rest_until_drawn(&mut h, marker.center(), &tip), "switch off, names hidden too");
+        // a tool button stays silent in the same mode
+        let tool = fp_ui::tools_panel::tool_title(&h.state().state, ToolId::Pointer);
+        let button = h.query_all_by_label(&tool).next().map(|n| n.rect()).expect("Pointer button");
+        assert!(!rest_and_tooltip_open(&mut h, button.center()), "tool tooltip hidden");
+    });
+}
+
+/// FB-99: the kinds of `HoverTip` in names-only and off mode: a description of several lines
+/// whose first line is not "Name (keys)" goes completely, a named tooltip keeps its first line,
+/// an explanation and a disabled reason stay whole.
+#[test]
+fn tip_kinds_follow_the_modes() {
+    use fp_ui::tips::HoverTip;
+    const DESC: &str = "Smooths the edges.\nWorks on bitmaps only.";
+    const NAMED: &str = "Blur (R)\nBlurs the pixels.";
+    const NAMED_PLAIN: &str = "Model one\nfrom disk";
+    const EXPLAIN: &str = "This step cannot be replayed.\nIt is undone with the one before.";
+    const WHY: &str = "Choose a folder first.\nThe output folder is missing.";
+    let first = |t: &str| t.split('\n').next().unwrap_or_default().to_string();
+    let shown = |tooltips: bool, hide: bool, at: usize| -> Vec<String> {
+        let mut prefs = fp_engine::Preferences::new();
+        prefs.set(fp_ui::tips::HIDE_NAMES_PREF, fp_engine::prefs::PrefValue::Bool(hide));
+        let mut h = egui_kittest::Harness::builder()
+            .with_size(vec2(600.0, 300.0))
+            .with_pixels_per_point(1.0)
+            .build_ui(move |ui| {
+                fp_ui::tips::apply(ui.ctx(), &prefs, tooltips);
+                ui.horizontal(|ui| {
+                    let _ = ui.button("desc").hover_tip(DESC);
+                    let _ = ui.button("named").hover_tip(NAMED);
+                    let _ = ui.button("plain").name_tip(NAMED_PLAIN);
+                    let _ = ui.button("explain").explain_tip(EXPLAIN);
+                    let _ = ui
+                        .add_enabled(false, egui::Button::new("why"))
+                        .disabled_explain_tip(WHY);
+                });
+            });
+        h.run_steps(2);
+        let label = ["desc", "named", "plain", "explain", "why"][at];
+        let r = h.get_by_label(label).rect();
+        h.input_mut().events.push(Event::PointerMoved(r.center()));
+        for _ in 0..60 {
+            h.step();
+        }
+        let mut seen = Vec::new();
+        for t in [DESC, NAMED, NAMED_PLAIN, EXPLAIN, WHY] {
+            for c in [t.to_string(), first(t)] {
+                if h.query_by_label(&c).is_some() && !seen.contains(&c) {
+                    seen.push(c);
+                }
+            }
+        }
+        seen
+    };
+    // on: every tooltip whole
+    assert_eq!(shown(true, false, 0), [DESC]);
+    assert_eq!(shown(true, false, 1), [NAMED]);
+    // names only: the description of several lines goes, name lines stay
+    assert!(shown(false, false, 0).is_empty(), "description-only tooltip hidden");
+    assert_eq!(shown(false, false, 1), [first(NAMED)]);
+    assert_eq!(shown(false, false, 2), [first(NAMED_PLAIN)]);
+    // explanations whole in every mode
+    for (tooltips, hide) in [(true, false), (false, false), (false, true)] {
+        assert_eq!(shown(tooltips, hide, 3), [EXPLAIN], "explain {tooltips} {hide}");
+        assert_eq!(shown(tooltips, hide, 4), [WHY], "disabled reason {tooltips} {hide}");
+    }
+    // off with names hidden: nothing else
+    for at in 0..3 {
+        assert!(shown(false, true, at).is_empty(), "off: {at}");
+    }
+}
+
+/// FB-99: the German Preferences dialog keeps its width with the tooltip options (the long
+/// checkbox label had widened it to 806 px); the labels say "QuickInfo" like the View menu.
+#[test]
+fn preferences_dialog_width_de_with_tooltip_options() {
+    fp_i18n::with_language("de", || {
+        let mut h = harness();
+        h.state_mut().state.run("edit.preferences", json!({}));
+        h.run_steps(3);
+        let r = fp_ui::dialogs::dialog_rect(&h.ctx, "fp-prefs").expect("Voreinstellungen");
+        assert!(r.width() <= 760.0, "width {}", r.width());
+        assert!((480.0..=520.0).contains(&r.height()), "height {}", r.height());
+        assert!(fp_i18n::t("dlg-pref-tooltipshidenames").contains("QuickInfos"));
+        assert!(fp_i18n::t("dlg-pref-tooltipdelay").starts_with("QuickInfo"));
+    });
 }

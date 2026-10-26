@@ -760,7 +760,7 @@ fn image_view(
             vec2(info.width(), line),
         );
         ui.interact(wr, Id::new("fp-batch-preview-warn"), Sense::hover())
-            .hover_tip(sh.warnings.join("\n"));
+            .explain_tip(sh.warnings.join("\n"));
     }
 }
 
