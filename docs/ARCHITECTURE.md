@@ -207,6 +207,18 @@ alone through `tool.pick` and `select.set`, so it moves and changes without its 
 `panels::common::list_frame` scroll horizontally when their rows report more width (`common::want_width`) than the
 panel has (FB-77).
 
+The split document view (Window ▸ Duplicate Window, FB-97 / TW-272) keeps every existing code path on one live
+pane: the focused pane's view, page, state, layer and selection stay in the usual `DocumentState` fields
+(`d.view`, `d.page`, `d.frame` …), and `DocumentState::split` (`fp-engine/src/view_pane.rs`) parks the other
+pane's `ViewPane`. Commands, tools, panels, MCP, CLI, scripts and the parity runner therefore address the focused
+pane unchanged and see no split at all without one. `fp-ui/src/canvas/split.rs` draws the two panes: for the pane
+without the focus it swaps the parked state in (`DocumentState::swap_pane`) together with that pane's canvas cache
+(`AppState::pane_canvases`, `use_pane_cache`), draws it passively (no tool input, no tool feedback) and swaps
+back. A press or wheel turn over the passive pane first calls `Session::focus_pane`, which finishes a running tool
+operation and re-checks the pane's page, state, layer and selection against the document (it may have changed in
+the other pane). Render jobs carry the pane (`RenderKey::pane`); the render thread keeps the newest job per pane,
+and finished images go to the cache of their pane. The split is not persisted.
+
 Animation playback on the canvas is a small driver in the UI frame loop, `fp-ui/src/playback.rs` (FB-63). While
 `ui.playing` is set (View ▸ Play/Stop or the status-bar Play button) `playback::frame` advances the active
 document to the next state after the shown state's own delay (1/100 s), asks egui for a repaint at that time and

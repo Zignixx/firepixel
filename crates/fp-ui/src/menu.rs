@@ -900,6 +900,16 @@ pub fn build_main_menu_where(
             }
             "menu-filter" => nodes.extend(filter_submenus(st)),
             "menu-window" => {
+                // FB-97 / TW-272: "Close Duplicate Window" right after Duplicate Window while the
+                // active document is shown in two panes
+                if st.session.active().is_some_and(|d| d.is_split()) {
+                    let pos = nodes
+                        .iter()
+                        .position(|n| matches!(n, Node::Item { action: ItemAction::Command(c), .. } if c == "window.duplicateWindow"))
+                        .map(|i| i + 1)
+                        .unwrap_or(0);
+                    nodes.insert(pos, runtime_item("window.closeDuplicate"));
+                }
                 // Flash-Bedienfelder (Laufzeit) nach „Suchen und ersetzen“, Dokumentliste am Ende
                 let pos = nodes.iter().position(|n| matches!(n, Node::Item { action: ItemAction::Command(c), .. } if c == "edit.findAndReplace")).map(|i| i + 1).unwrap_or(nodes.len());
                 let extra = vec![

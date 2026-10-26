@@ -497,6 +497,25 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
 - **Fenster:** blendet Bedienfelder ein und aus. Unter *Arbeitsbereichlayouts* lassen sich
   Anordnungen speichern und laden; dazu gibt es die Dokumentliste.
 
+### Geteilte Ansicht (Fenster ▸ Fenster duplizieren)
+
+*Fenster ▸ Fenster duplizieren* zeigt das aktive Dokument ein zweites Mal: Der Dokumentbereich teilt
+sich in zwei Bereiche nebeneinander. Jeder Bereich hat eigene Seite, eigenen Status, Zoom und
+Bildlauf – so arbeiten Sie auf einer Seite und sehen dabei eine andere. Beide Bereiche zeigen
+dasselbe Dokument; eine Änderung in einem Bereich erscheint sofort auch im anderen.
+
+- Der neue rechte Bereich hat den Fokus und beginnt auf derselben Seite. Eine andere Seite wählen
+  Sie in der Seitenliste oben im Bereich (oder im Bedienfeld Seiten).
+- Der zuletzt angeklickte Bereich hat den Fokus (Akzentlinie an seiner Kopfleiste): Werkzeuge,
+  Bedienfelder (Seiten, Ebenen, Status, Eigenschaften …), Lineale, Statusleiste und Tastenkürzel
+  wirken auf ihn. Ein Klick oder Mausrad über dem anderen Bereich gibt diesem zuerst den Fokus, ein
+  Werkzeug arbeitet also immer im Bereich unter dem Zeiger.
+- Mit dem Steg zwischen den Bereichen ändern Sie ihre Breiten. Original/Vorschau/2-fach/4-fach
+  gelten für den Bereich mit Fokus.
+- Einen Bereich schließen Sie mit dem × in seiner Kopfleiste oder mit *Fenster ▸ Zusätzliches
+  Fenster schließen* (der Bereich mit Fokus bleibt). Die Teilung wird weder im Dokument noch im
+  Arbeitsbereich gespeichert.
+
 ## Bedienfelder
 
 Die Bedienfelder sind rechts angedockt. Klick auf den aktiven Reiter klappt die Gruppe ein, einen

@@ -461,6 +461,24 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
 - **Window:** shows and hides panels. *Workspace Layouts* saves and loads arrangements; at the end
   is the list of open documents.
 
+### Split view (Window ▸ Duplicate Window)
+
+*Window ▸ Duplicate Window* shows the active document a second time: the document area splits into
+two panes side by side. Each pane has its own page, state, zoom and scroll position, so you can
+work on one page while you look at another one; both panes show the same document, so a change
+made in one pane appears in the other at once.
+
+- The new right pane has the focus and starts on the same page. Pick another page with the page
+  list at the top of the pane (or in the Pages panel).
+- The pane you clicked last has the focus (the accent line on its header): the tools, the panels
+  (Pages, Layers, States, Properties …), the rulers, the status bar and the keyboard shortcuts act on
+  it. Clicking or turning the wheel over the other pane gives it the focus first, so a tool always
+  works in the pane under the pointer.
+- Drag the bar between the panes to change their widths. Original/Preview/2-Up/4-Up apply to the
+  focused pane.
+- Close a pane with the × in its header or with *Window ▸ Close Duplicate Window* (the focused pane
+  stays). The split is not saved with the document or the workspace.
+
 ## Panels
 
 The panels are docked on the right. Clicking the active tab collapses the group; dragging a tab
