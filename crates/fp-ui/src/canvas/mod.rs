@@ -4172,32 +4172,44 @@ pub(crate) fn exit_bitmap_mode_colors(on: bool) -> (Color32, Color32) {
     }
 }
 
+/// The 10 x 10 px symbol of "Exit Bitmap Mode" centred on `center`, one quad per device pixel at
+/// `ppp` (FB-91). A mesh, not `rect_filled`: the tessellator draws a filled rectangle no wider
+/// than two feathering widths (one device pixel here) as a feathered line segment, which leaves
+/// such one-pixel squares invisible; mesh quads are filled as they are.
+pub(crate) fn exit_bitmap_mode_mesh(center: Pos2, ppp: f32, on: bool) -> egui::Shape {
+    let px = 1.0 / ppp;
+    let side = 10.0 * px;
+    let o = pos2(
+        ((center.x - side / 2.0) * ppp).round() / ppp,
+        ((center.y - side / 2.0) * ppp).round() / ppp,
+    );
+    let (circle, cross) = exit_bitmap_mode_colors(on);
+    let mut mesh = egui::Mesh::default();
+    for (y, row) in EXIT_BITMAP_MODE_PIXELS.iter().enumerate() {
+        for (x, ch) in row.chars().enumerate() {
+            let c = match ch {
+                'O' => circle,
+                'x' => cross,
+                _ => continue,
+            };
+            let p = o + vec2(x as f32 * px, y as f32 * px);
+            mesh.add_colored_rect(Rect::from_min_size(p, vec2(px, px)), c);
+        }
+    }
+    egui::Shape::mesh(mesh)
+}
+
 /// The status-bar button "Exit Bitmap Mode": no frame, no hover change, the 10 x 10 px symbol in
 /// whole pixels; disabled (a click does nothing) outside bitmap mode.
 fn exit_bitmap_mode_button(ui: &mut Ui, size: egui::Vec2, on: bool, tip: &str) -> egui::Response {
     let sense = if on { Sense::click() } else { Sense::hover() };
     let (rect, resp) = ui.allocate_exact_size(size, sense);
     if ui.is_rect_visible(rect) {
-        let ppp = ui.ctx().pixels_per_point();
-        let px = 1.0 / ppp;
-        let side = 10.0 * px;
-        let o = pos2(
-            ((rect.center().x - side / 2.0) * ppp).round() / ppp,
-            ((rect.center().y - side / 2.0) * ppp).round() / ppp,
-        );
-        let (circle, cross) = exit_bitmap_mode_colors(on);
-        let painter = ui.painter();
-        for (y, row) in EXIT_BITMAP_MODE_PIXELS.iter().enumerate() {
-            for (x, ch) in row.chars().enumerate() {
-                let c = match ch {
-                    'O' => circle,
-                    'x' => cross,
-                    _ => continue,
-                };
-                let p = o + vec2(x as f32 * px, y as f32 * px);
-                painter.rect_filled(Rect::from_min_size(p, vec2(px, px)), 0.0, c);
-            }
-        }
+        ui.painter().add(exit_bitmap_mode_mesh(
+            rect.center(),
+            ui.ctx().pixels_per_point(),
+            on,
+        ));
     }
     crate::ui_kit::icon_button_info(&resp, on, tip, None);
     if tip.is_empty() {
@@ -4287,6 +4299,9 @@ pub fn footer_status(st: &AppState, now: f64, alt: bool) -> String {
     }
 }
 
+/// Temp-data key of the last drawn status bar rectangle and its size box (FB-91 layout checks).
+pub(crate) const FOOTER_SIZE_BOX: &str = "footer-size-box";
+
 fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let theme = Theme::current(ui.ctx());
     let c = &theme.colors;
@@ -4313,6 +4328,8 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         pos2(zr.left() - 75.0, zr.top()),
         pos2(zr.left() - 2.0, zr.bottom()),
     );
+    // the status bar and its size box, for layout checks (FB-91)
+    ui.data_mut(|dd| dd.insert_temp(Id::new(FOOTER_SIZE_BOX), (rect, sr)));
     let p = ui.painter();
     for r in [zr, sr] {
         p.rect_filled(r, 0.0, c.frame_bg);

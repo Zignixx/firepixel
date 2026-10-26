@@ -3195,3 +3195,161 @@ fn pointer_edits_points_option_drags_only_selected_rectangle_points_ui() {
     assert_eq!(xy(2), (150.0, 140.0), "dragged bottom-right");
     assert_eq!(xy(3), (50.0, 120.0), "unselected corner stays");
 }
+
+/// FB-91: the "Exit Bitmap Mode" button lies in the status bar left of the size box at a normal
+/// and a narrow window width, grey when off and red in bitmap mode, and its symbol really reaches
+/// the screen (the former one-pixel `rect_filled` squares were tessellated away).
+#[test]
+fn exit_bitmap_mode_button_drawn_left_of_size_box() {
+    for (w, ppp) in [(1500.0f32, 1.0f32), (900.0, 1.0), (900.0, 2.0)] {
+        for on in [false, true] {
+            let mut session = fp_engine::Session::default();
+            let _ = session.execute(
+                "file.new",
+                json!({"width": 400, "height": 300, "background": "#ffffff"}),
+            );
+            if let Some(d) = session.active_mut() {
+                d.bitmap_mode = on;
+            }
+            let ctx = egui::Context::default();
+            let mut app = FirepixelApp::with_session(&ctx, session, UiSettings::default(), false);
+            app.state.os_clipboard = false;
+            let mut h = Harness::builder()
+                .with_size(egui::vec2(w, 800.0))
+                .with_pixels_per_point(ppp)
+                .with_max_steps(8)
+                .wgpu()
+                .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
+            h.run_steps(4);
+            let (enabled, r) = exit_bitmap_button(&h);
+            assert_eq!(enabled, on, "enabled only in bitmap mode (w {w})");
+            let (bar, size_box): (egui::Rect, egui::Rect) = h
+                .ctx
+                .data(|d| d.get_temp(egui::Id::new(super::FOOTER_SIZE_BOX)))
+                .expect("status bar drawn");
+            assert!(
+                bar.contains_rect(r),
+                "button {r:?} inside the status bar {bar:?} (w {w})"
+            );
+            assert!(
+                r.right() <= size_box.left(),
+                "button {r:?} left of the size box {size_box:?} (w {w})"
+            );
+            let Ok(shot) = h.render() else {
+                eprintln!("no graphics adapter, pixel check skipped");
+                continue;
+            };
+            let (circle, cross) = super::exit_bitmap_mode_colors(on);
+            let (mut n_circle, mut n_cross) = (0, 0);
+            for y in (r.top() * ppp) as u32..(r.bottom() * ppp) as u32 {
+                for x in (r.left() * ppp) as u32..(r.right() * ppp) as u32 {
+                    let p = shot.get_pixel(x, y).0;
+                    if p[..3] == [circle.r(), circle.g(), circle.b()] {
+                        n_circle += 1;
+                    } else if p[..3] == [cross.r(), cross.g(), cross.b()] {
+                        n_cross += 1;
+                    }
+                }
+            }
+            assert_eq!(
+                (n_circle, n_cross),
+                (48, 28),
+                "10 x 10 px symbol drawn (w {w}, ppp {ppp}, on {on})"
+            );
+        }
+    }
+}
+
+/// Texts drawn in the last frame with their rectangles.
+fn drawn_texts(h: &Harness<'static, FirepixelApp>) -> Vec<(String, egui::Rect)> {
+    fn texts(shape: &egui::epaint::Shape, out: &mut Vec<(String, egui::Rect)>) {
+        match shape {
+            egui::epaint::Shape::Text(t) => out.push((
+                t.galley.job.text.clone(),
+                egui::Rect::from_min_size(t.pos, t.galley.size()),
+            )),
+            egui::epaint::Shape::Vec(v) => v.iter().for_each(|s| texts(s, out)),
+            _ => {}
+        }
+    }
+    let mut all = Vec::new();
+    for cs in &h.output().shapes {
+        texts(&cs.shape, &mut all);
+    }
+    all
+}
+
+/// FB-92: the red × of a "Brush Stroke" / "Stroke Color" row in the History panel explains on
+/// hover that the row has no undo step of its own.
+#[test]
+fn history_marker_of_attached_row_has_tooltip() {
+    let mut h = harness();
+    let _ = h.state_mut().state.session.execute(
+        "draw.rectangle",
+        json!({"rect": [40, 40, 160, 130], "fillColor": "#ff0000", "strokeWidth": 0}),
+    );
+    set_tool(&mut h, ToolId::Brush);
+    h.run_steps(2);
+    let attached = h
+        .state()
+        .state
+        .session
+        .active()
+        .and_then(|d| d.history.top().map(|s| s.attached()));
+    assert_eq!(attached, Some(true), "choosing the Brush wrote a bound row");
+    let tip = crate::panels::history::marker_tip(true);
+    if !drawn_texts(&h).iter().any(|(t, _)| t == "×") {
+        // bring the History tab to the front
+        let title = fp_i18n::t("panel-title-history");
+        let tab = drawn_texts(&h)
+            .into_iter()
+            .filter(|(t, _)| *t == title)
+            .map(|(_, r)| r)
+            .max_by(|a, b| a.center().x.total_cmp(&b.center().x))
+            .expect("History tab");
+        mv(&mut h, tab.center());
+        button(
+            &mut h,
+            tab.center(),
+            PointerButton::Primary,
+            true,
+            Modifiers::NONE,
+        );
+        button(
+            &mut h,
+            tab.center(),
+            PointerButton::Primary,
+            false,
+            Modifiers::NONE,
+        );
+        h.run_steps(4);
+    }
+    // the History panel shows the bound row with its red ×
+    let r = drawn_texts(&h)
+        .into_iter()
+        .find(|(t, _)| t == "×")
+        .map(|(_, r)| r)
+        .expect("red × of the bound row");
+    assert!(
+        !drawn_texts(&h).iter().any(|(t, _)| *t == tip),
+        "no tooltip before hovering"
+    );
+    h.ctx.all_styles_mut(|s| {
+        s.interaction.tooltip_delay = 0.0;
+        s.interaction.show_tooltips_only_when_still = false;
+    });
+    mv(&mut h, r.center());
+    for _ in 0..40 {
+        h.step();
+        if drawn_texts(&h).iter().any(|(t, _)| *t == tip) {
+            break;
+        }
+    }
+    assert_eq!(
+        drawn_texts(&h).iter().filter(|(t, _)| *t == tip).count(),
+        1,
+        "hovering the × shows the tooltip once"
+    );
+    // the generic marker text of other non-replayable rows differs
+    assert_ne!(tip, crate::panels::history::marker_tip(false));
+}

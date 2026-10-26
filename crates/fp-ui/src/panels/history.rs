@@ -13,6 +13,16 @@ use std::collections::BTreeSet;
 
 const SEL: &str = "history-sel";
 
+/// Tooltip of the red × of a row that cannot be replayed (FB-92): a row bound to the step before
+/// it (`attached`) has no undo step of its own either.
+pub fn marker_tip(attached: bool) -> String {
+    common::t(if attached {
+        "panel-history-attached-tip"
+    } else {
+        "panel-history-not-replayable-tip"
+    })
+}
+
 /// Zeichnet das Bedienfeld.
 pub fn show(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
@@ -28,6 +38,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         .iter()
         .map(|s| (st.session.step_label(s), s.recordable))
         .collect();
+    // rows bound to the step before them ("Brush Stroke" / "Stroke Color", FB-92)
+    let attached: Vec<bool> = d.history.steps().iter().map(|s| s.attached()).collect();
     let pos = d.history.undo_count();
     let mut sel: BTreeSet<usize> = ui.data(|dd| dd.get_temp(Id::new(SEL))).unwrap_or_default();
     sel.retain(|i| *i < steps.len());
@@ -38,7 +50,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         for (i, (label, rec)) in steps.iter().enumerate() {
             let done = i < pos;
             let selected = sel.contains(&i);
-            let (rect, resp) = common::row(ui, 21.0, selected);
+            let (rect, mut resp) = common::row(ui, 21.0, selected);
             // Schieberspalte
             let slider = Rect::from_min_size(rect.min, vec2(16.0, rect.height()));
             ui.painter().vline(
@@ -62,13 +74,21 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 Rect::from_center_size(pos2(rect.left() + 28.0, rect.center().y), vec2(14.0, 14.0));
             crate::inspector::glyphs::paint(ui.painter(), ir, Glyph::StyleNew, &theme, done);
             if !rec {
-                ui.painter().text(
+                let mr = ui.painter().text(
                     ir.right_bottom(),
                     Align2::RIGHT_BOTTOM,
                     "×",
                     theme.bold(11.0),
                     c.icon_red,
                 );
+                // FB-92: the marker and the row explain the red × on hover
+                let tip = marker_tip(attached.get(i).copied().unwrap_or(false));
+                let m = ui.interact(mr, Id::new("history-marker").with(i), egui::Sense::hover());
+                if m.hovered() {
+                    m.on_hover_text(&tip);
+                } else {
+                    resp = resp.on_hover_text(&tip);
+                }
             }
             let col = if done { c.text } else { c.text_disabled };
             crate::widgets::text_clipped(

@@ -63,6 +63,8 @@ panel-history-save-command = Save as Command
 panel-history-replay = Replay
 panel-history-replay-label = Replay Steps
 panel-history-copied = Steps copied to the clipboard
+panel-history-attached-tip = This step has no undo step of its own; it is undone together with the step before it and cannot be replayed on its own.
+panel-history-not-replayable-tip = This step cannot be replayed or saved as a command.
 
 ## Pages
 panel-pages-count = { $n ->

@@ -63,6 +63,8 @@ panel-history-save-command = Als Befehl speichern
 panel-history-replay = Wiederholen
 panel-history-replay-label = Schritte wiederholen
 panel-history-copied = Schritte in die Zwischenablage kopiert
+panel-history-attached-tip = Dieser Schritt hat keinen eigenen Rückgängig-Schritt; er wird mit dem Schritt davor zurückgenommen und kann nicht einzeln wiederholt werden.
+panel-history-not-replayable-tip = Dieser Schritt kann nicht wiederholt oder als Befehl gespeichert werden.
 
 ## Seiten
 panel-pages-count = { $n ->
