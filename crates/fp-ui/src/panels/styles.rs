@@ -7,6 +7,7 @@ use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::inspector::glyphs::Glyph;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{
     Align2, Color32, ColorImage, Id, Rect, Sense, Stroke, StrokeKind, TextureOptions, Ui, pos2,
     vec2,
@@ -202,7 +203,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     lr.width(),
                 );
             }
-            let resp = resp.on_hover_text(&s.name);
+            let resp = resp.hover_tip(&s.name);
             if resp.clicked() {
                 if ui.input(|i| i.modifiers.command) {
                     actions.push(Action::Status(format!("\u{1}toggle-style:{}", s.name)));

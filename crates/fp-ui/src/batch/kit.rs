@@ -4,6 +4,7 @@
 
 use crate::icons::{self, Icon, IconStyle};
 use crate::theme::{Theme, ThemeKind, mix, with_alpha};
+use crate::tips::HoverTip;
 use crate::ui_kit::{self, KitIcon, RowIcon, sp, type_scale};
 use egui::{
     Align2, Color32, CornerRadius, Id, Rect, Response, Sense, Stroke, StrokeKind, Ui, pos2, vec2,
@@ -591,7 +592,7 @@ pub fn button(
         resp
     };
     if label.is_empty() && !name.is_empty() {
-        resp.on_hover_text(name)
+        resp.hover_tip(name)
     } else {
         resp
     }
@@ -814,7 +815,7 @@ pub fn toggle(ui: &mut Ui, rect: Rect, id: Id, on: bool, name: &str) -> Response
     if resp.hovered() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
-    resp.on_hover_text(name)
+    resp.hover_tip(name)
 }
 
 /// Zustandssymbol einer Dateizeile (wartet: nichts, läuft: Kreis, fertig ✓, Warnung ⚠, Fehler ✕).

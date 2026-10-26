@@ -16,6 +16,7 @@ use super::color_table;
 use crate::icons::Icon;
 use crate::inspector::fields;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_export::options::OptimizeSettings;
 use fp_i18n::t;
@@ -407,7 +408,7 @@ pub fn show(ui: &mut Ui, page: Rect, inner: Rect, d: &mut ImagePreview) {
         theme.ui_font(),
         if en { c.text } else { c.text_disabled },
     );
-    rresp.on_hover_text(t("image-preview-tip-runtime"));
+    rresp.hover_tip(t("image-preview-tip-runtime"));
 
     // Einmal abspielen / Schleife + Anzahl
     let s = &mut d.panes[active].settings;
@@ -502,7 +503,7 @@ fn tip(ui: &Ui, id: &str, r: Rect, key: &str) {
     let text = t(key);
     let resp = ui.interact(r, Id::new(("fp-ipv-anim-tip", id)), Sense::hover());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, text.as_str()));
-    resp.on_hover_text(text);
+    resp.hover_tip(text);
 }
 
 #[cfg(test)]

@@ -8,6 +8,7 @@ use crate::icons::{self, Icon, IconStyle};
 use crate::menu;
 use crate::panels::{self, PanelId};
 use crate::theme::{Theme, ToolGroup, with_alpha};
+use crate::tips::HoverTip;
 use crate::widgets;
 use crate::workspace::{DockMode, PanelGroup};
 use egui::{Align2, Color32, Id, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
@@ -289,7 +290,7 @@ pub fn tab_strip(
         );
         icons::paint(ui.painter(), mr, Icon::PanelMenu, &st);
         crate::ui_kit::icon_button_info(&resp, true, &fp_i18n::t("ui-dock-panel-menu"), None);
-        out.menu_clicked = Some(resp.on_hover_text(fp_i18n::t("ui-dock-panel-menu")));
+        out.menu_clicked = Some(resp.hover_tip(fp_i18n::t("ui-dock-panel-menu")));
     }
     out.background = Some(bg);
     out
@@ -590,7 +591,7 @@ pub fn show_dock(ui: &mut Ui, st: &mut AppState) {
         None,
     );
     if bresp
-        .on_hover_text(fp_i18n::t(if iconic {
+        .hover_tip(fp_i18n::t(if iconic {
             "ui-dock-expand"
         } else {
             "ui-dock-collapse-icons"
@@ -781,7 +782,7 @@ fn iconic_dock(ui: &mut Ui, st: &mut AppState, area: Rect) {
                 );
             }
             crate::ui_kit::icon_button_info(&resp, true, p.title(), Some(open));
-            if resp.on_hover_text(p.title()).clicked() {
+            if resp.hover_tip(p.title()).clicked() {
                 st.dock.iconic_open = if open { None } else { Some(p) };
             }
             if open {
@@ -986,14 +987,14 @@ fn float_title(
     let close = Rect::from_min_max(pos2(r.right() - r.height() - 6.0, r.top()), r.max);
     let a = ui
         .interact(arrow, id.with("collapse"), Sense::click())
-        .on_hover_text(fp_i18n::t(if g.collapsed {
+        .hover_tip(fp_i18n::t(if g.collapsed {
             "ui-panel-expand"
         } else {
             "ui-panel-collapse"
         }));
     let x = ui
         .interact(close, id.with("close"), Sense::click())
-        .on_hover_text(fp_i18n::t("pmenu-closeGroup"));
+        .hover_tip(fp_i18n::t("pmenu-closeGroup"));
     let ac = if a.hovered() {
         c.text
     } else {

@@ -9,6 +9,7 @@ use super::{DialogClose, dialog_frame, push_button, t};
 use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use serde_json::{Map, Value, json};
 
@@ -1318,7 +1319,7 @@ pub fn draw_fields(ui: &mut Ui, st: &AppState, d: &mut FormDialog, area: Rect) -
                                 egui::Id::new((dlg_id.as_str(), i, k, "icon")),
                                 Sense::click(),
                             )
-                            .on_hover_text(it.as_str());
+                            .hover_tip(it.as_str());
                         resp.widget_info(|| {
                             egui::WidgetInfo::selected(
                                 egui::WidgetType::RadioButton,

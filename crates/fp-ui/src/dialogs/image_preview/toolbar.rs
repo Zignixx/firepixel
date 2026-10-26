@@ -5,6 +5,7 @@ use super::{ImagePreview, Tool, ViewMode};
 use crate::icons::{self, Icon, IconStyle};
 use crate::inspector::fields;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use crate::widgets::{ButtonLook, button_frame};
 use egui::{Id, Rect, Sense, Ui, pos2, vec2};
 use fp_i18n::t;
@@ -91,7 +92,7 @@ pub(super) fn tool_button(
     );
     let clicked = enabled && resp.clicked();
     if !tip.is_empty() {
-        resp.on_hover_text(tip);
+        resp.hover_tip(tip);
     }
     clicked
 }
@@ -146,7 +147,7 @@ pub(super) fn show(ui: &mut Ui, d: &mut ImagePreview, origin: egui::Pos2) {
     }
     let zoom_tip = t("image-preview-zoom-tip");
     ui.interact(zr, Id::new("fp-ipv-zoom-tip"), Sense::hover())
-        .on_hover_text(zoom_tip);
+        .hover_tip(zoom_tip);
     x += ZOOM_W + 6.0;
     for (mode, icon, key) in [
         (ViewMode::One, Icon::ViewPreview, "image-preview-view-1"),
@@ -212,7 +213,7 @@ pub(super) fn show(ui: &mut Ui, d: &mut ImagePreview, origin: egui::Pos2) {
     let tip = t("image-preview-current-frame");
     let tr = ui.interact(fr, Id::new("fp-ipv-frame-tip"), Sense::hover());
     tr.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, multi, tip.as_str()));
-    tr.on_hover_text(tip);
+    tr.hover_tip(tip);
     x += 44.0 + 6.0;
     if tool_button(
         ui,
@@ -283,6 +284,6 @@ fn play_button(ui: &mut Ui, r: Rect, playing: bool, enabled: bool) -> bool {
         theme.colors.icon_fg,
     );
     let clicked = enabled && resp.clicked();
-    resp.on_hover_text(tip);
+    resp.hover_tip(tip);
     clicked
 }

@@ -13,6 +13,7 @@ use crate::app_state::AppState;
 use crate::file_dialog::{self, Request};
 use crate::inspector::fields;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Color32, Id, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
 use fp_model::{Behavior, ElementId, ElementKind};
 use serde_json::{Value, json};
@@ -355,7 +356,7 @@ fn draw_map(ui: &mut egui::Ui, r: Rect, d: &mut SwapImageDialog) {
     let c = &theme.colors;
     let resp = ui
         .interact(r, Id::new("fp-swap-map"), Sense::click())
-        .on_hover_text(t("dlg-swap-map-tip"));
+        .hover_tip(t("dlg-swap-map-tip"));
     ui.painter().rect_filled(r, 0.0, c.list_bg);
     ui.painter()
         .rect_stroke(r, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);

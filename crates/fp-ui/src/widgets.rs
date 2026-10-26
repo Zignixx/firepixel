@@ -3,6 +3,7 @@
 
 use crate::icons::{self, Icon, IconStyle};
 use crate::theme::{Theme, ToolGroup, with_alpha};
+use crate::tips::HoverTip;
 use egui::{
     Align2, Color32, CornerRadius, FontId, Painter, Rect, Response, Sense, Stroke, StrokeKind, Ui,
     pos2, vec2,
@@ -222,7 +223,7 @@ pub fn icon_button(
     if tooltip.is_empty() {
         resp
     } else {
-        resp.on_hover_text(tooltip)
+        resp.hover_tip(tooltip)
     }
 }
 

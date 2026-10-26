@@ -12,6 +12,7 @@
 use super::{DialogClose, dialog_frame, push_button, t};
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Rect, Sense, Stroke, pos2, vec2};
 use fp_ai::job::Job;
 use fp_ai::models::{self, ModelId};
@@ -659,10 +660,10 @@ fn checksum_row(ui: &mut egui::Ui, sha: &str) {
     let short = format!("{}…{}", &sha[..12], &sha[sha.len() - 8..]);
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new(short).font(egui::FontId::monospace(12.0)))
-            .on_hover_text(sha);
+            .hover_tip(sha);
         if ui
             .small_button(t("dlg-ai-copy"))
-            .on_hover_text(t("dlg-ai-copy-tip"))
+            .hover_tip(t("dlg-ai-copy-tip"))
             .clicked()
         {
             ui.ctx().copy_text(sha.to_string());
@@ -771,13 +772,13 @@ fn show_missing(ctx: &egui::Context, st: &mut AppState) {
                         ui.label(m.license);
                     }),
                     (gl[4].as_str(), &mut |ui: &mut egui::Ui| {
-                        ui.label(&src).on_hover_text(m.url);
+                        ui.label(&src).hover_tip(m.url);
                     }),
                     (gl[5].as_str(), &mut |ui: &mut egui::Ui| {
                         checksum_row(ui, m.sha256)
                     }),
                     (gl[6].as_str(), &mut |ui: &mut egui::Ui| {
-                        ui.label(&fshort).on_hover_text(&folder);
+                        ui.label(&fshort).hover_tip(&folder);
                     }),
                 ],
             );
@@ -1126,7 +1127,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
                     name_rect.width() - 4.0,
                 );
                 u.interact(name_rect, egui::Id::new(("fp-ai-row", i)), Sense::hover())
-                    .on_hover_text(format!("{name}\n{}\n{}", short_source(m), m.display_note()));
+                    .hover_tip(format!("{name}\n{}\n{}", short_source(m), m.display_note()));
                 u.painter().text(
                     pos2(rr.left() + cl.task.0, y),
                     egui::Align2::LEFT_CENTER,
@@ -1159,7 +1160,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
                         progress_bar(ui, pr, 130.0);
                         if ui
                             .small_button("×")
-                            .on_hover_text(t("dlg-ai-cancel-download"))
+                            .hover_tip(t("dlg-ai-cancel-download"))
                             .clicked()
                         {
                             cancel_dl = true;
@@ -1190,7 +1191,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
                                     .frame(true)
                                     .frame_when_inactive(false),
                                 )
-                                .on_hover_text(t("dlg-ai-remove-tip"))
+                                .hover_tip(t("dlg-ai-remove-tip"))
                                 .clicked()
                             {
                                 ask_remove = Some(m.id);
@@ -1290,7 +1291,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
                         ))
                         .color(c.text_weak),
                     )
-                    .on_hover_text(f);
+                    .hover_tip(f);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui
                             .add_sized(btn, egui::Button::new(open_l.as_str()))
@@ -1310,7 +1311,7 @@ fn show_manager(ctx: &egui::Context, st: &mut AppState) {
                             mem > 0,
                             egui::Button::new(clear_l.as_str()).min_size(vec2(cw, BTN.y)),
                         )
-                        .on_hover_text(t("dlg-ai-clear-cache-tip"))
+                        .hover_tip(t("dlg-ai-clear-cache-tip"))
                         .clicked()
                     {
                         clear = true;

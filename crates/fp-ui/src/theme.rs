@@ -926,9 +926,10 @@ impl Theme {
             style.spacing.window_margin = egui::Margin::same(8);
             style.spacing.combo_height = 300.0;
             style.spacing.scroll = egui::style::ScrollStyle::solid();
-            style.interaction.tooltip_delay = 0.6;
         });
         ctx.data_mut(|d| d.insert_temp(egui::Id::new(THEME_KEY), theme));
+        // the tooltip delay comes from the preferences (FB-98), written on the next frame
+        crate::tips::invalidate(ctx);
     }
 
     /// Aktives Design aus dem egui-Kontext (Rückfall: Normal).

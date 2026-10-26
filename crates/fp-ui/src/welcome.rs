@@ -29,6 +29,7 @@
 //! `locales\<sprache>\welcome.ftl`. Bausteine aus [`crate::ui_kit`], Vorschaubilder aus
 //! [`thumbs`].
 
+use crate::tips::HoverTip;
 mod thumbs;
 
 use crate::app_state::{Action, AppState};
@@ -912,7 +913,7 @@ fn draw_panel(
     crate::theme::field_widgets(&mut cu);
     let resp = cu
         .add(egui::Checkbox::new(&mut dont, t("welcome-dont-show")))
-        .on_hover_text(t("welcome-dont-show.tooltip"));
+        .hover_tip(t("welcome-dont-show.tooltip"));
     nav.track(&resp);
     if resp.changed() {
         st.session
@@ -1103,7 +1104,7 @@ fn action_tile(
         resp
     };
     if shown != subtitle {
-        resp.on_hover_text(subtitle)
+        resp.hover_tip(subtitle)
     } else {
         resp
     }
@@ -1243,7 +1244,7 @@ fn recent_row(
     } else {
         format!("{}\n{}", t("welcome-recent-missing"), it.path.display())
     };
-    resp.on_hover_text(tip)
+    resp.hover_tip(tip)
 }
 
 /// Schachbrett nur hinter Vorschauen, die groß genug sind, dass es nicht flimmert.

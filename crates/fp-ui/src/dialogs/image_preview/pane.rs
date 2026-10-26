@@ -7,6 +7,7 @@ use crate::inspector::fields;
 use crate::inspector::glyphs::Glyph;
 use crate::panels::optimize;
 use crate::theme::{Theme, ThemeKind};
+use crate::tips::HoverTip;
 use egui::{Align2, Color32, Rect, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_export::options::{ColorMode, ExportFormat, OptimizeSettings, PaletteKind, builtin_presets};
 use fp_export::preview::{SizeLabel, modem_seconds, size_label};
@@ -744,7 +745,7 @@ pub(super) fn paint_frame(ui: &Ui, frame: Rect, active: bool) {
 /// Tooltip über einem Bedienelement, das selbst keinen hat (nimmt keine Klicks weg).
 fn tip(ui: &Ui, id: impl std::hash::Hash + std::fmt::Debug, r: Rect, key: &str) {
     ui.interact(r, egui::Id::new(id), egui::Sense::hover())
-        .on_hover_text(t(key));
+        .hover_tip(t(key));
 }
 
 /// Kopfzeile mit Bedienelementen.

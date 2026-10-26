@@ -6,6 +6,7 @@ use super::kit::{self, BtnKind};
 use super::{EntryStatus, Inbox, Mode, Studio};
 use crate::app_state::AppState;
 use crate::theme::{Theme, with_alpha};
+use crate::tips::HoverTip;
 use crate::ui_kit::{self, RowIcon, Tone, sp, type_scale};
 use egui::{Align2, Color32, CornerRadius, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_batch::recipe::{Conflict, TargetKind};
@@ -431,7 +432,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
     );
     let sresp = match &block {
         Some(why) if !running => sresp.on_disabled_hover_text(why.as_str()),
-        _ => sresp.on_hover_text(t("batch-ui-start.tooltip")),
+        _ => sresp.hover_tip(t("batch-ui-start.tooltip")),
     };
     if sresp.clicked() {
         start(s, now);
@@ -480,7 +481,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
             dry_ok,
             &dry_l,
         )
-        .on_hover_text(t("batch-ui-dry-run.tooltip"))
+        .hover_tip(t("batch-ui-dry-run.tooltip"))
         .clicked()
     {
         dry_run(s, now);
@@ -625,7 +626,7 @@ fn target_controls(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, runn
                 );
             })
             .response
-            .on_hover_text(label.clone());
+            .hover_tip(label.clone());
     });
     if kind != s.recipe.output.target.kind {
         if kind == TargetKind::Folder && s.recipe.output.target.path.is_none() {
@@ -654,7 +655,7 @@ fn target_controls(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, runn
         !running,
         &folder_l,
     )
-    .on_hover_text(t("batch-ui-target-choose.tooltip"))
+    .hover_tip(t("batch-ui-target-choose.tooltip"))
     .clicked()
     {
         pick_target(st, s);
@@ -716,7 +717,7 @@ fn target_controls(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, runn
         if r.right() - x > ui_kit::text_w(ui.ctx(), &l, &f) + 24.0
             && cb
                 .add_enabled(!running, egui::Checkbox::new(&mut inc, l))
-                .on_hover_text(t("batch-ui-backup-keep.tooltip"))
+                .hover_tip(t("batch-ui-backup-keep.tooltip"))
                 .changed()
         {
             s.edit("backup", |r| {

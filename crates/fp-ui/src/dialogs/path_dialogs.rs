@@ -12,6 +12,7 @@ use super::{t, text_w};
 use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use serde_json::json;
 
@@ -405,9 +406,7 @@ fn icon_group(ui: &mut Ui, dlg_id: &str, i: usize, f: &mut Field, at: egui::Pos2
         } else {
             Sense::CLICK
         };
-        let resp = ui
-            .interact(br, ids[k], sense)
-            .on_hover_text(items[k].as_str());
+        let resp = ui.interact(br, ids[k], sense).hover_tip(items[k].as_str());
         resp.widget_info(|| {
             egui::WidgetInfo::selected(
                 egui::WidgetType::RadioButton,

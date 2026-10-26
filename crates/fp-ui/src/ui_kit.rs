@@ -22,6 +22,7 @@
 
 use crate::icons::{self, IconStyle};
 use crate::theme::{Theme, ThemeKind, mix, with_alpha};
+use crate::tips::HoverTip;
 use egui::{
     Align2, Color32, CornerRadius, FontId, Id, Painter, Pos2, Rect, Response, Sense, Shape, Stroke,
     StrokeKind, Ui, pos2, vec2,
@@ -655,8 +656,8 @@ pub fn link_row_at(
         resp
     };
     match tooltip {
-        Some(t) if !t.is_empty() => resp.on_hover_text(t),
-        _ if shown != text => resp.on_hover_text(text),
+        Some(t) if !t.is_empty() => resp.hover_tip(t),
+        _ if shown != text => resp.hover_tip(text),
         _ => resp,
     }
 }
@@ -718,8 +719,8 @@ pub fn more_link_at(
         resp
     };
     match tooltip {
-        Some(t) if !t.is_empty() => resp.on_hover_text(t),
-        _ if shown != text => resp.on_hover_text(text),
+        Some(t) if !t.is_empty() => resp.hover_tip(t),
+        _ if shown != text => resp.hover_tip(text),
         _ => resp,
     }
 }
@@ -932,11 +933,7 @@ pub fn cell_text(ui: &mut Ui, text: &str, weak: bool) -> Response {
             .selectable(false)
             .truncate(),
     );
-    if shown != text {
-        r.on_hover_text(text)
-    } else {
-        r
-    }
+    if shown != text { r.hover_tip(text) } else { r }
 }
 
 // ---------------------------------------------------------------------- leerer Zustand, Fortschritt

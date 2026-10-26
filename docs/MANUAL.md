@@ -86,7 +86,7 @@ with a short description of what the tool does (the rows of a flyout show the de
 tooltip). Toolbar buttons show only the command name. In the Property Inspector of the retouch tools
 (Blur, Sharpen, Dodge, Burn, Smudge, Rubber Stamp) and the Eraser, the fields describe themselves:
 "Brush size", "Brush preview", "Edge softness", "Round brush tip", "Pressure" and so on. All these tooltips
-are switched with *View ▸ Tooltips*.
+are switched with *View ▸ Tooltips* (off keeps the first line, see below).
 
 Frequent shortcuts (set "Firepixel", switchable in *Edit ▸ Keyboard Shortcuts...*; further sets are called
 "Image Editing", "Vector Drawing" and "Classic Vector Keys"):
@@ -397,7 +397,11 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   the export stay unchanged.
 - *View ▸ Tooltips* (on by default, remembered as the preference `Tooltips`) switches the tooltips of
   buttons, fields and panels everywhere (Tools panel, toolbar, Property Inspector, panels, dialogs). Off,
-  no tooltip opens; the change applies at once.
+  only the description lines go: the short first line with the name and shortcut stays, e.g. "Pointer
+  (V, 0)", and one-line tooltips of panel buttons and inspector fields stay as they are. To hide those
+  too, switch on *Preferences ▸ General ▸ Hide tool names too when tooltips are off*; *Tooltip delay (ms)*
+  on the same page sets how long the pointer must rest before a tooltip opens (default 600, 0–5000). The
+  changes apply at once.
 - *View ▸ Coordinate Tag* (Firepixel extension, right below Tooltips; on by default, remembered as the
   preference `Firepixel_CoordinateTag`) switches the small grey tag just below the pointer over the canvas:
   with the Rectangle, Ellipse, Line, Polygon and Auto Shape tools the pointer position ("x:53 y:37") and,

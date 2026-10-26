@@ -12,6 +12,7 @@ use super::common;
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use crate::ui_commands;
 use egui::{Align2, Color32, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_color::{Argb, Rgba8};
@@ -222,7 +223,7 @@ pub fn swatches(ui: &mut Ui, st: &mut AppState) {
     if let Some(i) = hovered {
         let c = colors[i];
         resp.clone()
-            .on_hover_text(format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b()));
+            .hover_tip(format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b()));
     }
     // Farbfeld auf ein Objekt ziehen: Füllfarbe (Umschalt: Strichfarbe)
     if resp.drag_started()

@@ -8,6 +8,7 @@ use crate::icons::{self, Icon, IconStyle, tool_icon};
 use crate::inspector::color_picker::Footer;
 use crate::inspector::popups::ColorChoice;
 use crate::theme::{Theme, ToolGroup, with_alpha};
+use crate::tips::HoverTip;
 use crate::widgets::{self, ButtonLook};
 use egui::{Align2, Color32, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_engine::tools::{self, ToolId};
@@ -537,7 +538,7 @@ fn tool_slot(
         widgets::corner_triangle(ui.painter(), r, col);
     }
     crate::ui_kit::icon_button_info(&resp, true, &tool_title(st, shown), Some(selected));
-    let resp = resp.on_hover_text(tool_tooltip(st, shown));
+    let resp = resp.hover_tip(tool_tooltip(st, shown));
     // Drücken und Halten (0,4 s) bzw. Klick auf das Dreieck öffnet den Flyout
     let mut open_flyout = false;
     if has_flyout {
@@ -681,7 +682,7 @@ fn flyout_popup(ctx: &egui::Context, st: &mut AppState) {
                     let resp = if desc.is_empty() {
                         resp
                     } else {
-                        resp.on_hover_text(desc)
+                        resp.hover_tip(desc)
                     };
                     if resp.clicked() {
                         chosen = tool;
@@ -757,7 +758,7 @@ fn color_section(ui: &mut Ui, st: &mut AppState, full: Rect, mut y: f32, theme: 
         widgets::color_well(ui.painter(), well, argb_to_color(argb), theme);
         let resp = ui
             .interact(row, Id::new(("well", is_stroke)), Sense::click())
-            .on_hover_text(&tip);
+            .hover_tip(&tip);
         crate::ui_kit::icon_button_info(&resp, true, &tip, None);
         if resp.clicked() {
             ui.ctx().data_mut(|d| {

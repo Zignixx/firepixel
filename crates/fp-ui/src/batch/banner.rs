@@ -6,6 +6,7 @@ use super::kit::{self, BtnKind};
 use super::{Inbox, Mode, Studio};
 use crate::app_state::AppState;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use crate::ui_kit::{RowIcon, Tone, sp};
 use egui::{Id, Rect, Ui, pos2, vec2};
 use fp_batch::Recipe;
@@ -218,7 +219,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now: f64) {
         !running,
         &menu_l,
     )
-    .on_hover_text(t("batch-ui-recipes.tooltip"));
+    .hover_tip(t("batch-ui-recipes.tooltip"));
     egui::Popup::menu(&mresp)
         .id(Id::new("fp-batch-recipes-menu"))
         .show(|ui| {
@@ -228,11 +229,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now: f64) {
             if !tpl.is_empty() {
                 ui.label(egui::RichText::new(t("batch-ui-menu-templates")).strong());
                 for tp in tpl {
-                    if ui
-                        .button(&tp.title)
-                        .on_hover_text(&tp.description)
-                        .clicked()
-                    {
+                    if ui.button(&tp.title).hover_tip(&tp.description).clicked() {
                         s.set_recipe(tp.recipe.clone(), None);
                     }
                 }
@@ -246,7 +243,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now: f64) {
             for path in mine.iter().take(20) {
                 if ui
                     .button(super::recipe_name_from_path(path))
-                    .on_hover_text(path.display().to_string())
+                    .hover_tip(path.display().to_string())
                     .clicked()
                 {
                     load_recipe(s, path, now);

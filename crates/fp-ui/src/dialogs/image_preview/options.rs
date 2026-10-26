@@ -17,6 +17,7 @@ use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::panels::optimize::{self, PALETTES};
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_export::options::{
     ColorMode, Dither, ExportFormat, OptimizeSettings, PaletteColor, PaletteKind, Transparency,
@@ -353,7 +354,7 @@ fn tip(ui: &Ui, id: &str, r: Rect, key: &str) {
     let text = t(key);
     let resp = ui.interact(r, Id::new(("fp-ipv-opt-tip", id)), Sense::hover());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, text.as_str()));
-    resp.on_hover_text(text);
+    resp.hover_tip(text);
 }
 
 /// Zeichnet die linke Spalte in `left` für das aktive Feld von `d`.
@@ -652,7 +653,7 @@ fn options_tab(
             theme.ui_font(),
             if en { c.text } else { c.text_disabled },
         );
-        resp.on_hover_text(t("image-preview-tip-actual-colors"));
+        resp.hover_tip(t("image-preview-tip-actual-colors"));
     }
 
     // Zeile 4: Rastern (4671 + Menge 4676) bzw. Glättung (4683)

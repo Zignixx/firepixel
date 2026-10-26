@@ -13,6 +13,7 @@ use super::levels_common::{self as common, Pipette};
 use super::{DIALOG_TITLE_H, DialogClose, access, dialog_frame, push_button, refs, t, tl};
 use crate::app_state::AppState;
 use crate::inspector::fields;
+use crate::tips::HoverTip;
 use egui::{Color32, Id, Pos2, Rect, Sense, Shape, Ui, pos2, vec2};
 use fp_raster::filters::curve_edit::{self, round_half_up};
 use fp_raster::filters::table::curve_table;
@@ -499,7 +500,7 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
             }
             let _ = ui
                 .interact(cr, Id::new("cv-ch-tip"), Sense::hover())
-                .on_hover_text(&ch_tip);
+                .hover_tip(&ch_tip);
             // Rampen (Klick kehrt die Darstellung um)
             let vr = at(9.0, 28.0, 14.0, 210.0);
             let hr = at(33.0, 244.0, 210.0, 15.0);
@@ -602,10 +603,10 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
             }
             let _ = ui
                 .interact(inr, Id::new("cv-in-tip"), Sense::hover())
-                .on_hover_text(&in_tip);
+                .hover_tip(&in_tip);
             let _ = ui
                 .interact(outr, Id::new("cv-out-tip"), Sense::hover())
-                .on_hover_text(&out_tip);
+                .hover_tip(&out_tip);
             // erst nach dem Zeichnen der Felder: sonst gäbe das Feld den Fokus beim selben Mausdruck
             // gleich wieder ab („Klick daneben“)
             if grabbed && d.selected.is_some() {
@@ -625,7 +626,7 @@ pub fn show_curves(ctx: &egui::Context, st: &mut AppState) {
             }
             let _ = ui
                 .interact(ar, Id::new("cv-auto-tip"), Sense::hover())
-                .on_hover_text(&auto_tip);
+                .hover_tip(&auto_tip);
             if let Some(p) = common::pipette_buttons(
                 ui,
                 "cv",

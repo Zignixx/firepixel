@@ -8,6 +8,7 @@ use super::params::{self, CardCtx};
 use super::{CardId, Mode, Studio};
 use crate::app_state::AppState;
 use crate::theme::{Theme, mix, with_alpha};
+use crate::tips::HoverTip;
 use crate::ui_kit::{self, KitIcon, RowIcon, sp, type_scale};
 use egui::{Align2, CornerRadius, Id, Rect, Sense, Shape, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_batch::output::OutputFormat;
@@ -182,7 +183,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
                 enabled,
                 &add_l,
             )
-            .on_hover_text(t("batch-ui-add-step.tooltip"));
+            .hover_tip(t("batch-ui-add-step.tooltip"));
             kit::dashed_rect(
                 ui.painter(),
                 ar,
@@ -485,7 +486,7 @@ fn step_card(
         dim,
     );
     let hresp = match &warn {
-        Some(m) => hresp.on_hover_text(m.as_str()),
+        Some(m) => hresp.hover_tip(m.as_str()),
         None => hresp,
     };
     if hresp.clicked() && enabled {
@@ -671,7 +672,7 @@ fn step_card(
                         enabled,
                         &l,
                     )
-                    .on_hover_text(t("batch-ui-ffmpeg-choose.tooltip"))
+                    .hover_tip(t("batch-ui-ffmpeg-choose.tooltip"))
                     .clicked()
                     {
                         open_settings = true;
@@ -823,7 +824,7 @@ fn end_head(
         Id::new(("fp-batch-end-lock", format!("{card:?}"))),
         Sense::hover(),
     );
-    lresp.on_hover_text(t("batch-ui-end-fixed"));
+    lresp.hover_tip(t("batch-ui-end-fixed"));
     if resp.clicked() && enabled {
         s.open_card = if open { None } else { Some(card) };
     }
@@ -1660,7 +1661,7 @@ fn tile(
         resp
     };
     if shown != desc {
-        resp.on_hover_text(desc)
+        resp.hover_tip(desc)
     } else {
         resp
     }

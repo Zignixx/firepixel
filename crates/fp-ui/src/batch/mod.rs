@@ -22,6 +22,7 @@
 //! [`params::register_card_body`], Vorlagen über [`register_templates`]; siehe
 //! `docs\berichte\batch2.md`. Texte: Präfix `batch-ui-` in `locales\<sprache>\batch.ftl`.
 
+use crate::tips::HoverTip;
 pub mod banner;
 pub mod files;
 pub mod kit;
@@ -1230,9 +1231,9 @@ pub fn doc_tab(ui: &mut Ui, st: &mut AppState, rect: Rect) -> Rect {
     let close_label = fp_i18n::t("batch-ui-close");
     crate::ui_kit::icon_button_info(&xresp, true, &close_label, None);
     let tip = fp_i18n::t("batch-ui-tab.tooltip");
-    if xresp.on_hover_text(close_label).clicked() || resp.middle_clicked() {
+    if xresp.hover_tip(close_label).clicked() || resp.middle_clicked() {
         s.close_requested = true;
-    } else if resp.on_hover_text(tip).clicked() {
+    } else if resp.hover_tip(tip).clicked() {
         s.front = true;
     }
     // Klick auf einen Dokumentreiter holt die Dokumente nach vorn

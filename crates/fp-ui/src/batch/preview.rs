@@ -10,6 +10,7 @@ use super::Studio;
 use super::kit;
 use crate::app_state::AppState;
 use crate::theme::{Theme, with_alpha};
+use crate::tips::HoverTip;
 use crate::ui_kit::{self, KitIcon, RowIcon, sp, type_scale};
 use egui::{
     Align2, Color32, ColorImage, CornerRadius, Id, Rect, Sense, Stroke, TextureHandle,
@@ -759,7 +760,7 @@ fn image_view(
             vec2(info.width(), line),
         );
         ui.interact(wr, Id::new("fp-batch-preview-warn"), Sense::hover())
-            .on_hover_text(sh.warnings.join("\n"));
+            .hover_tip(sh.warnings.join("\n"));
     }
 }
 
@@ -779,7 +780,7 @@ fn nav_row(ui: &mut Ui, s: &mut Studio, r: Rect, vis: &[usize], pos: Option<usiz
         pos.is_some_and(|k| k > 0),
         &prev_n,
     )
-    .on_hover_text(prev_n.clone())
+    .hover_tip(prev_n.clone())
     .clicked()
         && let Some(k) = pos
     {
@@ -797,7 +798,7 @@ fn nav_row(ui: &mut Ui, s: &mut Studio, r: Rect, vis: &[usize], pos: Option<usiz
         pos.is_some_and(|k| k + 1 < n),
         &next_n,
     )
-    .on_hover_text(next_n.clone())
+    .hover_tip(next_n.clone())
     .clicked()
         && let Some(k) = pos
     {
@@ -830,7 +831,7 @@ fn nav_row(ui: &mut Ui, s: &mut Studio, r: Rect, vis: &[usize], pos: Option<usiz
             }
         })
         .response
-        .on_hover_text(t("batch-ui-zoom"));
+        .hover_tip(t("batch-ui-zoom"));
     if zoom != s.preview.zoom {
         s.preview.zoom = zoom;
         s.preview.pan = egui::Vec2::ZERO;
@@ -854,6 +855,6 @@ fn nav_row(ui: &mut Ui, s: &mut Studio, r: Rect, vis: &[usize], pos: Option<usiz
             }
         })
         .response
-        .on_hover_text(t("batch-ui-bg"));
+        .hover_tip(t("batch-ui-bg"));
     s.preview.backdrop = bd;
 }

@@ -7,6 +7,7 @@ use super::kit::{self, BtnKind};
 use super::{EntryStatus, Inbox, Studio};
 use crate::app_state::AppState;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use crate::ui_kit::{self, Column, KitIcon, RowIcon, Tone, sp, type_scale};
 use egui::{Align2, Id, Rect, Ui, pos2, vec2};
 use fp_batch::{PlanAction, Report};
@@ -212,7 +213,7 @@ pub fn summary_card(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, now
             l,
         );
         let resp = if k == 1 {
-            resp.on_hover_text(t("batch-ui-done-open-report.tooltip"))
+            resp.hover_tip(t("batch-ui-done-open-report.tooltip"))
         } else {
             resp
         };
@@ -383,7 +384,7 @@ pub fn plan_view(ui: &mut Ui, s: &mut Studio, r: Rect) {
             match col {
                 0 => {
                     ui_kit::cell_text(ui, &name(&e.source), false)
-                        .on_hover_text(e.source.display().to_string());
+                        .hover_tip(e.source.display().to_string());
                 }
                 1 => {
                     let txt = if e.action == PlanAction::Skip {
@@ -391,8 +392,7 @@ pub fn plan_view(ui: &mut Ui, s: &mut Studio, r: Rect) {
                     } else {
                         name(&e.target)
                     };
-                    ui_kit::cell_text(ui, &txt, false)
-                        .on_hover_text(e.target.display().to_string());
+                    ui_kit::cell_text(ui, &txt, false).hover_tip(e.target.display().to_string());
                 }
                 2 => {
                     let txt = match est[row] {
@@ -402,9 +402,9 @@ pub fn plan_view(ui: &mut Ui, s: &mut Studio, r: Rect) {
                     };
                     let resp = ui_kit::cell_text(ui, &txt, false);
                     if est[row].is_none() && e.action != PlanAction::Skip {
-                        resp.on_hover_text(pending.as_str());
+                        resp.hover_tip(pending.as_str());
                     } else {
-                        resp.on_hover_text(t("batch-ui-plan-size.tooltip"));
+                        resp.hover_tip(t("batch-ui-plan-size.tooltip"));
                     }
                 }
                 _ => {
@@ -415,7 +415,7 @@ pub fn plan_view(ui: &mut Ui, s: &mut Studio, r: Rect) {
                     let txt = notes.join(" · ");
                     let resp = ui_kit::cell_text(ui, &txt, true);
                     if !txt.is_empty() {
-                        resp.on_hover_text(txt);
+                        resp.hover_tip(txt);
                     }
                 }
             }
@@ -472,7 +472,7 @@ pub fn errors_view(ui: &mut Ui, s: &mut Studio, r: Rect) {
         |ui, row, col| {
             let (a, b) = &failed[row];
             let txt = if col == 0 { a } else { b };
-            ui_kit::cell_text(ui, txt, col == 1).on_hover_text(txt.as_str());
+            ui_kit::cell_text(ui, txt, col == 1).hover_tip(txt.as_str());
         },
     );
     let _ = theme;

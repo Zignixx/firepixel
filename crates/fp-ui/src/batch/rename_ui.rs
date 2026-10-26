@@ -12,6 +12,7 @@ use super::Mode;
 use super::kit::{self, BtnKind};
 use super::params::CardCtx;
 use crate::theme::{Theme, mix, with_alpha};
+use crate::tips::HoverTip;
 use crate::ui_kit::{self, KitIcon, Tone, sp, type_scale};
 use egui::text::{LayoutJob, TextFormat, TextWrapping};
 use egui::{
@@ -142,7 +143,7 @@ fn header(ui: &mut Ui, spec: &mut RenameSpec, mode: Mode) {
         ui.is_enabled(),
         &pl,
     )
-    .on_hover_text(t("batch-rn-presets.tooltip"));
+    .hover_tip(t("batch-rn-presets.tooltip"));
     egui::Popup::menu(&resp)
         .id(Id::new("fp-batch-rename-presets-menu"))
         .show(|ui| {
@@ -151,7 +152,7 @@ fn header(ui: &mut Ui, spec: &mut RenameSpec, mode: Mode) {
             for (key, f) in PRESETS {
                 if ui
                     .button(t(key))
-                    .on_hover_text(t(&format!("{key}.tooltip")))
+                    .hover_tip(t(&format!("{key}.tooltip")))
                     .clicked()
                 {
                     f(spec);
@@ -551,7 +552,7 @@ fn builder_section(ui: &mut Ui, spec: &mut RenameSpec, mode: Mode) {
         } else {
             t("batch-rn-chip-tooltip")
         };
-        let resp = resp.on_hover_text(tip);
+        let resp = resp.hover_tip(tip);
         if resp.hovered() && enabled {
             ui.ctx().set_cursor_icon(if resp.dragged() {
                 egui::CursorIcon::Grabbing
@@ -668,7 +669,7 @@ fn builder_section(ui: &mut Ui, spec: &mut RenameSpec, mode: Mode) {
                 }
                 if ui
                     .button(t(key))
-                    .on_hover_text(t(&format!("{key}.tooltip")))
+                    .hover_tip(t(&format!("{key}.tooltip")))
                     .clicked()
                 {
                     action = Some(ChipAction::Add(part));
@@ -752,7 +753,7 @@ fn row<R>(ui: &mut Ui, lw: f32, label: &str, add: impl FnOnce(&mut Ui, f32) -> R
                 ui.id().with(("fp-batch-rn-label", label)),
                 Sense::hover(),
             )
-            .on_hover_text(label);
+            .hover_tip(label);
         }
         let w = (ui.available_width() - 2.0).max(40.0);
         crate::theme::field_widgets(ui);
@@ -895,7 +896,7 @@ fn part_editor(ui: &mut Ui, spec: &mut RenameSpec, i: usize, mode: Mode) {
                 if mode == Mode::Pro {
                     row(ui, lw, "", |ui, w| {
                         text_field(ui, format, w, &keys[7], true)
-                            .on_hover_text(t("batch-rn-opt-format.tooltip"))
+                            .hover_tip(t("batch-rn-opt-format.tooltip"))
                     });
                 }
                 if *source == DateSource::Exif {
@@ -1028,7 +1029,7 @@ fn regex_section(ui: &mut Ui, spec: &mut RenameSpec) {
                     )
                     .wrap(),
                 )
-                .on_hover_text(&p.detail);
+                .hover_tip(&p.detail);
             });
         });
     } else {
@@ -1085,7 +1086,7 @@ fn regex_section(ui: &mut Ui, spec: &mut RenameSpec) {
         ui.is_enabled(),
         &l,
     )
-    .on_hover_text(t("batch-rn-from-builder.tooltip"))
+    .hover_tip(t("batch-rn-from-builder.tooltip"))
     .clicked()
     {
         spec.regex = explain::builder_to_regex(spec);
@@ -1187,10 +1188,10 @@ fn options_section(ui: &mut Ui, spec: &mut RenameSpec, mode: Mode, show_more: &m
             row(ui, lw, &label, |ui, w| {
                 let fw = ((w - 16.0 - 22.0 - 2.0 * sp::S) / 2.0).max(30.0);
                 text_field(ui, &mut r.find, fw, &t("batch-rn-replace-find"), false)
-                    .on_hover_text(t("batch-rn-replace-find"));
+                    .hover_tip(t("batch-rn-replace-find"));
                 ui.label("→");
                 text_field(ui, &mut r.replace, fw, &t("batch-rn-replace-with"), false)
-                    .on_hover_text(t("batch-rn-replace-with"));
+                    .hover_tip(t("batch-rn-replace-with"));
                 let (xr, _) = ui.allocate_exact_size(vec2(20.0, 20.0), Sense::hover());
                 let name = t("batch-rn-replace-remove");
                 let resp = kit::button(
@@ -1203,7 +1204,7 @@ fn options_section(ui: &mut Ui, spec: &mut RenameSpec, mode: Mode, show_more: &m
                     ui.is_enabled(),
                     &name,
                 )
-                .on_hover_text(&name);
+                .hover_tip(&name);
                 if resp.clicked() {
                     remove = Some(k);
                 }
@@ -1284,8 +1285,7 @@ fn options_section(ui: &mut Ui, spec: &mut RenameSpec, mode: Mode, show_more: &m
         text_field(ui, &mut spec.prefix, w, &keys[1], false)
     });
     row(ui, lw, &keys[2], |ui, w| {
-        text_field(ui, &mut spec.suffix, w, &keys[2], false)
-            .on_hover_text(t("batch-rn-suffix.tooltip"))
+        text_field(ui, &mut spec.suffix, w, &keys[2], false).hover_tip(t("batch-rn-suffix.tooltip"))
     });
     let cases = [
         (CaseMode::Keep, "batch-ui-case-keep"),
@@ -1324,7 +1324,7 @@ fn options_section(ui: &mut Ui, spec: &mut RenameSpec, mode: Mode, show_more: &m
             crate::theme::field_widgets(ui);
             ui.checkbox(&mut spec.transliterate, t("batch-rn-transliterate"));
             ui.checkbox(&mut spec.strip_special, t("batch-rn-strip-special"))
-                .on_hover_text(t("batch-rn-strip-special.tooltip"));
+                .hover_tip(t("batch-rn-strip-special.tooltip"));
         });
         let exts = [
             (ExtCase::Lower, "batch-rn-ext-lower"),
@@ -1600,7 +1600,7 @@ fn table_section(
             true,
             &l,
         )
-        .on_hover_text(t("batch-rn-add-counter-fix.tooltip"))
+        .hover_tip(t("batch-rn-add-counter-fix.tooltip"))
         .clicked()
         {
             spec.parts.push(NamePart::Text { text: "_".into() });
@@ -1785,7 +1785,7 @@ fn table_section(
                             &crate::icons::IconStyle::new(&theme, None, true),
                         );
                     }
-                    resp.on_hover_text(tip);
+                    resp.hover_tip(tip);
                 }
             });
     });

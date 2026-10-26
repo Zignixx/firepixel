@@ -28,6 +28,7 @@ use super::Mode;
 use super::kit::{self, BtnKind};
 use crate::app_state::AppState;
 use crate::theme::{Theme, mix, with_alpha};
+use crate::tips::HoverTip;
 use crate::ui_kit::{self, RowIcon, sp, type_scale};
 use egui::{Align2, Color32, CornerRadius, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_batch::step::{ParamDef, ParamType, param_key, value_key};
@@ -286,9 +287,9 @@ pub fn form_rows(ui: &mut Ui, ctx: &mut CardCtx, shown: &[ParamDef], label_w: f3
                 Sense::hover(),
             );
             if fp_i18n::has(&tip_key) {
-                lresp.on_hover_text(t(&tip_key));
+                lresp.hover_tip(t(&tip_key));
             } else if shown_l != *label {
-                lresp.on_hover_text(label.as_str());
+                lresp.hover_tip(label.as_str());
             }
             let w = (ui.available_width() - RESET_W - sp::S).max(40.0);
             let out = ui
@@ -959,7 +960,7 @@ fn color_widget(ui: &mut Ui, ctx: &mut CardCtx, d: &ParamDef, label: &str, w: f3
             );
             ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
         }
-        let sresp = sresp.on_hover_text(t("batch-form-color.tooltip"));
+        let sresp = sresp.hover_tip(t("batch-form-color.tooltip"));
         match ctx.app {
             Some(app) => {
                 let footer = if d

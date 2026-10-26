@@ -7,6 +7,7 @@ use super::texts::t;
 use crate::app_state::{Action, AppState};
 use crate::icons::{self, IconStyle};
 use crate::theme::{Theme, ToolGroup};
+use crate::tips::HoverTip;
 use crate::widgets;
 use egui::{Align2, Color32, Rect, Stroke, StrokeKind, Ui, pos2, vec2};
 use serde_json::json;
@@ -754,7 +755,7 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     fields::log_tip(ui, link, &t("pi-box-keep-proportions"));
     let lresp = ui
         .interact(link, key.with("btn"), egui::Sense::click())
-        .on_hover_text(t("pi-box-keep-proportions"));
+        .hover_tip(t("pi-box-keep-proportions"));
     crate::ui_kit::icon_button_info(&lresp, en, &t("pi-box-keep-proportions"), Some(prop));
     icons::paint(
         ui.painter(),

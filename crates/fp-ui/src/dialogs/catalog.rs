@@ -11,6 +11,7 @@ use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::inspector::scale;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Rect, Stroke, Ui, pos2, vec2};
 use serde_json::{Map, Value, json};
 
@@ -856,7 +857,7 @@ fn grid_draw(ui: &mut Ui, st: &AppState, d: &mut FormDialog, body: Rect) -> (boo
         hover.widget_info(|| {
             egui::WidgetInfo::labeled(egui::WidgetType::Label, true, label.as_str())
         });
-        let _ = hover.on_hover_text(label.as_str());
+        let _ = hover.hover_tip(label.as_str());
         changed |= number_at(ui, d, key, er, true);
         // Einheit rechts vom Popup-Schieber ▾ (der liegt direkt am Feld, 14 px breit)
         let ux = er.right() + 15.0 + dlu(3.0, 0.0).x;

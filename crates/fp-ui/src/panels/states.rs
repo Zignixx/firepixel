@@ -7,6 +7,7 @@ use super::common::{self, FooterButton};
 use crate::app_state::{Action, AppState};
 use crate::inspector::glyphs::{self, Glyph};
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Id, Rect, Sense, Stroke, Ui, pos2, vec2};
 use serde_json::json;
 
@@ -212,7 +213,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let loop_r = Rect::from_min_size(pos2(rect.left() + 22.0, y), vec2(19.0, 16.0));
     let onion = ui
         .interact(onion_r, Id::new("states-onion"), Sense::click())
-        .on_hover_text(common::t("panel-states-onion"));
+        .hover_tip(common::t("panel-states-onion"));
     glyphs::paint(
         ui.painter(),
         onion_r.shrink(1.0),
@@ -222,7 +223,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     );
     let lp = ui
         .interact(loop_r, Id::new("states-loop"), Sense::click())
-        .on_hover_text(common::t("panel-states-loop"));
+        .hover_tip(common::t("panel-states-loop"));
     glyphs::paint(ui.painter(), loop_r.shrink(1.0), Glyph::Loop, &theme, true);
     crate::ui_kit::icon_button_info(&onion, true, &common::t("panel-states-onion"), None);
     crate::ui_kit::icon_button_info(&lp, true, &common::t("panel-states-loop"), None);

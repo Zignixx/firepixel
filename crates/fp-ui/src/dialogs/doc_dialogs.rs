@@ -8,6 +8,7 @@ use super::{
 };
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
+use crate::tips::HoverTip;
 use egui::{Id, Rect, Ui, vec2};
 use serde_json::json;
 
@@ -101,7 +102,7 @@ fn chain(ui: &Ui, first: Rect, second: Rect, enabled: bool, tip: &str) {
             Id::new(("chain", first.min.x as i32, first.min.y as i32)),
             egui::Sense::hover(),
         )
-        .on_hover_text(tip);
+        .hover_tip(tip);
 }
 
 /// Doppelpfeil ↔ (waagerecht) bzw. ↕ statt der Beschriftung „Breite:/Höhe:“, rechtsbündig vor
@@ -130,7 +131,7 @@ fn dim_symbol(
         egui::Sense::hover(),
     );
     hover.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, name));
-    let _ = hover.on_hover_text(name);
+    let _ = hover.hover_tip(name);
 }
 
 /// Druckgröße wie im Original: 3 Nachkommastellen, Punkt, ohne überflüssige Nullen
@@ -291,7 +292,7 @@ fn anchor_grid(ui: &mut Ui, id: &str, cells: &[Rect], tips: &[&str], sel: usize)
                     Sense::CLICK
                 },
             )
-            .on_hover_text(&tip);
+            .hover_tip(&tip);
         resp.widget_info(|| {
             egui::WidgetInfo::selected(egui::WidgetType::RadioButton, true, k == sel, &tip)
         });

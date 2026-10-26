@@ -10,6 +10,7 @@ use super::obj_quads::{self, Target, edit_tool_attrs, tool_attrs};
 use super::texts::{refs, t as tx, tl};
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Id, Rect, Ui};
 use fp_engine::ToolId;
 use fp_engine::tools::{EdgeMode, MarqueeStyle};
@@ -1126,7 +1127,7 @@ fn confine_q5(ui: &mut Ui, _st: &mut AppState, r: Rect) {
     );
     let _ = ui
         .interact(rect, Id::new("retouch-confine-tip"), egui::Sense::hover())
-        .on_hover_text(tx("pi-tip-confine-bounds"));
+        .hover_tip(tx("pi-tip-confine-bounds"));
     if let Some(v) = v {
         edit_tool_attrs(ui.ctx(), |a| a.confine_bounds = v);
     }
@@ -1160,7 +1161,7 @@ fn pointer_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
     );
     let _ = ui
         .interact(rect, Id::new("pointer-marquee-tip"), egui::Sense::hover())
-        .on_hover_text(tx("pi-tip-pointer-marquee"));
+        .hover_tip(tx("pi-tip-pointer-marquee"));
     if let Some(i) = pick
         && (i == 1) != lasso
     {

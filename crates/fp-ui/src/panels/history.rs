@@ -7,6 +7,7 @@ use super::common::{self, FooterButton};
 use crate::app_state::{Action, AppState};
 use crate::inspector::glyphs::Glyph;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Id, Rect, Stroke, Ui, pos2, vec2};
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -85,9 +86,9 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 let tip = marker_tip(attached.get(i).copied().unwrap_or(false));
                 let m = ui.interact(mr, Id::new("history-marker").with(i), egui::Sense::hover());
                 if m.hovered() {
-                    m.on_hover_text(&tip);
+                    m.hover_tip(&tip);
                 } else {
-                    resp = resp.on_hover_text(&tip);
+                    resp = resp.hover_tip(&tip);
                 }
             }
             let col = if done { c.text } else { c.text_disabled };

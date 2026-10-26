@@ -13,6 +13,7 @@ use super::kit::{self, BtnKind};
 use super::{Inbox, Mode, Studio};
 use crate::app_state::{Action, AppState};
 use crate::theme::{Theme, with_alpha};
+use crate::tips::HoverTip;
 use crate::ui_kit::{self, KitIcon, RowIcon, Tone, sp, type_scale};
 use egui::{Align2, Color32, Id, Rect, Sense, Ui, pos2, vec2};
 use fp_batch::video::ffmpeg::{self, FfmpegStatus};
@@ -319,7 +320,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, area: Rect, now: f64
             kit::weak(&theme),
         );
         if shown + 1.0 < ui_kit::text_w(ui.ctx(), &detail, &theme.font(type_scale::CAPTION)) {
-            dresp.on_hover_text(&detail);
+            dresp.hover_tip(&detail);
         }
     }
     // Knöpfe: ffmpeg-Datei… | Automatisch suchen | Erneut prüfen

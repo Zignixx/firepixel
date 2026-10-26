@@ -34,6 +34,7 @@ use crate::app_state::{Action, AppState};
 use crate::icons;
 use crate::inspector::fields;
 use crate::theme::{Theme, mix, with_alpha};
+use crate::tips::HoverTip;
 use crate::ui_kit::{self, BarButton, HeaderIcon, KitIcon, Tone, sp, type_scale};
 use egui::{
     Align2, Color32, CornerRadius, FontId, Id, Pos2, Rect, Sense, Shape, Stroke, StrokeKind,
@@ -2398,7 +2399,7 @@ impl TraceDialog {
                     }
                 }
             }
-            resp.on_hover_text(tip).clicked()
+            resp.hover_tip(tip).clicked()
         };
         let zoom_out = btn(ui, x, 0, t("trace-zoom-out"));
         x += b;
@@ -2503,7 +2504,7 @@ impl TraceDialog {
                 );
                 let _ = ui
                     .interact(cr, Id::new(("trace-refine-tip", i)), Sense::hover())
-                    .on_hover_text(tip.as_str());
+                    .hover_tip(tip.as_str());
             }
             top
         } else {
@@ -2563,7 +2564,7 @@ impl TraceDialog {
         let cr = Rect::from_min_max(pos2(x0, r.top()), r.max);
         let _ = ui
             .interact(cr, Id::new("trace-match-tip"), Sense::hover())
-            .on_hover_text(t("trace-stat-match-tip"));
+            .hover_tip(t("trace-stat-match-tip"));
     }
 
     /// Eine Zeile Kennzahlen: Wert fett oben, Beschriftung gedämpft darunter, Trennlinien;
@@ -2797,7 +2798,7 @@ fn segmented_tips(
             out = Some(i);
         }
         if let Some(tip) = tips.get(i) {
-            let _ = resp.on_hover_text(*tip);
+            let _ = resp.hover_tip(*tip);
         }
     }
     ui.painter().rect_stroke(
@@ -3406,7 +3407,7 @@ pub fn inspector_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
         font,
         if en { c.text } else { c.text_disabled },
     );
-    if resp.on_hover_text(t("trace-inspector-tip")).clicked() && en {
+    if resp.hover_tip(t("trace-inspector-tip")).clicked() && en {
         st.push(Action::Run("modify.traceBitmap".into(), json!({})));
     }
 }

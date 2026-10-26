@@ -12,6 +12,7 @@ use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::inspector::glyphs::Glyph;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Color32, Id, Rect, Sense, Stroke, StrokeKind, TextureHandle, Ui, pos2, vec2};
 use serde_json::{Value, json};
 use std::collections::HashMap;
@@ -235,7 +236,7 @@ pub fn panel(ui: &mut Ui, st: &mut AppState) {
                 c.text,
                 cell,
             );
-            let resp = resp.on_hover_text(label);
+            let resp = resp.hover_tip(label);
             if resp.clicked() {
                 sel = Some(s.name.clone());
             }

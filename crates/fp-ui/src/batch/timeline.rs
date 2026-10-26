@@ -10,6 +10,7 @@
 //! kleinen Proxy-Bildern gerechnet). Eingehängt in `preview.rs` (`update` + `show_in_preview`).
 
 use super::Studio;
+use crate::tips::HoverTip;
 use egui::{
     Align2, Color32, CornerRadius, FontId, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2,
 };
@@ -442,14 +443,14 @@ pub fn timeline(ui: &mut Ui, tl: &mut Timeline, current: Option<usize>) -> Timel
             } else {
                 "batch-anim-timeline-remove"
             };
-            resp.on_hover_text(format!(
+            resp.hover_tip(format!(
                 "{}\n{}",
                 fp_i18n::tr!("batch-anim-timeline-frame", n = i + 1, ms = tl.delays[i]),
                 fp_i18n::t(key)
             ));
         }
         None => {
-            resp.on_hover_text(fp_i18n::t("batch-anim-timeline-hint"));
+            resp.hover_tip(fp_i18n::t("batch-anim-timeline-hint"));
         }
     }
     out

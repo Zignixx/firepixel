@@ -20,6 +20,7 @@ use super::preview::{self, PreviewTarget};
 use super::texts;
 use crate::app_state::AppState;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{
     Align2, Color32, Id, Key, LayerId, Modifiers, Order, Pos2, Rect, Response, Sense, Stroke,
     StrokeKind, Ui, pos2, vec2,
@@ -1104,7 +1105,7 @@ fn body(
                 let dd = Rect::from_min_max(o + vec2(47.0, 214.0), o + vec2(61.0, 235.0));
                 let ddr = ui
                     .interact(dd, pid.with("op-dd"), Sense::click_and_drag())
-                    .on_hover_text(texts::t("pi-color-opacity"));
+                    .hover_tip(texts::t("pi-color-opacity"));
                 p.rect_stroke(
                     dd,
                     0.0,

@@ -6,6 +6,7 @@ use super::common;
 use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Color32, Id, Painter, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use serde_json::json;
 
@@ -209,7 +210,7 @@ fn mode_button(
     }
     paint_mode(ui.painter(), r, mode, &t, enabled);
     crate::ui_kit::icon_button_info(&resp, enabled, tip, None);
-    let resp = resp.on_hover_text(tip);
+    let resp = resp.hover_tip(tip);
     if enabled && resp.clicked() {
         st.run("pi.align", json!({"mode": mode, "toCanvas": to_canvas}));
     }

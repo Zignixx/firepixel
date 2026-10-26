@@ -6,6 +6,7 @@ use super::kit::{self, BtnKind};
 use super::{EntryStatus, FileEntry, Inbox, Mode, Studio};
 use crate::app_state::AppState;
 use crate::theme::{Theme, ThemeKind, mix, with_alpha};
+use crate::tips::HoverTip;
 use crate::ui_kit::{self, KitIcon, RowIcon, Tone, sp, type_scale};
 use egui::{Align2, Color32, CornerRadius, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_batch::ItemKind;
@@ -503,7 +504,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
         enabled,
         &add_l,
     )
-    .on_hover_text(t("batch-ui-files-add.tooltip"))
+    .hover_tip(t("batch-ui-files-add.tooltip"))
     .clicked()
     {
         pick_files(st, s);
@@ -521,7 +522,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState, s: &mut Studio, rect: Rect, now: f64
             enabled,
             &folder_l,
         )
-        .on_hover_text(folder_tooltip(s.recursive))
+        .hover_tip(folder_tooltip(s.recursive))
         .clicked()
         {
             let rec = s.recursive;
@@ -646,7 +647,7 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
     } else {
         t("batch-ui-filter-glob-hint")
     };
-    let resp = resp.on_hover_text(tip);
+    let resp = resp.hover_tip(tip);
     let _ = resp;
     let _ = theme;
     // Typ
@@ -701,7 +702,7 @@ fn filter_row(ui: &mut Ui, s: &mut Studio, r: Rect) {
             }
         })
         .response
-        .on_hover_text(t("batch-ui-sort"));
+        .hover_tip(t("batch-ui-sort"));
     if pro && !f.regex.is_empty() && f.text.is_empty() {
         // Feld zeigt den regulären Ausdruck
     } else if pro && f.text.starts_with('/') && f.text.len() > 1 {
@@ -811,7 +812,7 @@ fn size_filter_fields(ui: &mut Ui, f: &mut Filter) {
             .desired_width(200.0),
     );
     r.widget_info(|| super::params::text_info(&glob_l));
-    r.on_hover_text(t("batch-ui-filter-glob.tooltip"));
+    r.hover_tip(t("batch-ui-filter-glob.tooltip"));
     if f.has_pro_filter() && ui.button(t("batch-ui-filter-reset")).clicked() {
         f.clear_pro();
     }
@@ -942,7 +943,7 @@ fn empty_state(ui: &mut Ui, st: &mut AppState, s: &mut Studio, r: Rect, enabled:
             enabled,
             &folder_l,
         )
-        .on_hover_text(folder_tooltip(s.recursive))
+        .hover_tip(folder_tooltip(s.recursive))
         .clicked()
     {
         let rec = s.recursive;
@@ -1056,7 +1057,7 @@ fn file_list(
             if g.drag_started() {
                 drag_start = Some(k);
             }
-            let _ = g.on_hover_text(t("batch-ui-file-drag"));
+            let _ = g.hover_tip(t("batch-ui-file-drag"));
         }
     });
     child
@@ -1391,7 +1392,7 @@ fn file_row(
             );
         }
         ffmpeg_click = lresp
-            .on_hover_text(format!("{choose}\n{}", t("batch-ui-ffmpeg-choose.tooltip")))
+            .hover_tip(format!("{choose}\n{}", t("batch-ui-ffmpeg-choose.tooltip")))
             .clicked();
     } else {
         let meta = ui_kit::elide(ui.ctx(), &meta.join(" · "), &f, tw);
@@ -1442,7 +1443,7 @@ fn file_row(
     if enabled {
         tip = format!("{tip}\n{}", t("batch-ui-file-keys"));
     }
-    let resp = resp.on_hover_text(tip);
+    let resp = resp.hover_tip(tip);
     let box_click = cresp.clicked();
     (
         resp.clicked() && !box_click && !ffmpeg_click,
@@ -1494,7 +1495,7 @@ fn footer(ui: &mut Ui, s: &mut Studio, r: Rect, total_bytes: u64, enabled: bool)
         enabled && s.selected.is_some(),
         &rem_l,
     )
-    .on_hover_text(t("batch-ui-files-remove.tooltip"))
+    .hover_tip(t("batch-ui-files-remove.tooltip"))
     .clicked()
         && let Some(sel) = s.selected
     {

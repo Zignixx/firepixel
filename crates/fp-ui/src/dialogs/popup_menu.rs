@@ -8,6 +8,7 @@ use super::{DialogClose, dialog_frame, push_button, refs, t, tl};
 use crate::app_state::{Action, AppState};
 use crate::inspector::fields;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
 use serde_json::{Map, Value, json};
 
@@ -245,7 +246,7 @@ fn content_page(ui: &mut egui::Ui, d: &mut PopupEditor, area: Rect, cols: &[Stri
             if en { c.text } else { c.text_disabled },
         );
         clicked[k] = en && resp.clicked();
-        resp.on_hover_text(tips[k].as_str());
+        resp.hover_tip(tips[k].as_str());
     }
     if clicked[0] {
         let level = sel

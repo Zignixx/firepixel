@@ -131,6 +131,19 @@ fn page_items(cat: usize) -> &'static [Item] {
             Check("AppendFwPng", "dlg-pref-appendfwpng", true),
             // Entwickleroptionen: Testsprache qps auch im Release-Build (Text aus common.ftl)
             Check(crate::language::DEV_PREF_KEY, "lang-dev-options", false),
+            // FB-98: View > Tooltips off hides the names too; delay before a tooltip opens
+            Check(
+                crate::tips::HIDE_NAMES_PREF,
+                "dlg-pref-tooltipshidenames",
+                false,
+            ),
+            Int(
+                crate::tips::DELAY_PREF,
+                "dlg-pref-tooltipdelay",
+                crate::tips::DEFAULT_DELAY_MS,
+                0,
+                crate::tips::MAX_DELAY_MS,
+            ),
         ],
         1 => &[
             Check("CropDocCropsImages", "dlg-pref-cropdoccropsimages", true),
@@ -343,6 +356,10 @@ pub enum GeneralRow {
     Language,
     /// „Alle Warnmeldungen zurücksetzen“.
     ResetWarnings,
+    /// FB-98 (Firepixel): tooltip delay with its field in the label column, the box "Hide tool
+    /// names too when tooltips are off" in the control column - one row, so the page keeps its
+    /// height.
+    Tooltips,
 }
 
 /// Gruppen der Seite „Allgemein“: Überschrift mit Trennlinie (Textschlüssel, `None` = ohne) und Zeilen.
@@ -371,6 +388,7 @@ pub const GENERAL_GROUPS: &[(Option<&str>, &[GeneralRow])] = &[
             GeneralRow::Theme,
             GeneralRow::Language,
             GeneralRow::Item(None, crate::language::DEV_PREF_KEY),
+            GeneralRow::Tooltips,
         ],
     ),
     (
@@ -441,6 +459,9 @@ fn strip_label(it: &Item) -> Item {
     }
 }
 
+/// Abstand des Felds „Tooltip delay“ links vor der Steuerspalte (60 px Feld + 8 px Lücke).
+const TIP_DELAY_FIELD_OFF: f32 = 68.0;
+
 /// Zeichnet die Seite „Allgemein“ in Gruppen.
 fn draw_general(
     ui: &mut Ui,
@@ -494,6 +515,23 @@ fn draw_general(
                             label(ui, lk);
                         }
                         draw_item(ui, d, prefs, &strip_label(it), full, ctrl_x, st);
+                    }
+                }
+                GeneralRow::Tooltips => {
+                    let fx = ctrl_x - TIP_DELAY_FIELD_OFF;
+                    ui.painter().text(
+                        pos2(fx - 6.0, y + 10.0),
+                        Align2::RIGHT_CENTER,
+                        t("dlg-pref-tooltipdelay"),
+                        theme.ui_font(),
+                        c.text,
+                    );
+                    if let Some(it) = general_item(crate::tips::DELAY_PREF) {
+                        let r = Rect::from_min_size(pos2(fx, y), vec2(60.0, 22.0));
+                        draw_item(ui, d, prefs, &strip_label(it), r, fx, st);
+                    }
+                    if let Some(it) = general_item(crate::tips::HIDE_NAMES_PREF) {
+                        draw_item(ui, d, prefs, it, full, ctrl_x, st);
                     }
                 }
                 GeneralRow::Undo => {
@@ -1032,7 +1070,9 @@ impl Layout {
                 _ => 0.0,
             };
             page_h = page_h.max(if cat == 0 {
-                general_height()
+                // room below the last row ("Reset all warnings") so it stays clear of the
+                // button bar (needed since the tooltip row of FB-98 made this the tallest page)
+                general_height() + 12.0
             } else {
                 28.0 + items.iter().map(item_h).sum::<f32>() + extra
             });
@@ -1041,6 +1081,8 @@ impl Layout {
         for k in ["dlg-pref-grp-docoptions", "dlg-pref-grp-workspace"] {
             label_w = label_w.max(tw(k));
         }
+        // FB-98: the tooltip delay label stands left of its field in the label column
+        label_w = label_w.max(tw("dlg-pref-tooltipdelay") + TIP_DELAY_FIELD_OFF + 6.0);
         let note_w = 68.0 + tw("dlg-pref-restart-note");
         let colors_w =
             32.0 + tw("dlg-pref-color-stroke").max(80.0) + 20.0 + 32.0 + tw("dlg-pref-color-fill");
@@ -1346,11 +1388,52 @@ mod tests {
                             || *k == fp_engine::tools::DUPLICATE_WITH_CTRL_DRAG_PREF
                             || *k == fp_engine::tools::SHIFT_MARQUEE_ADDS_ONLY_PREF
                             || *k == crate::canvas::SHIFT_WHEEL_HORIZONTAL_PREF
-                            || *k == fp_engine::tools::ARROW_KEYS_MOVE_PIXELS_PREF,
+                            || *k == fp_engine::tools::ARROW_KEYS_MOVE_PIXELS_PREF
+                            || *k == crate::tips::HIDE_NAMES_PREF
+                            || *k == crate::tips::DELAY_PREF,
                         "unbekannter Schlüssel {k}"
                     );
                 }
             }
         }
+    }
+
+    /// FB-98: the two tooltip options sit in the user-interface group of "General", translated.
+    #[test]
+    fn tooltip_options_on_the_general_page() {
+        let ui_rows = GENERAL_GROUPS
+            .iter()
+            .find(|(g, _)| *g == Some("dlg-pref-cap-ui"))
+            .map(|(_, rows)| *rows)
+            .unwrap_or_default();
+        assert!(
+            ui_rows.contains(&GeneralRow::Tooltips),
+            "one row for both options"
+        );
+        for key in [crate::tips::HIDE_NAMES_PREF, crate::tips::DELAY_PREF] {
+            assert!(general_item(key).is_some(), "{key}");
+        }
+        assert_eq!(
+            general_item(crate::tips::DELAY_PREF),
+            Some(&Item::Int(
+                crate::tips::DELAY_PREF,
+                "dlg-pref-tooltipdelay",
+                600,
+                0,
+                5000
+            ))
+        );
+        let de = |k: &str| fp_i18n::with_language("de", || fp_i18n::t(k));
+        let en = |k: &str| fp_i18n::with_language("en", || fp_i18n::t(k));
+        assert_eq!(
+            de("dlg-pref-tooltipshidenames"),
+            "Werkzeugnamen bei ausgeschalteten Tooltips ebenfalls ausblenden"
+        );
+        assert_eq!(
+            en("dlg-pref-tooltipshidenames"),
+            "Hide tool names too when tooltips are off"
+        );
+        assert_eq!(de("dlg-pref-tooltipdelay"), "Tooltip-Verzögerung (ms):");
+        assert_eq!(en("dlg-pref-tooltipdelay"), "Tooltip delay (ms):");
     }
 }

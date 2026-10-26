@@ -6,6 +6,7 @@ use crate::app_state::{Action, AppState};
 use crate::icons::{self, Icon, IconStyle};
 use crate::menu::{self, ItemAction, Node};
 use crate::theme::{Theme, ToolGroup};
+use crate::tips::HoverTip;
 use crate::widgets::{self, ButtonLook};
 use crate::workspace::Workspace;
 use egui::{Align2, Id, Rect, Sense, Stroke, StrokeKind, Ui, ViewportCommand, pos2, vec2};
@@ -192,7 +193,7 @@ pub fn show_bar(ui: &mut Ui, st: &mut AppState, native: bool) {
         );
         let zresp = ui
             .interact(zr, Id::new("appbar-zoom"), Sense::click())
-            .on_hover_text(fp_i18n::t("ui-zoom"));
+            .hover_tip(fp_i18n::t("ui-zoom"));
         if zoom.is_some() {
             let nodes: Vec<Node> = [
                 6.0f64, 12.0, 25.0, 50.0, 66.0, 100.0, 150.0, 200.0, 300.0, 400.0, 800.0, 1600.0,
@@ -253,7 +254,7 @@ pub fn show_bar(ui: &mut Ui, st: &mut AppState, native: bool) {
         Rect::from_center_size(pos2(wr.right() - 8.0, wr.center().y + 2.0), vec2(8.0, 8.0)),
         c.text_weak,
     );
-    let wresp = wresp.on_hover_text(fp_i18n::tr!("ui-workspace-switcher", name = name.as_str()));
+    let wresp = wresp.hover_tip(fp_i18n::tr!("ui-workspace-switcher", name = name.as_str()));
     let nodes = workspace_menu(st);
     let mut acts = Vec::new();
     menu::popup_menu(ui, &wresp, &nodes, &mut acts);
@@ -329,7 +330,7 @@ fn window_buttons(ui: &mut Ui, st: &mut AppState, minr: Rect, maxr: Rect, close:
             icon,
             &IconStyle::mono(col, c.app_bar_bg),
         );
-        if resp.on_hover_text(tip).clicked() {
+        if resp.hover_tip(tip).clicked() {
             match cmd {
                 0 => ui.ctx().send_viewport_cmd(ViewportCommand::Minimized(true)),
                 1 => ui

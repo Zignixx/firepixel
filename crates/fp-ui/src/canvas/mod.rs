@@ -4,6 +4,7 @@
 //! (Auswahlinfo, Status-Steuerung, Dokumentgröße, Vergrößerung). Mausereignisse gehen als
 //! [`fp_engine::ToolEvent`] an die Sitzung.
 
+use crate::tips::HoverTip;
 pub mod anim;
 pub mod context;
 pub mod cursors;
@@ -321,7 +322,7 @@ fn symbol_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect, path: &(String, Str
     );
     crate::ui_kit::icon_button_info(&resp, true, &back, None);
     if resp
-        .on_hover_text(fp_i18n::t("ui-symbol-edit-back.tooltip"))
+        .hover_tip(fp_i18n::t("ui-symbol-edit-back.tooltip"))
         .clicked()
     {
         st.push(Action::Run("modify.symbol.exitEdit".into(), json!({})));
@@ -532,7 +533,7 @@ fn doc_tabs(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             &IconStyle::mono(xc, c.frame_bg),
         );
         crate::ui_kit::icon_button_info(&xresp, true, &fp_i18n::t("ui-tab-close"), None);
-        if xresp.on_hover_text(fp_i18n::t("ui-tab-close")).clicked() {
+        if xresp.hover_tip(fp_i18n::t("ui-tab-close")).clicked() {
             st.push(Action::CloseDocument(*id));
         } else if resp.clicked() {
             st.push(Action::Activate(*id));
@@ -552,7 +553,7 @@ fn doc_tabs(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         );
         let mresp = ui
             .interact(mr, Id::new("doc-tabs-more"), Sense::click())
-            .on_hover_text(fp_i18n::t("ui-tab-more"));
+            .hover_tip(fp_i18n::t("ui-tab-more"));
         crate::ui_kit::icon_button_info(&mresp, true, &fp_i18n::t("ui-tab-more"), None);
         if mresp.hovered() {
             ui.painter().rect_filled(mr, 0.0, c.tab_hover_bg);
@@ -675,7 +676,7 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             c.text,
         );
         crate::ui_kit::icon_button_info(&resp, true, &label, Some(selected));
-        if resp.on_hover_text(tip).clicked() {
+        if resp.hover_tip(tip).clicked() {
             chosen = Some(*m);
         }
         x += w + 2.0;
@@ -768,7 +769,7 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         &IconStyle::new(&theme, Some(ToolGroup::View), names.len() > 1),
     );
     crate::ui_kit::icon_button_info(&resp, names.len() > 1, &fp_i18n::t("ui-page-nav"), None);
-    if resp.on_hover_text(fp_i18n::t("ui-page-nav")).clicked() && names.len() > 1 {
+    if resp.hover_tip(fp_i18n::t("ui-page-nav")).clicked() && names.len() > 1 {
         st.push(Action::SetPage((page + 1) % names.len()));
     }
 }
@@ -4257,7 +4258,7 @@ fn exit_bitmap_mode_button(ui: &mut Ui, size: egui::Vec2, on: bool, tip: &str) -
     if tip.is_empty() {
         resp
     } else {
-        resp.on_hover_text(tip)
+        resp.hover_tip(tip)
     }
 }
 
@@ -4399,7 +4400,7 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     );
     let zresp = ui
         .interact(zr, Id::new("footer-zoom"), Sense::click())
-        .on_hover_text(fp_i18n::t("ui-zoom"));
+        .hover_tip(fp_i18n::t("ui-zoom"));
     let nodes: Vec<crate::menu::Node> = ZOOM_STEPS
         .iter()
         .filter(|z| ![0.16, 0.33, 6.0].contains(*z))

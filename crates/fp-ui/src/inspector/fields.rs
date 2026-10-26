@@ -8,6 +8,7 @@
 use crate::inspector::glyphs::{self, Glyph};
 use crate::inspector::preview::{self, PreviewTarget};
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{
     Align2, Color32, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, pos2, vec2,
 };
@@ -200,7 +201,7 @@ fn fitted_text(
                 Id::new(("pi-fit-tip", kind, avail.min.x as i32, avail.min.y as i32)),
                 Sense::hover(),
             )
-            .on_hover_text(text);
+            .hover_tip(text);
     }
     audit(ui, kind, text, avail, drawn, fit);
     drawn
@@ -1678,11 +1679,7 @@ pub fn list_item(ui: &mut Ui, text: &str, selected: bool) -> Response {
     resp.widget_info(|| {
         egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, text)
     });
-    if clipped {
-        resp.on_hover_text(text)
-    } else {
-        resp
-    }
+    if clipped { resp.hover_tip(text) } else { resp }
 }
 
 /// Innenabstand eines Listeneintrags ([`list_item`]): 6 px links, 4 px rechts.
@@ -1856,7 +1853,7 @@ pub fn toggle(
     let clicked = enabled && resp.clicked();
     if !tip.is_empty() {
         log_tip(ui, r, tip);
-        resp.on_hover_text(tip);
+        resp.hover_tip(tip);
     }
     clicked
 }
@@ -1898,7 +1895,7 @@ pub fn icon_button(
         resp
     } else {
         log_tip(ui, r, tip);
-        resp.on_hover_text(tip)
+        resp.hover_tip(tip)
     }
 }
 
@@ -2201,7 +2198,7 @@ pub fn swatch(
         _ => "#FFFFFF00".to_string(),
     };
     log_tip(ui, r, &hex);
-    resp.on_hover_text(hex)
+    resp.hover_tip(hex)
 }
 
 /// Descriptive tooltip over a control area (RE spec 57 §4: the inspector controls of the retouch
@@ -2213,7 +2210,7 @@ pub fn tip(ui: &Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str) {
     }
     log_tip(ui, r, text);
     ui.interact(r, Id::new(id).with("tip"), Sense::hover())
-        .on_hover_text(text);
+        .hover_tip(text);
 }
 
 const TIP_LOG: &str = "pi-tip-log";

@@ -6,6 +6,7 @@ use crate::app_state::{Action, AppState};
 use crate::icons::Icon;
 use crate::menu::{self, ItemAction, Node};
 use crate::theme::{Theme, ToolGroup};
+use crate::tips::HoverTip;
 use crate::widgets::{self, ButtonLook};
 use egui::{Rect, Sense, Stroke, Ui, pos2, vec2};
 use serde_json::json;
@@ -245,8 +246,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     &menu::clean_label(&fp_i18n::t("menu-modify-align")).0,
                     None,
                 );
-                let resp =
-                    resp.on_hover_text(menu::clean_label(&fp_i18n::t("menu-modify-align")).0);
+                let resp = resp.hover_tip(menu::clean_label(&fp_i18n::t("menu-modify-align")).0);
                 let nodes: Vec<Node> = ALIGN_ITEMS
                     .iter()
                     .map(|n| {

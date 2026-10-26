@@ -10,6 +10,7 @@
 use super::super::{DialogClose, dialog_frame, push_button};
 use crate::menu;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use crate::widgets::{ButtonLook, button_frame};
 use egui::{
     Color32, Id, Painter, Rect, Response, Sense, Shape, Stroke, StrokeKind, Ui, pos2, vec2,
@@ -554,7 +555,7 @@ pub fn toggle_button(
     if tip.is_empty() {
         resp
     } else {
-        resp.on_hover_text(tip)
+        resp.hover_tip(tip)
     }
 }
 

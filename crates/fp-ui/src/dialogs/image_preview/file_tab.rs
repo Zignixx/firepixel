@@ -9,6 +9,7 @@ use super::crop;
 use crate::icons::{self, Icon, IconStyle};
 use crate::inspector::fields;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Id, Rect, Sense, Stroke, Ui, pos2, vec2};
 use fp_i18n::t;
 
@@ -37,7 +38,7 @@ fn tip(ui: &Ui, id: &str, r: Rect, key: &str) {
     let text = t(key);
     let resp = ui.interact(r, Id::new(("fp-ipv-file-tip", id)), Sense::hover());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, text.as_str()));
-    resp.on_hover_text(text);
+    resp.hover_tip(text);
 }
 
 /// Gruppenrahmen; `head_w` = Breite des Kopfes (Text bzw. Kästchen), der im oberen Strich steht.

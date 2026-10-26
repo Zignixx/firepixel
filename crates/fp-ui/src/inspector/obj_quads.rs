@@ -15,6 +15,7 @@ use super::preview::{InspectorPreview, PreviewValue};
 use super::texts::{self, refs, t, tl};
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use crate::ui_commands::{self, BRUSH_PRESETS, GRADIENT_SHAPES};
 use egui::{Align2, Color32, Id, Rect, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_color::{Argb, BlendMode};
@@ -1013,7 +1014,7 @@ fn preview_text(st: &mut AppState, live: Option<f64>, patch: impl FnOnce(f64) ->
 
 /// Tooltip über einem Feld (ohne eigene Klickfläche; das Feld bleibt bedienbar).
 pub fn tooltip_at(ui: &mut Ui, id: Id, r: Rect, text: &str) {
-    let _ = ui.interact(r, id, egui::Sense::hover()).on_hover_text(text);
+    let _ = ui.interact(r, id, egui::Sense::hover()).hover_tip(text);
 }
 
 /// Farbfeld mit dem Muster (Ausschnitt des Musterbilds).
@@ -2186,7 +2187,7 @@ pub fn effect_list(ui: &mut Ui, st: &mut AppState, r: Rect) {
             ir.widget_info(|| {
                 egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tip.as_str())
             });
-            ir.on_hover_text(tip.as_str());
+            ir.hover_tip(tip.as_str());
         }
         ui.painter().text(
             pos2(info.right() + 5.0, rr.center().y),
@@ -3785,7 +3786,7 @@ fn orientation_button(ui: &mut Ui, id: Id, r: Rect, current: i32, enabled: bool)
     let name = t("pi-text-orientation");
     crate::ui_kit::icon_button_info(&resp, enabled, &name, None);
     fields::log_tip(ui, r, &name);
-    let resp = resp.on_hover_text(&name);
+    let resp = resp.hover_tip(&name);
     egui::Popup::menu(&resp)
         .frame(crate::menu::menu_frame(&theme))
         .show(|ui| {

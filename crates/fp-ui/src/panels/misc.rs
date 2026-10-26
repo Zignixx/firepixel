@@ -7,6 +7,7 @@ use crate::app_state::{Action, AppState};
 use crate::inspector::fields::{self, Dl};
 use crate::inspector::glyphs::Glyph;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Align2, Color32, Id, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_engine::ToolId;
 use fp_model::ElementKind;
@@ -33,7 +34,7 @@ fn cmd_buttons(ui: &mut Ui, st: &mut AppState, title: &str, items: &[(&str, &str
                 crate::widgets::text_width(ui, &label, &Theme::current(ui.ctx()).ui_font()) + 16.0;
             let (r, resp) = ui.allocate_exact_size(vec2(full.min(max_w), 20.0), Sense::hover());
             if full > max_w {
-                let _ = resp.on_hover_text(&label);
+                let _ = resp.hover_tip(&label);
             }
             if fields::button(ui, ("cmdbtn", *cmd), r, &label, enabled) {
                 st.run(cmd, json!({}));
@@ -365,7 +366,7 @@ pub fn special_characters(ui: &mut Ui, st: &mut AppState) {
             theme.font(13.0),
             theme.colors.text,
         );
-        let resp = resp.on_hover_text(format!("U+{:04X}", *ch as u32));
+        let resp = resp.hover_tip(format!("U+{:04X}", *ch as u32));
         if resp.clicked() {
             match &text {
                 Some((id, t)) => st.run(

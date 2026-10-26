@@ -90,7 +90,7 @@ zweiten Zeile eine kurze Beschreibung, was das Werkzeug tut (die Zeilen eines Fl
 Beschreibung als Tooltip). Knöpfe der Werkzeugleiste zeigen nur den Befehlsnamen. Im Inspektor der
 Retusche-Werkzeuge (Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter, Verwischen, Stempel) und des
 Radiergummis beschreiben sich die Felder selbst: „Pinselstärke“, „Pinselvorschau“, „Kantenweichheit“,
-„Runde Pinselspitze“, „Druck“ usw. Alle diese QuickInfos schaltet *Ansicht ▸ QuickInfos*.
+„Runde Pinselspitze“, „Druck“ usw. Alle diese QuickInfos schaltet *Ansicht ▸ QuickInfos* (aus bleibt die erste Zeile, siehe unten).
 
 Häufige Kürzel (Satz „Firepixel“, umschaltbar unter *Bearbeiten ▸ Tastaturkurzbefehle…*; weitere Sätze heißen
 „Bildbearbeitung“, „Vektorzeichnung“ und „Klassische Vektor-Tasten“):
@@ -429,7 +429,12 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Export bleiben unverändert.
 - *Ansicht ▸ QuickInfos* (Vorgabe: ein, wird als Voreinstellung `Tooltips` gemerkt) schaltet die QuickInfos
   (Tooltips) von Knöpfen, Feldern und Bedienfeldern überall (Werkzeugbedienfeld, Symbolleiste, Inspektor,
-  Bedienfelder, Dialoge). Aus öffnet sich keine QuickInfo mehr; die Änderung wirkt sofort.
+  Bedienfelder, Dialoge). Aus entfallen nur die Beschreibungszeilen: die kurze erste Zeile mit Name und
+  Kürzel bleibt, z. B. „Zeiger (V, 0)“, einzeilige QuickInfos von Bedienfeldknöpfen und Inspektorfeldern
+  bleiben unverändert. Um auch diese auszublenden, *Voreinstellungen ▸ Allgemein ▸ Werkzeugnamen bei
+  ausgeschalteten Tooltips ebenfalls ausblenden* einschalten; *Tooltip-Verzögerung (ms)* auf derselben
+  Seite legt fest, wie lange der Mauszeiger ruhen muss, bis eine QuickInfo erscheint (Vorgabe 600,
+  0–5000). Die Änderungen wirken sofort.
 - *Ansicht ▸ Koordinaten-Tag* (Firepixel-Erweiterung, direkt unter QuickInfos; Vorgabe: ein, wird als
   Voreinstellung `Firepixel_CoordinateTag` gemerkt) schaltet die kleine graue Marke dicht unter dem
   Mauszeiger über der Leinwand: mit Rechteck, Ellipse, Linie, Polygon und automatischen Formen die

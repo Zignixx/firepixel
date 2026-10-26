@@ -13,6 +13,7 @@ use super::{DialogClose, access, dialog_frame, push_button, refs, t, tl};
 use crate::app_state::AppState;
 use crate::inspector::fields;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use egui::{Color32, Id, Pos2, Rect, Sense, Shape, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_raster::filters::levels_math as lm;
 use fp_raster::filters::{LevelsChannel, LevelsParams};
@@ -280,7 +281,7 @@ fn slider(
         d.drag = None;
     }
     if !tip.is_empty() {
-        resp.on_hover_text(tip);
+        resp.hover_tip(tip);
     }
     out
 }
@@ -346,7 +347,7 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
             }
             let _ = ui
                 .interact(cr, Id::new("lv-ch-tip"), Sense::hover())
-                .on_hover_text(&ch_tip);
+                .hover_tip(&ch_tip);
             let ch = *d.channel_ref();
             // Eingabetonwerte: Schwarz, Gamma, Weiß
             access::label_right(ui, at(11.0, 34.0, 135.0, 21.0), &in_l, true);
@@ -387,7 +388,7 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
                 }
                 let _ = ui
                     .interact(fr, Id::new(("lv-in-tip", k)), Sense::hover())
-                    .on_hover_text([&min_tip, &gamma_tip, &max_tip][k].as_str());
+                    .hover_tip([&min_tip, &gamma_tip, &max_tip][k].as_str());
             }
             // Histogramm
             draw_histogram(ui, at(21.0, 60.0, 241.0, 111.0), &d.shown);
@@ -439,7 +440,7 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
                 }
                 let _ = ui
                     .interact(fr, Id::new(("lv-out-tip", k)), Sense::hover())
-                    .on_hover_text(if k == 0 {
+                    .hover_tip(if k == 0 {
                         min_tip.as_str()
                     } else {
                         max_tip.as_str()
@@ -480,7 +481,7 @@ pub fn show_levels(ctx: &egui::Context, st: &mut AppState) {
             }
             let _ = ui
                 .interact(ar, Id::new("lv-auto-tip"), Sense::hover())
-                .on_hover_text(&auto_tip);
+                .hover_tip(&auto_tip);
             let px = 287.0 + (bw - 72.0) / 2.0;
             if let Some(p) = common::pipette_buttons(
                 ui,

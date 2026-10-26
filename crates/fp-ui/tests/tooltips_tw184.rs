@@ -7,7 +7,10 @@
 //!   Coordinate Tag since FB-41 (default on): shape tools show "x:… y:…" on hover and "w:… h:…"
 //!   while drawing, a Pointer drag shows the dragged object's new top-left corner, Pointer/Pen/Text
 //!   show nothing on hover.
-//! - View ▸ Tooltips (FB-37) switches the tooltips of buttons and fields at once (default on).
+//! - View ▸ Tooltips (FB-37) switches the tooltips of buttons and fields at once (default on);
+//!   since FB-98 "off" hides only the description lines, the short first line (name and shortcut)
+//!   stays; Preferences ▸ General "Hide tool names too" hides everything; the delay is the
+//!   preference `Firepixel_TooltipDelayMs` (default 600 ms).
 
 use egui::{Event, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
@@ -307,7 +310,7 @@ fn view_checks(h: &H) -> Vec<(String, Option<bool>)> {
     view_switches(h).into_iter().map(|(c, _, k)| (c, k)).collect()
 }
 
-/// Rests the pointer on `at` for one second (tooltip delay 0.6 s) and tells whether a tooltip layer
+/// Rests the pointer on `at` for one second (default tooltip delay 0.6 s) and tells whether a tooltip layer
 /// is open.
 fn rest_and_tooltip_open(h: &mut H, at: Pos2) -> bool {
     ev(h, Event::PointerGone);
@@ -319,21 +322,27 @@ fn rest_and_tooltip_open(h: &mut H, at: Pos2) -> bool {
     h.ctx.memory(|m| m.areas().visible_layer_ids().iter().any(|l| l.order == egui::Order::Tooltip))
 }
 
-/// FB-37: View ▸ Tooltips switches the tooltips of the toolbox buttons (and every other widget) at
-/// once; stored as the preference `Tooltips`; the menu's check mark follows.
+/// FB-37 / FB-98: View ▸ Tooltips switches the description lines of the toolbox buttons' (and
+/// every other widget's) tooltips at once; the name and shortcut line stays unless Preferences ▸
+/// General "Hide tool names too" is on; stored as the preference `Tooltips`; the menu's check mark
+/// follows.
 #[test]
 fn view_tooltips_switches_widget_tooltips_at_once() {
     fp_i18n::with_language("de", || {
         let mut h = harness();
         let tip = fp_ui::tools_panel::tool_tooltip(&h.state().state, ToolId::Pointer);
         let label = tip.lines().next().unwrap_or_default().to_string();
+        assert_eq!(label, "Zeiger (V, 0)");
+        assert!(tip.contains('\n'), "name line plus description: {tip:?}");
         let button = h.query_all_by_label(&label).next().map(|n| n.rect()).expect("Pointer button");
+        // the button itself carries the name as its label; a shown name-only tooltip adds a second node
+        let label_nodes = |h: &H| h.query_all_by_label(&label).count();
         let on_on = vec![("view.tooltips".to_string(), Some(true)), ("view.coordinateTag".to_string(), Some(true))];
         assert_eq!(view_checks(&h), on_on, "both checked by default, Coordinate Tag right after Tooltips");
-        // on (default): resting on the Pointer button shows its tooltip
+        // on (default): resting on the Pointer button shows its full tooltip
         assert!(rest_and_tooltip_open(&mut h, button.center()), "tooltip with the switch on");
         assert!(h.query_by_label(&tip).is_some(), "the tool's tooltip text: {tip:?}");
-        // off: no tooltip, preference stored, check mark gone; the tag switch stays
+        // off: only the name and shortcut line, preference stored, check mark gone; the tag switch stays
         h.state_mut().state.run("view.tooltips", json!({}));
         h.run_steps(1);
         assert!(!h.state().state.session.prefs.get_bool("Tooltips", true), "preference Tooltips off");
@@ -341,13 +350,26 @@ fn view_tooltips_switches_widget_tooltips_at_once() {
             view_checks(&h),
             vec![("view.tooltips".to_string(), Some(false)), ("view.coordinateTag".to_string(), Some(true))]
         );
-        assert!(!rest_and_tooltip_open(&mut h, button.center()), "no tooltip with the switch off");
+        assert!(h.ctx.global_style().interaction.tooltip_delay.is_finite(), "names still open");
+        assert!(rest_and_tooltip_open(&mut h, button.center()), "name tooltip with the switch off");
+        assert!(h.query_by_label(&tip).is_none(), "no description line");
+        assert!(label_nodes(&h) >= 2, "the name line is shown");
+        // off and "hide tool names too": no tooltip at all
+        h.state_mut()
+            .state
+            .session
+            .prefs
+            .set(fp_ui::tips::HIDE_NAMES_PREF, fp_engine::prefs::PrefValue::Bool(true));
+        h.run_steps(1);
+        assert!(h.ctx.global_style().interaction.tooltip_delay.is_infinite(), "nothing opens");
+        assert!(!rest_and_tooltip_open(&mut h, button.center()), "no tooltip with names hidden too");
         assert!(h.query_by_label(&tip).is_none(), "no tool tooltip text");
-        // on again: the tooltip comes back with the normal delay
+        assert_eq!(label_nodes(&h), 1, "only the button carries the name");
+        // on again (the option only matters while the switch is off): the full tooltip comes back
         h.state_mut().state.run("view.tooltips", json!({}));
         h.run_steps(1);
         assert!(h.state().state.session.prefs.get_bool("Tooltips", false), "preference Tooltips on");
-        assert!(h.ctx.global_style().interaction.tooltip_delay.is_finite(), "delay restored");
+        assert_eq!(h.ctx.global_style().interaction.tooltip_delay, 0.6, "default delay restored");
         assert!(rest_and_tooltip_open(&mut h, button.center()), "tooltip back");
         assert!(h.query_by_label(&tip).is_some(), "the tool's tooltip text again");
         // View > Coordinate Tag off: its check mark follows, Tooltips stays checked
@@ -359,6 +381,47 @@ fn view_tooltips_switches_widget_tooltips_at_once() {
         );
         assert!(!h.state().state.session.prefs.get_bool(fp_engine::session::COORDINATE_TAG_PREF, true));
     });
+}
+
+/// FB-98: with View ▸ Tooltips off a one-line tooltip (inspector control) stays whole - the
+/// first-line rule covers every widget tooltip, not only the toolbox.
+#[test]
+fn tooltips_off_keeps_one_line_tips_of_the_inspector() {
+    let mut h = harness();
+    let smudge = fp_i18n::with_language("de", || inspector_tips(&mut h, ToolId::Smudge));
+    let size = smudge[0].1;
+    h.state_mut().state.run("view.tooltips", json!({}));
+    h.run_steps(1);
+    fp_i18n::with_language("de", || {
+        assert!(rest_and_tooltip_open(&mut h, size.center()), "one-line tip still opens");
+    });
+    assert!(h.query_by_label("Pinselstärke").is_some(), "one-line tip whole");
+}
+
+/// FB-98: Preferences ▸ General "Tooltip delay (ms)" sets the egui tooltip delay from the next
+/// frame on (default 600 ms, clamped to 0–5000), also after the design is applied again.
+#[test]
+fn tooltip_delay_preference_sets_the_style_delay() {
+    use fp_engine::prefs::PrefValue;
+    let mut h = harness();
+    let delay = |h: &H| h.ctx.global_style().interaction.tooltip_delay;
+    assert_eq!(delay(&h), 0.6, "default 600 ms");
+    h.state_mut().state.session.prefs.set(fp_ui::tips::DELAY_PREF, PrefValue::Int(1500));
+    h.run_steps(1);
+    assert_eq!(delay(&h), 1.5);
+    h.state_mut().state.theme_dirty = true;
+    h.run_steps(2);
+    assert_eq!(delay(&h), 1.5, "kept when the design is applied again");
+    h.state_mut().state.session.prefs.set(fp_ui::tips::DELAY_PREF, PrefValue::Int(0));
+    h.run_steps(1);
+    assert_eq!(delay(&h), 0.0);
+    h.state_mut().state.session.prefs.set(fp_ui::tips::DELAY_PREF, PrefValue::Int(99_999));
+    h.run_steps(1);
+    assert_eq!(delay(&h), 5.0, "clamped");
+    // the delay also holds with Tooltips off (names only)
+    h.state_mut().state.run("view.tooltips", json!({}));
+    h.run_steps(1);
+    assert_eq!(delay(&h), 5.0, "names-only tooltips use the same delay");
 }
 
 /// The two menu entries are translated (DE/EN).

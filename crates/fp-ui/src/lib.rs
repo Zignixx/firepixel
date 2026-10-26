@@ -47,6 +47,7 @@ pub mod preview;
 pub mod screen_mode; // TW-158: Standard / full screen with menus / full screen
 mod start_window;
 pub mod theme;
+pub mod tips; // FB-98: View > Tooltips keeps the names; delay preference
 pub mod toolbar;
 pub mod tools_panel;
 pub mod ui_commands;
@@ -223,8 +224,8 @@ impl FirepixelApp {
             st.theme.apply(&ctx);
             st.theme_dirty = false;
         }
-        // View ▸ Tooltips (FB-37): tooltips of buttons, fields and panels from this frame on
-        apply_widget_tooltips(&ctx, st.session.ui.tooltips);
+        // View ▸ Tooltips (FB-37, FB-98): tooltips of buttons, fields and panels from this frame on
+        tips::apply(&ctx, &st.session.prefs, st.session.ui.tooltips);
         let theme: Arc<Theme> = Arc::clone(&st.theme);
         // fertige Renderergebnisse übernehmen
         for res in st.worker.poll() {
@@ -428,7 +429,7 @@ impl FirepixelApp {
         st.process_actions(&ctx);
         st.handle_session_events();
         // a View ▸ Tooltips toggled by this frame's actions holds from the next pass on
-        apply_widget_tooltips(&ctx, st.session.ui.tooltips);
+        tips::apply(&ctx, &st.session.prefs, st.session.ui.tooltips);
         if st.dialogs.any_open() != dialogs_before || st.window_title() != title_before {
             ctx.request_discard("dialog or document changed by an action");
             ctx.request_repaint();
@@ -785,33 +786,3 @@ pub fn run(files: Vec<PathBuf>, design: Option<ThemeKind>) -> eframe::Result {
     r
 }
 
-/// Key of the tooltip timing (delay, grace time) saved while View ▸ Tooltips is off.
-const TOOLTIP_TIMING_KEY: &str = "fp-tooltip-timing";
-
-/// View ▸ Tooltips (FB-37): with the switch off no egui tooltip opens - an infinite delay and no
-/// grace time (otherwise a tooltip shown a moment ago lets the next one open at once); switched on
-/// again, the timing from before comes back (0.6 s delay from the theme). Changes the style only
-/// when the state differs, so a delay set elsewhere (tests, theme) stays while the switch is on.
-fn apply_widget_tooltips(ctx: &egui::Context, on: bool) {
-    let off_now = ctx.global_style().interaction.tooltip_delay.is_infinite();
-    if on != off_now {
-        return;
-    }
-    let key = egui::Id::new(TOOLTIP_TIMING_KEY);
-    if on {
-        let (delay, grace) = ctx
-            .data(|d| d.get_temp::<(f32, f32)>(key))
-            .unwrap_or((0.6, 0.2));
-        ctx.all_styles_mut(|s| {
-            s.interaction.tooltip_delay = delay;
-            s.interaction.tooltip_grace_time = grace;
-        });
-    } else {
-        let i = ctx.global_style().interaction.clone();
-        ctx.data_mut(|d| d.insert_temp(key, (i.tooltip_delay, i.tooltip_grace_time)));
-        ctx.all_styles_mut(|s| {
-            s.interaction.tooltip_delay = f32::INFINITY;
-            s.interaction.tooltip_grace_time = 0.0;
-        });
-    }
-}

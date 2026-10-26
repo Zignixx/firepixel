@@ -7,6 +7,7 @@
 //! schickt Änderungen als Befehle über die Aktions-Warteschlange. Nicht registrierte Vorlagen
 //! bleiben leer.
 
+use crate::tips::HoverTip;
 pub mod ai_quads;
 pub mod color_picker;
 pub mod fields;
@@ -270,7 +271,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         if hresp.clicked() {
             toggle_height = true;
         }
-        let hresp = hresp.on_hover_text(tip);
+        let hresp = hresp.hover_tip(tip);
         let col = if hresp.hovered() { c.focus } else { c.tab_text };
         ui.painter().line_segment(
             [pos2(cx - 2.5, cy - 1.0), pos2(cx, cy - 3.5)],
