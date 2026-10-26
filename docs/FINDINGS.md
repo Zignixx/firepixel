@@ -1123,7 +1123,7 @@ has a row of its own. Deliberate Firepixel extension (see `[N]`): the option `Fi
 off = reference; on, the arrow keys move the selected pixels with the Pointer, Select Behind, the Subselection and the
 Mask Element Selection, Alt+arrow moves a copy); the Magic Wand now handles the arrow keys itself like Marquee and
 Lasso. Hands-on checks [VERIFICATION.md](VERIFICATION.md) A4-111 to A4-114. Workspace tests for the merged tree:
-pending (GT-2f). The 106 rows: new is TW-267, fixed, pending the click-test; TW-249 and TW-225 updated; TW-269 is
+3499 passed, 0 failed, 142 ignored (GT-2f, `43fe3e6b`). The 106 rows: new is TW-267, fixed, pending the click-test; TW-249 and TW-225 updated; TW-269 is
 recorded in `[N]` only; the other rows as listed above.
 
 | ID | Area | What is open (expected vs. current) |
