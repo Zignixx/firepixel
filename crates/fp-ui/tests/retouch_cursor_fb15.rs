@@ -83,13 +83,25 @@ fn tips(h: &H) -> usize {
         .unwrap_or(0)
 }
 
-/// Circle outlines of the active retouch tip (its diameter at 100 %) painted in the last frame.
-fn tip_circles(h: &H) -> usize {
-    fn count(s: &egui::Shape, r: f32) -> usize {
+/// Tip outlines of the active retouch tip (its diameter at 100 %) painted in the last frame: since
+/// RE spec 74 one mesh of 1 px quads (the pixel below XOR #FFFF00), outer size diameter + 1.
+fn tip_meshes(h: &H) -> Vec<egui::Mesh> {
+    fn find(s: &egui::Shape, r: f32, out: &mut Vec<egui::Mesh>) {
         match s {
-            egui::Shape::Circle(c) if (c.radius - r).abs() < 0.6 && c.fill.a() == 0 => 1,
-            egui::Shape::Vec(v) => v.iter().map(|s| count(s, r)).sum(),
-            _ => 0,
+            egui::Shape::Mesh(m)
+                if m.texture_id == egui::TextureId::default()
+                    && m.vertices.len() % 4 == 0
+                    && m.vertices
+                        .chunks(4)
+                        .all(|q| (q[3].pos - q[0].pos) == egui::vec2(1.0, 1.0))
+                    && !m.vertices.is_empty()
+                    && (m.calc_bounds().width() - (2.0 * r + 1.0)).abs() < 1.1
+                    && (m.calc_bounds().height() - (2.0 * r + 1.0)).abs() < 1.1 =>
+            {
+                out.push((**m).clone())
+            }
+            egui::Shape::Vec(v) => v.iter().for_each(|s| find(s, r, out)),
+            _ => {}
         }
     }
     let s = st(h);
@@ -99,7 +111,16 @@ fn tip_circles(h: &H) -> usize {
         _ => "SmudgeToolDiameter",
     };
     let r = s.session.prefs.get_int(key, 13) as f32 / 2.0;
-    h.output().shapes.iter().map(|cs| count(&cs.shape, r)).sum()
+    // the tip is a mesh of 1 × 1 px quads (other untextured meshes, e.g. icons, are not)
+    let mut out = Vec::new();
+    for cs in &h.output().shapes {
+        find(&cs.shape, r, &mut out);
+    }
+    out
+}
+
+fn tip_circles(h: &H) -> usize {
+    tip_meshes(h).len()
 }
 
 fn hover(h: &mut H, p: Pos2) {
@@ -119,6 +140,14 @@ fn tip_outline_only_over_the_canvas_and_cursor_per_target() {
         hover(&mut h, p);
         assert_eq!(tips(&h), 1, "{tool:?}: tip over the bitmap");
         assert_eq!(tip_circles(&h), 1, "{tool:?}: one tip circle painted");
+        // RE spec 74: over the grey bitmap (100, 100, 100) every outline pixel is grey XOR #FFFF00
+        assert!(
+            tip_meshes(&h)[0]
+                .vertices
+                .iter()
+                .all(|v| v.color == egui::Color32::from_rgb(155, 155, 100)),
+            "{tool:?}: outline colour = pixel below XOR #FFFF00"
+        );
         assert_eq!(st(&h).tool_cursor, Cursor::Hidden, "{tool:?}: cursor hidden");
         // next to the selected bitmap: still editable (the stroke would act on it)
         let p = screen(&h, 450.0, 350.0);

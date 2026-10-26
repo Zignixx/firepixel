@@ -19,6 +19,7 @@ pub mod stack;
 #[cfg(test)]
 mod tests;
 pub mod textedit;
+pub mod tip_outline;
 pub mod tools;
 pub mod web;
 
@@ -3034,12 +3035,9 @@ fn overlays(
     // Werkzeug-Rückmeldung
     let Some(d) = st.session.active() else { return };
     let stroke = Stroke::new(1.0, c.tool_preview);
-    // the brush outline is red while a mask is being edited (RE spec 68 §4.1 e5)
-    let tip_color = if st.session.mask_selected() {
-        Color32::from_rgb(255, 0, 0)
-    } else {
-        c.tool_preview
-    };
+    // the brush tip outline has no colour of its own: the pixel below XOR #FFFF00, also while a
+    // mask is edited (RE spec 74; replaces the red of RE spec 68 §4.1 e5)
+    let ppp_px = ui.ctx().pixels_per_point();
     // Gerenderte Vorschauen (Verschieben, Kopie, Transformieren, Text) nur innerhalb der Leinwand
     // wie im fertigen Bild; Rahmen, Griffe und Umrisse dürfen darüber hinaus
     let page_clip = st
@@ -3423,17 +3421,11 @@ fn overlays(
                 round,
             } => {
                 let p = spp(at);
-                let rr = (diameter as f64 * view.zoom / 2.0).max(1.0) as f32;
-                if round {
-                    painter.circle_stroke(p, rr, Stroke::new(1.0, tip_color));
-                } else {
-                    painter.rect_stroke(
-                        Rect::from_center_size(p, vec2(rr * 2.0, rr * 2.0)),
-                        0.0,
-                        Stroke::new(1.0, tip_color),
-                        StrokeKind::Middle,
-                    );
-                }
+                let dia = (diameter as f64 * view.zoom).max(1.0) as f32;
+                let (img, tr, pb) = (cc.shown_image.as_ref(), cc.tex_rect, c.canvas_bg);
+                tip_outline::paint(painter, p, dia, round, ppp_px, |q| {
+                    tip_outline::under_color(img, tr, pb, q)
+                });
             }
             Overlay::ControlPoint { at, tooltip, hot } => {
                 // gelbe Raute mit dunklem Rand (Steuerpunkt einer automatischen Form)

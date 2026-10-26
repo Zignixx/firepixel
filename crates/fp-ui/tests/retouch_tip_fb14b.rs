@@ -74,15 +74,28 @@ fn feedback(h: &H) -> Vec<Overlay> {
         .unwrap_or_default()
 }
 
-/// Circle outlines of the tip size (diameter 13 at 100 %, radius 6.5) painted in the last frame.
+/// Tip outlines of the tip size (diameter 13 at 100 %) painted in the last frame: since RE spec 74
+/// one mesh of 1 px quads with the outer size 14 × 14.
 fn tip_circles(h: &H) -> usize {
     fn count(s: &egui::Shape) -> usize {
         match s {
-            egui::Shape::Circle(c) if (c.radius - 6.5).abs() < 0.6 && c.fill.a() == 0 => 1,
+            egui::Shape::Mesh(m)
+                if m.texture_id == egui::TextureId::default()
+                    && m.vertices.len() % 4 == 0
+                    && m.vertices
+                        .chunks(4)
+                        .all(|q| (q[3].pos - q[0].pos) == egui::vec2(1.0, 1.0))
+                    && !m.vertices.is_empty()
+                    && (m.calc_bounds().width() - 14.0).abs() < 1.1
+                    && (m.calc_bounds().height() - 14.0).abs() < 1.1 =>
+            {
+                1
+            }
             egui::Shape::Vec(v) => v.iter().map(count).sum(),
             _ => 0,
         }
     }
+    // the tip is a mesh of 1 × 1 px quads (other untextured meshes, e.g. icons, are not)
     h.output().shapes.iter().map(|cs| count(&cs.shape)).sum()
 }
 
