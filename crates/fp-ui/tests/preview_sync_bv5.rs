@@ -13,23 +13,17 @@ use egui_kittest::Harness;
 use fp_engine::view::PreviewMode;
 use fp_engine::ToolId;
 use fp_ui::app_state::{Action, AppState, UiSettings};
-use fp_ui::dialogs::image_preview::{crop, toolbar, worker, ImagePreview, Tool};
+use fp_ui::dialogs::image_preview::{crop, toolbar, ImagePreview, Tool};
 use fp_ui::theme::ThemeKind;
 use fp_ui::FirepixelApp;
 use serde_json::json;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-/// Die Zähler des Bildvorschau-Workers sind global: Tests dieser Datei laufen nacheinander.
+/// Tests dieser Datei laufen nacheinander.
 static LOCK: Mutex<()> = Mutex::new(());
 
 struct Guard(#[allow(dead_code)] std::sync::MutexGuard<'static, ()>);
-
-impl Drop for Guard {
-    fn drop(&mut self) {
-        worker::hold_jobs(false);
-    }
-}
 
 fn lock() -> Guard {
     let g = LOCK.lock().unwrap_or_else(|e| e.into_inner());

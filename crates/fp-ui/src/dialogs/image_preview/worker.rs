@@ -115,24 +115,38 @@ pub struct Counters {
     pub finished: usize,
 }
 
-static STARTED: AtomicUsize = AtomicUsize::new(0);
-static CANCELLED: AtomicUsize = AtomicUsize::new(0);
-static FINISHED: AtomicUsize = AtomicUsize::new(0);
-static HOLD: AtomicBool = AtomicBool::new(false);
+/// Hold switch and counters of one UI context (the window, or one test harness). Scoped to the
+/// context instead of the process, so tests running in parallel in one test program neither hold
+/// nor count each other's jobs (BA-117).
+#[derive(Default)]
+struct Hooks {
+    hold: AtomicBool,
+    started: AtomicUsize,
+    cancelled: AtomicUsize,
+    finished: AtomicUsize,
+}
 
-/// Zählerstand (prozessweit).
-pub fn counters() -> Counters {
+fn hooks(ctx: &egui::Context) -> Arc<Hooks> {
+    ctx.data_mut(|d| {
+        d.get_temp_mut_or_default::<Arc<Hooks>>(egui::Id::new("fp-image-preview-hooks"))
+            .clone()
+    })
+}
+
+/// Zählerstand der Aufträge, die über `ctx` gestartet wurden.
+pub fn counters(ctx: &egui::Context) -> Counters {
+    let h = hooks(ctx);
     Counters {
-        started: STARTED.load(Ordering::SeqCst),
-        cancelled: CANCELLED.load(Ordering::SeqCst),
-        finished: FINISHED.load(Ordering::SeqCst),
+        started: h.started.load(Ordering::SeqCst),
+        cancelled: h.cancelled.load(Ordering::SeqCst),
+        finished: h.finished.load(Ordering::SeqCst),
     }
 }
 
-/// Für Tests: neue Aufträge warten vor dem Rechnen, bis `false` gesetzt wird (oder sie abgebrochen
-/// werden). So lässt sich der Abbruch eines laufenden Auftrags sicher prüfen.
-pub fn hold_jobs(on: bool) {
-    HOLD.store(on, Ordering::SeqCst);
+/// Für Tests: Aufträge von `ctx` warten vor dem Rechnen, bis `false` gesetzt wird (oder sie
+/// abgebrochen werden). So lässt sich der Abbruch eines laufenden Auftrags sicher prüfen.
+pub fn hold_jobs(ctx: &egui::Context, on: bool) {
+    hooks(ctx).hold.store(on, Ordering::SeqCst);
 }
 
 /// Schlüssel eines Auftrags: Dokumentstand, Seite, Status und Einstellungen.
@@ -239,15 +253,16 @@ pub fn spawn(input: JobInput, cache: Arc<RenderCache>, ctx: &egui::Context) -> J
     let key = input.key;
     let c2 = Arc::clone(&cancel);
     let ctx2 = ctx.clone();
-    STARTED.fetch_add(1, Ordering::SeqCst);
+    let hk = hooks(ctx);
+    hk.started.fetch_add(1, Ordering::SeqCst);
     let spawned = std::thread::Builder::new()
         .name("fp-image-preview".into())
         .spawn(move || {
-            let res = run(&input, &cache, &c2);
+            let res = run(&input, &cache, &c2, &hk.hold);
             if res.is_none() {
-                CANCELLED.fetch_add(1, Ordering::SeqCst);
+                hk.cancelled.fetch_add(1, Ordering::SeqCst);
             } else {
-                FINISHED.fetch_add(1, Ordering::SeqCst);
+                hk.finished.fetch_add(1, Ordering::SeqCst);
             }
             let _ = tx.send(res);
             ctx2.request_repaint();
@@ -258,8 +273,13 @@ pub fn spawn(input: JobInput, cache: Arc<RenderCache>, ctx: &egui::Context) -> J
     Job { key, cancel, rx }
 }
 
-fn run(input: &JobInput, cache: &RenderCache, cancel: &AtomicBool) -> Option<PaneResult> {
-    while HOLD.load(Ordering::SeqCst) {
+fn run(
+    input: &JobInput,
+    cache: &RenderCache,
+    cancel: &AtomicBool,
+    hold: &AtomicBool,
+) -> Option<PaneResult> {
+    while hold.load(Ordering::SeqCst) {
         if cancel.load(Ordering::SeqCst) {
             return None;
         }

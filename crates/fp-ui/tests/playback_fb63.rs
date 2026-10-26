@@ -21,7 +21,6 @@ struct Guard(#[allow(dead_code)] std::sync::MutexGuard<'static, ()>);
 
 impl Drop for Guard {
     fn drop(&mut self) {
-        worker::hold_jobs(false);
         fp_i18n::set_language("de");
     }
 }
@@ -250,8 +249,8 @@ fn image_preview_plays_states_that_render_slower_than_their_delay() {
     wait_idle(&mut h);
     assert_eq!(dlg(&mut h).frame, 0);
     // rendering is "slow": jobs wait until released (a large document takes seconds per state)
-    worker::hold_jobs(true);
-    let c0 = worker::counters();
+    worker::hold_jobs(&h.ctx, true);
+    let c0 = worker::counters(&h.ctx);
     dlg(&mut h).playing = true;
     for _ in 0..60 {
         h.run_steps(1);
@@ -263,12 +262,12 @@ fn image_preview_plays_states_that_render_slower_than_their_delay() {
     );
     assert_eq!(dlg(&mut h).play_wait, Some(1), "busy cue names state 2");
     assert_eq!(
-        worker::counters().cancelled,
+        worker::counters(&h.ctx).cancelled,
         c0.cancelled,
         "no job is cancelled while waiting"
     );
     // rendering completes: every state is shown with its own picture
-    worker::hold_jobs(false);
+    worker::hold_jobs(&h.ctx, false);
     let t0 = Instant::now();
     let mut seen = vec![0usize];
     let mut keys = vec![dlg(&mut h).panes[0].result.as_ref().map(|r| r.key)];
@@ -287,7 +286,7 @@ fn image_preview_plays_states_that_render_slower_than_their_delay() {
     assert_eq!(seen, vec![0, 1, 2, 0, 1], "plays all states in order");
     assert!(keys[0] != keys[1] && keys[1] != keys[2] && keys[2] != keys[0]);
     assert_eq!(
-        worker::counters().cancelled,
+        worker::counters(&h.ctx).cancelled,
         c0.cancelled,
         "playback cancels no per-state job"
     );

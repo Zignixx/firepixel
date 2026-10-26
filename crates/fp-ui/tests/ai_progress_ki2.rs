@@ -9,6 +9,11 @@
 //!   eingepasst in de/en; mit Modellen: ein Wert im Inspektor stellt die Auswahl nach
 //!
 //! Wie alle Testläufe mit `FP_NO_SHELL_OPEN=1` und eigenem `LOCALAPPDATA` starten.
+//!
+//! Timing (BA-117): show delay and fade run on the UI clock, which advances by the harness step
+//! (1/60 s per frame), not on wall time. Runs that must end at a given point are held by a
+//! [`Gate`] and the test waits for the worker thread with the UI clock stopped
+//! ([`wait_for`]), so machine load cannot shift a run across the 300 ms threshold.
 
 use egui::epaint::{Shape, TextShape};
 use egui::{Event, Modifiers, PointerButton, Pos2, Rect};
@@ -21,7 +26,8 @@ use fp_ui::app_state::{AppState, UiSettings};
 use fp_ui::dialogs;
 use fp_ui::theme::ThemeKind;
 use serde_json::json;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 /// Sprache und Design sind global: Tests dieser Datei laufen nacheinander.
@@ -119,13 +125,52 @@ fn demo_hold(h: &mut H, cmd: &str, model: ModelId, stage: Stage, p: f32) {
     });
 }
 
-/// Echte Zeit vergehen lassen und dabei Bilder zeichnen.
+/// Advances the UI clock by `d` (one harness step = 1/60 s), drawing every frame; between frames
+/// the worker gets at least 15 ms of real time, so it progresses roughly along with the clock.
 fn run_for(h: &mut H, d: Duration) {
-    let t = Instant::now();
-    while t.elapsed() < d {
+    let t0 = h.ctx.input(|i| i.time);
+    while h.ctx.input(|i| i.time) - t0 < d.as_secs_f64() - 1e-9 {
         std::thread::sleep(Duration::from_millis(15));
         h.step();
     }
+}
+
+/// One frame with the UI clock stopped (egui keeps an explicit `RawInput::time`, so reset it).
+fn step_frozen(h: &mut H) {
+    let t = h.ctx.input(|i| i.time);
+    h.input_mut().time = Some(t);
+    h.step();
+    h.input_mut().time = None;
+}
+
+/// Waits for the worker thread with the UI clock stopped until `done` holds (real-time limit
+/// only against hangs): what the UI shows then does not depend on how fast the thread ran.
+fn wait_for(h: &mut H, what: &str, done: impl Fn(&mut H) -> bool) {
+    let t = Instant::now();
+    while !done(h) {
+        assert!(t.elapsed() < Duration::from_secs(60), "timeout: {what}");
+        std::thread::sleep(Duration::from_millis(5));
+        step_frozen(h);
+    }
+}
+
+/// Holds a demo run until the test opens it (or the run is cancelled).
+#[derive(Clone, Default)]
+struct Gate(Arc<AtomicBool>);
+
+impl Gate {
+    fn open(&self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+    fn wait(&self, pr: &fp_ai::Progress) {
+        while !self.0.load(Ordering::SeqCst) && !pr.cancel.is_cancelled() {
+            std::thread::sleep(Duration::from_millis(2));
+        }
+    }
+}
+
+fn busy(h: &mut H) -> bool {
+    st(h).dialogs.ai.busy()
 }
 
 fn card_rect(h: &H) -> Option<Rect> {
@@ -159,7 +204,8 @@ fn texts_in(h: &H, r: Rect) -> Vec<(String, Rect)> {
 
 fn stop(h: &mut H) {
     st(h).dialogs.ai.cancel();
-    run_for(h, Duration::from_millis(120));
+    wait_for(h, "run ends after cancel", |h| !busy(h));
+    h.run_steps(2);
 }
 
 #[test]
@@ -295,8 +341,12 @@ fn cancel_with_button_and_escape() {
     );
     run_for(&mut h, Duration::from_millis(450));
     h.get_by_label("Abbrechen").click();
-    run_for(&mut h, Duration::from_millis(200));
-    assert!(!st(&mut h).dialogs.ai.busy(), "Knopf bricht ab");
+    h.step();
+    assert!(
+        st(&mut h).dialogs.ai.cancel_requested(),
+        "Knopf fordert Abbruch an"
+    );
+    wait_for(&mut h, "Knopf bricht ab", |h| !busy(h));
     let status = st(&mut h).status.clone().map(|s| s.0).unwrap_or_default();
     assert!(status.contains("abgebrochen"), "{status}");
     assert!(
@@ -320,8 +370,11 @@ fn cancel_with_button_and_escape() {
         modifiers: Modifiers::NONE,
     });
     h.step();
-    run_for(&mut h, Duration::from_millis(200));
-    assert!(!st(&mut h).dialogs.ai.busy(), "Esc bricht ab");
+    assert!(
+        st(&mut h).dialogs.ai.cancel_requested(),
+        "Esc fordert Abbruch an"
+    );
+    wait_for(&mut h, "Esc bricht ab", |h| !busy(h));
 }
 
 #[test]
@@ -329,23 +382,34 @@ fn fast_runs_do_not_flash_and_slow_runs_fade_out() {
     let _g = lock();
     let mut h = harness(ThemeKind::Oled);
     let f0 = st(&mut h).dialogs.ai.progress_frames;
+    // kurzer Lauf: endet nach 120 ms auf der Uhr der Oberfläche (vor der Schwelle von 300 ms)
+    let gate = Gate::default();
+    let g = gate.clone();
     dialogs::models::start_demo(
         st(&mut h),
         "select.aiSubject",
         ModelId::BiRefNetLite,
-        |pr| {
+        move |pr| {
             pr.set_stage(Stage::Analyze);
-            std::thread::sleep(Duration::from_millis(120));
+            g.wait(pr);
             pr.set(1.0);
             Ok(())
         },
     );
-    run_for(&mut h, Duration::from_millis(600));
-    assert!(!st(&mut h).dialogs.ai.busy());
+    run_for(&mut h, Duration::from_millis(120));
+    gate.open();
+    wait_for(&mut h, "kurzer Lauf endet", |h| !busy(h));
     assert_eq!(
         st(&mut h).dialogs.ai.progress_frames,
         f0,
         "kurzer Lauf: Anzeige nie sichtbar"
+    );
+    assert!(st(&mut h).dialogs.ai.fading.is_none());
+    run_for(&mut h, Duration::from_millis(600));
+    assert_eq!(
+        st(&mut h).dialogs.ai.progress_frames,
+        f0,
+        "kurzer Lauf: auch danach nicht sichtbar"
     );
     assert!(st(&mut h).dialogs.ai.fading.is_none());
     assert!(
@@ -353,16 +417,17 @@ fn fast_runs_do_not_flash_and_slow_runs_fade_out() {
         "kein Abbrechen-Knopf zu sehen"
     );
     // langer Lauf: sichtbar, danach kurz „Fertig“ und weg
+    let gate = Gate::default();
+    let g = gate.clone();
     dialogs::models::start_demo(
         st(&mut h),
         "select.aiSubject",
         ModelId::BiRefNetLite,
-        |pr| {
+        move |pr| {
             pr.set_stage(Stage::Analyze);
-            for i in 0..50 {
-                pr.set(i as f32 / 50.0);
-                std::thread::sleep(Duration::from_millis(12));
-            }
+            pr.set(0.5);
+            g.wait(pr);
+            pr.set(1.0);
             Ok(())
         },
     );
@@ -377,8 +442,13 @@ fn fast_runs_do_not_flash_and_slow_runs_fade_out() {
         st(&mut h).dialogs.ai.progress_frames > f0,
         "danach sichtbar"
     );
-    run_for(&mut h, Duration::from_millis(500));
-    assert!(!st(&mut h).dialogs.ai.busy());
+    gate.open();
+    wait_for(&mut h, "langer Lauf endet", |h| !busy(h));
+    assert!(
+        st(&mut h).dialogs.ai.fading.is_some(),
+        "sichtbarer Lauf blendet mit „Fertig“ aus"
+    );
+    run_for(&mut h, Duration::from_millis(400));
     assert!(st(&mut h).dialogs.ai.fading.is_none(), "ausgeblendet");
 }
 

@@ -27,7 +27,6 @@ struct Guard(#[allow(dead_code)] std::sync::MutexGuard<'static, ()>);
 
 impl Drop for Guard {
     fn drop(&mut self) {
-        worker::hold_jobs(false);
         fp_i18n::set_language("de");
     }
 }

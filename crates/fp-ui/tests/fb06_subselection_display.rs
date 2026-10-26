@@ -23,7 +23,7 @@ fn harness(s: fp_engine::Session) -> H {
     let mut app = FirepixelApp::with_session(&ctx, s, UiSettings::default(), false);
     app.state.sync_render = true;
     app.state.os_clipboard = false;
-    let mut h = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).with_pixels_per_point(1.0).with_max_steps(12).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
+    let mut h = Harness::builder().renderer(crate::gpu_common::renderer()).with_size(egui::vec2(1200.0, 800.0)).with_pixels_per_point(1.0).with_max_steps(12).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
     h.run_steps(4);
     h
 }

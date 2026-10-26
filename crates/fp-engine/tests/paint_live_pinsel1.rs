@@ -689,9 +689,12 @@ fn edit_stroke_values_reach_the_brush() {
 #[test]
 fn large_bitmap_renders_only_affected_areas() {
     // 4000 × 3000 Bitmap, langer Zug mit Größe 35: je Bewegung nur das Endstück neu rechnen.
-    // Die Bereichsgröße ist die eigentliche Aussage (unabhängig von der Rechnerlast). Die Zeit wird
-    // je Bewegung gemessen und als Median bewertet; unter Volllast (Gesamtlauf, andere Agenten)
-    // gilt der beste von bis zu 3 Durchläufen, damit kurze Lastspitzen nicht als Fehler zählen.
+    // Die Bereichsgröße ist die eigentliche Aussage (unabhängig von der Rechnerlast) and always
+    // runs: the work per move (largest area and mean area) stays a small share of the bitmap.
+    // BA-117: the wall-time threshold (median below 40 ms per move, best of up to 3 runs) depends
+    // on the machine load and is asserted only with `FP_PERF_ASSERT=1`; otherwise it is printed.
+    let perf = std::env::var("FP_PERF_ASSERT").is_ok_and(|v| v == "1");
+    let full = 4000usize * 3000;
     let mut best = f64::INFINITY;
     for run in 0..3 {
         let base = fp_raster::RgbaImage::filled(
@@ -718,6 +721,7 @@ fn large_bitmap_renders_only_affected_areas() {
             fp_color::Argb(0xffff_ffff),
         );
         let mut max_area = 0;
+        let mut sum_area = 0usize;
         let n = 400;
         let mut times = Vec::with_capacity(n);
         for i in 1..=n {
@@ -727,6 +731,7 @@ fn large_bitmap_renders_only_affected_areas() {
             lp.push(fp_geom::Point::new(x, y));
             times.push(t.elapsed().as_secs_f64() * 1000.0);
             max_area = max_area.max(lp.last_area());
+            sum_area += lp.last_area() as usize;
         }
         times.sort_by(f64::total_cmp);
         let median = times[n / 2];
@@ -737,13 +742,23 @@ fn large_bitmap_renders_only_affected_areas() {
             max_area < 400_000,
             "nur betroffene Bereiche ({max_area} px von 12 000 000)"
         );
+        // relative work: a move recomputes on average under 1 % of the bitmap
+        let mean_area = sum_area / n;
+        assert!(
+            mean_area * 100 < full,
+            "je Bewegung im Mittel {mean_area} px von {full}"
+        );
         best = best.min(median);
-        if best < 40.0 {
+        if !perf || best < 40.0 {
             break;
         }
     }
-    assert!(
-        best < 40.0,
-        "flüssig: Median {best:.2} ms je Bewegung (bester von 3 Läufen)"
-    );
+    if perf {
+        assert!(
+            best < 40.0,
+            "flüssig: Median {best:.2} ms je Bewegung (bester von 3 Läufen)"
+        );
+    } else {
+        eprintln!("Zeitgrenze 40 ms nicht geprüft (FP_PERF_ASSERT=1 prüft sie): {best:.2} ms");
+    }
 }

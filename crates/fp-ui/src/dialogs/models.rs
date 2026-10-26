@@ -31,6 +31,10 @@ pub struct RunningJob {
     title: String,
     /// Was die Fortschrittsanzeige zeigt.
     view: super::ai_progress::ProgressView,
+    /// UI clock (`egui::InputState::time`) of the first frame that polled the job. Show delay,
+    /// fade and the elapsed seconds use the UI clock, so tests drive them with the harness clock
+    /// instead of wall time (BA-117); in the app the UI clock is wall time.
+    started: Option<f64>,
 }
 
 /// Download (im Dialog „Modell fehlt“ bzw. „Modelle verwalten“).
@@ -263,6 +267,7 @@ fn start(st: &mut AppState, mut queue: Vec<Invocation>) {
                     then: queue,
                     title: view.title.clone(),
                     view,
+                    started: None,
                 });
                 return;
             }
@@ -343,6 +348,7 @@ pub fn start_demo(
         then: Vec::new(),
         title: view.title.clone(),
         view,
+        started: None,
     });
 }
 
@@ -354,9 +360,10 @@ fn poll_job(ctx: &egui::Context, st: &mut AppState) {
         .active()
         .and_then(|d| st.canvases.get(&d.id))
         .and_then(|c| c.area);
+    let now = ctx.input(|i| i.time);
     // Ausblenden nach dem Ende
     if let Some(fd) = st.dialogs.ai.fading.as_mut() {
-        let k = 1.0 - fd.since.elapsed().as_secs_f32() / ap::FADE_OUT;
+        let k = 1.0 - (now - fd.since).max(0.0) as f32 / ap::FADE_OUT;
         let mut shown = false;
         let elapsed = fd.elapsed;
         ap::show(
@@ -378,11 +385,11 @@ fn poll_job(ctx: &egui::Context, st: &mut AppState) {
     let Some(j) = st.dialogs.ai.job.as_mut() else {
         return;
     };
+    let elapsed = (now - *j.started.get_or_insert(now)).max(0.0) as f32;
     if let Some(r) = j.job.poll() {
         let Some(j) = st.dialogs.ai.job.take() else {
             return;
         };
-        let elapsed = j.job.elapsed();
         match r {
             Ok(()) => {
                 // war die Anzeige zu sehen, kurz mit vollem Balken ausblenden statt zu verschwinden
@@ -390,7 +397,7 @@ fn poll_job(ctx: &egui::Context, st: &mut AppState) {
                     st.dialogs.ai.fading = Some(Fading {
                         view: j.view.clone(),
                         elapsed,
-                        since: std::time::Instant::now(),
+                        since: now,
                     });
                     ctx.request_repaint();
                 }
@@ -406,7 +413,6 @@ fn poll_job(ctx: &egui::Context, st: &mut AppState) {
         }
         return;
     }
-    let elapsed = j.job.elapsed();
     let cancelling = j.job.progress.cancel.is_cancelled();
     let mut shown = false;
     let cancel = ap::show(

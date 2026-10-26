@@ -26,7 +26,6 @@ struct Guard(#[allow(dead_code)] std::sync::MutexGuard<'static, ()>);
 
 impl Drop for Guard {
     fn drop(&mut self) {
-        worker::hold_jobs(false);
         fp_i18n::set_language("de");
     }
 }
@@ -525,8 +524,8 @@ fn plus_saves_the_pane_settings_as_user_preset() {
 fn worker_cancels_outdated_jobs_and_ui_stays_fluid() {
     let _g = lock();
     let mut h = harness();
-    worker::hold_jobs(true);
-    let c0 = worker::counters();
+    worker::hold_jobs(&h.ctx, true);
+    let c0 = worker::counters(&h.ctx);
     open(&mut h);
     h.run_steps(2);
     assert!(dlg(&mut h).panes[0].is_busy(), "Auftrag läuft (angehalten)");
@@ -534,27 +533,31 @@ fn worker_cancels_outdated_jobs_and_ui_stays_fluid() {
     // neue Einstellung: der alte Auftrag wird abgebrochen, nach der Entprellung startet der neue
     dlg(&mut h).panes[0].settings = builtin_presets()[5].settings.clone();
     h.run_steps(1);
-    let t0 = Instant::now();
+    assert!(dlg(&mut h).panes[0].job_key().is_none(), "alter Auftrag sofort abgebrochen");
+    // BA-117: the debounce runs on the UI clock (1/60 s per harness step), so the order is checked
+    // in frames, not in milliseconds. All jobs are held: a frame that waited for the worker would
+    // never return, so every returning frame shows the UI does not block.
     let mut k2 = None;
-    while t0.elapsed() < Duration::from_secs(5) {
-        let f0 = Instant::now();
+    let mut frames = 0;
+    for _ in 0..120 {
         h.run_steps(1);
-        assert!(f0.elapsed() < Duration::from_millis(1500), "Oberfläche blockiert nicht ({:?})", f0.elapsed());
+        frames += 1;
         k2 = dlg(&mut h).panes[0].job_key().filter(|k| *k != k1);
         if k2.is_some() {
             break;
         }
-        std::thread::sleep(Duration::from_millis(10));
     }
     assert!(k2.is_some(), "neuer Auftrag nach Entprellung");
+    let debounce_frames = (pane::DEBOUNCE.as_secs_f64() * 60.0).floor() as usize;
+    assert!(frames >= debounce_frames, "Entprellung wartet {debounce_frames} Bilder ({frames})");
     // viele Änderungen schnell hintereinander (wie Tippen): nur der letzte Stand wird gerechnet
     for q in 10..40 {
         dlg(&mut h).panes[0].settings.jpeg.quality = q;
         h.run_steps(1);
     }
-    worker::hold_jobs(false);
+    worker::hold_jobs(&h.ctx, false);
     wait_idle(&mut h);
-    let c1 = worker::counters();
+    let c1 = worker::counters(&h.ctx);
     assert!(c1.cancelled >= c0.cancelled + 2, "alte Aufträge abgebrochen: {c0:?} → {c1:?}");
     let p = &dlg(&mut h).panes[0];
     let res = p.result.clone().expect("Ergebnis");
@@ -565,20 +568,24 @@ fn worker_cancels_outdated_jobs_and_ui_stays_fluid() {
     assert_eq!(dlg(&mut h).panes[0].settings.jpeg.quality, 39);
     assert!(c1.started - c0.started < 30, "Entprellung: nicht jede Taste ein Auftrag ({} gestartet)", c1.started - c0.started);
     // Dialog schließen bricht laufende Aufträge ab
-    worker::hold_jobs(true);
+    worker::hold_jobs(&h.ctx, true);
     dlg(&mut h).panes[0].settings.jpeg.quality = 77;
-    h.run_steps(1);
-    std::thread::sleep(Duration::from_millis(200));
-    h.run_steps(2);
-    let c2 = worker::counters();
+    for _ in 0..120 {
+        h.run_steps(1);
+        if dlg(&mut h).panes[0].job_key().is_some() {
+            break;
+        }
+    }
+    assert!(dlg(&mut h).panes[0].job_key().is_some(), "Auftrag für 77 läuft (angehalten)");
+    let c2 = worker::counters(&h.ctx);
     h.key_press(egui::Key::Escape);
     h.run_steps(2);
-    worker::hold_jobs(false);
+    worker::hold_jobs(&h.ctx, false);
     let t0 = Instant::now();
-    while worker::counters().cancelled == c2.cancelled && t0.elapsed() < Duration::from_secs(5) {
+    while worker::counters(&h.ctx).cancelled == c2.cancelled && t0.elapsed() < Duration::from_secs(60) {
         std::thread::sleep(Duration::from_millis(10));
     }
-    assert!(worker::counters().cancelled > c2.cancelled, "Schließen bricht ab");
+    assert!(worker::counters(&h.ctx).cancelled > c2.cancelled, "Schließen bricht ab");
 }
 
 /// Alle Texte im Dialog, keine Rohschlüssel, keine Überläufe – 1/2/4-fach, drei Designs, de/en,

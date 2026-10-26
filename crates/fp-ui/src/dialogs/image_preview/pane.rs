@@ -13,7 +13,7 @@ use fp_export::options::{ColorMode, ExportFormat, OptimizeSettings, PaletteKind,
 use fp_export::preview::{SizeLabel, modem_seconds, size_label};
 use fp_i18n::t;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 /// Höhe der Kopfzeile in 1-/2-fach (drei Zeilen) bzw. 4-fach (Vorgabenliste + drei Zeilen).
 pub const HEADER_H: f32 = 52.0;
@@ -292,8 +292,9 @@ pub struct Pane {
     /// Letztes fertiges Ergebnis (wird weiter gezeigt, solange neu gerechnet wird).
     pub result: Option<Arc<PaneResult>>,
     pub(super) job: Option<Job>,
-    /// Erste Änderung, die noch auf ihren Auftrag wartet (Entprellung).
-    pub(super) pending_since: Option<Instant>,
+    /// Erste Änderung, die noch auf ihren Auftrag wartet (Entprellung); UI clock
+    /// (`egui::InputState::time`, wall time in the app, the harness step in tests, BA-117).
+    pub(super) pending_since: Option<f64>,
     pub(super) texture: Option<(u64, egui::TextureHandle)>,
     /// Zuletzt gerechnete Ergebnisse (Abspielen, Statuswechsel, Werkzeug „Exportbereich“ ein/aus:
     /// schon gerechnete Status bzw. Einstellungen werden nicht noch einmal gerechnet).
@@ -526,14 +527,15 @@ impl Pane {
         // veralteter Auftrag: sofort abbrechen
         if let Some(j) = self.job.take() {
             j.cancel();
-            let now = Instant::now();
+            let now = ctx.input(|i| i.time);
             self.pending_since.get_or_insert(now);
         }
-        if let Some(t0) = self.pending_since
-            && t0.elapsed() < DEBOUNCE
-        {
-            ctx.request_repaint_after(DEBOUNCE.saturating_sub(t0.elapsed()));
-            return;
+        if let Some(t0) = self.pending_since {
+            let waited = Duration::from_secs_f64((ctx.input(|i| i.time) - t0).max(0.0));
+            if waited < DEBOUNCE {
+                ctx.request_repaint_after(DEBOUNCE.saturating_sub(waited));
+                return;
+            }
         }
         self.pending_since = None;
         let input = JobInput {

@@ -87,6 +87,14 @@ fn open(h: &mut H) {
     wait_idle(h);
 }
 
+/// One frame with the UI clock stopped (egui keeps an explicit `RawInput::time`, so reset it).
+fn step_frozen(h: &mut H) {
+    let t = h.ctx.input(|i| i.time);
+    h.input_mut().time = Some(t);
+    h.run_steps(1);
+    h.input_mut().time = None;
+}
+
 fn wait_idle(h: &mut H) {
     let t0 = Instant::now();
     loop {
@@ -427,6 +435,15 @@ fn animation_delay_playback_and_frame_choice() {
     let mut switch_at = Vec::new();
     for _ in 0..80 {
         h.run_steps(1);
+        // BA-117: playback shows a state only once the worker rendered it (FB-63). The worker runs
+        // on real threads; while playback waits for it, the UI clock is stopped, so the measured
+        // delays are those of the playback logic, not of the machine load.
+        let w0 = Instant::now();
+        while dlg(&mut h).play_wait.is_some() {
+            assert!(w0.elapsed() < Duration::from_secs(60), "Worker rendert den nächsten Status");
+            std::thread::sleep(Duration::from_millis(5));
+            step_frozen(&mut h);
+        }
         let f = dlg(&mut h).frame;
         if Some(&f) != seen.last() {
             seen.push(f);

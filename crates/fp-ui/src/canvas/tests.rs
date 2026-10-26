@@ -718,7 +718,7 @@ fn drag_preview_is_clipped_to_the_canvas() {
         .with_size(egui::vec2(1500.0, 950.0))
         .with_pixels_per_point(1.0)
         .with_max_steps(8)
-        .wgpu()
+        .renderer(gpu::renderer())
         .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
     h.run_steps(4);
     set_tool(&mut h, ToolId::Pointer);
@@ -1440,7 +1440,7 @@ fn page_edges_are_pixel_exact() {
                 .with_pixels_per_point(ppp)
                 .with_max_steps(8)
                 .with_step_dt(1.0 / 60.0)
-                .wgpu()
+                .renderer(gpu::renderer())
                 .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
             h.run_steps(4);
             // Zoomstufen, dazu bei großen Zoomstufen an den rechten unteren Rand gerollt (Teil-Rendering:
@@ -2412,7 +2412,7 @@ fn screenshots() {
         .with_size(egui::vec2(1600.0, 1000.0))
         .with_pixels_per_point(1.0)
         .with_max_steps(8)
-        .wgpu()
+        .renderer(gpu::renderer())
         .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
     h.run_steps(6);
     let shot = |h: &mut Harness<'static, FirepixelApp>, name: &str| {
@@ -3218,7 +3218,7 @@ fn exit_bitmap_mode_button_drawn_left_of_size_box() {
                 .with_size(egui::vec2(w, 800.0))
                 .with_pixels_per_point(ppp)
                 .with_max_steps(8)
-                .wgpu()
+                .renderer(gpu::renderer())
                 .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
             h.run_steps(4);
             let (enabled, r) = exit_bitmap_button(&h);
@@ -3352,4 +3352,59 @@ fn history_marker_of_attached_row_has_tooltip() {
     );
     // the generic marker text of other non-replayable rows differs
     assert_ne!(tip, crate::panels::history::marker_tip(false));
+}
+
+/// BA-117: one GPU at a time in the lib test program. egui_kittest creates a wgpu renderer
+/// (instance + device, on this machine the software adapter) per harness; the render tests of this
+/// module ran them in parallel with `.wgpu()`, which returned black images under load and is the
+/// likely cause of the 0xc0000005 ends of the lib test process (the same effect as NZ-2 in the
+/// shared integration program, see `tests/gpu_common`). Creating the renderer, texture uploads,
+/// `render()` and the device teardown run under one process-wide lock; the rest stays parallel.
+mod gpu {
+    use egui::TexturesDelta;
+    use egui_kittest::{LazyRenderer, TestRenderer};
+    use std::sync::{Mutex, MutexGuard};
+
+    static GPU: Mutex<()> = Mutex::new(());
+
+    fn lock() -> MutexGuard<'static, ()> {
+        // a failed assertion while rendering must not block the other render tests
+        GPU.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// The default renderer of egui_kittest, GPU work serialized.
+    pub struct GuardedRenderer(Option<LazyRenderer>);
+
+    /// New guarded renderer for `HarnessBuilder::renderer`.
+    pub fn renderer() -> GuardedRenderer {
+        GuardedRenderer(Some(LazyRenderer::default()))
+    }
+
+    impl TestRenderer for GuardedRenderer {
+        fn handle_delta(&mut self, delta: &mut TexturesDelta) {
+            let _g = lock();
+            if let Some(r) = self.0.as_mut() {
+                r.handle_delta(delta);
+            }
+        }
+
+        fn render(
+            &mut self,
+            ctx: &egui::Context,
+            output: &egui::FullOutput,
+        ) -> Result<image::RgbaImage, String> {
+            let _g = lock();
+            match self.0.as_mut() {
+                Some(r) => r.render(ctx, output),
+                None => Err("renderer dropped".into()),
+            }
+        }
+    }
+
+    impl Drop for GuardedRenderer {
+        fn drop(&mut self) {
+            let _g = lock();
+            drop(self.0.take());
+        }
+    }
 }

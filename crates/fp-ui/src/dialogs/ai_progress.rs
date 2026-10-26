@@ -83,7 +83,8 @@ pub struct ProgressView {
 pub struct Fading {
     pub view: ProgressView,
     pub elapsed: f32,
-    pub since: std::time::Instant,
+    /// UI clock (`egui::InputState::time`) when the fade started.
+    pub since: f64,
 }
 
 fn stage_index(stages: &[Stage], s: Stage) -> usize {

@@ -245,6 +245,18 @@ get their own temporary profile automatically; writing to the real profile from 
 
 - Unit tests per crate; corpus/golden tests compare output with measured reference results.
 - UI tests offscreen (kittest, wgpu); `fp-ui` and `fp-engine` link all integration tests into one `all` binary.
+- Flaky tests under machine load (BA-117): tests run in parallel with other tests and builds, so they must
+  not depend on wall time.
+  - UI timing (show delays, fades, debounce, playback) runs on the UI clock `egui::InputState::time`, which
+    the harness advances by its step (1/60 s); count frames instead of sleeping.
+  - Worker threads are real: hold them (a gate in the job, `image_preview::worker::hold_jobs`) and wait for
+    them with the UI clock stopped (set `RawInput::time` for that frame, then reset it to `None`), so the
+    result does not depend on how fast the thread ran. Assert order, not elapsed milliseconds.
+  - Test hooks and counters are scoped to the harness `egui::Context`, never process-wide.
+  - GPU rendering (`h.render()`) goes through a guarded renderer that serializes device creation, uploads,
+    rendering and teardown (`tests/gpu_common`, `canvas::tests::gpu`); never `.wgpu()` directly.
+  - Absolute performance thresholds are asserted only with `FP_PERF_ASSERT=1`; without it the test checks
+    the relative work (for example the area recomputed per move) and prints the time.
 - Parity runs against the reference application: [PARITY.md](PARITY.md).
 - Behaviour descriptions and measurements of the reference application, the test corpus and the comparison
   run data are kept outside this repository (they describe a third-party program and use files that cannot be
