@@ -711,3 +711,4 @@ cmdtext-seite-die-bleibt-wenn-alle-seiten-geloes-a6c88f = Page that stays when a
 cmdtext-single-nur-diese-seite-wird-aktuell-rang-713897 = single = only this page (becomes current), range = range from the current page, toggle = add or remove the page
 cmdtext-seitenindizes-0-2-als-block = Page indices [0, 2, …] as a block
 cmdtext-bereich-der-geteilten-ansicht-0-links-1-rechts = Pane of the split view (0 left, 1 right)
+cmdtext-anordnung-der-bereiche = Arrangement of the panes (vertical side by side, horizontal one above the other)

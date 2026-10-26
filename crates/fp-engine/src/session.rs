@@ -289,6 +289,8 @@ pub struct DocumentState {
     /// FB-97 / TW-272: the document is shown in two panes (Window ▸ Duplicate Window); the
     /// fields above hold the focused pane, this the other one ([`crate::view_pane`]).
     pub split: Option<crate::view_pane::SplitView>,
+    /// F132: orientation and splitter position of the split view, remembered for the session.
+    pub split_layout: crate::view_pane::SplitLayout,
 }
 
 /// A page in [`DocumentState::page_layers`]: its GUID (stays with the page when pages are moved),
@@ -362,6 +364,7 @@ impl DocumentState {
             selection_history: Default::default(),
             tool_fill_none: false,
             split: None,
+            split_layout: Default::default(),
         }
     }
 
@@ -953,6 +956,39 @@ impl Session {
             self.events.push(SessionEvent::PanelsChanged);
         }
         Ok(changed)
+    }
+
+    /// F132: gives the focus to the other pane of the active document's split view (Window ▸
+    /// Next Pane); like [`Session::focus_pane`]. `false` without a split.
+    pub fn next_pane(&mut self) -> Result<bool> {
+        let d = self.doc()?;
+        if !d.is_split() {
+            return Ok(false);
+        }
+        let other = 1 - d.live_pane();
+        self.focus_pane(other)
+    }
+
+    /// F132: hover feedback for the split-view pane without the focus. The UI swaps that pane's
+    /// state into the live fields while it draws it ([`DocumentState::swap_pane`]); this runs a
+    /// fresh machine of the active tool against that state, gives it `hover` (a pointer move, if
+    /// the pointer is over the pane) and returns its feedback and cursor. Nothing is executed (the
+    /// probe's commands are dropped) and the active tool machine, with any running operation of
+    /// the focused pane, stays untouched.
+    pub fn tool_hover_probe(
+        &mut self,
+        hover: Option<&ToolEvent>,
+    ) -> (Vec<tools::Overlay>, tools::Cursor) {
+        let probe = tools::make_machine(self.tools.active);
+        let machine = std::mem::replace(&mut self.tools.machine, probe);
+        let held = self.tools.held.take();
+        let out = self.with_tool_ctx(|m, ctx| {
+            let cursor = hover.map(|ev| m.handle(ev, ctx).cursor).unwrap_or_default();
+            (m.feedback(ctx), cursor)
+        });
+        self.tools.machine = machine;
+        self.tools.held = held;
+        out
     }
 
     /// Fügt ein Dokument hinzu und aktiviert es.

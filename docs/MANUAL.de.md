@@ -515,7 +515,7 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
 ### Geteilte Ansicht (Fenster ▸ Fenster duplizieren)
 
 *Fenster ▸ Fenster duplizieren* zeigt das aktive Dokument ein zweites Mal: Der Dokumentbereich teilt
-sich in zwei Bereiche nebeneinander. Jeder Bereich hat eigene Seite, eigenen Status, Zoom und
+sich in zwei Bereiche (zunächst nebeneinander). Jeder Bereich hat eigene Seite, eigenen Status, Zoom und
 Bildlauf – so arbeiten Sie auf einer Seite und sehen dabei eine andere. Beide Bereiche zeigen
 dasselbe Dokument; eine Änderung in einem Bereich erscheint sofort auch im anderen.
 
@@ -525,8 +525,17 @@ dasselbe Dokument; eine Änderung in einem Bereich erscheint sofort auch im ande
   Bedienfelder (Seiten, Ebenen, Status, Eigenschaften …), Lineale, Statusleiste und Tastenkürzel
   wirken auf ihn. Ein Klick oder Mausrad über dem anderen Bereich gibt diesem zuerst den Fokus, ein
   Werkzeug arbeitet also immer im Bereich unter dem Zeiger.
-- Mit dem Steg zwischen den Bereichen ändern Sie ihre Breiten. Original/Vorschau/2-fach/4-fach
-  gelten für den Bereich mit Fokus.
+- Auch der Bereich ohne Fokus folgt dem Zeiger: Werkzeugzeiger, Hervorhebung beim Überfahren
+  (auch der Rahmen von „Dahinter auswählen“ und Pfadpunkte), Pinselspitze und Koordinatenanzeige
+  erscheinen in dem Bereich, über dem der Zeiger steht; erst ein Klick oder Mausrad gibt den Fokus
+  weiter.
+- *Fenster ▸ Nächster Bereich* (Umschalt+F6) gibt dem anderen Bereich den Fokus (Strg+Tab und
+  Strg+F6 wechseln weiterhin zwischen den Dokumenten).
+- *Fenster ▸ Teilung ▸ Nebeneinander / Untereinander* ordnet die Bereiche nebeneinander (Vorgabe)
+  oder übereinander an; beide behalten Seite und Zoom.
+- Mit dem Steg zwischen den Bereichen ändern Sie ihre Größe; Lage und Anordnung merkt sich
+  Firepixel für das Dokument bis zum Beenden. Original/Vorschau/2-fach/4-fach gelten für den
+  Bereich mit Fokus.
 - Einen Bereich schließen Sie mit dem × in seiner Kopfleiste oder mit *Fenster ▸ Zusätzliches
   Fenster schließen* (der Bereich mit Fokus bleibt). Die Teilung wird weder im Dokument noch im
   Arbeitsbereich gespeichert.

@@ -595,6 +595,17 @@ fn switch_documents(ctx: &egui::Context, st: &mut AppState) {
             }
         }
     });
+    // F132: Shift+F6 = Window ▸ Next Pane while the active document is split (Ctrl+Tab and
+    // Ctrl+F6 cycle the documents; Shift+F6 is free in all five shortcut sets)
+    if st.session.active().is_some_and(|d| d.is_split())
+        && !st.session.tool_is_editing_text()
+        && ctx.input_mut(|i| i.consume_key(egui::Modifiers::SHIFT, egui::Key::F6))
+    {
+        st.push(app_state::Action::Run(
+            "window.nextPane".into(),
+            serde_json::json!({}),
+        ));
+    }
     // Umschalt+W: Werkzeuge am Platz des Zauberstabs durchschalten (Zauberstab, KI-Auswahl)
     if !st.session.tool_is_editing_text()
         && ctx.input_mut(|i| i.consume_key(egui::Modifiers::SHIFT, egui::Key::W))

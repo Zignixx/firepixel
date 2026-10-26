@@ -118,3 +118,114 @@ fn swap_pane_exchanges_the_live_state_as_it_is() {
     d.swap_pane();
     assert_eq!((d.live_pane(), d.page), (1, 1));
 }
+
+/// F132: `window.splitOrientation` arranges the panes one above the other; both keep their page,
+/// zoom and focus, and the orientation stays with the document after the split is closed.
+#[test]
+fn orientation_switch_keeps_the_panes_and_is_remembered() {
+    use fp_engine::view_pane::SplitOrientation;
+    let mut s = two_pages();
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    ex(&mut s, "page.setCurrent", json!({"index": 1}));
+    ex(&mut s, "view.zoomIn", json!({}));
+    let (page, zoom) = s.active().map(|d| (d.page, d.view.zoom)).expect("doc");
+    let other = s.active().and_then(|d| d.other_pane().cloned());
+    assert_eq!(
+        s.active().map(|d| d.split_layout.orientation),
+        Some(SplitOrientation::Vertical),
+        "Duplicate Window starts side by side"
+    );
+    let v = ex(
+        &mut s,
+        "window.splitOrientation",
+        json!({"orientation": "horizontal"}),
+    );
+    assert_eq!(
+        (v["orientation"].as_str(), v["changed"].as_bool()),
+        (Some("horizontal"), Some(true))
+    );
+    let d = s.active().expect("doc");
+    assert_eq!(d.split_layout.orientation, SplitOrientation::Horizontal);
+    assert_eq!((d.live_pane(), d.page, d.view.zoom), (1, page, zoom));
+    assert_eq!(d.other_pane().cloned(), other);
+    // closed and split again: still one above the other
+    ex(&mut s, "window.closeDuplicate", json!({}));
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    assert_eq!(
+        s.active().map(|d| d.split_layout.orientation),
+        Some(SplitOrientation::Horizontal)
+    );
+    assert!(
+        s.execute(
+            "window.splitOrientation",
+            json!({"orientation": "diagonal"})
+        )
+        .is_err()
+    );
+    ex(
+        &mut s,
+        "window.splitOrientation",
+        json!({"orientation": "vertical"}),
+    );
+    assert_eq!(
+        s.active().map(|d| d.split_layout.orientation),
+        Some(SplitOrientation::Vertical)
+    );
+}
+
+/// F132: Window ▸ Next Pane moves the focus to the other pane (and back); without a split it is
+/// unavailable.
+#[test]
+fn next_pane_cycles_the_focus() {
+    let mut s = two_pages();
+    assert!(s.execute("window.nextPane", json!({})).is_err());
+    assert!(!s.command_state("window.nextPane").0);
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    assert!(s.command_state("window.nextPane").0);
+    ex(&mut s, "page.setCurrent", json!({"index": 1}));
+    let v = ex(&mut s, "window.nextPane", json!({}));
+    assert_eq!((v["pane"].as_u64(), v["page"].as_u64()), (Some(0), Some(0)));
+    let v = ex(&mut s, "window.nextPane", json!({}));
+    assert_eq!((v["pane"].as_u64(), v["page"].as_u64()), (Some(1), Some(1)));
+}
+
+/// F132: the hover probe for the pane without the focus reports the tool's hover feedback and
+/// cursor without running anything and leaves the active tool machine alone.
+#[test]
+fn hover_probe_runs_nothing() {
+    use fp_engine::tools::{Modifiers, PointerKind, ToolInput};
+    let mut s = two_pages();
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    ex(&mut s, "select.none", json!({}));
+    let _ = s.set_tool(fp_engine::ToolId::Pointer);
+    let before = s
+        .active()
+        .map(|d| (d.history.undo_count(), d.selection.clone()));
+    let ev = fp_engine::ToolEvent {
+        input: ToolInput::Pointer {
+            kind: PointerKind::Move,
+            pos: fp_geom::Point::new(30.0, 30.0),
+        },
+        mods: Modifiers::default(),
+        pressure: 1.0,
+        time_ms: 0,
+    };
+    let (feedback, _) = s.tool_hover_probe(Some(&ev));
+    assert!(
+        feedback
+            .iter()
+            .any(|o| matches!(o, fp_engine::Overlay::Highlight { .. })),
+        "hover highlight over the rectangle: {feedback:?}"
+    );
+    assert_eq!(
+        s.active()
+            .map(|d| (d.history.undo_count(), d.selection.clone())),
+        before
+    );
+    // the active machine got no move: its own feedback has no hover highlight
+    assert!(
+        !s.tool_feedback()
+            .iter()
+            .any(|o| matches!(o, fp_engine::Overlay::Highlight { .. }))
+    );
+}

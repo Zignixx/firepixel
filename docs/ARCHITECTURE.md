@@ -218,6 +218,14 @@ back. A press or wheel turn over the passive pane first calls `Session::focus_pa
 operation and re-checks the pane's page, state, layer and selection against the document (it may have changed in
 the other pane). Render jobs carry the pane (`RenderKey::pane`); the render thread keeps the newest job per pane,
 and finished images go to the cache of their pane. The split is not persisted.
+The passive pane still shows hover feedback (F132): while the pointer is over it and no button is held,
+`canvas_ui` asks `Session::tool_hover_probe` for the feedback and cursor of a fresh machine of the active tool,
+fed one pointer move against the swapped-in pane state; the probe's commands are dropped and the real tool
+machine (with any running operation of the focused pane) is not touched, so hover highlight, brush tip, tool
+cursor and coordinate tag follow the pointer without a focus change. Orientation (`window.splitOrientation`,
+side by side or one above the other) and splitter position live in `DocumentState::split_layout`, outside
+`split`, so they are remembered per document for the session; `window.nextPane` (Shift+F6, since Ctrl+Tab and
+Ctrl+F6 cycle the documents) moves the focus through `Session::next_pane`.
 
 Tooltips go through one module, `fp-ui/src/tips.rs` (FB-37, FB-98 / TW-226, TW-271). Widgets attach their tooltip
 with `HoverTip::hover_tip` instead of egui's `on_hover_text`; `TipMode` (Full / names only / off) comes from View ▸

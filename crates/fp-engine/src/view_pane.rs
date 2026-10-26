@@ -9,11 +9,62 @@
 //! focused pane unchanged. The other pane's state waits in [`SplitView::other`]. The UI swaps the
 //! two while it draws the other pane ([`DocumentState::swap_pane`]) and swaps them back afterwards;
 //! a real focus change goes through [`DocumentState::focus_pane`]. Nothing of the split is saved.
+//!
+//! F132: the panes sit side by side (default) or one above the other
+//! ([`SplitOrientation`], `window.splitOrientation`); orientation and splitter position live in
+//! [`DocumentState::split_layout`], outside [`DocumentState::split`], so they are remembered for the
+//! document for the rest of the session (also after the split was closed and opened again).
 
 use crate::selection::Selection;
 use crate::session::DocumentState;
 use crate::view::ViewState;
 use fp_model::LayerId;
+
+/// How the two panes of a split view are arranged.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SplitOrientation {
+    /// Side by side (pane 0 left, pane 1 right), the default of Window ▸ Duplicate Window.
+    #[default]
+    Vertical,
+    /// One above the other (pane 0 top, pane 1 bottom).
+    Horizontal,
+}
+
+impl SplitOrientation {
+    /// Name used by `window.splitOrientation` (`vertical`, `horizontal`).
+    pub fn name(self) -> &'static str {
+        match self {
+            SplitOrientation::Vertical => "vertical",
+            SplitOrientation::Horizontal => "horizontal",
+        }
+    }
+
+    /// From a `window.splitOrientation` name.
+    pub fn from_name(s: &str) -> Option<SplitOrientation> {
+        match s {
+            "vertical" => Some(SplitOrientation::Vertical),
+            "horizontal" => Some(SplitOrientation::Horizontal),
+            _ => None,
+        }
+    }
+}
+
+/// Arrangement of a document's split view, remembered for the session (not saved).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SplitLayout {
+    pub orientation: SplitOrientation,
+    /// Share of pane 0 (left or top) in the width or height of the document area.
+    pub ratio: f32,
+}
+
+impl Default for SplitLayout {
+    fn default() -> Self {
+        SplitLayout {
+            orientation: SplitOrientation::Vertical,
+            ratio: 0.5,
+        }
+    }
+}
 
 /// The state of one pane that is not live (see the module documentation).
 #[derive(Clone, Debug, PartialEq)]
@@ -27,7 +78,7 @@ pub struct ViewPane {
     pub selection: Selection,
 }
 
-/// A document shown in two panes side by side (0 = left, 1 = right).
+/// A document shown in two panes (0 = left or top, 1 = right or bottom).
 #[derive(Clone, Debug, PartialEq)]
 pub struct SplitView {
     /// The pane whose state is in the document's live fields.

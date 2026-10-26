@@ -1002,21 +1002,37 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         clamp_view_bars(&mut d.view, pr, SCROLLBAR_T);
         align_view_to_pixels(&mut d.view, pr, area.min, ppp);
     }
-    // Rückmeldung des Werkzeugs (auch ohne Ereignis) und im Hintergrund auszublendende Elemente
-    let feedback = if passive {
-        Vec::new()
-    } else {
-        st.session.tool_feedback()
-    };
     // Rote Vorauswahl-Hervorhebung nur, solange der Zeiger über der Leinwand ist: Verlässt er das
     // Fenster (bzw. liegt ein Bedienfeld darüber), kommt kein Bewegungsereignis mehr, das sie
     // löscht; die alte Hervorhebung blieb stehen (CT-3: rote Linie ab dem Seitenursprung)
-    let pointer_here = !passive
-        && resp.hovered()
-        && ui
-            .ctx()
-            .pointer_hover_pos()
-            .is_some_and(|p| area.contains(p));
+    let hover_pos = ui
+        .ctx()
+        .pointer_hover_pos()
+        .filter(|p| resp.hovered() && area.contains(*p));
+    let pointer_here = hover_pos.is_some() && (!passive || passive_hover_free(ui, st, id));
+    // Rückmeldung des Werkzeugs (auch ohne Ereignis) und im Hintergrund auszublendende Elemente.
+    // F132: the pane without the focus gets the feedback of a fresh probe of the active tool
+    // against its own state, with the pointer move while the pointer is over it (hover highlight,
+    // brush tip, tool cursor); the focused pane's tool operation stays untouched
+    let (feedback, passive_cursor) = if passive {
+        let view = st.session.active().map(|d| d.view.clone());
+        let hover = hover_pos.filter(|_| pointer_here).zip(view).map(|(p, v)| {
+            let (m, t) = ui.input(|i| (mods(i, st.space_down), i.time));
+            ToolEvent {
+                input: ToolInput::Pointer {
+                    kind: PointerKind::Move,
+                    pos: v.screen_to_doc((p.x - area.left()) as f64, (p.y - area.top()) as f64),
+                },
+                mods: m,
+                pressure: 1.0,
+                time_ms: (t * 1000.0) as u64,
+            }
+        });
+        let (fb, cursor) = st.session.tool_hover_probe(hover.as_ref());
+        (fb, hover.map(|_| cursor))
+    } else {
+        (st.session.tool_feedback(), None)
+    };
     // the brush tip outline is drawn only while the pointer is over the canvas (RE spec 57 §2:
     // it disappears as soon as the pointer leaves the canvas, also while a stroke runs)
     let pressed = st.canvases.get(&id).is_some_and(|c| c.pointer_down);
@@ -1446,6 +1462,10 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         scrollbars(ui, st, area, &view, pr);
     }
     if passive {
+        // F132: the tool cursor follows the pointer into the pane without the focus as well
+        if let Some(cursor) = passive_cursor {
+            paint_cursor(ui, st, area, &resp, cursor);
+        }
         return;
     }
     // Kontextmenü (Rechtsklick)
@@ -1462,7 +1482,23 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let menu = st.canvases.get(&id).and_then(|c| c.context.clone());
     context::show(ui, &resp, st, menu.as_ref());
     // eigener Mauszeiger
-    paint_cursor(ui, st, area, &resp);
+    let cursor = st.tool_cursor;
+    paint_cursor(ui, st, area, &resp, cursor);
+}
+
+/// F132: may the pane without the focus show hover feedback? Not while a button is held (a press
+/// over it moves the focus first; a drag from the focused pane keeps its own feedback), while the
+/// focused pane pans, drags a guide or runs a press, or while a dialog is open.
+fn passive_hover_free(ui: &Ui, st: &AppState, id: fp_engine::DocId) -> bool {
+    // while the passive pane is drawn, the focused pane's canvas cache is the parked one
+    let focused_busy = st
+        .pane_canvases
+        .get(&id)
+        .is_some_and(|c| c.pointer_down || c.panning || c.guide_move.is_some());
+    !focused_busy
+        && !st.dialogs.any_open()
+        && !ui.input(|i| i.pointer.any_down())
+        && st.place_import.is_none()
 }
 
 /// Coordinate tag next to the pointer (re 58 §4, measured: the reference ties it to *View ▸
@@ -1588,8 +1624,9 @@ fn pointer_tag_box(painter: &egui::Painter, theme: &Theme, at: Pos2, text: &str)
     painter.galley(at + vec2(3.0, 1.0), galley, ink);
 }
 
-/// Eigener Mauszeiger über der Leinwand (Systemzeiger ausgeblendet).
-fn paint_cursor(ui: &Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
+/// Eigener Mauszeiger über der Leinwand (Systemzeiger ausgeblendet); `tool` = the cursor of the
+/// active tool (F132: of its hover probe in the pane without the focus).
+fn paint_cursor(ui: &Ui, st: &mut AppState, area: Rect, resp: &egui::Response, tool: Cursor) {
     let Some(p) = ui.ctx().pointer_hover_pos().filter(|p| area.contains(*p)) else {
         return;
     };
@@ -1623,7 +1660,7 @@ fn paint_cursor(ui: &Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
             }
         }
         _ if st.space_down => Cursor::Hand,
-        _ => st.tool_cursor,
+        _ => tool,
     };
     let theme = Theme::current(ui.ctx());
     let precise = st.session.prefs.get_bool("UsePrecisionCursors", false);

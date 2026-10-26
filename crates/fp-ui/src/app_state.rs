@@ -100,8 +100,6 @@ pub struct AppState {
     pub pane_canvases: HashMap<DocId, CanvasCache>,
     /// FB-97: the pane of a split document whose cache is in [`AppState::canvases`] (missing = 0).
     pub cache_panes: HashMap<DocId, usize>,
-    /// FB-97: share of the left pane in the width of a split document area.
-    pub split_ratio: f32,
     /// FB-97: the canvas being drawn is the pane without the focus (drawn, takes no input).
     pub pane_passive: bool,
     pub worker: RenderWorker,
@@ -198,7 +196,6 @@ impl AppState {
             canvases: HashMap::new(),
             pane_canvases: HashMap::new(),
             cache_panes: HashMap::new(),
-            split_ratio: 0.5,
             pane_passive: false,
             worker,
             renderer,

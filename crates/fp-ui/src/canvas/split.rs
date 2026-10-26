@@ -1,9 +1,14 @@
 //! FB-97 / TW-272: split document view. Window ▸ Duplicate Window shows the active document in two
-//! panes side by side with a draggable splitter; each pane has its own page, state, zoom and
-//! scroll (`fp_engine::view_pane`) and a header with its page combo. The pane last clicked has the
-//! focus: tools, panels, rulers, the status bar and keyboard shortcuts address it. The other pane
-//! is drawn from its parked state (swapped in for the drawing only) and takes no input; a press or
-//! a wheel turn over it gives it the focus first, so the tool acts in the pane under the pointer.
+//! panes with a draggable splitter, side by side by default or one above the other (F132,
+//! `window.splitOrientation`); each pane has its own page, state, zoom and scroll
+//! (`fp_engine::view_pane`) and a header with its page combo. The pane last clicked has the focus:
+//! tools, panels, rulers, the status bar and keyboard shortcuts address it (Shift+F6 or Window ▸
+//! Next Pane moves the focus). The other pane is drawn from its parked state (swapped in for the
+//! drawing only) and takes no input, but shows the hover feedback of the active tool (cursor,
+//! hover highlight, brush tip, coordinate tag) while the pointer is over it (F132); a press or a
+//! wheel turn over it gives it the focus first, so the tool acts in the pane under the pointer.
+//! Orientation and splitter position are remembered per document for the session
+//! (`DocumentState::split_layout`).
 
 use crate::app_state::{Action, AppState};
 use crate::theme::Theme;
@@ -15,13 +20,30 @@ use serde_json::json;
 pub const HEADER_H: f32 = 22.0;
 /// Width of the splitter between the panes.
 pub const SPLITTER_W: f32 = 5.0;
-/// Smallest and largest share of the left pane.
+/// Smallest and largest share of the first (left or top) pane.
 pub const MIN_RATIO: f32 = 0.1;
 pub const MAX_RATIO: f32 = 0.9;
 
 /// Left pane, splitter and right pane of `rect` for the share `ratio` of the left pane.
 pub fn pane_rects(rect: Rect, ratio: f32) -> (Rect, Rect, Rect) {
-    let lw = ((rect.width() - SPLITTER_W).max(0.0) * ratio.clamp(MIN_RATIO, MAX_RATIO)).round();
+    pane_rects_in(rect, ratio, false)
+}
+
+/// First pane, splitter and second pane of `rect` for the share `ratio` of the first pane: side
+/// by side, or one above the other with `horizontal` (F132).
+pub fn pane_rects_in(rect: Rect, ratio: f32, horizontal: bool) -> (Rect, Rect, Rect) {
+    let r = ratio.clamp(MIN_RATIO, MAX_RATIO);
+    if horizontal {
+        let th = ((rect.height() - SPLITTER_W).max(0.0) * r).round();
+        let top = Rect::from_min_size(rect.min, vec2(rect.width(), th));
+        let splitter = Rect::from_min_size(
+            pos2(rect.left(), top.bottom()),
+            vec2(rect.width(), SPLITTER_W),
+        );
+        let bottom = Rect::from_min_max(pos2(rect.left(), splitter.bottom()), rect.max);
+        return (top, splitter, bottom);
+    }
+    let lw = ((rect.width() - SPLITTER_W).max(0.0) * r).round();
     let left = Rect::from_min_size(rect.min, vec2(lw, rect.height()));
     let splitter = Rect::from_min_size(
         pos2(left.right(), rect.top()),
@@ -29,6 +51,17 @@ pub fn pane_rects(rect: Rect, ratio: f32) -> (Rect, Rect, Rect) {
     );
     let right = Rect::from_min_max(pos2(splitter.right(), rect.top()), rect.max);
     (left, splitter, right)
+}
+
+/// Share of the first pane for the splitter dragged to `p` (F132: along the orientation's axis).
+pub fn ratio_at(rect: Rect, p: egui::Pos2, horizontal: bool) -> Option<f32> {
+    let (len, at) = if horizontal {
+        (rect.height(), p.y - rect.top())
+    } else {
+        (rect.width(), p.x - rect.left())
+    };
+    (len > SPLITTER_W)
+        .then(|| ((at - SPLITTER_W / 2.0) / (len - SPLITTER_W)).clamp(MIN_RATIO, MAX_RATIO))
 }
 
 /// Body of a pane (below its header).
@@ -77,28 +110,38 @@ pub fn show(
 ) {
     let Some(d) = st.session.active() else { return };
     let id = d.id;
+    let layout = d.split_layout;
+    let horizontal = layout.orientation == fp_engine::view_pane::SplitOrientation::Horizontal;
     let theme = Theme::current(ui.ctx());
     let c = theme.colors.clone();
-    let (left, splitter, right) = pane_rects(rect, st.split_ratio);
-    let panes = [left, right];
-    // splitter
+    let (first, splitter, second) = pane_rects_in(rect, layout.ratio, horizontal);
+    let panes = [first, second];
+    // splitter (its position is remembered per document for the session, F132)
     let sresp = ui.interact(splitter, Id::new("fp-split-handle"), Sense::drag());
     if sresp.dragged()
         && let Some(p) = sresp.interact_pointer_pos()
-        && rect.width() > SPLITTER_W
+        && let Some(ratio) = ratio_at(rect, p, horizontal)
+        && let Some(d) = st.session.active_mut()
     {
-        st.split_ratio = ((p.x - rect.left() - SPLITTER_W / 2.0) / (rect.width() - SPLITTER_W))
-            .clamp(MIN_RATIO, MAX_RATIO);
+        d.split_layout.ratio = ratio;
     }
     if sresp.hovered() || sresp.dragged() {
-        ui.ctx().set_cursor_icon(CursorIcon::ResizeHorizontal);
+        ui.ctx().set_cursor_icon(if horizontal {
+            CursorIcon::ResizeVertical
+        } else {
+            CursorIcon::ResizeHorizontal
+        });
     }
     ui.painter().rect_filled(splitter, 0.0, c.frame_bg);
-    ui.painter().vline(
-        splitter.center().x,
-        splitter.y_range(),
-        Stroke::new(1.0, c.line_mid),
-    );
+    let line = Stroke::new(1.0, c.line_mid);
+    if horizontal {
+        ui.painter()
+            .hline(splitter.x_range(), splitter.center().y, line);
+    } else {
+        ui.painter()
+            .vline(splitter.center().x, splitter.y_range(), line);
+    }
+    let Some(d) = st.session.active() else { return };
     // a press or a wheel turn over the pane without the focus gives it the focus first
     let live = d.live_pane();
     let other = 1 - live;

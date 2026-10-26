@@ -704,6 +704,58 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 ))
             }),
     );
+    // F132: arrangement of the split view (side by side or one above the other); remembered for
+    // the document for the session, also when the view is not split (applies to the next split)
+    r.add(
+        cmd("window.splitOrientation")
+            .label("Teilung")
+            .requires(super::DOC)
+            .param(
+                "orientation",
+                ParamKind::Enum {
+                    values: vec!["vertical".into(), "horizontal".into()],
+                },
+                "Anordnung der Bereiche",
+            )
+            .run(|s, p| {
+                let name = p.str("orientation")?;
+                let o = crate::view_pane::SplitOrientation::from_name(&name).ok_or_else(|| {
+                    EngineError::InvalidParams {
+                        name: "orientation".into(),
+                        message: name.clone(),
+                    }
+                })?;
+                let d = s.doc_mut()?;
+                let changed = d.split_layout.orientation != o;
+                d.split_layout.orientation = o;
+                let split = d.is_split();
+                s.emit(SessionEvent::PanelsChanged);
+                Ok(CommandOutput::session_with(json!({
+                    "orientation": o.name(),
+                    "changed": changed,
+                    "split": split,
+                })))
+            }),
+    );
+    // F132: Window ▸ Next Pane: the focus goes to the other pane of the split view
+    r.add(
+        cmd("window.nextPane")
+            .label("Nächster Bereich")
+            .requires(super::DOC)
+            .available(|s| s.active().is_some_and(|d| d.is_split()))
+            .run(|s, _| {
+                if !s.doc()?.is_split() {
+                    return Err(EngineError::Failed(fp_i18n::t("err-view-not-split")));
+                }
+                let changed = s.next_pane()?;
+                let d = s.doc()?;
+                Ok(CommandOutput::session_with(json!({
+                    "pane": d.live_pane(),
+                    "changed": changed,
+                    "page": d.page,
+                })))
+            }),
+    );
     r.add(
         cmd("window.focusPane")
             .label("Ansichtsbereich wählen")

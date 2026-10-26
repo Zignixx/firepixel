@@ -909,6 +909,55 @@ pub fn build_main_menu_where(
                         .map(|i| i + 1)
                         .unwrap_or(0);
                     nodes.insert(pos, runtime_item("window.closeDuplicate"));
+                    // F132: Next Pane (Shift+F6) and the orientation of the split
+                    let (en, _, sc) = command_state(
+                        st,
+                        "window.nextPane",
+                        Some(shortcut_text(&fp_engine::shortcuts::Shortcut {
+                            ctrl: false,
+                            alt: false,
+                            shift: true,
+                            vk: 0x75,
+                        })),
+                    );
+                    nodes.insert(
+                        pos + 1,
+                        Node::Item {
+                            label: clean_label(&t("cmd-window-nextPane")).0,
+                            shortcut: sc,
+                            action: ItemAction::Command("window.nextPane".into()),
+                            enabled: en,
+                            checked: None,
+                        },
+                    );
+                    let cur = st
+                        .session
+                        .active()
+                        .map(|d| d.split_layout.orientation)
+                        .unwrap_or_default();
+                    let orient = |o: fp_engine::view_pane::SplitOrientation, key: &str| {
+                        item(
+                            &clean_label(&t(key)).0,
+                            ItemAction::Ui(Action::Run(
+                                "window.splitOrientation".into(),
+                                json!({ "orientation": o.name() }),
+                            )),
+                            true,
+                            Some(cur == o),
+                        )
+                    };
+                    use fp_engine::view_pane::SplitOrientation as O;
+                    nodes.insert(
+                        pos + 2,
+                        Node::Sub {
+                            label: clean_label(&t("cmd-window-splitOrientation")).0,
+                            children: vec![
+                                orient(O::Vertical, "menu-window-split-vertical"),
+                                orient(O::Horizontal, "menu-window-split-horizontal"),
+                            ],
+                            enabled: true,
+                        },
+                    );
                 }
                 // Flash-Bedienfelder (Laufzeit) nach „Suchen und ersetzen“, Dokumentliste am Ende
                 let pos = nodes.iter().position(|n| matches!(n, Node::Item { action: ItemAction::Command(c), .. } if c == "edit.findAndReplace")).map(|i| i + 1).unwrap_or(nodes.len());

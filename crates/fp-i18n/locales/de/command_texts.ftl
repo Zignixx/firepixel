@@ -711,3 +711,4 @@ cmdtext-seite-die-bleibt-wenn-alle-seiten-geloes-a6c88f = Seite, die bleibt, wen
 cmdtext-single-nur-diese-seite-wird-aktuell-rang-713897 = single = nur diese Seite (wird aktuell), range = Bereich ab der aktuellen Seite, toggle = Seite hinzu oder weg
 cmdtext-seitenindizes-0-2-als-block = Seitenindizes [0, 2, …] als Block
 cmdtext-bereich-der-geteilten-ansicht-0-links-1-rechts = Bereich der geteilten Ansicht (0 links, 1 rechts)
+cmdtext-anordnung-der-bereiche = Anordnung der Bereiche (vertical nebeneinander, horizontal untereinander)
