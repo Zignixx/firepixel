@@ -192,7 +192,11 @@ obenauf angezeigt.
 jeder Strich ist ein Verlaufsschritt mit dem Namen des Werkzeugs. Über einer bearbeitbaren Bitmap
 blenden diese Werkzeuge den Mauszeiger aus und zeigen nur den Umriss der Pinselspitze (er verschwindet,
 sobald der Zeiger die Leinwand verlässt); wo keine Bitmap bearbeitet werden kann, zeigt der Zeiger
-„nicht erlaubt“. **Verwischen** wird nie am Bitmaprand abgeschnitten, gleich ob die Pinselmitte beim
+„nicht erlaubt“. Der Spitzenumriss von Pinsel, Radiergummi und diesen Werkzeugen hat keine eigene Farbe:
+Er kehrt um, was darunter auf dem Bildschirm steht (jedes Pixel XOR #FFFF00, also blau über Weiß, gelb
+über Schwarz und grün über Rot), ist bei jedem Zoom 1 Bildschirmpixel breit und so groß wie die Spitze
+beim aktuellen Zoom; er sieht unabhängig von der Werkzeugfarbe gleich aus, auch beim Bearbeiten einer
+Maske. Der Bleistift zeigt keinen Umriss. **Verwischen** wird nie am Bitmaprand abgeschnitten, gleich ob die Pinselmitte beim
 Drücken auf der Bitmap oder daneben lag (bei gewählter Bitmap wirkt ein daneben begonnener Strich wie
 ein auf ihr begonnener; ist nichts gewählt, bewirkt ein Druck neben der Bitmap nichts): Über den Rand
 getragene Farbe läuft halbtransparent aus, und die Bitmap wächst mit; nur hineingezogene Transparenz
@@ -401,7 +405,7 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   *Graustufen*. Der Rückweg geht immer; Maske wählen, Modus und Kästchen sind je eine Verlaufszeile *Maske
   modifizieren*. Die Farbfelder zeigen bei gewählter Maske Grau (die Luma).
 - **Malen auf einer Bitmapmaske** (Pinsel, Bleistift, Radiergummi) wirkt in beiden Modi live: Weiß deckt auf,
-  Schwarz blendet aus, das maskierte Element ändert sich während des Zugs, der Pinselumriss ist rot, jeder Zug
+  Schwarz blendet aus, das maskierte Element ändert sich während des Zugs, der Pinselumriss kehrt wie überall den Bildschirm um, jeder Zug
   ist eine Zeile *Pinsel*. Die Malwerkzeuge zeigen die Radios *Alphakanal* / *Graustufen* der Maske, die den
   Modus umschalten. Die Unterlage *Füllung und Pinselstrich anzeigen* bleibt sichtbar, während eine
   Bitmapmaske bearbeitet und bemalt wird; das maskierte Objekt behält sein Aussehen. Im Ebenen-Bedienfeld zeigt die
@@ -553,7 +557,9 @@ dasselbe Dokument; eine Änderung in einem Bereich erscheint sofort auch im ande
 - Einen Bereich schließen Sie mit dem × in seiner Kopfleiste oder mit *Fenster ▸ Zusätzliches
   Fenster schließen* (der Bereich mit Fokus bleibt). Die Teilung wird weder im Dokument noch im
   Arbeitsbereich gespeichert.
-- Es gibt eine Teilung je Dokument.
+- Es gibt eine Teilung je Dokument (zwei Bereiche). Im Bereich ohne Fokus beginnt die Rückmeldung
+  beim Überfahren mit einem ruhenden Werkzeug; ein im Bereich mit Fokus laufender Vorgang erscheint
+  dort nicht.
 
 ## Bedienfelder
 

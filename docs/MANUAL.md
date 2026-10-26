@@ -183,7 +183,11 @@ bitmap, or paints into a bitmap inside a symbol, is previewed on top until you r
 their effect live while you drag; releasing the mouse changes nothing more, and each stroke is one
 history step named after the tool. Over an editable bitmap these tools hide the mouse pointer and show
 only the outline of the brush tip (it disappears when the pointer leaves the canvas); where no bitmap
-can be edited the pointer shows "not allowed". **Smudge** is never cut off at the bitmap edge, no
+can be edited the pointer shows "not allowed". The tip outline of the Brush, the Eraser and these tools
+has no colour of its own: it inverts what is on screen below it (each pixel XOR #FFFF00, so it is blue
+over white, yellow over black and green over red), 1 screen pixel wide at every zoom and as large as the
+tip at the current zoom; it looks the same whatever the tool colour and also while a mask is edited. The
+Pencil shows no outline. **Smudge** is never cut off at the bitmap edge, no
 matter whether the brush centre was on the bitmap or beside it when you pressed (with the bitmap
 selected, a stroke pressed beside it works like one pressed on it; with nothing selected a press beside
 the bitmap does nothing): color carried past the edge fades out semi-transparent and the bitmap grows to
@@ -371,7 +375,7 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   *Grayscale*. Switching back is always possible; selecting the mask, the mode and the checkbox are each one
   History row *Modify Mask*. The colour wells show grey (the luma) while a mask is selected.
 - **Painting on a bitmap mask** (brush, pencil, eraser) works live in both modes: white reveals, black hides,
-  the masked element updates during the stroke, the brush outline is red, and each stroke is one *Brush*
+  the masked element updates during the stroke, the brush outline inverts the screen as everywhere, and each stroke is one *Brush*
   row. The painting tools show the mask's *Alpha channel* / *Grayscale* radios, which switch the mode. The *Show
   fill and stroke* underlay stays visible while a bitmap mask is edited and painted, so the masked object keeps its
   look. In the Layers panel the object thumbnail of a masked object shows the masked result with the underlay when
@@ -511,7 +515,8 @@ made in one pane appears in the other at once.
   pane.
 - Close a pane with the × in its header or with *Window ▸ Close Duplicate Window* (the focused pane
   stays). The split is not saved with the document or the workspace.
-- There is one split per document.
+- There is one split per document (two panes). In the pane without the focus the hover feedback
+  starts from an idle tool, so an operation running in the focused pane is not shown there.
 
 ## Panels
 

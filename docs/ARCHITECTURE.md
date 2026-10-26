@@ -136,8 +136,16 @@ what the release leaves behind; it lingers until the new background tiles are re
 opacity below 100 %, another blend mode or live effects, two sprites would apply them twice, so
 (`ghost::pixel_move_needs_pipeline`) the canvas instead renders a render-only copy of the document with the pixels
 moved (`ghost::apply_live_pixels`, own render key `live_pixels_key`) through the element pipeline; the preview then
-equals the committed result (FB-87, TW-241). Pixel buffers are RGBA8 in
-128 × 128 copy-on-write tiles (cheap undo). `rayon` parallelises filters and large areas; long operations run
+equals the committed result (FB-87, TW-241).
+
+The brush tip outline at the pointer (Brush, Eraser and the retouch tools; the Pencil has none) is drawn by
+`fp-ui/src/canvas/tip_outline.rs` (F131, measured rule): it has no colour of its own, each outline pixel is the
+displayed pixel underneath XOR #FFFF00, 1 device pixel wide at every zoom, outer size tip × zoom + 1. egui has no
+XOR blend, so the module samples the displayed canvas image (`CanvasCache::shown_image`; the pasteboard colour
+outside the image) under each outline pixel (`ring_pixels`) and paints 1-device-pixel quads in the XOR colour
+(`outline_color`). Tool colour, mask editing and the "Show fill and stroke" underlay do not change it.
+
+Pixel buffers are RGBA8 in 128 × 128 copy-on-write tiles (cheap undo). `rayon` parallelises filters and large areas; long operations run
 in the background with progress so the UI never blocks.
 
 ## 5. File format (FW-PNG)
@@ -269,7 +277,8 @@ get their own temporary profile automatically; writing to the real profile from 
   several processes at once). Use `fp_i18n::profile::unique_temp_dir("<english-tag>")`, which returns a new
   empty folder `%TEMP%\firepixel-test-files\<pid>\<tag>-<n>` per call (folders of old processes are pruned);
   keep one folder in a `OnceLock` when several calls of a test must share it. Program outputs under
-  `%TEMP%\Firepixel` (e-mail draft, quick help, scan) use `export::unique_temp_dir` for the same reason.
+  `%TEMP%\Firepixel` (e-mail draft, quick help, scan) use `export::unique_temp_dir(kind)`, a per-call folder
+  `%TEMP%\Firepixel\<kind>\<pid>-<n>`, for the same reason (F133).
 - Formatting: run `cargo fmt --all` before every commit; `cargo fmt --check` must stay clean (no CI job
   checks it yet).
 - Parity runs against the reference application: [PARITY.md](PARITY.md).
