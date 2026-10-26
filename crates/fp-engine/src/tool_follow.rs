@@ -428,7 +428,11 @@ impl Session {
             st.new_fill = Some(json!({"category": "none"}));
         } else {
             st.fill_color = Argb(st.fill_color.0 | 0xff00_0000);
-            if st.new_fill.as_ref().and_then(|v| v.get("category")).and_then(|v| v.as_str())
+            if st
+                .new_fill
+                .as_ref()
+                .and_then(|v| v.get("category"))
+                .and_then(|v| v.as_str())
                 == Some("none")
             {
                 st.new_fill = None;

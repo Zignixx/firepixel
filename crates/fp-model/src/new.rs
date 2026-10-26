@@ -654,7 +654,12 @@ mod tests {
         let mut d = Document::new(200.0, 100.0, Argb(0xffffffff));
         d.add_page("B");
         d.add_page_after(1, "C");
-        let names = |d: &Document| d.pages.iter().map(|p| p.display_name().to_string()).collect::<Vec<_>>();
+        let names = |d: &Document| {
+            d.pages
+                .iter()
+                .map(|p| p.display_name().to_string())
+                .collect::<Vec<_>>()
+        };
         assert_eq!(names(&d)[1..], ["B", "C"]);
         // in front of the model's current page: `current_page` follows its page
         d.current_page = 2;

@@ -270,6 +270,8 @@ get their own temporary profile automatically; writing to the real profile from 
   empty folder `%TEMP%\firepixel-test-files\<pid>\<tag>-<n>` per call (folders of old processes are pruned);
   keep one folder in a `OnceLock` when several calls of a test must share it. Program outputs under
   `%TEMP%\Firepixel` (e-mail draft, quick help, scan) use `export::unique_temp_dir` for the same reason.
+- Formatting: run `cargo fmt --all` before every commit; `cargo fmt --check` must stay clean (no CI job
+  checks it yet).
 - Parity runs against the reference application: [PARITY.md](PARITY.md).
 - Behaviour descriptions and measurements of the reference application, the test corpus and the comparison
   run data are kept outside this repository (they describe a third-party program and use files that cannot be

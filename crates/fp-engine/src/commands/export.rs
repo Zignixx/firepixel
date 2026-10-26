@@ -332,7 +332,11 @@ pub fn temp_dir(kind: &str) -> PathBuf {
 pub fn unique_temp_dir(kind: &str) -> PathBuf {
     use std::sync::atomic::{AtomicU64, Ordering};
     static N: AtomicU64 = AtomicU64::new(0);
-    let d = temp_dir(kind).join(format!("{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+    let d = temp_dir(kind).join(format!(
+        "{}-{}",
+        std::process::id(),
+        N.fetch_add(1, Ordering::Relaxed)
+    ));
     let _ = std::fs::create_dir_all(&d);
     d
 }

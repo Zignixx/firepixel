@@ -266,10 +266,9 @@ fn apply_attrs(a: &mut fp_model::PathAttrs, placement: &mut i32, pa: &Value) {
                 (Some(br), None) => br.diameter = d,
                 (None, None) => a.brush = Some(fp_model::Brush::basic(d)),
             }
-            if let (Some(br), Some(aa)) = (
-                &mut a.brush,
-                b.get("antiAliased").and_then(Value::as_bool),
-            ) {
+            if let (Some(br), Some(aa)) =
+                (&mut a.brush, b.get("antiAliased").and_then(Value::as_bool))
+            {
                 br.antialiased = aa;
             }
         }

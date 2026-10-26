@@ -7,7 +7,11 @@ use serde_json::json;
 
 fn run(s: &mut fp_engine::Session, src: &str) -> String {
     let o = run_source(s, src, &ScriptOptions::default());
-    assert!(o.ok, "error: {:?}\ndiagnostics: {:?}", o.error, o.diagnostics);
+    assert!(
+        o.ok,
+        "error: {:?}\ndiagnostics: {:?}",
+        o.error, o.diagnostics
+    );
     o.result.unwrap_or_default()
 }
 
@@ -29,8 +33,10 @@ fn session_with_mask() -> fp_engine::Session {
         .expect("ellipse")
         .value["id"]
         .clone();
-    s.execute("select.set", json!({"ids": [b, a]})).expect("select");
-    s.execute("modify.mask.groupAsMask", json!({})).expect("mask");
+    s.execute("select.set", json!({"ids": [b, a]}))
+        .expect("select");
+    s.execute("modify.mask.groupAsMask", json!({}))
+        .expect("mask");
     s
 }
 
@@ -54,7 +60,10 @@ fn set_element_mask_invert_and_the_mask_object() {
         "var e = fw.selection[0]; var m = e.mask; m.invert = false; e.mask = m; 0",
     );
     assert!(!model_invert(&s));
-    run(&mut s, "var e = fw.selection[0]; e.mask = {invert: true}; 0");
+    run(
+        &mut s,
+        "var e = fw.selection[0]; e.mask = {invert: true}; 0",
+    );
     assert!(model_invert(&s));
     // undo restores the previous state
     s.undo().expect("undo");

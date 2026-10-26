@@ -30,12 +30,18 @@ fn put(doc: &mut Document, elems: Vec<Element>) {
 
 /// Green 40 × 40 content masked by a 10..20 square (colour `mask_color`, opacity `mask_opacity`),
 /// on a transparent page.
-fn render(kind: GroupKind, invert: bool, mask_color: u32, mask_opacity: u8) -> fp_raster::RgbaImage {
+fn render(
+    kind: GroupKind,
+    invert: bool,
+    mask_color: u32,
+    mask_opacity: u8,
+) -> fp_raster::RgbaImage {
     let mut doc = Document::new(40.0, 40.0, Argb(0x00ff_ffff));
     let content = rect(&mut doc, Rect::new(0.0, 0.0, 40.0, 40.0), 0xff00_ff00);
     let mut mask = rect(&mut doc, Rect::new(10.0, 10.0, 20.0, 20.0), mask_color);
     mask.common.opacity = Opacity(mask_opacity);
-    let mut g = Element::new_mask_group(&mut doc.ids, Arc::new(mask), vec![Arc::new(content)], true);
+    let mut g =
+        Element::new_mask_group(&mut doc.ids, Arc::new(mask), vec![Arc::new(content)], true);
     if let ElementKind::Group(gr) = &mut g.kind {
         gr.kind = kind;
         gr.mask_flags.invert = invert;
@@ -52,7 +58,11 @@ fn inverted_path_mask_hides_inside_and_shows_outside() {
     let inv = render(GroupKind::VectorMask, true, 0xffff_0000, 255);
     assert_eq!(inv.pixel(15, 15).a, 0, "inside the mask is hidden");
     assert_eq!(inv.pixel(30, 30), Rgba8::rgb(0, 255, 0), "outside stays");
-    assert_eq!(inv.pixel(2, 2), Rgba8::rgb(0, 255, 0), "outside the mask bounds stays");
+    assert_eq!(
+        inv.pixel(2, 2),
+        Rgba8::rgb(0, 255, 0),
+        "outside the mask bounds stays"
+    );
 }
 
 #[test]
@@ -74,7 +84,10 @@ fn grayscale_value_scales_the_inverted_strength() {
         let normal = render(GroupKind::BitmapMask, false, color, 255);
         let inv = render(GroupKind::BitmapMask, true, color, 255);
         let (n, i) = (normal.pixel(15, 15).a as i32, inv.pixel(15, 15).a as i32);
-        assert!((n + i - 255).abs() <= 1, "{color:08x}: normal {n} + inverted {i} = 255");
+        assert!(
+            (n + i - 255).abs() <= 1,
+            "{color:08x}: normal {n} + inverted {i} = 255"
+        );
         assert_eq!(inv.pixel(30, 30).a, 255);
     }
 }

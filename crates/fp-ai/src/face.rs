@@ -96,7 +96,9 @@ impl Reader<'_> {
         if v.is_finite() {
             Ok(v)
         } else {
-            Err(AiError::Weights(fp_i18n::t("ai-err-d-face-cascade-not-finite")))
+            Err(AiError::Weights(fp_i18n::t(
+                "ai-err-d-face-cascade-not-finite",
+            )))
         }
     }
 }

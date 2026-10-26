@@ -26,7 +26,10 @@ fn doc(open1: bool, open_sub: bool, open2: bool) -> Document {
     sub.expanded = open_sub;
     let inner = rect(&mut ids, 50.0);
     Arc::make_mut(&mut sub.cels[0]).elements.push(inner);
-    let sub_el = Arc::new(Element::new(ids.element(), ElementKind::SubLayer(Arc::new(sub))));
+    let sub_el = Arc::new(Element::new(
+        ids.element(),
+        ElementKind::SubLayer(Arc::new(sub)),
+    ));
     let r1 = rect(&mut ids, 10.0);
     let mut l2 = Layer::new(&mut ids, "Ebene 2", LayerKind::Normal, 1);
     l2.expanded = open2;
@@ -81,7 +84,11 @@ fn layer_disclosure_round_trips() {
         let d = doc(want.0, want.1, want.2);
         let bytes = write(&d, &WriteOptions::default(), &NoFlattener).expect("write");
         let back = read(&bytes).expect("read");
-        assert_eq!(flags(&back), want, "disclosure (Ebene 1, Unterebene, Ebene 2)");
+        assert_eq!(
+            flags(&back),
+            want,
+            "disclosure (Ebene 1, Unterebene, Ebene 2)"
+        );
         // and once more through the written file
         let bytes2 = write(&back, &WriteOptions::default(), &NoFlattener).expect("write again");
         assert_eq!(flags(&read(&bytes2).expect("read again")), want);

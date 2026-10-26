@@ -24,7 +24,8 @@ fn masked(doc: &mut Document, invert: bool) -> Element {
         0.0,
         PathAttrs::solid_fill(Argb(0xffff_0000)),
     );
-    let mut g = Element::new_mask_group(&mut doc.ids, Arc::new(mask), vec![Arc::new(content)], true);
+    let mut g =
+        Element::new_mask_group(&mut doc.ids, Arc::new(mask), vec![Arc::new(content)], true);
     if let ElementKind::Group(gr) = &mut g.kind {
         gr.mask_flags.invert = invert;
     }

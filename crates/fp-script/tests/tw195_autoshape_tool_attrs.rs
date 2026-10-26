@@ -88,7 +88,12 @@ fn paths(s: &Session, id: ElementId) -> Vec<Attrs> {
                 p.attrs.fill_color,
                 p.attrs.stroke_color,
                 p.attrs.brush.as_ref().map(|b| {
-                    (b.category.clone(), b.name.clone(), b.diameter, b.antialiased)
+                    (
+                        b.category.clone(),
+                        b.name.clone(),
+                        b.diameter,
+                        b.antialiased,
+                    )
                 }),
                 p.stroke_placement,
             )),
@@ -126,7 +131,13 @@ fn nine_shapes_take_the_tool_attributes_in_full() {
             for p in ps {
                 assert_eq!(
                     p,
-                    (true, WHITE, RED, brush("bc_Pencil", "bn_1-Pixel", 4, false), id),
+                    (
+                        true,
+                        WHITE,
+                        RED,
+                        brush("bc_Pencil", "bn_1-Pixel", 4, false),
+                        id
+                    ),
                     "{shape} {placement}"
                 );
             }
@@ -149,7 +160,11 @@ fn shapes_take_stroke_none_and_fill_none() {
     s.set_tool_style(st);
     let arrow = insert(&mut s, "Arrow");
     for p in paths(&s, arrow) {
-        assert_eq!((p.0, p.3.clone()), (false, None), "arrow: no fill, no stroke");
+        assert_eq!(
+            (p.0, p.3.clone()),
+            (false, None),
+            "arrow: no fill, no stroke"
+        );
     }
 }
 
@@ -192,7 +207,11 @@ fn connector_and_spiral_draw_their_own_stroke_without_a_tool_stroke() {
         );
     }
     s.follow_selection();
-    assert_eq!(s.tool_style(), before, "the tool stays (stroke none, fill solid)");
+    assert_eq!(
+        s.tool_style(),
+        before,
+        "the tool stays (stroke none, fill solid)"
+    );
 }
 
 /// The tool after Arrow Line / Measure Tool: `bn_Hard Line` 1 px in `color`, fill none with the
@@ -202,7 +221,12 @@ fn tool_is_hard_line(s: &Session, color: Argb, placement: &str) {
     assert_eq!(st.stroke_color, color);
     let b = tool_brush_from(st.new_stroke.as_ref(), st.new_brush.as_ref());
     assert_eq!(
-        (b.category.as_str(), b.name.as_str(), b.diameter, b.antialiased),
+        (
+            b.category.as_str(),
+            b.name.as_str(),
+            b.diameter,
+            b.antialiased
+        ),
         ("bc_Basic", "bn_Hard Line", 1, false)
     );
     assert!(st.fill_is_none());
@@ -246,7 +270,13 @@ fn measure_tool_is_red_inside_not_selected_and_sets_the_tool() {
     assert_eq!(ps.len(), 1);
     assert_eq!(
         ps[0],
-        (false, ps[0].1, RED, brush("bc_Basic", "bn_Hard Line", 1, false), 0)
+        (
+            false,
+            ps[0].1,
+            RED,
+            brush("bc_Basic", "bn_Hard Line", 1, false),
+            0
+        )
     );
     let ElementKind::Group(g) = element(&s, id).kind else {
         panic!("group")
@@ -287,7 +317,11 @@ fn each_shape_is_one_history_row_shape() {
             insert(&mut s, shape);
             let d = s.active().expect("doc");
             assert_eq!(d.history.undo_count(), n + 1, "{lang} {shape}: one row");
-            assert_eq!(d.history.labels().last().map(String::as_str), Some(label), "{lang} {shape}");
+            assert_eq!(
+                d.history.labels().last().map(String::as_str),
+                Some(label),
+                "{lang} {shape}"
+            );
         }
     }
     fp_i18n::set_language("de");
@@ -305,13 +339,18 @@ fn a_selected_auto_shape_is_not_followed_but_shown() {
     let star = insert(&mut s, "Star");
     tool_red4(&mut s, "center");
     s.execute("select.none", json!({})).expect("none");
-    s.execute("select.set", json!({"ids": [star.0]})).expect("select");
+    s.execute("select.set", json!({"ids": [star.0]}))
+        .expect("select");
     s.follow_selection();
     let st = s.tool_style();
     assert_eq!((st.stroke_color, st.fill_color), (RED, WHITE));
     let b = tool_brush_from(st.new_stroke.as_ref(), st.new_brush.as_ref());
     assert_eq!(b.diameter, 4, "the tool stays");
-    assert_eq!(s.tool_well_colors(), (BLACK, WHITE), "the wells show the star");
+    assert_eq!(
+        s.tool_well_colors(),
+        (BLACK, WHITE),
+        "the wells show the star"
+    );
     s.execute("select.none", json!({})).expect("none");
     assert_eq!(s.tool_well_colors(), (RED, WHITE));
 }
