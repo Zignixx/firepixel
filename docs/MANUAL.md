@@ -511,8 +511,7 @@ made in one pane appears in the other at once.
   pane.
 - Close a pane with the × in its header or with *Window ▸ Close Duplicate Window* (the focused pane
   stays). The split is not saved with the document or the workspace.
-- There is one split, always side by side. The pane without the focus shows no hover feedback (tool
-  cursor, brush outline, hover frames) until it gets the focus.
+- There is one split per document.
 
 ## Panels
 

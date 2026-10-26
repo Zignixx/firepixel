@@ -553,8 +553,7 @@ dasselbe Dokument; eine Änderung in einem Bereich erscheint sofort auch im ande
 - Einen Bereich schließen Sie mit dem × in seiner Kopfleiste oder mit *Fenster ▸ Zusätzliches
   Fenster schließen* (der Bereich mit Fokus bleibt). Die Teilung wird weder im Dokument noch im
   Arbeitsbereich gespeichert.
-- Es gibt eine Teilung, immer nebeneinander. Der Bereich ohne Fokus zeigt keine Rückmeldung beim
-  Überfahren (Werkzeugzeiger, Pinselumriss, Hover-Rahmen), bis er den Fokus erhält.
+- Es gibt eine Teilung je Dokument.
 
 ## Bedienfelder
 
