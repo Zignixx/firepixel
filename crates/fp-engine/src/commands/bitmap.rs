@@ -343,7 +343,9 @@ fn apply_paint_job(
                 // none → refused, no change
                 use_paint_layer(d)?;
                 let id = insert_bitmap(d, &out)?;
-                Ok(CommandOutput::doc_with(json!({"target": id.0})))
+                Ok(CommandOutput::doc_with(
+                    json!({"target": id.0, "newBitmap": true}),
+                ))
             }
         }
     })

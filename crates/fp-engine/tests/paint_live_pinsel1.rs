@@ -137,8 +137,8 @@ fn live_stroke_matches_result_and_is_one_step() {
     assert!(!p.tiles.is_empty(), "Vorschau hat Kacheln");
     assert_eq!(
         steps(&s),
-        n0 + 2,
-        "Loslassen = genau ein Verlaufsschritt (nach \"Edit Bitmap\", RE spec 71)"
+        n0 + 3,
+        "Loslassen = genau ein Verlaufsschritt (nach \"Insert Empty Bitmap\" und \"Edit Bitmap\", RE spec 71)"
     );
     let id = top_elements(&s)[0].id;
     let img = image(&s, id);
@@ -178,9 +178,14 @@ fn live_stroke_matches_result_and_is_one_step() {
     );
     // Rückgängig/Wiederholen exakt
     let after = doc(&s);
-    s.undo().expect("Rückgängig");
+    // Strich, „Bitmap bearbeiten“, „Leere Bitmap einfügen“ (RE spec 71 §1.3)
+    for _ in 0..3 {
+        s.undo().expect("Rückgängig");
+    }
     assert!(top_elements(&s).iter().all(|e| e.id != id));
-    s.redo().expect("Wiederholen");
+    for _ in 0..3 {
+        s.redo().expect("Wiederholen");
+    }
     assert_eq!(doc(&s), after);
 }
 
@@ -412,7 +417,8 @@ fn fifty_value_changes_do_not_stack() {
         "Einstellungen ändern ist kein Verlaufsschritt"
     );
     stroke(&mut s, &[(40.0, 150.0), (340.0, 150.0)]);
-    assert_eq!(steps(&s), n0 + 2);
+    // "Insert Empty Bitmap", "Edit Bitmap", the stroke
+    assert_eq!(steps(&s), n0 + 3);
     assert_eq!(top_elements(&s).len(), 1, "genau eine Bitmap");
     let id = top_elements(&s)[0].id;
     let img = image(&s, id);
@@ -462,14 +468,14 @@ fn escape_discards_the_stroke() {
     events(&mut s, &[ToolEvent::up(250.0, 60.0)]);
     assert_eq!(
         steps(&s),
-        n0 + 2,
+        n0 + 3,
         "Esc mitten im Zug: Strich vollständig gemalt"
     );
     // der nächste Zug malt wieder
     // choosing the Brush again writes its row "Stroke Color" (RE spec 72 §1)
     tool(&mut s, ToolId::Brush);
     stroke(&mut s, &[(50.0, 100.0), (250.0, 100.0)]);
-    assert_eq!(steps(&s), n0 + 4);
+    assert_eq!(steps(&s), n0 + 5);
 }
 
 #[test]
@@ -552,7 +558,8 @@ fn multi_selection_and_locks() {
     let p = stroke(&mut s, &[(220.0, 200.0), (300.0, 200.0)]).expect("Vorschau");
     assert_eq!(image(&s, b), img_b, "gesperrte Bitmap bleibt unverändert");
     assert_eq!(top_elements(&s).len(), count + 1, "neue Bitmap");
-    assert_eq!(steps(&s), n0 + 1);
+    // "Insert Empty Bitmap" and the stroke (bitmap mode was on already)
+    assert_eq!(steps(&s), n0 + 2);
     let nb = top_elements(&s)[0].id;
     assert_eq!(px(&s, nb, 260, 200), shown(&p, 260, 200));
     // gesperrte Ebene: die Bitmap darauf wird nicht bemalt

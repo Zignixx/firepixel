@@ -165,7 +165,7 @@ fn fb62_stroke_starts_mode_and_rows_named_after_tool() {
 }
 
 /// B: a Brush stroke on empty space with nothing selected makes a new bitmap and starts bitmap
-/// mode ("Edit Bitmap" before the stroke row).
+/// mode ("Insert Empty Bitmap", then "Edit Bitmap" before the stroke row, RE spec 71 §1.3).
 #[test]
 fn fb62_brush_on_empty_space_starts_mode() {
     let (mut s, _) = setup();
@@ -173,7 +173,10 @@ fn fb62_brush_on_empty_space_starts_mode() {
     s.set_tool(ToolId::Brush).expect("Brush");
     stroke(&mut s, (40.0, 40.0), (90.0, 40.0));
     assert!(mode(&s));
-    assert_eq!(tail(&s, 2), vec!["Edit Bitmap", "Brush"]);
+    assert_eq!(
+        tail(&s, 3),
+        vec!["Insert Empty Bitmap", "Edit Bitmap", "Brush"]
+    );
 }
 
 /// B: a Pointer double-click on a bitmap writes two rows "Edit Bitmap" and switches to the

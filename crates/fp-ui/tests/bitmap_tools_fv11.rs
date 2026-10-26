@@ -176,8 +176,13 @@ fn brush_without_selection_creates_new_bitmap_and_keeps_painting_into_it() {
     );
     assert_eq!(sel(s), vec![nb], "neue Bitmap ausgewählt");
     assert_eq!(s.tools.active, ToolId::Brush, "Werkzeug bleibt Pinsel");
-    // "Edit Bitmap" (bitmap mode starts, RE spec 71 §1.3) and the stroke row
-    assert_eq!(undo_count(s), h0 + 2, "Edit Bitmap + Brush");
+    // "Insert Empty Bitmap", "Edit Bitmap" (bitmap mode starts, RE spec 71 §1.3) and the
+    // stroke row
+    assert_eq!(
+        undo_count(s),
+        h0 + 3,
+        "Insert Empty Bitmap + Edit Bitmap + Brush"
+    );
     // zweiter Strich malt in dieselbe (ausgewählte) Bitmap
     drag(s, (300.0, 40.0), (400.0, 40.0));
     assert_eq!(ids(s).len(), n0 + 1, "kein weiteres Objekt");
@@ -189,14 +194,18 @@ fn brush_without_selection_creates_new_bitmap_and_keeps_painting_into_it() {
     // Escape without a pixel selection writes "Exit Bitmap Mode" twice (RE spec 71 §1.4)
     assert_eq!(
         undo_count(s),
-        h0 + 5,
-        "Edit Bitmap, two strokes, Exit Bitmap Mode twice"
+        h0 + 6,
+        "Insert Empty Bitmap, Edit Bitmap, two strokes, Exit Bitmap Mode twice"
     );
     s.undo().expect("undo");
     s.undo().expect("undo");
-    // Rückgängig: erst der zweite Strich, dann die neue Bitmap
+    // Rückgängig: erst der zweite Strich, dann der erste, „Bitmap bearbeiten“ und die neue
+    // (leere) Bitmap
     s.undo().expect("undo");
     assert_eq!(image(s, nb).alpha_bounds(), IRect::new(300, 20, 401, 21));
+    s.undo().expect("undo");
+    assert_eq!(ids(s).len(), n0 + 1, "the empty bitmap stays");
+    s.undo().expect("undo");
     s.undo().expect("undo");
     assert_eq!(ids(s).len(), n0);
 }

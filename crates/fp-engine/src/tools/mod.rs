@@ -1217,6 +1217,18 @@ pub fn tool_shortcuts(set: &ShortcutSet, id: ToolId) -> Vec<Shortcut> {
 /// Nächstes Werkzeug für ein Werkzeugkürzel: Mehrere Werkzeuge mit gleichem Kürzel werden beim
 /// wiederholten Drücken durchgeschaltet (10 §2.1, A).
 pub fn cycle_tool_for_key(set: &ShortcutSet, sc: &Shortcut, current: ToolId) -> Option<ToolId> {
+    cycle_tool_for_key_preferring(set, sc, current, &[])
+}
+
+/// Like [`cycle_tool_for_key`]; from a tool outside the key's tools the first press selects the
+/// first of `prefer` the key belongs to (else the key's first tool), e.g. the Brush or Pencil used
+/// last for B (RE spec 72 §1.2).
+pub fn cycle_tool_for_key_preferring(
+    set: &ShortcutSet,
+    sc: &Shortcut,
+    current: ToolId,
+    prefer: &[ToolId],
+) -> Option<ToolId> {
     if sc.has_modifiers() {
         return None;
     }
@@ -1231,7 +1243,11 @@ pub fn cycle_tool_for_key(set: &ShortcutSet, sc: &Shortcut, current: ToolId) -> 
     }
     match cands.iter().position(|t| *t == current) {
         Some(i) => Some(cands[(i + 1) % cands.len()]),
-        None => Some(cands[0]),
+        None => prefer
+            .iter()
+            .find(|t| cands.contains(t))
+            .copied()
+            .or(Some(cands[0])),
     }
 }
 

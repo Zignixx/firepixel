@@ -759,6 +759,13 @@ pub struct Session {
     /// The stroke of the vector a bitmap-tool choice just deselected (`Some(None)` = no stroke),
     /// for the Brush/Pencil row of the same choice.
     stroke_row_current: Option<Option<fp_model::Brush>>,
+    /// RE spec 72 §1.4: the stroke the Brush resp. the Pencil took over on a direct switch from
+    /// the other one (`None` = the tool's own stroke from its options).
+    brush_stroke_memory: Option<fp_model::Brush>,
+    pencil_stroke_memory: Option<fp_model::Brush>,
+    /// RE spec 72 §1.2: the Brush or Pencil used last (the first B press from another tool
+    /// selects it; `None` = the Brush).
+    last_brush_or_pencil: Option<ToolId>,
     next_doc: u64,
     untitled: u32,
 }
@@ -819,6 +826,9 @@ impl Session {
             in_tool_commands: false,
             paint_stroke: None,
             stroke_row_current: None,
+            brush_stroke_memory: None,
+            pencil_stroke_memory: None,
+            last_brush_or_pencil: None,
             next_doc: 1,
             untitled: 0,
             prefs,
@@ -1241,6 +1251,16 @@ impl Session {
                 if let (Some(id), Some(b)) = (doc_id, before) {
                     self.finish_step(id, b, step_name, step_key, name, &p.value);
                     self.note_tool_colors(rows_before, colors_before);
+                    // RE spec 71 §1.3, §2.2: a Brush/Pencil stroke that makes a new bitmap
+                    // writes "Insert Empty Bitmap" before "Edit Bitmap" and the stroke row
+                    let new_bitmap = out
+                        .value
+                        .get("newBitmap")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    if PAINT_COMMANDS.contains(&name) && self.in_tool_commands && new_bitmap {
+                        self.insert_empty_bitmap_below_top(rows_before, &out.value);
+                    }
                     if PAINT_COMMANDS.contains(&name) && !mode_before && self.in_tool_commands {
                         self.enter_bitmap_mode_below_top(rows_before);
                     }
@@ -1516,6 +1536,66 @@ impl Session {
             before,
             after,
         };
+        d.history.insert_below_top(step);
+        let id = d.id;
+        self.events.push(SessionEvent::HistoryChanged(id));
+    }
+
+    /// RE spec 71 §1.3, §2.2: a stroke that made a new bitmap gets the row "Insert Empty Bitmap"
+    /// just below its stroke row: its state holds the new bitmap without pixels (selected), the
+    /// stroke row then paints into it. Undo takes back the stroke, then "Edit Bitmap", then the
+    /// empty bitmap. Nothing happens when the command wrote no row.
+    fn insert_empty_bitmap_below_top(&mut self, rows_before: usize, value: &serde_json::Value) {
+        if self.group_depth > 0 || self.history_rows() <= rows_before {
+            return;
+        }
+        let Some(target) = value.get("target").and_then(|v| v.as_u64()) else {
+            return;
+        };
+        let Some(d) = self.active_mut() else {
+            return;
+        };
+        let Some(top) = d.history.top_mut() else {
+            return;
+        };
+        let mut mid = top.after.clone();
+        mid.bitmap_mode = top.before.bitmap_mode;
+        mid.bitmap_worked = top.before.bitmap_worked.clone();
+        mid.tool_colors = None;
+        let id = fp_model::ElementId(target as _);
+        let Some(path) = crate::docops::find_on_page(&mid.doc, mid.page, id) else {
+            return;
+        };
+        let doc = Arc::make_mut(&mut mid.doc);
+        let emptied = crate::docops::edit_at(doc, &path, |e| {
+            if let fp_model::ElementKind::Bitmap(b) = &mut e.kind
+                && let Some(img) = crate::docops::bitmap_image(b)
+                && let Ok(empty) = fp_raster::RgbaImage::from_rgba_bytes(
+                    img.bounds(),
+                    &vec![0u8; img.width() * img.height() * 4],
+                )
+            {
+                crate::docops::set_bitmap_image(b, &empty);
+                true
+            } else {
+                false
+            }
+        });
+        if emptied != Some(true) {
+            return;
+        }
+        let key = "msg-step-insert-empty-bitmap";
+        let step = crate::history::HistoryStep {
+            label: fp_i18n::with_ui_language(|| fp_i18n::t(key)),
+            key: Some(crate::history::StepKey::Text(key.into())),
+            command: "bitmap.insertEmpty".into(),
+            params: serde_json::json!({}),
+            // the stroke row makes the bitmap again when it is replayed
+            recordable: false,
+            before: top.before.clone(),
+            after: mid.clone(),
+        };
+        top.before = mid;
         d.history.insert_below_top(step);
         let id = d.id;
         self.events.push(SessionEvent::HistoryChanged(id));
@@ -1998,6 +2078,9 @@ impl Session {
             if !leaves_bitmap {
                 self.bitmap_tool_chosen(id);
             }
+            if matches!(id, ToolId::Brush | ToolId::Pencil) {
+                self.last_brush_or_pencil = Some(id);
+            }
             self.tools.active = id;
             self.tools.machine = tools::make_machine(id);
             self.with_tool_ctx(|m, ctx| m.activated(ctx));
@@ -2037,19 +2120,26 @@ impl Session {
     /// stroke (the deselected vector's, else the stroke the last Brush/Pencil choice made
     /// current, else the toolbox stroke), otherwise "Stroke Color", but no second "Stroke Color"
     /// right after one. The rows are bound to the step before them (`TOOL_STROKE_ROW`, §2.4).
-    /// Each tool keeps its own stroke (the simpler rule §1.5 allows). Other bitmap tools write no
-    /// row.
+    /// Stroke memory as measured (§1.4): a direct switch between the Brush and the Pencil keeps
+    /// the current stroke, and the chosen tool remembers it from then on (so the switch writes
+    /// "Stroke Color", never "Brush Stroke"); after any other tool the chosen one takes its
+    /// remembered stroke. Other bitmap tools write no row.
     fn bitmap_tool_chosen(&mut self, id: ToolId) {
         let deselected = self.stroke_row_current.take();
         if !matches!(id, ToolId::Brush | ToolId::Pencil) || self.group_depth > 0 {
             return;
         }
-        let tool = if id == ToolId::Pencil {
-            let mut b = fp_model::Brush::basic(1);
-            b.antialiased = self.tools.options.pencil_antialias;
-            b
+        let prev = self.tools.active;
+        let direct = prev != id && matches!(prev, ToolId::Brush | ToolId::Pencil);
+        let tool = if direct {
+            let kept = self
+                .paint_stroke
+                .clone()
+                .unwrap_or_else(|| self.own_tool_stroke(prev));
+            *self.stroke_memory_mut(id) = Some(kept.clone());
+            kept
         } else {
-            crate::commands::panel::tool_brush(&self.tools.options)
+            self.remembered_tool_stroke(id)
         };
         let current = deselected.unwrap_or_else(|| {
             Some(
@@ -2098,13 +2188,65 @@ impl Session {
         self.events.push(SessionEvent::HistoryChanged(id));
     }
 
+    /// The stroke a Brush or Pencil choice takes from the tool's options (no memory).
+    fn own_tool_stroke(&self, id: ToolId) -> fp_model::Brush {
+        if id == ToolId::Pencil {
+            let mut b = fp_model::Brush::basic(1);
+            b.antialiased = self.tools.options.pencil_antialias;
+            b
+        } else {
+            crate::commands::panel::tool_brush(&self.tools.options)
+        }
+    }
+
+    /// The stroke the Brush or Pencil remembers (RE spec 72 §1.4), else its own.
+    fn remembered_tool_stroke(&self, id: ToolId) -> fp_model::Brush {
+        let mem = if id == ToolId::Pencil {
+            &self.pencil_stroke_memory
+        } else {
+            &self.brush_stroke_memory
+        };
+        mem.clone().unwrap_or_else(|| self.own_tool_stroke(id))
+    }
+
+    fn stroke_memory_mut(&mut self, id: ToolId) -> &mut Option<fp_model::Brush> {
+        if id == ToolId::Pencil {
+            &mut self.pencil_stroke_memory
+        } else {
+            &mut self.brush_stroke_memory
+        }
+    }
+
     /// Werkzeug per Tastenkürzel (aktives Set; mehrfach gleiches Kürzel schaltet durch).
+    /// RE spec 72 §1.2: a key shared by the Brush and the Pencil (B in the default set) toggles
+    /// between them; from another tool the first press selects the one used last (the Brush when
+    /// neither was used yet). The Knife's key selects it only with a vector object selected (else
+    /// nothing happens).
     pub fn tool_shortcut(&mut self, sc: &Shortcut) -> Result<Option<ToolId>> {
-        let next = tools::cycle_tool_for_key(self.shortcut_set(), sc, self.tools.active);
+        let prefer = [self.last_brush_or_pencil.unwrap_or(ToolId::Brush)];
+        let next = tools::cycle_tool_for_key_preferring(
+            self.shortcut_set(),
+            sc,
+            self.tools.active,
+            &prefer,
+        );
+        if next == Some(ToolId::Knife) && !self.vector_selected() {
+            return Ok(None);
+        }
         if let Some(t) = next {
             self.set_tool(t)?;
         }
         Ok(next)
+    }
+
+    /// Is a vector object (not a bitmap) selected?
+    fn vector_selected(&self) -> bool {
+        self.active().is_some_and(|d| {
+            crate::docops::paths_sorted(&d.doc, d.page, &d.selection.elements)
+                .into_iter()
+                .filter_map(|p| d.doc.element_at(&p))
+                .any(|e| !matches!(e.kind, fp_model::ElementKind::Bitmap(_)))
+        })
     }
 
     fn with_tool_ctx<R>(&mut self, f: impl FnOnce(&mut dyn ToolMachine, &ToolContext) -> R) -> R {

@@ -106,8 +106,8 @@ fn shift_mid_stroke_keeps_the_painted_part() {
     events(&mut s, &[ToolEvent::up(250.0, 255.0).shift()]);
     assert_eq!(
         steps(&s),
-        n0 + 2,
-        "one stroke, one row (after the row \"Edit Bitmap\" that starts bitmap mode, RE spec 71)"
+        n0 + 3,
+        "one stroke, one row (after the rows \"Insert Empty Bitmap\" and \"Edit Bitmap\" that start bitmap mode, RE spec 71)"
     );
     let img = image(&s, top_elements(&s)[0].id);
     // even size: points +1/+1
@@ -168,8 +168,8 @@ fn undo_and_redo_are_ignored_while_the_button_is_held() {
     events(&mut s, &[ToolEvent::up(250.0, 100.0)]);
     assert_eq!(
         steps(&s),
-        2,
-        "the whole stroke is applied on release (after \"Edit Bitmap\", RE spec 71)"
+        3,
+        "the whole stroke is applied on release (after \"Insert Empty Bitmap\", \"Edit Bitmap\", RE spec 71)"
     );
     let id = top_elements(&s)[0].id;
     let img = image(&s, id);
@@ -179,10 +179,11 @@ fn undo_and_redo_are_ignored_while_the_button_is_held() {
     events(&mut s, &[ToolEvent::down(50.0, 220.0)]);
     drag(&mut s, (50.0, 220.0), (250.0, 220.0));
     s.undo().expect("undo");
-    assert_eq!(steps(&s), 2, "the earlier rows stay");
+    assert_eq!(steps(&s), 3, "the earlier rows stay");
     assert_eq!(s.tool_stroke_pause(), StrokePause::Painting);
     events(&mut s, &[ToolEvent::up(250.0, 220.0)]);
-    assert_eq!(steps(&s), 3);
+    // far from the first bitmap: a new one ("Insert Empty Bitmap" and the stroke)
+    assert_eq!(steps(&s), 5);
     // Redo while held is ignored too (no repeat of the last row)
     events(&mut s, &[ToolEvent::down(50.0, 260.0)]);
     drag(&mut s, (50.0, 260.0), (150.0, 260.0));
@@ -192,10 +193,10 @@ fn undo_and_redo_are_ignored_while_the_button_is_held() {
         StrokePause::Painting,
         "Redo is ignored while held"
     );
-    assert_eq!(steps(&s), 3);
+    assert_eq!(steps(&s), 5);
     drag(&mut s, (150.0, 260.0), (250.0, 260.0));
     events(&mut s, &[ToolEvent::up(250.0, 260.0)]);
-    assert_eq!(steps(&s), 4, "the stroke is applied on release");
+    assert_eq!(steps(&s), 6, "the stroke is applied on release");
 }
 
 #[test]
@@ -218,8 +219,8 @@ fn paused_stroke_undo_discards_redo_applies_via_commands() {
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle);
     assert_eq!(
         steps(&s),
-        2,
-        "Redo applied the paused stroke as one row (after \"Edit Bitmap\", RE spec 71)"
+        3,
+        "Redo applied the paused stroke as one row (after \"Insert Empty Bitmap\", \"Edit Bitmap\", RE spec 71)"
     );
     let img = image(&s, top_elements(&s)[0].id);
     assert_eq!(px(&img, 150, 101)[3], 255);

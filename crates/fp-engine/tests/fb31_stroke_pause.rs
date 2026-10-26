@@ -156,8 +156,8 @@ fn resumed_stroke_is_one_row_and_the_overlap_does_not_darken() {
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle);
     assert_eq!(
         steps(&s),
-        n0 + 2,
-        "the whole stroke is ONE history row (after the row \"Edit Bitmap\" that starts bitmap mode, RE spec 71)"
+        n0 + 3,
+        "the whole stroke is ONE history row (after the rows \"Insert Empty Bitmap\" and \"Edit Bitmap\" that start bitmap mode, RE spec 71)"
     );
     let id = top_elements(&s)[0].id;
     let img = image(&s, id);
@@ -234,7 +234,7 @@ fn escape_while_paused_applies_the_stroke() {
         r.commands.first().map(|c| c.command.as_str()),
         Some("bitmap.paint")
     );
-    assert_eq!(steps(&s), n0 + 2, "Escape applies the paused stroke");
+    assert_eq!(steps(&s), n0 + 3, "Escape applies the paused stroke");
     assert_eq!(s.tools.active, ToolId::Brush, "the tool stays");
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle);
     let img = image(&s, top_elements(&s)[0].id);
@@ -276,8 +276,8 @@ fn undo_while_paused_discards_and_redo_applies() {
     s.redo().expect("redo");
     assert_eq!(
         steps(&s),
-        n0 + 2,
-        "Redo applies the paused stroke (after the row \"Edit Bitmap\" that starts bitmap mode, RE spec 71)"
+        n0 + 3,
+        "Redo applies the paused stroke (after the rows \"Insert Empty Bitmap\" and \"Edit Bitmap\" that start bitmap mode, RE spec 71)"
     );
     assert_eq!(s.tool_stroke_pause(), StrokePause::Idle);
     let img = image(&s, top_elements(&s)[0].id);
@@ -286,7 +286,8 @@ fn undo_while_paused_discards_and_redo_applies() {
     events(&mut s, &[ToolEvent::down(50.0, 200.0)]);
     drag(&mut s, (50.0, 200.0), (250.0, 200.0));
     events(&mut s, &[ToolEvent::up(250.0, 200.0)]);
-    assert_eq!(steps(&s), n0 + 3);
+    // far from the bitmap: a new one ("Insert Empty Bitmap" and the stroke, still bitmap mode)
+    assert_eq!(steps(&s), n0 + 5);
 }
 
 #[test]
@@ -308,7 +309,7 @@ fn menu_command_applies_but_zoom_keeps_the_pause() {
         StrokePause::Idle,
         "a menu command applies the stroke"
     );
-    assert_eq!(steps(&s), n0 + 3, "the stroke row, then the command");
+    assert_eq!(steps(&s), n0 + 4, "the stroke row, then the command");
 }
 
 #[test]
@@ -345,7 +346,7 @@ fn pencil_and_eraser_pause_too() {
     events(&mut s, &[ToolEvent::up(150.0, 200.0)]);
     assert_eq!(
         steps(&s),
-        n0 + 2,
+        n0 + 3,
         "release after the resume applies the whole stroke"
     );
     let id = top_elements(&s)[0].id;

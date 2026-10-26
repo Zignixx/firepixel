@@ -173,8 +173,8 @@ fn p_pauses_and_the_next_press_resumes_the_stroke() {
     h.run_steps(2);
     assert_eq!(
         steps(&h),
-        n0 + 2,
-        "one History row for the whole stroke (after \"Edit Bitmap\", RE spec 71)"
+        n0 + 3,
+        "one History row for the whole stroke (after \"Insert Empty Bitmap\", \"Edit Bitmap\", RE spec 71)"
     );
     assert_eq!(st(&h).session.tool_stroke_pause(), StrokePause::Idle);
     assert_ne!(
@@ -199,8 +199,8 @@ fn enter_applies_a_paused_stroke() {
     key(&mut h, Key::Enter);
     assert_eq!(
         steps(&h),
-        n0 + 2,
-        "Enter applies the paused stroke (after \"Edit Bitmap\")"
+        n0 + 3,
+        "Enter applies the paused stroke (after \"Insert Empty Bitmap\", \"Edit Bitmap\")"
     );
     assert_eq!(st(&h).session.tool_stroke_pause(), StrokePause::Idle);
     assert_eq!(st(&h).session.tools.active, ToolId::Brush);
