@@ -273,7 +273,7 @@ struct Grab {
 fn navigate(ui: &mut Ui, st: &mut AppState, idx: usize, body: Rect) {
     let resp = ui.interact(
         body,
-        Id::new(("fp-preview-pane", idx)),
+        crate::canvas::pane_id(st, Id::new(("fp-preview-pane", idx))),
         egui::Sense::click_and_drag(),
     );
     let Some(d) = st.session.active() else { return };
@@ -374,7 +374,7 @@ fn navigate(ui: &mut Ui, st: &mut AppState, idx: usize, body: Rect) {
     let ctrl = mods.ctrl || mods.command;
     let hand = tool == fp_engine::ToolId::Hand || (space && !ctrl);
     let zoom_tool = tool == fp_engine::ToolId::Zoom || (space && ctrl);
-    let grab_id = Id::new(("fp-preview-grab", idx));
+    let grab_id = crate::canvas::pane_id(st, Id::new(("fp-preview-grab", idx)));
     let panning = resp.dragged_by(egui::PointerButton::Middle)
         || (hand && resp.dragged_by(egui::PointerButton::Primary));
     if panning {

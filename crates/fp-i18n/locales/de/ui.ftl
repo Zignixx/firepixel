@@ -185,3 +185,5 @@ ui-macmenu-hide = Firepixel Studio ausblenden
 ui-macmenu-hide-others = Andere ausblenden
 ui-macmenu-show-all = Alle einblenden
 ui-macmenu-quit = Firepixel Studio beenden
+ui-split-close-pane = Diesen Bereich schließen (Fenster ▸ Zusätzliches Fenster schließen)
+ui-split-pane-page = Seite dieses Bereichs; ein Klick in den Bereich wählt ihn für Werkzeuge und Bedienfelder

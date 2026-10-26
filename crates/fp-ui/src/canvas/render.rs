@@ -160,6 +160,8 @@ pub struct RenderKey {
     /// Bitmap mask in bitmap editing (0 = none): its mask group is drawn without the "Show fill
     /// and stroke" underlay (RE spec 68 §4.2 rule 5, TW-225).
     pub mask_edit: u64,
+    /// FB-97 / TW-272: pane of the split view the image is for (0 = left or the only one).
+    pub pane: usize,
 }
 
 /// Stand der Leinwand eines Dokuments (Render-Cache und Interaktionszustand der Werkzeuge).
@@ -402,24 +404,28 @@ impl RenderWorker {
         let spawned = std::thread::Builder::new()
             .name("fp-canvas-render".into())
             .spawn(move || {
-                while let Ok(mut job) = job_rx.recv() {
-                    // nur der neueste Auftrag zählt
+                'jobs: while let Ok(first) = job_rx.recv() {
+                    // nur der neueste Auftrag zählt – je Bereich der geteilten Ansicht (FB-97)
+                    let mut jobs = vec![first];
                     while let Ok(newer) = job_rx.try_recv() {
-                        job = newer;
+                        jobs.retain(|j| j.key.pane != newer.key.pane);
+                        jobs.push(newer);
                     }
-                    let (image, layers) = render_job(&r, &job);
-                    if res_tx
-                        .send(RenderResult {
-                            key: job.key,
-                            image,
-                            layers,
-                        })
-                        .is_err()
-                    {
-                        break;
-                    }
-                    if let Some(c) = &ctx {
-                        c.request_repaint();
+                    for job in jobs {
+                        let (image, layers) = render_job(&r, &job);
+                        if res_tx
+                            .send(RenderResult {
+                                key: job.key,
+                                image,
+                                layers,
+                            })
+                            .is_err()
+                        {
+                            break 'jobs;
+                        }
+                        if let Some(c) = &ctx {
+                            c.request_repaint();
+                        }
                     }
                 }
             });

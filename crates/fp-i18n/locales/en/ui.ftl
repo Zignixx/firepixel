@@ -185,3 +185,5 @@ ui-macmenu-hide = Hide Firepixel Studio
 ui-macmenu-hide-others = Hide Others
 ui-macmenu-show-all = Show All
 ui-macmenu-quit = Quit Firepixel Studio
+ui-split-close-pane = Close this pane (Window ▸ Close Duplicate Window)
+ui-split-pane-page = Page of this pane; a click into the pane makes it the one tools and panels act on

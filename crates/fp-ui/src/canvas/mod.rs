@@ -11,6 +11,9 @@ pub mod ghost;
 pub mod overlay;
 pub mod paint_preview;
 pub mod render;
+pub mod split;
+#[cfg(test)]
+mod split_tests;
 pub mod stack;
 #[cfg(test)]
 mod tests;
@@ -90,18 +93,38 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
         top = bar.bottom();
     }
     let canvas = Rect::from_min_max(pos2(full.left(), top), pos2(full.right(), footer.top()));
+    // FB-97 / TW-272: split view (Window ▸ Duplicate Window): two panes, each with its own body
+    let split = st.session.active().is_some_and(|d| d.is_split());
+    let split_docs: Vec<fp_engine::DocId> = st
+        .session
+        .documents()
+        .iter()
+        .filter(|d| d.is_split())
+        .map(|d| d.id)
+        .collect();
+    st.pane_canvases.retain(|id, _| split_docs.contains(id));
+    if split {
+        split::show(ui, st, canvas, &mut pane_body);
+    } else {
+        pane_body(ui, st, canvas);
+    }
+    if chrome.footer {
+        footer_ui(ui, st, footer);
+    }
+}
+
+/// One document view: the canvas, or in Preview/2-Up/4-Up the export images with the canvas as the
+/// original tile.
+fn pane_body(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let preview = st
         .session
         .active()
         .is_some_and(|d| d.view.preview_mode != PreviewMode::Original);
     if preview {
         // Vorschau/2-fach/4-fach: Exportbild (nicht bearbeitbar); die Originalkachel ist die Leinwand
-        crate::preview::show(ui, st, canvas, &mut |ui, st, r| canvas_ui(ui, st, r));
+        crate::preview::show(ui, st, rect, &mut |ui, st, r| canvas_ui(ui, st, r));
     } else {
-        canvas_ui(ui, st, canvas);
-    }
-    if chrome.footer {
-        footer_ui(ui, st, footer);
+        canvas_ui(ui, st, rect);
     }
 }
 
@@ -682,19 +705,7 @@ fn view_bar_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     }
     // Seitenauswahl rechts
     let Some(d) = st.session.active() else { return };
-    let names: Vec<String> = d
-        .doc
-        .pages
-        .iter()
-        .enumerate()
-        .map(|(i, p)| {
-            if p.display_name().is_empty() {
-                fp_i18n::tr!("ui-page-default-name", n = i + 1)
-            } else {
-                p.display_name().to_string()
-            }
-        })
-        .collect();
+    let names = split::page_names(d);
     let page = d.page;
     let nav = Rect::from_center_size(pos2(rect.right() - 20.0, rect.center().y), vec2(18.0, 18.0));
     // Seitenauswahl rechts, bei schmaler Leinwand nach links begrenzt bzw. ausgeblendet (nichts überlappt)
@@ -903,11 +914,23 @@ fn mods(i: &egui::InputState, space: bool) -> Modifiers {
     }
 }
 
+/// FB-97 / TW-272: salts a canvas widget id with the pane of the split view drawn now (pane 0 and
+/// an unsplit view keep the id).
+pub(crate) fn pane_id(st: &AppState, base: Id) -> Id {
+    match st.session.active().map_or(0, |d| d.live_pane()) {
+        0 => base,
+        p => base.with(("fp-split-pane", p)),
+    }
+}
+
 fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let theme = Theme::current(ui.ctx());
     let c = theme.colors.clone();
     let Some(d) = st.session.active() else { return };
     let id = d.id;
+    // FB-97: pane of the split view (the pane without the focus is drawn but takes no input)
+    let pane = d.live_pane();
+    let passive = st.pane_passive;
     let chrome = crate::screen_mode::current(st);
     let show_rulers = d.view.show_rulers && chrome.rulers;
     let ruler = if show_rulers {
@@ -961,8 +984,14 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     }
     st.canvases.entry(id).or_default().area = Some(area);
     overlay::sync_tool_attrs(ui.ctx(), st);
-    let resp = ui.interact(area, Id::new(("canvas", id.0)), Sense::click_and_drag());
-    input(ui, st, area, &resp);
+    let resp = ui.interact(
+        area,
+        pane_id(st, Id::new(("canvas", id.0))),
+        Sense::click_and_drag(),
+    );
+    if !passive {
+        input(ui, st, area, &resp);
+    }
     // Zoom/Bildlauf aus diesem Bild sofort zentrieren bzw. begrenzen – sonst würde ein Bild lang mit
     // dem neuen Zoom, aber dem alten Versatz gezeichnet
     if let Some(d) = st.session.active_mut()
@@ -973,11 +1002,16 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         align_view_to_pixels(&mut d.view, pr, area.min, ppp);
     }
     // Rückmeldung des Werkzeugs (auch ohne Ereignis) und im Hintergrund auszublendende Elemente
-    let feedback = st.session.tool_feedback();
+    let feedback = if passive {
+        Vec::new()
+    } else {
+        st.session.tool_feedback()
+    };
     // Rote Vorauswahl-Hervorhebung nur, solange der Zeiger über der Leinwand ist: Verlässt er das
     // Fenster (bzw. liegt ein Bedienfeld darüber), kommt kein Bewegungsereignis mehr, das sie
     // löscht; die alte Hervorhebung blieb stehen (CT-3: rote Linie ab dem Seitenursprung)
-    let pointer_here = resp.hovered()
+    let pointer_here = !passive
+        && resp.hovered()
         && ui
             .ctx()
             .pointer_hover_pos()
@@ -998,7 +1032,9 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             .collect()
     };
     // object selection: mask preview while hovering (BA-037)
-    tools::ai_object::update(ui.ctx(), st, pointer_here);
+    if !passive {
+        tools::ai_object::update(ui.ctx(), st, pointer_here);
+    }
     let preview_drag = st.session.prefs.get_bool("PreviewDrag", true);
     // Stapelfolge der Vorschau (N34, BA-039): gezogene bzw. bemalte Objekte bleiben zwischen den
     // Objekten darunter (Hintergrundbild) und darüber (durchsichtige Schichten)
@@ -1218,6 +1254,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             gamma,
             preview,
             mask_edit,
+            pane,
         };
         cc.requested = Some(key);
         let docarc = if preview != 0 {
@@ -1376,7 +1413,9 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         &spp,
     );
     overlays(ui, st, &painter, area, &view, &feedback);
-    tools::ai_object::paint(ui, st, &painter, area, &view);
+    if !passive {
+        tools::ai_object::paint(ui, st, &painter, area, &view);
+    }
     if let Some(cc) = st.canvases.get_mut(&id) {
         cc.info = feedback.iter().rev().find_map(|o| match o {
             Overlay::Label { text, .. } => Some(text.clone()),
@@ -1404,6 +1443,9 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     }
     if chrome.scrollbars {
         scrollbars(ui, st, area, &view, pr);
+    }
+    if passive {
+        return;
     }
     // Kontextmenü (Rechtsklick)
     if resp.secondary_clicked()
@@ -4027,8 +4069,8 @@ fn rulers(ui: &mut Ui, st: &mut AppState, rect: Rect, area: Rect, view: &fp_engi
     let Some(id) = st.session.active_id() else {
         return;
     };
-    let rt = ui.interact(top, Id::new("ruler-top"), Sense::drag());
-    let rl = ui.interact(left, Id::new("ruler-left"), Sense::drag());
+    let rt = ui.interact(top, pane_id(st, Id::new("ruler-top")), Sense::drag());
+    let rl = ui.interact(left, pane_id(st, Id::new("ruler-left")), Sense::drag());
     let cc = st.canvases.entry(id).or_default();
     if rt.drag_started() {
         cc.guide_drag = Some(true);
@@ -4105,7 +4147,7 @@ fn scrollbars(ui: &mut Ui, st: &mut AppState, area: Rect, view: &fp_engine::View
         ui.painter()
             .rect_filled(track, 0.0, with_alpha(c.scrollbar_bg, 200));
         ui.painter().rect_filled(thumb, 3.0, c.scrollbar_thumb);
-        let resp = ui.interact(track, Id::new("hscroll"), Sense::drag());
+        let resp = ui.interact(track, pane_id(st, Id::new("hscroll")), Sense::drag());
         if resp.dragged()
             && let Some(d) = st.session.active_mut()
         {
@@ -4133,7 +4175,7 @@ fn scrollbars(ui: &mut Ui, st: &mut AppState, area: Rect, view: &fp_engine::View
         ui.painter()
             .rect_filled(track, 0.0, with_alpha(c.scrollbar_bg, 200));
         ui.painter().rect_filled(thumb, 3.0, c.scrollbar_thumb);
-        let resp = ui.interact(track, Id::new("vscroll"), Sense::drag());
+        let resp = ui.interact(track, pane_id(st, Id::new("vscroll")), Sense::drag());
         if resp.dragged()
             && let Some(d) = st.session.active_mut()
         {

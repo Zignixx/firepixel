@@ -95,6 +95,15 @@ pub struct AppState {
     pub theme: Arc<Theme>,
     pub settings: UiSettings,
     pub canvases: HashMap<DocId, CanvasCache>,
+    /// FB-97 / TW-272: canvas caches of the pane of a split view whose cache is not in
+    /// [`AppState::canvases`] (swapped in while that pane is drawn, `canvas::split`).
+    pub pane_canvases: HashMap<DocId, CanvasCache>,
+    /// FB-97: the pane of a split document whose cache is in [`AppState::canvases`] (missing = 0).
+    pub cache_panes: HashMap<DocId, usize>,
+    /// FB-97: share of the left pane in the width of a split document area.
+    pub split_ratio: f32,
+    /// FB-97: the canvas being drawn is the pane without the focus (drawn, takes no input).
+    pub pane_passive: bool,
     pub worker: RenderWorker,
     pub renderer: Arc<fp_render::Renderer>,
     pub dialogs: Dialogs,
@@ -145,6 +154,31 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// FB-97: the pane of document `id` whose canvas cache is in [`AppState::canvases`].
+    pub fn cache_pane(&self, id: DocId) -> usize {
+        self.cache_panes.get(&id).copied().unwrap_or(0)
+    }
+
+    /// FB-97: puts the canvas cache of `pane` of document `id` into [`AppState::canvases`] (the
+    /// other pane's cache goes to [`AppState::pane_canvases`]).
+    pub fn use_pane_cache(&mut self, id: DocId, pane: usize) {
+        if self.cache_pane(id) == pane {
+            return;
+        }
+        let a = self.canvases.remove(&id);
+        if let Some(b) = self.pane_canvases.remove(&id) {
+            self.canvases.insert(id, b);
+        }
+        if let Some(a) = a {
+            self.pane_canvases.insert(id, a);
+        }
+        if pane == 0 {
+            self.cache_panes.remove(&id);
+        } else {
+            self.cache_panes.insert(id, pane);
+        }
+    }
+
     /// Neuer Zustand mit Sitzung und Einstellungen.
     pub fn new(mut session: Session, settings: UiSettings, ctx: Option<egui::Context>) -> AppState {
         let renderer = Arc::new(fp_render::Renderer::default());
@@ -162,6 +196,10 @@ impl AppState {
             theme,
             settings,
             canvases: HashMap::new(),
+            pane_canvases: HashMap::new(),
+            cache_panes: HashMap::new(),
+            split_ratio: 0.5,
+            pane_passive: false,
             worker,
             renderer,
             dialogs: Dialogs::default(),
@@ -267,9 +305,14 @@ impl AppState {
             match e {
                 SessionEvent::DocumentClosed(id) => {
                     self.canvases.remove(&id);
+                    self.pane_canvases.remove(&id);
+                    self.cache_panes.remove(&id);
                 }
                 SessionEvent::DocumentChanged { doc, .. } | SessionEvent::LocationChanged(doc) => {
                     if let Some(c) = self.canvases.get_mut(&doc) {
+                        c.invalidate();
+                    }
+                    if let Some(c) = self.pane_canvases.get_mut(&doc) {
                         c.invalidate();
                     }
                 }

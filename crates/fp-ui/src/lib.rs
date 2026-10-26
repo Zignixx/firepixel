@@ -228,7 +228,12 @@ impl FirepixelApp {
         let theme: Arc<Theme> = Arc::clone(&st.theme);
         // fertige Renderergebnisse übernehmen
         for res in st.worker.poll() {
-            let cc = st.canvases.entry(res.key.doc).or_default();
+            // FB-97: an image for the pane whose cache is parked goes to the parked cache
+            let cc = if st.cache_pane(res.key.doc) == res.key.pane {
+                st.canvases.entry(res.key.doc).or_default()
+            } else {
+                st.pane_canvases.entry(res.key.doc).or_default()
+            };
             if cc.requested.as_ref() == Some(&res.key) || cc.shown.is_none() {
                 canvas::render::show_result(&ctx, cc, res);
             }
