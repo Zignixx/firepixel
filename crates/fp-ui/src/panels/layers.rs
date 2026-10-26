@@ -465,6 +465,22 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     ) {
         st.run("element.setOpacity", json!({"opacity": v}));
     }
+    // FB-101: the field acts on the selected objects; with a mask selected on the mask object
+    // itself, whose opacity only sets how strongly Invert hides (the masking and the "Show fill
+    // and stroke" underlay keep their strength, RE spec 68 §4.2, compose rule of the underlay)
+    let one_mask = en
+        && selected.len() == 1
+        && fp_engine::docops::mask_owner(&doc, page, selected[0]).is_some();
+    fields::tip(
+        ui,
+        "layers-opacity-help",
+        dl.r(120.0, 2.0, 21.0, 12.0),
+        &common::t(if one_mask {
+            "panel-layers-opacity-tip-mask"
+        } else {
+            "panel-layers-opacity-tip"
+        }),
+    );
     // live canvas preview of the dragged value like the inspector's opacity slider (FB-28,
     // TW-205); applied on release / pop-up close, the Blend mode menu stays a plain commit
     if en && let Some(v) = fields::slider_live(ui.ctx(), "layers-opacity") {
@@ -532,15 +548,15 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let mut tree_toggles: Vec<u64> = Vec::new();
     let mut tree_click: Option<TreeClick> = None;
     let yellow_bg = group_child_selected_bg(&theme);
-    // Miniaturoptionen (0 = keine; Vorgabe 32 → 24 px wie im Original „mittel“)
-    let tpx = (st
-        .session
-        .prefs
-        .get_int("LayersList_ThumbnailSize", 32)
-        .clamp(0, 128) as f32
-        * 0.75)
-        .round();
-    let erow_h = if tpx > 0.0 { tpx + 6.0 } else { 20.0 };
+    // thumbnail options (0 = none; default 32 → 34 × 23 px frame, RE spec 73 §6)
+    let tsz = thumb_frame_size(
+        st.session
+            .prefs
+            .get_int("LayersList_ThumbnailSize", 32)
+            .clamp(0, 128),
+    );
+    let (tpx, tph) = (tsz.x, tsz.y);
+    let erow_h = object_row_height(tsz);
     let list_rect = common::list_frame(ui, "layers-list", common::FOOTER_H, |ui| {
         for rl in layers.iter().rev() {
             let l = &rl.layer;
@@ -1030,6 +1046,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         doc_id,
                         doc_gen,
                         tpx,
+                        tph,
                         row_h: erow_h,
                         selected: &selected_set,
                         rename: &rename,
@@ -1131,14 +1148,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     let thumb = Rect::from_min_size(
                         pos2(
                             r2.left() + 78.0 + THUMB_INDENT * depth as f32,
-                            r2.top() + 3.0,
+                            r2.top() + THUMB_TOP,
                         ),
-                        vec2(tpx, tpx),
+                        vec2(tpx, tph),
                     );
                     // Miniaturen nur für sichtbare Zeilen (FV-8: bei Seiten mit Tausenden Objekten
                     // rechnete und lud jedes Bild sonst ständig Miniaturen nach)
                     if tpx > 0.0 && ui.is_rect_visible(thumb) {
-                        crate::widgets::checker(ui.painter(), thumb, 4.0, &theme);
+                        crate::widgets::checker(ui.painter(), thumb.shrink(1.0), 4.0, &theme);
                         let size = (tpx as u32 * 2).max(16);
                         // a masked object: canvas-related, with or without the mask and its
                         // underlay (RE spec 73 §0.1)
@@ -1148,14 +1165,10 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             thumbs::element_thumb(ui.ctx(), st, doc_id, doc_gen, &doc, e, size)
                         };
                         if let Some(tex) = tex {
-                            let ts = tex.size_vec2();
-                            let s = (thumb.width() / ts.x).min(thumb.height() / ts.y);
-                            ui.painter().image(
-                                tex.id(),
-                                Rect::from_center_size(thumb.center(), ts * s),
-                                Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-                                Color32::WHITE,
-                            );
+                            paint_thumb_image(ui.painter(), thumb, &tex);
+                        }
+                        if content_is_bitmap(e) {
+                            paint_bitmap_badge(ui.painter(), thumb);
                         }
                         ui.painter().rect_stroke(
                             thumb,
@@ -1163,7 +1176,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             if obj_sel {
                                 Stroke::new(2.0, c.focus)
                             } else {
-                                Stroke::new(1.0, c.list_border)
+                                Stroke::new(1.0, THUMB_FRAME)
                             },
                             StrokeKind::Inside,
                         );
@@ -1531,14 +1544,7 @@ fn mask_thumb_pair(
         ui.painter().rect_filled(mt, 0.0, Color32::BLACK);
         let size = (thumb.width() as u32 * 2).max(16);
         if let Some(tex) = thumbs::mask_thumb(ui.ctx(), st, doc_id, doc, e, m, size) {
-            let ts = tex.size_vec2();
-            let s = (mt.width() / ts.x).min(mt.height() / ts.y);
-            ui.painter().image(
-                tex.id(),
-                Rect::from_center_size(mt.center(), ts * s),
-                Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-                Color32::WHITE,
-            );
+            paint_thumb_image(ui.painter(), mt, &tex);
         }
         // a vector mask (path, group) carries the pen badge bottom right, a bitmap mask none
         // (RE spec 73 §0.3)
@@ -1557,7 +1563,7 @@ fn mask_thumb_pair(
             );
         } else {
             ui.painter()
-                .rect_stroke(mt, 0.0, Stroke::new(1.0, c.list_border), StrokeKind::Inside);
+                .rect_stroke(mt, 0.0, Stroke::new(1.0, THUMB_FRAME), StrokeKind::Inside);
         }
         // disabled mask: red X over the mask thumbnail (RE spec 68 section 8, M-10)
         if matches!(&e.kind, ElementKind::Group(g) if !g.mask_flags.enabled) {
@@ -1569,6 +1575,81 @@ fn mask_thumb_pair(
 
 /// Size of the pen badge of a vector mask thumbnail (about 10 × 10 like the reference).
 pub const PEN_BADGE: f32 = 10.0;
+
+/// Normal frame of an object or mask thumbnail: 1 px #696969 (RE spec 73 §6).
+pub const THUMB_FRAME: Color32 = Color32::from_rgb(0x69, 0x69, 0x69);
+
+/// Distance of a thumbnail frame from the top of its row (27 px row, 23 px frame, RE spec 73 §1, §6).
+const THUMB_TOP: f32 = 2.0;
+
+/// Outer size of the thumbnail frame for the thumbnail option `size` (0 = no thumbnails, the
+/// default 32 = the reference's standard size): 34 × 23 px including the 1 px frame, image area
+/// 32 × 21 (landscape, the page fitted inside; RE spec 73 §6; other sizes scale alike, not
+/// measured, RE spec 73 §8 item 4).
+pub fn thumb_frame_size(size: i64) -> egui::Vec2 {
+    if size <= 0 {
+        return egui::Vec2::ZERO;
+    }
+    let s = size as f32 / 32.0;
+    vec2((34.0 * s).round(), (23.0 * s).round())
+}
+
+/// Height of an object row: the thumbnail frame plus 2 px above and below (27 px at the default
+/// size, RE spec 73 §1), 20 px without thumbnails.
+pub fn object_row_height(frame: egui::Vec2) -> f32 {
+    if frame.y > 0.0 {
+        frame.y + 2.0 * THUMB_TOP
+    } else {
+        20.0
+    }
+}
+
+/// The thumbnail texture fitted into the image area inside the 1 px frame `frame`, centred.
+fn paint_thumb_image(p: &egui::Painter, frame: Rect, tex: &egui::TextureHandle) {
+    let area = frame.shrink(1.0);
+    let ts = tex.size_vec2();
+    let s = (area.width() / ts.x).min(area.height() / ts.y);
+    p.image(
+        tex.id(),
+        Rect::from_center_size(area.center(), ts * s),
+        Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+        Color32::WHITE,
+    );
+}
+
+/// Does the content thumbnail of this row show a bitmap, i.e. is it a masked object whose content
+/// is one bitmap? The reference puts the bitmap badge on it (RE spec 73 §0.3, §6); rows of plain
+/// objects were not measured and stay without a badge.
+pub fn content_is_bitmap(e: &Element) -> bool {
+    match &e.kind {
+        ElementKind::Group(g) if g.kind.is_mask() && g.mask.is_some() => {
+            g.children.len() == 1 && matches!(g.children[0].kind, ElementKind::Bitmap(_))
+        }
+        _ => false,
+    }
+}
+
+/// Bitmap badge bottom right in the content thumbnail `r` (RE spec 73 §6, about 10 × 10 with a
+/// black border): a white box with a black hill and a black sun.
+fn paint_bitmap_badge(p: &egui::Painter, r: Rect) {
+    let b = Rect::from_min_size(
+        r.right_bottom() - vec2(PEN_BADGE + 1.0, PEN_BADGE + 1.0),
+        vec2(PEN_BADGE, PEN_BADGE),
+    );
+    p.rect_filled(b, 0.0, Color32::WHITE);
+    p.rect_stroke(b, 0.0, Stroke::new(1.0, Color32::BLACK), StrokeKind::Inside);
+    let (l, t) = (b.left(), b.top());
+    p.add(egui::Shape::convex_polygon(
+        vec![
+            pos2(l + 1.5, t + 8.5),
+            pos2(l + 4.5, t + 4.5),
+            pos2(l + 8.5, t + 8.5),
+        ],
+        Color32::BLACK,
+        Stroke::NONE,
+    ));
+    p.circle_filled(pos2(l + 7.0, t + 3.0), 1.2, Color32::BLACK);
+}
 
 /// Pen badge bottom right in the mask thumbnail `r` of a vector mask (RE spec 73 §0.3): a white
 /// box with a black border and a black pen nib.
@@ -2160,6 +2241,7 @@ struct TreeCtx<'a> {
     doc_id: fp_engine::DocId,
     doc_gen: u64,
     tpx: f32,
+    tph: f32,
     row_h: f32,
     selected: &'a std::collections::HashSet<fp_model::ElementId>,
     rename: &'a Option<RowKind>,
@@ -2257,8 +2339,11 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
             }
         }
         let thumb = Rect::from_min_size(
-            pos2(tc.thumb_x + TREE_INDENT * it.level as f32, r.top() + 3.0),
-            vec2(tc.tpx, tc.tpx),
+            pos2(
+                tc.thumb_x + TREE_INDENT * it.level as f32,
+                r.top() + THUMB_TOP,
+            ),
+            vec2(tc.tpx, tc.tph),
         );
         let bitmap_mask = matches!(it.role, TreeRole::Mask { bitmap: true, .. });
         if tc.tpx > 0.0 && ui.is_rect_visible(thumb) {
@@ -2269,7 +2354,7 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
                     thumbs::mask_thumb(ui.ctx(), tc.st, tc.doc_id, tc.doc, o, e, size)
                 }
                 _ => {
-                    crate::widgets::checker(ui.painter(), thumb, 4.0, tc.theme);
+                    crate::widgets::checker(ui.painter(), thumb.shrink(1.0), 4.0, tc.theme);
                     if e.element_mask().is_some() {
                         thumbs::masked_object_thumb(ui.ctx(), tc.st, tc.doc_id, tc.doc, e, size)
                     } else {
@@ -2286,14 +2371,10 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
                 }
             };
             if let Some(tex) = tex {
-                let ts = tex.size_vec2();
-                let s = (thumb.width() / ts.x).min(thumb.height() / ts.y);
-                ui.painter().image(
-                    tex.id(),
-                    Rect::from_center_size(thumb.center(), ts * s),
-                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-                    Color32::WHITE,
-                );
+                paint_thumb_image(ui.painter(), thumb, &tex);
+            }
+            if !bitmap_mask && content_is_bitmap(e) {
+                paint_bitmap_badge(ui.painter(), thumb);
             }
             ui.painter().rect_stroke(
                 thumb,
@@ -2301,7 +2382,7 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
                 if obj_sel {
                     Stroke::new(2.0, c.focus)
                 } else {
-                    Stroke::new(1.0, c.list_border)
+                    Stroke::new(1.0, THUMB_FRAME)
                 },
                 StrokeKind::Inside,
             );

@@ -495,6 +495,7 @@ pi-colorize = Colorize
 pi-mask = Mask:
 pi-mask-alpha = Alpha channel
 pi-mask-gray = Grayscale
+pi-tip-bmask-alpha = Alpha channel: the transparency of the mask bitmap cuts the content. After Paste Inside the bitmap also shows under the content (Show fill and stroke); Group as Mask or Paste as Mask, then Alpha channel, masks the same way without it.
 pi-mask-path-outline = Path outline
 pi-mask-grayscale = Grayscale
 pi-mask-show-attrs = Show fill and stroke

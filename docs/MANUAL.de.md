@@ -409,6 +409,20 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   anzeigen* im Modus *Alphakanal* / *Pfadumriss* an ist, sonst den Inhalt allein, die Maskenminiatur die Maske grau
   auf Schwarz (eine Vektormaske mit Feder-Symbol), beide auf die Arbeitsfläche bezogen und nach jedem Zug
   aktualisiert, und die Maskenminiatur der bearbeiteten Maske bekommt einen 2 px breiten grünen Rahmen.
+  Die Miniaturen sind 34 × 23 px groß mit 1 px dunkelgrauem Rahmen (Bildfläche 32 × 21, die Seite darin
+  eingepasst, Objektzeilen 27 px hoch); die Inhaltsminiatur einer maskierten Bitmap trägt unten rechts ein
+  kleines Bitmap-Symbol.
+- **Die Unterlage einer Bitmapmaske.** Nach *Innen einfügen* auf eine Bitmap liegt die Masken-Bitmap
+  zusätzlich unter dem Inhalt (*Füllung und Pinselstrich anzeigen*, Modus *Alphakanal*). Wie im Original
+  hat der Inspektor einer Bitmapmaske nur *Alphakanal* / *Graustufen* (dazu Firepixels *Invertieren*) und
+  kein Kontrollkästchen dafür; die Quickinfo von *Alphakanal* sagt das. Wer mit der Transparenz der Bitmap
+  maskieren will, ohne Unterlage, nimmt *Als Maske gruppieren* oder *Als Maske einfügen* und wählt danach
+  *Alphakanal*; auch der Wechsel einer vorhandenen Maske zu *Graustufen* nimmt sie weg (der Maskenwert folgt
+  dann der Helligkeit); Skripte schalten sie mit `setElementMaskShowAttrs(false)` ab. Das Feld *Deckkraft*
+  oben im Ebenen-Bedienfeld wirkt auf das gewählte Objekt: Bei gewählter Maske ist es die Deckkraft des
+  Maskenobjekts selbst, die nur bestimmt, wie stark *Invertieren* ausblendet; Maskierung und Unterlage
+  behalten ihre Stärke (das sagt seine Quickinfo). Bei gewähltem maskierten Objekt blenden die
+  Deckkraft-Felder den Inhalt aus, die Unterlage scheint dann stärker durch.
 - *Auswählen ▸ Auswahl umkehren* kehrt nur eine Pixelauswahl um; ohne sie erscheint eine Warnung, und
   die gewählten Objekte bleiben unverändert.
 - *Text ▸ Größe ▸ Größer / Kleiner* ändern die Größe um genau 1 pt (24 → 25 → 24), bei gewählten Texten

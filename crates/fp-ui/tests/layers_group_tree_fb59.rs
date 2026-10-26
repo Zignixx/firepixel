@@ -45,8 +45,8 @@ struct Ids {
 /// Which test document: `Groups` = group "Grp" of group "Inner" (N1, N2) and "A" above "X"
 /// masked by the path "M", without thumbnails (20 px rows, the whole tree fits the list);
 /// `Masks` = "Y" masked by a group of "M1", "M2", "BM" with a bitmap mask, "X" masked by "M"
-/// (thumbnails 24 px); `Nested` = group "GZ" of "Z" masked by the path "ZM" and "W", "X"
-/// masked by "M" (thumbnails 24 px).
+/// (thumbnails 34 × 23 px); `Nested` = group "GZ" of "Z" masked by the path "ZM" and "W", "X"
+/// masked by "M" (thumbnails 34 × 23 px).
 #[derive(Clone, Copy, PartialEq)]
 enum Doc {
     Groups,
@@ -523,10 +523,10 @@ fn switch_off_mask_thumbnail_edits_like_the_reference() {
     click(&mut h, "X", Modifiers::NONE);
     assert_eq!(selection(&h), vec![ids.mg]);
     let name = row(&h, "X");
-    // thumbnails 24 px: mask thumbnail ends 6 px before the name, the object thumbnail 12 px
+    // thumbnails 34 px wide: mask thumbnail ends 6 px before the name, the object thumbnail 12 px
     // (chain) before the mask thumbnail
     let mask_thumb = Pos2::new(name.left() - 6.0 - 12.0, name.center().y);
-    let obj_thumb = Pos2::new(name.left() - 6.0 - 24.0 - 12.0 - 12.0, name.center().y);
+    let obj_thumb = Pos2::new(name.left() - 6.0 - fp_ui::panels::layers::thumb_frame_size(32).x - 12.0 - 12.0, name.center().y);
     let focus = fp_ui::theme::Theme::current(&h.ctx).colors.focus;
     assert!(blue(&h, "X") && framed(&h, obj_thumb, focus), "object thumbnail framed blue");
     // mask thumbnail click: mask editing
@@ -556,11 +556,11 @@ fn chain_at(h: &H, p: Pos2) -> bool {
 }
 
 /// Number of tree-line strokes (thin vertical lines) in the indentation step just left of the
-/// thumbnail of the row with the text rect `label` (24 px thumbnails): 1 = content bracket,
+/// thumbnail of the row with the text rect `label` (34 px wide thumbnails): 1 = content bracket,
 /// 2 = mask bracket (FB-84).
 fn bracket_lines(h: &H, label: Rect) -> usize {
     let col = fp_ui::theme::Theme::current(&h.ctx).colors.list_border;
-    let thumb_left = label.left() - 6.0 - 24.0;
+    let thumb_left = label.left() - 6.0 - fp_ui::panels::layers::thumb_frame_size(32).x;
     let (x0, x1) = (thumb_left - fp_ui::panels::layers::TREE_INDENT, thumb_left);
     fn lines(shape: &egui::epaint::Shape, col: egui::Color32, out: &mut Vec<Rect>) {
         match shape {
@@ -602,8 +602,8 @@ fn masked_object_inside_a_group_has_the_mask_row_look() {
     let z = row(&h, "Z");
     assert!(z.left() > top_row(&h, "GZ").left() + 40.0, "one level deeper, two thumbnails");
     let mask_thumb = Pos2::new(z.left() - 6.0 - 12.0, z.center().y);
-    let chain = Pos2::new(z.left() - 6.0 - 24.0 - 6.0, z.center().y);
-    let obj_thumb = Pos2::new(z.left() - 6.0 - 24.0 - 12.0 - 12.0, z.center().y);
+    let chain = Pos2::new(z.left() - 6.0 - fp_ui::panels::layers::thumb_frame_size(32).x - 6.0, z.center().y);
+    let obj_thumb = Pos2::new(z.left() - 6.0 - fp_ui::panels::layers::thumb_frame_size(32).x - 12.0 - 12.0, z.center().y);
     assert!(chain_at(&h, chain), "chain icon between the thumbnails");
     let focus = fp_ui::theme::Theme::current(&h.ctx).colors.focus;
     let green = egui::Color32::from_rgb(0x66, 0xFF, 0x00);

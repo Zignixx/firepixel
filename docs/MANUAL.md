@@ -378,6 +378,18 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   *Show fill and stroke* is on in *Alpha channel* / *Path outline* mode and the content alone otherwise, the mask
   thumbnail shows the mask in grey on black (a vector mask with a pen badge), both related to the canvas and
   updated when a stroke ends, and the mask thumbnail of the mask being edited gets a 2 px green frame.
+  The thumbnails are 34 × 23 px with a 1 px dark grey frame (image area 32 × 21, the page fitted inside,
+  27 px object rows); the content thumbnail of a masked bitmap carries a small bitmap badge bottom right.
+- **The underlay of a bitmap mask.** After *Paste Inside* onto a bitmap the mask bitmap also shows under
+  the content (*Show fill and stroke*, *Alpha channel* mode). As in the original, a bitmap mask's
+  inspector has only *Alpha channel* / *Grayscale* (plus Firepixel's *Invert*) and no checkbox for it; the
+  tooltip of *Alpha channel* says so. To mask by the bitmap's transparency without the underlay, use
+  *Group as Mask* or *Paste as Mask* and then pick *Alpha channel*; switching an existing mask to
+  *Grayscale* also drops it (the mask value then follows the brightness); scripts can turn it off with
+  `setElementMaskShowAttrs(false)`. The *Opacity* field at the top of the Layers panel acts on the
+  selected object: with the mask selected it is the mask object's own opacity, which only sets how
+  strongly *Invert* hides; the masking and the underlay keep their strength (its tooltip says so). With
+  the masked object selected, the opacity fields fade the content, so the underlay shows through more.
 - *Select ▸ Select Inverse* inverts a pixel selection only; without one it shows a warning and leaves
   the selected objects alone.
 - *Text ▸ Size ▸ Larger / Smaller* change the size by exactly 1 pt (24 → 25 → 24), on selected texts

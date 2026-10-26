@@ -4156,6 +4156,14 @@ pub fn bitmap_mask_radios(ui: &mut Ui, st: &mut AppState, d: Dl, id: &str) {
     {
         st.run("modify.mask.options", json!({"mode": "path"}));
     }
+    // FB-101: what Alpha channel does and where the Paste Inside underlay comes from (the
+    // reference offers no "Show fill and stroke" for a bitmap mask, RE spec 68 §4.2 rules 2 and 5)
+    fields::tip(
+        ui,
+        (id, "alpha-tip"),
+        d.r(39.0, 2.0, 80.0, 10.0),
+        &t("pi-tip-bmask-alpha"),
+    );
     if fields::radio(
         ui,
         egui::Id::new((id, "gray")),

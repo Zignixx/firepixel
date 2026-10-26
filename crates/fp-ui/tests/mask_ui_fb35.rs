@@ -199,7 +199,7 @@ fn mask_thumbnail_click_selects_the_mask_with_green_frame() {
     // the mask thumbnail is the thumbnail directly left of the row name
     let name = text_rect(&h, "B1").expect("row");
     let thumb = Pos2::new(name.left() - 6.0 - 8.0, name.center().y);
-    let grey = fp_ui::theme::Theme::current(&h.ctx).colors.list_border;
+    let grey = fp_ui::panels::layers::THUMB_FRAME;
     let normal = frames(&h, grey).into_iter().find(|(r, _)| r.contains(thumb) && r.width() < 60.0).expect("normal mask thumbnail frame");
     assert_eq!(normal.1, 1.0, "normal frame 1 px");
     click(&mut h, thumb);

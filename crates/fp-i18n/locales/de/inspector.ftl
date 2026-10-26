@@ -492,6 +492,7 @@ pi-colorize = Kolorieren
 pi-mask = Maske:
 pi-mask-alpha = Alphakanal
 pi-mask-gray = Graustufen
+pi-tip-bmask-alpha = Alphakanal: Die Transparenz der Masken-Bitmap schneidet den Inhalt zu. Nach „Innen einfügen“ liegt die Bitmap zusätzlich unter dem Inhalt („Füllung und Pinselstrich anzeigen“); „Als Maske gruppieren“ oder „Als Maske einfügen“ und danach „Alphakanal“ maskiert genauso, ohne Unterlage.
 pi-mask-path-outline = Pfadumriss
 pi-mask-grayscale = Graustufendarstellung
 pi-mask-show-attrs = Füllung und Pinselstrich anzeigen
