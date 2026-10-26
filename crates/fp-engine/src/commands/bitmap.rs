@@ -594,7 +594,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("trimEnd", ParamKind::Bool, "Endpunkt weglassen (Vorgabe aus: echte Züge malen bis einschließlich Endpunkt)")
             .opt("seed", ParamKind::Integer { min: Some(0), max: None }, "Zufalls-Startwert des Zugs (natürliche Pinsel; Vorgabe aus den Punkten)")
             .opt("velocities", ParamKind::Json, "Geschwindigkeit je Punkt (VELf in px/ms, 1/256-Schritte, aus der Zeigerbewegung; Vorgabe 0,125)")
-            .opt("newBitmap", ParamKind::Bool, "in ein neues Bitmap malen, auch wenn eine Bitmap ausgewählt ist (Zug außerhalb der Bitmap)")
+            .opt("newBitmap", ParamKind::Bool, "in ein neues Bitmap malen, auch wenn eine Bitmap ausgewählt ist oder `at` eine Bitmap trifft (Strg beim Drücken von Pinsel/Buntstift, FB-96)")
             .opt("at", ParamKind::Point, "press point of the tool (FB-65): a stroke that starts on a bitmap paints into it, selected or not")
             .opt("tool", ParamKind::Enum { values: vec!["brush".into(), "pencil".into()] }, "Werkzeug (Vorgabe: Pinsel)")
             .opt("draw", ParamKind::Json, "älterer Aufruf: Strich als Zeichenbefehl {command: tool.shape, params} – der Pinsel wird daraus gebildet")

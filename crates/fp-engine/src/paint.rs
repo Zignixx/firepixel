@@ -884,22 +884,46 @@ pub fn stroke_target(
     {
         return sel;
     }
-    let hit = at
-        .and_then(|p| {
-            docops::hits_at(
-                doc,
-                page,
-                frame,
-                p,
-                &crate::geometry::BasicGeometry,
-                &docops::HitOptions::default(),
-            )
-            .into_iter()
-            .next()
-        })
-        .and_then(|path| doc.element_at(&path).cloned())
-        .filter(|e| matches!(e.kind, ElementKind::Bitmap(_)));
+    let hit = at.and_then(|p| bitmap_hit_at(doc, page, frame, p));
     hit.map(|e| (e.id, e)).or(sel)
+}
+
+/// The bitmap that is the topmost object under `p` (on a shown and unlocked layer), if any.
+fn bitmap_hit_at(
+    doc: &Document,
+    page: usize,
+    frame: usize,
+    p: fp_geom::Point,
+) -> Option<Arc<fp_model::Element>> {
+    docops::hits_at(
+        doc,
+        page,
+        frame,
+        p,
+        &crate::geometry::BasicGeometry,
+        &docops::HitOptions::default(),
+    )
+    .into_iter()
+    .next()
+    .and_then(|path| doc.element_at(&path).cloned())
+    .filter(|e| matches!(e.kind, ElementKind::Bitmap(_)))
+}
+
+/// FB-96 (Firepixel extension): does a Brush or Pencil press at `at` with Ctrl (Cmd on macOS)
+/// paint a new bitmap on top instead of into the bitmap under the point? Yes when the topmost
+/// object under the point is a bitmap; not while a selected bitmap inside a group (a mask being
+/// painted, a subselected bitmap) is the target, which [`stroke_target`] keeps in any case.
+pub fn ctrl_paints_new_bitmap(
+    doc: &Document,
+    page: usize,
+    frame: usize,
+    selection: &[ElementId],
+    at: fp_geom::Point,
+) -> bool {
+    let grouped = target_bitmap(doc, page, selection).is_some_and(|(id, _)| {
+        docops::find_on_page(doc, page, id).is_some_and(|p| in_group(doc, &p))
+    });
+    !grouped && bitmap_hit_at(doc, page, frame, at).is_some()
 }
 
 /// Is the element at `path` inside a group or a mask (not only inside sublayers)?

@@ -461,6 +461,10 @@ pub enum Cursor {
     /// Deselect marquee of the Pointer / Subselection (Firepixel extension FB-56,
     /// `Firepixel_AltMarqueeDeselects`): arrow with a "−" badge.
     Deselect,
+    /// Brush / Pencil with Ctrl held over a bitmap (Firepixel extension FB-96): the glyph with a
+    /// "+" badge, a press paints a new bitmap on top.
+    BrushNew,
+    PencilNew,
 }
 
 /// Antwort eines Werkzeugs.

@@ -140,7 +140,9 @@ Mit **Voreinstellungen ▸ Bearbeitung ▸ Pfeiltasten verschieben die gewählte
 
 **Bitmap-Werkzeuge:** Der **Pinsel** malt Pixel: Ein Strich, der auf einer Bitmap beginnt, malt in
 diese Bitmap (ohne Zusatztaste, gewählt oder nicht) und wählt sie; ein Strich, der auf leerer Fläche
-beginnt, malt in die gewählte Bitmap oder legt auf der aktuellen Ebene eine neue an. Eine gesperrte
+beginnt, malt in die gewählte Bitmap oder legt auf der aktuellen Ebene eine neue an. Halten Sie beim
+Drücken von Pinsel oder Buntstift über einer Bitmap **Strg** (macOS: Cmd), entsteht stattdessen eine neue
+Bitmap darüber (Firepixel-Erweiterung; der Zeiger zeigt ein „+“). Eine gesperrte
 oder ausgeblendete Ebene wird übersprungen (es gilt die nächste sichtbare, nicht gesperrte Ebene
 darunter, sonst darüber); gibt es keine, meldet die Statusleiste, dass keine Ebene bemalbar ist. **Radiergummi**, **Weichzeichner** und **Stempel** arbeiten mit
 weichem Rand wie im Original; Esc beendet das Malen und wechselt zum Zeiger. Nach einer Auswahl mit

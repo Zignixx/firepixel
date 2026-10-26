@@ -219,7 +219,7 @@ fn badge_plus(p: &Painter, at: Pos2, c: &Palette, minus: bool) {
 /// Combine-mode badge of the bitmap selection tools (RE spec 69 section 4): a small dark square
 /// with a light "+" (add), "-" (subtract) or "x" (intersect), centred on `o`. Own shapes, only
 /// the meaning follows the reference.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Sign {
     Plus,
     Minus,
@@ -256,6 +256,9 @@ fn selection_badge(c: Cursor) -> Option<(Cursor, Sign)> {
         Cursor::WandAdd => (Cursor::Wand, Sign::Plus),
         Cursor::WandSubtract => (Cursor::Wand, Sign::Minus),
         Cursor::WandIntersect => (Cursor::Wand, Sign::Cross),
+        // Brush / Pencil with Ctrl over a bitmap: a press paints a new bitmap (FB-96)
+        Cursor::BrushNew => (Cursor::Brush, Sign::Plus),
+        Cursor::PencilNew => (Cursor::Pencil, Sign::Plus),
         _ => return None,
     })
 }
@@ -696,6 +699,7 @@ pub fn has_precision_variant(c: Cursor) -> bool {
             | Cursor::PenJoin
             | Cursor::PenNew
             | Cursor::Pencil
+            | Cursor::PencilNew
             | Cursor::Eyedropper
             | Cursor::Bucket
             | Cursor::Gradient
@@ -792,7 +796,9 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
         | Cursor::LassoIntersect
         | Cursor::WandAdd
         | Cursor::WandSubtract
-        | Cursor::WandIntersect => {}
+        | Cursor::WandIntersect
+        | Cursor::BrushNew
+        | Cursor::PencilNew => {}
         Cursor::Crosshair => crosshair(p, at, colors, 2.0, 8.0),
         Cursor::Pivot => {
             crosshair(p, at, colors, 0.0, 7.0);
@@ -952,6 +958,8 @@ mod tests {
                 Cursor::MoveMarquee,
                 Cursor::MovePixels,
                 Cursor::Deselect,
+                Cursor::BrushNew,
+                Cursor::PencilNew,
             ] {
                 paint(p, pos2(50.0, 50.0), c, &theme.colors, false);
                 paint(p, pos2(50.0, 50.0), c, &theme.colors, true);
@@ -995,5 +1003,30 @@ mod tests {
         );
         assert!(minus_segs.iter().any(horizontal), "−: horizontal bar");
         assert!(!minus_segs.iter().any(vertical), "−: no vertical bar");
+    }
+
+    /// FB-96: Brush and Pencil with Ctrl over a bitmap show their glyph plus the "+" badge of the
+    /// selection tools (a badge square and two more strokes than the plain glyph).
+    #[test]
+    fn new_bitmap_cursors_have_a_plus_badge() {
+        let count = |c: Cursor| {
+            let ctx = egui::Context::default();
+            let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+                let theme = crate::theme::Theme::new(crate::theme::ThemeKind::Normal);
+                paint(ui.painter(), pos2(50.0, 50.0), c, &theme.colors, false);
+            });
+            out.textures_delta.clear();
+            out.shapes.len()
+        };
+        assert_eq!(count(Cursor::BrushNew), count(Cursor::Brush) + 3);
+        assert_eq!(count(Cursor::PencilNew), count(Cursor::Pencil) + 3);
+        assert_eq!(
+            selection_badge(Cursor::BrushNew),
+            Some((Cursor::Brush, Sign::Plus))
+        );
+        assert_eq!(
+            selection_badge(Cursor::PencilNew),
+            Some((Cursor::Pencil, Sign::Plus))
+        );
     }
 }

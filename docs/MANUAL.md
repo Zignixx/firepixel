@@ -135,7 +135,9 @@ With **Preferences ▸ Edit ▸ Arrow keys move the selected pixels with the sel
 
 **Bitmap tools:** the **Brush** paints pixels: a stroke that starts on a bitmap paints into that
 bitmap (no modifier key needed, selected or not) and selects it; a stroke that starts on empty space
-paints into the selected bitmap, or creates a new one on the current layer. A locked or hidden layer
+paints into the selected bitmap, or creates a new one on the current layer. Holding **Ctrl** (Cmd on
+macOS) when you press the Brush or Pencil over a bitmap paints a new bitmap on top of it instead
+(Firepixel extension; the cursor shows a "+" badge). A locked or hidden layer
 is skipped (the nearest shown, unlocked layer below, else above, is used); with none the status bar
 says that no layer can be painted on. **Eraser**, **Blur** and **Rubber Stamp** work with a
 soft edge as in the original; Esc ends painting and switches to the Pointer. After a Marquee, Lasso

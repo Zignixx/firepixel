@@ -974,7 +974,7 @@ impl BrushTool {
     }
 
     /// Beginnt den Zug: Auftrag festlegen, Zielbitmap lesen, ersten Abdruck rechnen.
-    fn begin(&mut self, ctx: &ToolContext, pos: Point, time_ms: u64) {
+    fn begin(&mut self, ctx: &ToolContext, pos: Point, time_ms: u64, ctrl: bool) {
         self.active = true;
         self.zoom = ctx.zoom;
         self.raw = vec![pos];
@@ -991,8 +991,14 @@ impl BrushTool {
         self.offset = 0.0;
         // FB-65: a Brush or Pencil stroke that starts on a bitmap paints into it
         let at = (self.id != ToolId::Eraser).then_some(pos);
-        let mut target =
-            crate::paint::stroke_target(ctx.doc, ctx.page, ctx.frame, &ctx.selection.elements, at);
+        // FB-96 (Firepixel extension): Ctrl (Cmd) held at the press over a bitmap paints a new
+        // bitmap on top instead; Ctrl pressed later during the stroke changes nothing
+        let new_bitmap = ctrl && self.ctrl_paints_new_bitmap(ctx, pos);
+        let mut target = if new_bitmap {
+            None
+        } else {
+            crate::paint::stroke_target(ctx.doc, ctx.page, ctx.frame, &ctx.selection.elements, at)
+        };
         let mut base = target.as_ref().and_then(|(_, e)| match &e.kind {
             ElementKind::Bitmap(b) => docops::bitmap_image(b),
             _ => None,
@@ -1003,6 +1009,9 @@ impl BrushTool {
         self.params = self.job_params(ctx, start_px);
         if let Some(a) = at {
             self.params["at"] = json!([a.x, a.y]);
+        }
+        if new_bitmap {
+            self.params["newBitmap"] = json!(true);
         }
         self.live = None;
         if self.id == ToolId::Brush {
@@ -1249,6 +1258,33 @@ impl BrushTool {
         }
     }
 
+    /// FB-96: would a press at `pos` with Ctrl paint a new bitmap (Brush and Pencil only)?
+    fn ctrl_paints_new_bitmap(&self, ctx: &ToolContext, pos: Point) -> bool {
+        matches!(self.id, ToolId::Brush | ToolId::Pencil)
+            && crate::paint::ctrl_paints_new_bitmap(
+                ctx.doc,
+                ctx.page,
+                ctx.frame,
+                &ctx.selection.elements,
+                pos,
+            )
+    }
+
+    /// Hover cursor: with Ctrl held over a bitmap (no stroke running) the glyph with the "+"
+    /// badge of a new bitmap (FB-96); it follows a modifier change without motion like every
+    /// hover cursor (FB-72).
+    fn hover_cursor(&self, ctx: &ToolContext, pos: Point, ctrl: bool) -> Cursor {
+        if !self.active && ctrl && self.ctrl_paints_new_bitmap(ctx, pos) {
+            if self.id == ToolId::Pencil {
+                Cursor::PencilNew
+            } else {
+                Cursor::BrushNew
+            }
+        } else {
+            self.cursor()
+        }
+    }
+
     fn overlay_for(&self, ctx: &ToolContext) -> Vec<Overlay> {
         let mut v = Vec::new();
         if let Some(f) = &self.frozen {
@@ -1390,7 +1426,7 @@ impl ToolMachine for BrushTool {
                 }
             }
             PointerKind::Down => {
-                self.begin(ctx, *pos, ev.time_ms);
+                self.begin(ctx, *pos, ev.time_ms, ev.mods.ctrl);
                 // FB-71: Shift held at the press draws the line from the press point
                 self.line_anchor = ev.mods.shift.then_some(0);
                 self.alt_latch = ev.mods.alt;
@@ -1415,7 +1451,8 @@ impl ToolMachine for BrushTool {
             }
             _ => {}
         }
-        ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor())
+        let cursor = self.hover_cursor(ctx, *pos, ev.mods.ctrl);
+        ToolResponse::with_overlay(self.overlay_for(ctx), cursor)
     }
 
     fn finish(&mut self, ctx: &ToolContext) -> ToolResponse {
