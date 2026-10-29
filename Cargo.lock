@@ -1969,7 +1969,7 @@ checksum = "aedcfb3409746eddb02b9e19ebda1c3394f759a152e48ee875a0844d1b955484"
 
 [[package]]
 name = "firepixel"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "eframe",
  "embed-resource",
@@ -1979,7 +1979,7 @@ dependencies = [
 
 [[package]]
 name = "firepixel-cli"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -2142,7 +2142,7 @@ dependencies = [
 
 [[package]]
 name = "fp-ai"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "faer",
  "fp-geom",
@@ -2160,7 +2160,7 @@ dependencies = [
 
 [[package]]
 name = "fp-batch"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "chrono",
  "crc32fast",
@@ -2189,7 +2189,7 @@ dependencies = [
 
 [[package]]
 name = "fp-color"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "crc32fast",
  "fp-i18n",
@@ -2200,7 +2200,7 @@ dependencies = [
 
 [[package]]
 name = "fp-effects"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "fp-color",
  "fp-geom",
@@ -2212,7 +2212,7 @@ dependencies = [
 
 [[package]]
 name = "fp-engine"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "fp-ai",
  "fp-batch",
@@ -2239,7 +2239,7 @@ dependencies = [
 
 [[package]]
 name = "fp-export"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -2264,7 +2264,7 @@ dependencies = [
 
 [[package]]
 name = "fp-fwpng"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -2280,7 +2280,7 @@ dependencies = [
 
 [[package]]
 name = "fp-geom"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "serde",
  "serde_json",
@@ -2288,7 +2288,7 @@ dependencies = [
 
 [[package]]
 name = "fp-i18n"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "fluent-bundle",
  "fluent-syntax",
@@ -2299,7 +2299,7 @@ dependencies = [
 
 [[package]]
 name = "fp-io"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "flate2",
  "fp-color",
@@ -2326,7 +2326,7 @@ dependencies = [
 
 [[package]]
 name = "fp-mcp"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "bytes",
  "fp-batch",
@@ -2355,7 +2355,7 @@ dependencies = [
 
 [[package]]
 name = "fp-model"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "fp-color",
  "fp-geom",
@@ -2366,11 +2366,11 @@ dependencies = [
 
 [[package]]
 name = "fp-neutral"
-version = "0.2.20"
+version = "0.2.21"
 
 [[package]]
 name = "fp-raster"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "fp-color",
  "fp-geom",
@@ -2384,7 +2384,7 @@ dependencies = [
 
 [[package]]
 name = "fp-render"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "fp-color",
  "fp-effects",
@@ -2401,7 +2401,7 @@ dependencies = [
 
 [[package]]
 name = "fp-script"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "boa_engine",
  "fp-color",
@@ -2423,11 +2423,11 @@ dependencies = [
 
 [[package]]
 name = "fp-testlist"
-version = "0.2.20"
+version = "0.2.21"
 
 [[package]]
 name = "fp-text"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "fp-color",
  "fp-geom",
@@ -2444,7 +2444,7 @@ dependencies = [
 
 [[package]]
 name = "fp-trace"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "fp-color",
  "fp-geom",
@@ -2458,7 +2458,7 @@ dependencies = [
 
 [[package]]
 name = "fp-ui"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "arboard",
  "eframe",
@@ -2497,7 +2497,7 @@ dependencies = [
 
 [[package]]
 name = "fp-vector"
-version = "0.2.20"
+version = "0.2.21"
 dependencies = [
  "fp-color",
  "fp-geom",
