@@ -657,7 +657,7 @@ Important panels:
 - **Pages / States:** pages and animation frames, master page, onion skinning. The Play button in the
   status bar (or *View ▸ Play/Stop*) plays the states on the canvas with each state's delay; states excluded from export (*Include when
   exporting* off) are skipped, and playback loops until you press Stop (the document's loop setting is
-  for the GIF and APNG export). It shows a Stop square while playing. *File ▸ Image Preview* plays the
+  for the GIF and APNG export). The timing follows the delays over the whole loop, like the exported GIF: a state shorter than one screen refresh still shows for one refresh and the time is made up on the next states. It shows a Stop square while playing. *File ▸ Image Preview* plays the
   same way, large documents too, rendering the states ahead. When an animation
   instance is selected, the canvas shows its motion path (green start, red end), and the selection
   frame encloses only the current frame.

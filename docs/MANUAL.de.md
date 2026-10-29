@@ -719,7 +719,7 @@ Wichtige Bedienfelder:
   der Statusleiste (oder *Ansicht ▸ Abspielen/Stopp*) spielt die Status auf der Leinwand mit der
   Verzögerung jedes Status ab; vom Export ausgeschlossene Status (*Beim Exportieren einschließen* aus)
   werden übersprungen, und die Wiedergabe läuft in einer Schleife, bis Sie Stopp drücken (die
-  Schleifeneinstellung des Dokuments gilt für den GIF- und APNG-Export); währenddessen zeigt er ein
+  Schleifeneinstellung des Dokuments gilt für den GIF- und APNG-Export). Die Zeiten folgen über die ganze Schleife den Verzögerungen wie im exportierten GIF: Ein Status, der kürzer als eine Bildwiederholung ist, steht eine Wiederholung lang, und die Zeit wird bei den nächsten Status aufgeholt. Währenddessen zeigt er ein
   Stopp-Quadrat. *Datei ▸ Bildvorschau* spielt ebenso ab, auch große Dokumente, und berechnet die Status
   vorab. Ist eine
   Animationsinstanz gewählt, zeigt die Leinwand ihren Bewegungspfad (grüner Start, rotes Ende), und der

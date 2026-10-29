@@ -136,7 +136,8 @@ pub fn tick(d: &mut ImagePreview, ctx: &egui::Context, base: &super::worker::Job
             return;
         }
         d.frame = next;
-        d.next_tick = Some(now + next_delay);
+        // on the schedule like the canvas playback (T144: no drift of one frame per state)
+        d.next_tick = Some(crate::playback::next_due(due, now, next_delay));
     }
     let wait = d.next_tick.map(|n| (n - now).max(0.0)).unwrap_or(0.0);
     ctx.request_repaint_after(std::time::Duration::from_secs_f64(wait.min(1.0)));

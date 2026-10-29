@@ -80,6 +80,25 @@ pub fn next_included_state(cur: usize, included: &[bool]) -> Option<usize> {
     (1..=n).map(|k| (cur + k) % n).find(|i| included[*i])
 }
 
+/// Longest lag behind the schedule that playback catches up on (seconds); a longer hold-up (a slow
+/// render, a hidden window) restarts the schedule instead.
+const MAX_LAG: f64 = 0.25;
+
+/// When the state shown at `now` (it was due at `due`) hands over to the next one, `delay` seconds
+/// later: on the schedule (`due + delay`), so the lateness of the frame that showed it (timer
+/// granularity, vsync, render time) does not add up over a pass (T144: each state lasted up to one
+/// UI frame longer than its delay). States shorter than a UI frame are still all shown, one per
+/// frame, and the time is made up on the longer states that follow. Lagging more than
+/// [`MAX_LAG`] behind, the schedule restarts from `now`: no burst of states to catch up.
+pub fn next_due(due: f64, now: f64, delay: f64) -> f64 {
+    let on_schedule = due + delay;
+    if now - on_schedule > MAX_LAG {
+        now + delay
+    } else {
+        on_schedule
+    }
+}
+
 /// Stops the playback (the toggle shows "Play" again).
 fn stop(st: &mut AppState) {
     st.session.ui.playing = false;
@@ -129,7 +148,7 @@ pub fn frame(ctx: &egui::Context, st: &mut AppState) {
             return;
         };
         st.session.show_state(next);
-        st.playback.due = Some(now + delay_secs(st, next));
+        st.playback.due = Some(next_due(due, now, delay_secs(st, next)));
     }
     let wait = st.playback.due.map(|d| (d - now).max(0.0)).unwrap_or(0.0);
     ctx.request_repaint_after(std::time::Duration::from_secs_f64(wait));
@@ -137,7 +156,51 @@ pub fn frame(ctx: &egui::Context, st: &mut AppState) {
 
 #[cfg(test)]
 mod tests {
-    use super::next_included_state;
+    use super::{next_due, next_included_state};
+
+    #[test]
+    fn schedule_does_not_drift() {
+        // frames every 1/60 s, delay 0.07 s: each switch fires up to a frame late, but the
+        // schedule keeps the average (T144)
+        let dt = 1.0 / 60.0;
+        let delay = 0.07;
+        let (mut now, mut due) = (0.0f64, 0.0f64);
+        let mut switches = Vec::new();
+        while switches.len() < 100 {
+            if now + 1e-6 >= due {
+                switches.push(now);
+                due = next_due(due, now, delay);
+            }
+            now += dt;
+        }
+        let span = switches[99] - switches[0];
+        assert!((span - 99.0 * delay).abs() <= dt + 1e-9, "span {span}");
+        // a long hold-up restarts the schedule instead of catching up
+        assert_eq!(next_due(1.0, 2.0, 0.1), 2.1);
+        assert_eq!(next_due(1.0, 1.05, 0.1), 1.1);
+        // a short lag stays on the schedule: the next frame shows the next state at once
+        assert_eq!(next_due(1.0, 1.15, 0.1), 1.1);
+    }
+
+    #[test]
+    fn states_shorter_than_a_frame_keep_the_pass_time() {
+        // UI frames of 1/30 s (a remote session), delays 0.02 / 0.03 / 0.04 / 0.05 s (T144
+        // corpus file 2): every state is shown, the 0.14 s cycle is kept on average
+        let dt = 1.0 / 30.0;
+        let delays = [0.02, 0.03, 0.04, 0.05];
+        let (mut now, mut due, mut k) = (0.0f64, 0.0f64, 0usize);
+        let mut switches = Vec::new();
+        while switches.len() < 161 {
+            if now + 1e-6 >= due {
+                switches.push(now);
+                due = next_due(due, now, delays[k % 4]);
+                k += 1;
+            }
+            now += dt;
+        }
+        let span = switches[160] - switches[0];
+        assert!((span - 40.0 * 0.14).abs() <= dt + 1e-9, "span {span}");
+    }
 
     #[test]
     fn excluded_states_are_skipped() {
