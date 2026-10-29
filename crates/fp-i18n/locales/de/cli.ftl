@@ -158,6 +158,25 @@ cli-language-template-arg-overwrite = Vorhandene Dateien überschreiben
 cli-language-template-arg-from = Ausgangssprache der Vorlage
     .value = VON
 cli-language-list = Verfügbare Sprachen (eingebaut und aus den Sprachordnern) mit Vollständigkeit
+cli-models = KI-Modelle auflisten, herunterladen und prüfen (Objektauswahl, Motiv auswählen, Kante verfeinern, KI-Hochskalierung)
+    .examples = 
+        Beispiele:
+          firepixel-cli models list
+          firepixel-cli models download realEsrganX4 realEsrganX2
+          firepixel-cli models download all
+          firepixel-cli models verify
+
+        Heruntergeladen wird nur von den offiziellen Quellen des Katalogs (siehe „KI-Modelle verwalten...“),
+        in den Modellordner (Voreinstellung oder %LOCALAPPDATA%\Firepixel\Models); behalten wird eine Datei erst
+        nach der Prüfung von Größe und SHA-256. Der Aufruf „models download“ ist Ihre Zustimmung zum Download.
+cli-models-list = Katalog mit Größe, Lizenz und ob das Modell vorhanden ist
+cli-models-download = Modelle von ihren offiziellen Quellen herunterladen (mit SHA-256-Prüfung)
+cli-models-download-arg-models = Modellnamen (z. B. sam2Tiny, birefnetLite, realEsrganX4) oder all
+    .value = MODELL
+cli-models-download-arg-force = Erneut herunterladen, auch wenn eine geprüfte Datei vorhanden ist
+cli-models-verify = Vorhandene Modelldateien gegen die SHA-256 des Katalogs prüfen
+cli-models-verify-arg-models = Modellnamen oder all (Vorgabe: alle)
+    .value = MODELL
 cli-root-arg-json = Ausgabe als JSON (maschinenlesbar)
 cli-root-arg-lang = Sprache der Ausgaben (z. B. de, en; Vorgabe: FIREPIXEL_LANG bzw. Systemsprache)
     .value = CODE
@@ -280,3 +299,11 @@ cli-check-none = keine
 cli-check-not-utf8 = { $path }: keine UTF-8-Datei (bitte als UTF-8 speichern)
 cli-check-no-path = { $path }: weder Datei noch Ordner
 cli-check-no-ftl = { $path }: keine .ftl-Dateien gefunden
+cli-models-folder = Modellordner für Downloads: { $folder }
+cli-models-present = vorhanden ({ $path })
+cli-models-absent = fehlt
+cli-models-unknown = Unbekanntes Modell „{ $name }“. Bekannt: { $known }, all
+cli-models-skip = { $name }: schon vorhanden und geprüft ({ $path })
+cli-models-dl-start = Lade { $name } von { $url } ({ $size }, Lizenz { $license }) ...
+cli-models-dl-done = { $name }: heruntergeladen und SHA-256 geprüft in { $seconds } s ({ $rate } MB/s) -> { $path }
+cli-models-verify-ok = { $name }: SHA-256 in Ordnung ({ $seconds } s, { $path })

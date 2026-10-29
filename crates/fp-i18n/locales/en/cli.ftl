@@ -158,6 +158,25 @@ cli-language-template-arg-overwrite = Overwrite existing files
 cli-language-template-arg-from = Source language of the template
     .value = FROM
 cli-language-list = Available languages (built-in and from the language folders) with completeness
+cli-models = List, download and verify the AI models (object selection, select subject, refine edge, AI upscale)
+    .examples = 
+        Examples:
+          firepixel-cli models list
+          firepixel-cli models download realEsrganX4 realEsrganX2
+          firepixel-cli models download all
+          firepixel-cli models verify
+
+        Downloads come only from the official sources of the catalogue (see "Manage AI Models..."),
+        go to the model folder (preference or %LOCALAPPDATA%\Firepixel\Models) and are kept only after
+        the size and SHA-256 check. Calling "models download" is your consent to the download.
+cli-models-list = Catalogue with size, licence and whether the model is present
+cli-models-download = Download models from their official sources (with SHA-256 check)
+cli-models-download-arg-models = Model names (e.g. sam2Tiny, birefnetLite, realEsrganX4) or all
+    .value = MODEL
+cli-models-download-arg-force = Download again even if a verified file is present
+cli-models-verify = Check present model files against the SHA-256 of the catalogue
+cli-models-verify-arg-models = Model names or all (default: all)
+    .value = MODEL
 cli-root-arg-json = Output as JSON (machine-readable)
 cli-root-arg-lang = Language of the output (e.g. de, en; default: FIREPIXEL_LANG or the system language)
     .value = CODE
@@ -280,3 +299,11 @@ cli-check-none = none
 cli-check-not-utf8 = { $path }: not a UTF-8 file (please save as UTF-8)
 cli-check-no-path = { $path }: neither a file nor a folder
 cli-check-no-ftl = { $path }: no .ftl files found
+cli-models-folder = Model folder for downloads: { $folder }
+cli-models-present = present ({ $path })
+cli-models-absent = missing
+cli-models-unknown = Unknown model "{ $name }". Known: { $known }, all
+cli-models-skip = { $name }: already present and verified ({ $path })
+cli-models-dl-start = Downloading { $name } from { $url } ({ $size }, licence { $license }) ...
+cli-models-dl-done = { $name }: downloaded and SHA-256 verified in { $seconds } s ({ $rate } MB/s) -> { $path }
+cli-models-verify-ok = { $name }: SHA-256 OK ({ $seconds } s, { $path })

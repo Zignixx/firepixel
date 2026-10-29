@@ -434,14 +434,14 @@ extension spelling under ⋯ (lower/upper case, `jpg`/`jpeg`).
 | `effect.stroke` | Stroke (PSD live effect, F138) | **A** `size` 1…250 px *3*; **A** `position` outside/inside/center *outside*; `blendMode` normal/multiply/screen/overlay/darken/lighten/colorBurn/colorDodge/linearDodge/softLight *normal*; `opacity` 0…100 % *100*; **A** `color` *#ff0000*; `expandCanvas` on (canvas grows by an outside stroke) | yes | `fp-effects` stroke of the PSD live effect | P2 |
 | `effect.style` | Apply style | **A** `name`; **A** `library` (style library `.json` or FW-PNG, imported first; otherwise the document's own styles). Unknown style = error of the item | yes | registry `panel.styles.importLibrary`, `select.all`, `pi.style.apply` in a headless session (documents stay documents) | P2 |
 | `adjust.lut` | Colour LUT (.cube) | **A** `file` (`.cube`, 3D, `LUT_3D_SIZE` 2…256, `DOMAIN_MIN/MAX`; 1D = error; checked in the validation); **A** `strength` 0…100 % *100* | yes | own `.cube` reader (cached by path and time), trilinear | P3 |
-| `ai.upscale` | AI upscale ×2/×4 | **A** `scale` 2/4 *4* (also as a number); `model` auto/realEsrganX4/realEsrganX2 *auto* (auto = the model of the factor; ×4 with the ×2 model = two passes, ×2 with the ×4 model = ×4, then Lanczos 3 to half, as `outscale` in Real-ESRGAN); `alpha` network/bicubic *network* (transparency as a grey image through the same network, as Real-ESRGAN does, or bicubic; images without transparency skip it). Models Real-ESRGAN x4plus/x2plus (BSD-3-Clause) via "Manage AI Models..." (`ai.manageModels`); model missing → hint + "Manage AI Models...", never a download; output larger than 32768 px per side or 2²⁸ pixels → error of the item; one item at a time (the network uses all cores) | yes (region: the network runs on a detail of at most 96 × 96 px in the middle of the preview, the rest is bicubic, with a hint) | **Done** (BA-109, `9f3a1647`): `fp-ai` `esrgan.rs`, RRDBNet exactly as BasicSR (pixel_unshuffle for ×2, 23 RRDB, nearest ×2 + conv twice), own CPU inference; tiles of 384 network px with 24 px context (core kept, as `RealESRGANer.tile_process`), high-resolution part in row stripes; ×2plus matches the PyTorch reference within 1.5·10⁻⁶; 64 × 64 → 256 × 256 with ×4plus about 2.3 s on 6 threads | P3 |
+| `ai.upscale` | AI upscale ×2/×4 | **A** `scale` 2/4 *4* (also as a number); `model` auto/realEsrganX4/realEsrganX2 *auto* (auto = the model of the factor; ×4 with the ×2 model = two passes, ×2 with the ×4 model = ×4, then Lanczos 3 to half, as `outscale` in Real-ESRGAN); `alpha` network/bicubic *network* (transparency as a grey image through the same network, as Real-ESRGAN does, or bicubic; images without transparency skip it). Models Real-ESRGAN x4plus/x2plus (BSD-3-Clause) via "Manage AI Models..." (`ai.manageModels`); model missing → hint + "Manage AI Models...", never a download; output larger than 32768 px per side or 2²⁸ pixels → error of the item; one item at a time (the network uses all cores) | yes (region: the network runs on a detail of at most 96 × 96 px in the middle of the preview, the rest is bicubic, with a hint) | **Done** (BA-109, `9f3a1647`): `fp-ai` `esrgan.rs`, RRDBNet exactly as BasicSR (pixel_unshuffle for ×2, 23 RRDB, nearest ×2 + conv twice), own CPU inference; tiles of 384 network px with 24 px context (core kept, as `RealESRGANer.tile_process`), high-resolution part in row stripes; ×2plus matches the PyTorch reference within 1.5·10⁻⁶; 64 × 64 → 256 × 256 with ×4plus about 2.3 s on 6 threads. **Real weights end to end (F143, §5.10):** sharper than bilinear on a real photo (mean \|Laplacian\| ×4 8.0 vs 2.0, ×2 11.8 vs 5.0), colours kept, alpha through the network clean (corners ≤ 2/255); 320 × 213 px warm: ×2 3.7 s, ×4 13.6 s (23 threads) | P3 |
 | `ai.faceBlur` | Blur faces | **A** `strength` 0…100 % *60* (blur radius = strength × half the face edge; with `pixelate` block = strength × face edge / 6); **A** `shape` ellipse/rect *ellipse* (soft inner edge 8 % of the face); **A** `pixelate` off; `padding` 0…100 % *20* (per side, share of the face edge); `minSize` 24…4096 px *24*; `sensitivity` low/normal/high *normal* (a face needs more than 8/5/3 overlapping hits); `region` `{x, y, width, height}` px *whole image*. No face = no error: image unchanged, report note "0 faces". Animations: every frame on its own | yes | `fp-ai::face`: own Viola-Jones detector (integral image, pyramid ×1.1, grouping) with OpenCV's `haarcascade_frontalface_default.xml` (Intel License Agreement, BSD-style; notice in `crates/fp-ai/data/` and the manuals), converted and embedded (95 KB), no download, no model dialog; frontal faces only (no profiles, tilt up to about ±15°) | P3 |
 
 ### 3.5 Background and transparency (group "Background")
 
 | ID | Name | Parameters | V | Method | P |
 |---|---|---|---|---|---|
-| `background.remove` | Remove background (AI) | **A** `model` birefnetLite/birefnet *birefnetLite*; **A** `edge` hard/antiAlias/feather *antiAlias*; `tolerance` 0…100 *50*; `expand` −100…100; `smooth` 0…100; `refineEdge` (hair, `birefnetLiteMatting`) off; `output` transparent / mask only / keep + mask as alpha | yes (mask cached) | `fp-ai` BiRefNet (present, `select.aiSubject`, fine-tuning as in `docs\AGENTS.md`); model missing → hint + "Manage AI Models..." | **P1** |
+| `background.remove` | Remove background (AI) | **A** `model` birefnetLite/birefnet *birefnetLite*; **A** `edge` hard/antiAlias/feather *antiAlias*; `tolerance` 0…100 *50*; `expand` −100…100; `smooth` 0…100; `refineEdge` (hair, `birefnetLiteMatting`) off; `output` transparent / mask only / keep + mask as alpha | yes (mask cached) | `fp-ai` BiRefNet (present, `select.aiSubject`, fine-tuning as in `docs\AGENTS.md`); model missing → hint + "Manage AI Models...". **Real weights (F143, §5.10):** BiRefNet lite 2.6–3.8 s per 1280 px photo; edge colours are unmixed with the *local* background (window 16 px) and blended with the local subject colour by the mask value (one global background mean gave saturated fringes) | **P1** |
 | `background.removeColor` | Remove colour (no AI) | **A** `color` *top-left corner*/eyedropper; **A** `tolerance` 0…255 *24*; `contiguous` on (only from the edges); `feather` 0…10 | yes | own (flood fill like `bitmap.floodFill`) | **P1** |
 | `background.flatten` | Transparency → colour | **A** `color` *#ffffff*; `kind` color/gradient/image/blur (blurred copy of the image) *color*; `onlyIfTransparent` on | yes | own (optional alpha blending in linear light) | **P1** |
 | `background.replace` | Replace background | `remove` + `flatten` in one (colour/gradient/image/blur) | yes | combination | P2 |
@@ -957,6 +957,37 @@ test in `fp-batch\tests\licenses.rs` reads `cargo metadata`, P2).
   gallery, dragging cards, preview divider, progress; `clipping_audit` 0 findings (3 themes × de/en ×
   100/150 % × 1024×768/1920×1080, plus `qps`); images in `docs\screenshots\batch\` per theme/language.
 - **CLI/MCP**: `apps\firepixel-cli\tests\batch_recipe.rs`, `fp-mcp` tool test.
+- **AI steps with the real model weights** (F143, 29 Oct 2026). All eight catalogue models were
+  downloaded with the app's own path, `firepixel-cli models download all --force` (new sub-command,
+  `fp_ai::download`: official source, `*.part`, size and SHA-256 check, rename): 1.63 GB in 109 s
+  (4–89 MB/s per file), every SHA-256 matched; `models verify` of all eight takes about 4 s. Tests
+  (`#[ignore]`, skip cleanly without the model): `fp-ai` `tests\ai_real.rs` (13 `ai_real_*` tests),
+  `fp-engine` `tests\ai_real_hover.rs`, plus the existing `esrgan_reference`, `referenz`,
+  `steps_upscale` and `steps_background_ai` runs; all green. Outputs for a look by eye go to
+  `target\tmp\ai_real\`. Figures (release, 24 logical cores; the machine was shared with other
+  builds at ~97 % CPU, single runs varied up to 10×, the lower values are from quieter moments):
+
+  | Feature | Input | Result | Time |
+  |---|---|---|---|
+  | `ai.upscale` ×4 (x4plus) | 64 × 64 detail of `produkt_tasse.jpg` (shrunk from 256) | 256 × 256; mean \|Laplacian\| 8.0 (bilinear 2.0, original 17.0); PSNR to the original 25.7 dB (bilinear 24.9) | 1.3–1.7 s incl. load, warm 1.3–2.2 s |
+  | `ai.upscale` ×2 (x2plus) | 128 × 128 (shrunk from 256) | 256 × 256; sharpness 11.8 (bilinear 5.0); PSNR 28.1 dB (bilinear 29.0: the GAN trades PSNR for detail) | 1.3–1.8 s, warm 1.5 s |
+  | `ai.upscale` ×2 / ×4 | 320 × 213 photo | — | 3.7–4.2 s / 13.6–13.8 s (best of 3 warm runs) |
+  | CLI `batch` resize 320 + ×2 | 1 photo | 640 px PNG | 6.2–7.5 s per call incl. start and load; peak working set 495 MB (×2), 744 MB (×4) |
+  | `background.remove` (BiRefNet lite) | 4 photos, 1280 px | coverage cup 25.2 %, dog 17.3 %, cat 22.6 %, portrait 78.4 %; image corners background | 2.6–3.8 s each warm; CLI peak working set 1.49 GB |
+  | BiRefNet (Swin-L) | cup photo | coverage 17.8 % | 10.8 s incl. load; process peak 4.6 GB with all models loaded |
+  | Refine edge (lite matting, 16 px) | portrait | 106 325 semi-transparent px, coverage ±0.1 % | 3.4–4.5 s |
+  | SAM 2.1 tiny / small | red disk on noise, 480 × 360 | IoU with the true disk 0.998 / 0.998 | cold 2.7–3.5 s / 4.0–6.5 s, warm click 0.13–0.27 s / 0.19–0.29 s |
+  | SAM 2.1 tiny | click on the cup body | 3.5 % of the photo, box 608,393–897,613 (cup only) | — |
+  | Hover preview (BA-037) | disk, after the first click (2.1 s) | hover mask = click mask, IoU 1.000 | hover 0.09 s, click on the hovered pixel 0.004 s |
+
+  Cancel during an upscale returns `Cancelled` within 0.5 s; a damaged model of the right size
+  fails the checksum check and loads with a readable error; an empty model folder gives "AI model …
+  is missing … Manage AI Models". **Bug found and fixed:** `background.remove` unmixed the edge with
+  one global background mean, so edges in front of a differently coloured part of the background
+  turned into saturated fringes. Edge pixels whose channel spread grew by more than 100 levels,
+  before → after: cat 794 → 2 (at least 12 % opaque: 143 → 0), dog 555 → 14, cup 369 → 2, portrait
+  15 812 → 5 008 (the rest are red hair strands over white, correctly coloured). Test
+  `steps_background::f143_unmix_uses_local_background`.
 - **Neutrality**: `cargo test -p fp-neutral` green; `cargo test -p fp-i18n` (de/en completeness).
 - Everything with `FP_NO_SHELL_OPEN=1` and a test profile, never the real user profile.
 

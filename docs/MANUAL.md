@@ -830,7 +830,8 @@ models, without a network connection while computing:
 
 The models are not shipped. If one is missing, Firepixel offers the download; nothing is loaded
 before you agree. Overview, licenses and model folder: *Commands ▸ Manage AI Models...* (details in
-`docs\MODELLE.md`).
+`docs\MODELLE.md`); without the user interface, `firepixel-cli models download all` loads them
+(about 1.6 GB for all eight).
 
 While a model is computing, a card at the bottom above the canvas shows the tool, the model, the
 stages, a bar and the time; *Cancel* or Esc stops it. The tool's inspector offers the **fine
@@ -923,7 +924,9 @@ Choose saved settings from the list at the top; "+" saves the current one.
   menu's "Help" opens the matching section.
 - **Command line:** `firepixel-cli` can inspect documents (`info`), apply commands (`run`,
   `batch`), render images (`render`), convert (`convert`), run scripts (`script`) and check
-  translations (`language check`). `firepixel-cli <command> --help` shows examples; `--lang en|de`
+  translations (`language check`) and list, download and check the AI models (`models list`,
+  `models download realEsrganX4` or `all`, `models verify`; official sources only, SHA-256 checked,
+  the command itself is the consent). `firepixel-cli <command> --help` shows examples; `--lang en|de`
   chooses the language of the output.
 - **AI control (MCP):** `firepixel-cli mcp` (stdio), or in the running application
   *Commands ▸ AI Control Channel (MCP)*, or start with `--mcp`. The server listens on 127.0.0.1

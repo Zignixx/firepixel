@@ -701,19 +701,100 @@ pub fn ai_subject_mask(
     Ok(out)
 }
 
-/// Mittlere Farbe der Hintergrundpixel (Maske < 5 %), gewichtet mit Alpha.
-fn background_estimate(img: &RgbaImage, mask: &[f32]) -> Option<[f32; 3]> {
-    let (mut s, mut n) = ([0.0f64; 3], 0.0f64);
-    for (p, m) in img.data().iter().zip(mask) {
-        if *m < 0.05 && p[3] > 0 {
-            let a = p[3] as f64 / 255.0;
-            for i in 0..3 {
-                s[i] += p[i] as f64 / 255.0 * a;
+/// Radius (px) of the window for the local background and subject colours of an edge pixel.
+const LOCAL_RADIUS: usize = 16;
+
+/// Alpha-weighted local mean colours from a summed-area table `(w + 1) × (h + 1)` of
+/// `[a·r, a·g, a·b, a]` over the pixels a predicate on the mask picks.
+struct LocalMean {
+    w: usize,
+    h: usize,
+    sat: Vec<[f64; 4]>,
+}
+
+impl LocalMean {
+    fn new(img: &RgbaImage, mask: &[f32], pick: impl Fn(f32) -> bool) -> LocalMean {
+        let (w, h) = (img.width(), img.height());
+        let mut sat = vec![[0.0f64; 4]; (w + 1) * (h + 1)];
+        let data = img.data();
+        for y in 0..h {
+            let mut row = [0.0f64; 4];
+            for x in 0..w {
+                let i = y * w + x;
+                let p = data[i];
+                if pick(mask[i]) && p[3] > 0 {
+                    let a = p[3] as f64 / 255.0;
+                    for c in 0..3 {
+                        row[c] += p[c] as f64 / 255.0 * a;
+                    }
+                    row[3] += a;
+                }
+                let up = sat[y * (w + 1) + x + 1];
+                sat[(y + 1) * (w + 1) + x + 1] = std::array::from_fn(|k| up[k] + row[k]);
             }
-            n += a;
+        }
+        LocalMean { w, h, sat }
+    }
+
+    fn mean(v: [f64; 4]) -> Option<[f32; 3]> {
+        (v[3] >= 0.5).then(|| std::array::from_fn(|k| (v[k] / v[3]) as f32))
+    }
+
+    /// Mean over all picked pixels.
+    fn global(&self) -> Option<[f32; 3]> {
+        LocalMean::mean(self.sat[(self.h + 1) * (self.w + 1) - 1])
+    }
+
+    /// Mean in the window of [`LOCAL_RADIUS`] around pixel `i`.
+    fn at(&self, i: usize) -> Option<[f32; 3]> {
+        let (x, y) = (i % self.w, i / self.w);
+        let r = LOCAL_RADIUS;
+        let (x0, x1) = (x.saturating_sub(r), (x + r + 1).min(self.w));
+        let (y0, y1) = (y.saturating_sub(r), (y + r + 1).min(self.h));
+        let s = |xx: usize, yy: usize| self.sat[yy * (self.w + 1) + xx];
+        let (a, b, c, d) = (s(x1, y1), s(x0, y1), s(x1, y0), s(x0, y0));
+        LocalMean::mean(std::array::from_fn(|k| a[k] - b[k] - c[k] + d[k]))
+    }
+}
+
+/// Colours for unmixing the edge (F143). Measured with the real BiRefNet on the test photos: one
+/// global background mean made edges in front of a differently coloured part of the background
+/// unmix into saturated fringes (cat photo: 794 edge pixels whose channel spread grew by more
+/// than 100 levels, 143 of them at least 12 % opaque; hair photo 15 812 / 4 310). Now the
+/// background colour is the local mean of the background pixels (mask < 5 %) around the pixel,
+/// and the unmixed colour is blended with the local mean of the subject pixels (mask > 95 %) by
+/// the mask value: `F = m·unmix(c, m, B) + (1 − m)·S`. Faint edge pixels, where unmixing amplifies
+/// every error of the mask by `(1 − m)/m`, take the colour of the subject next to them.
+struct EdgeColors {
+    bg: LocalMean,
+    fg: LocalMean,
+    global_bg: [f32; 3],
+}
+
+impl EdgeColors {
+    fn new(img: &RgbaImage, mask: &[f32]) -> Option<EdgeColors> {
+        let bg = LocalMean::new(img, mask, |m| m < 0.05);
+        let global_bg = bg.global()?;
+        Some(EdgeColors {
+            fg: LocalMean::new(img, mask, |m| m > 0.95),
+            bg,
+            global_bg,
+        })
+    }
+
+    /// Subject colour of edge pixel `i` with colour `c` and mask `m`.
+    fn unmix(&self, i: usize, c: [f32; 4], m: f32) -> [f32; 4] {
+        let f = unmix(c, m, self.bg.at(i).unwrap_or(self.global_bg));
+        match self.fg.at(i) {
+            Some(s) => [
+                m * f[0] + (1.0 - m) * s[0],
+                m * f[1] + (1.0 - m) * s[1],
+                m * f[2] + (1.0 - m) * s[2],
+                c[3],
+            ],
+            None => f,
         }
     }
-    (n > 0.0).then(|| [(s[0] / n) as f32, (s[1] / n) as f32, (s[2] / n) as f32])
 }
 
 /// Entmischt eine Kantenfarbe: `c = m·F + (1−m)·B` → `F` (begrenzt).
@@ -728,21 +809,22 @@ fn unmix(c: [f32; 4], m: f32, b: [f32; 3]) -> [f32; 4] {
 }
 
 /// Wendet eine Motiv-Maske (0…1) an. `output`: `transparent` (Alpha × Maske, Kantenfarben
-/// optional entmischt), `mask` (Maske als deckendes Graubild), `alpha` (Farben unverändert, Maske
-/// ersetzt das Alpha).
+/// optional entmischt mit der örtlichen Hintergrundfarbe), `mask` (Maske als deckendes Graubild),
+/// `alpha` (Farben unverändert, Maske ersetzt das Alpha).
 pub fn apply_subject_mask(img: &mut RgbaImage, mask: &[f32], output: &str, decontaminate: bool) {
     if mask.len() != img.data().len() {
         return;
     }
     let bg = if output == "transparent" && decontaminate {
-        background_estimate(img, mask)
+        EdgeColors::new(img, mask)
     } else {
         None
     };
     img.data_mut()
         .par_iter_mut()
         .zip(mask.par_iter())
-        .for_each(|(p, m)| {
+        .enumerate()
+        .for_each(|(i, (p, m))| {
             let m = m.clamp(0.0, 1.0);
             match output {
                 "mask" => {
@@ -754,11 +836,11 @@ pub fn apply_subject_mask(img: &mut RgbaImage, mask: &[f32], output: &str, decon
                 }
                 _ => {
                     let mut f = to_f(*p);
-                    if let Some(b) = bg
+                    if let Some(b) = &bg
                         && m > 0.0
                         && m < 0.98
                     {
-                        f = unmix(f, m, b);
+                        f = b.unmix(i, f, m);
                     }
                     f[3] *= m;
                     *p = to_u8(f);

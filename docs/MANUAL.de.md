@@ -907,7 +907,8 @@ KI-Modellen, ohne Netzverbindung beim Rechnen:
 
 Die Modelle werden nicht mitgeliefert. Fehlt eines, bietet Firepixel den Download an; erst nach
 Zustimmung wird geladen. Übersicht, Lizenzen und Modellordner: *Befehle ▸ KI-Modelle verwalten…*
-(Einzelheiten in `docs\MODELLE.md`).
+(Einzelheiten in `docs\MODELLE.md`); ohne Oberfläche lädt `firepixel-cli models download all` sie
+(etwa 1,6 GB für alle acht).
 
 Während ein Modell rechnet, zeigt eine Karte unten über der Leinwand Werkzeug, Modell, die Stufen,
 einen Balken und die Zeit; *Abbrechen* oder Esc bricht ab. Im Inspektor des Werkzeugs gibt es
@@ -1002,7 +1003,9 @@ Gespeicherte Einstellungen wählst du aus der Liste oben, „+“ speichert die 
   `docs\BATCH.md` (englisch); „Hilfe“ im Kartenmenü öffnet den passenden Abschnitt.
 - **Kommandozeile:** `firepixel-cli` kann Dokumente prüfen (`info`), Befehle anwenden (`run`,
   `batch`), Bilder rendern (`render`), umwandeln (`convert`), Skripte starten (`script`) und
-  Übersetzungen prüfen (`language check`). `firepixel-cli <befehl> --help` zeigt Beispiele;
+  Übersetzungen prüfen (`language check`) sowie die KI-Modelle auflisten, herunterladen und prüfen
+  (`models list`, `models download realEsrganX4` oder `all`, `models verify`; nur offizielle Quellen,
+  SHA-256 geprüft, der Aufruf selbst ist die Zustimmung). `firepixel-cli <befehl> --help` zeigt Beispiele;
   `--lang de|en` wählt die Sprache der Ausgaben.
 - **KI-Steuerung (MCP):** `firepixel-cli mcp` (stdio) oder in der laufenden Oberfläche
   *Befehle ▸ KI-Steuerkanal (MCP)* bzw. der Start mit `--mcp`. Der Server lauscht nur auf

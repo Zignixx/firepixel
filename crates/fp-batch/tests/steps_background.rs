@@ -419,7 +419,8 @@ fn subject_mask_outputs() {
     let mut d = mixed.clone();
     apply_subject_mask(&mut d, &mask, "transparent", true);
     let e = d.data()[7 * 20 + 5];
-    assert!(e[0] >= 198 && e[1] <= 25 && e[3] == 128, "entmischt {e:?}");
+    // F143: blended with the local subject colour (the square has a white hole, so a little lighter)
+    assert!(e[0] >= 198 && e[1] <= 32 && e[3] == 128, "entmischt {e:?}");
 }
 
 #[test]
@@ -575,4 +576,62 @@ fn run_writes_flattened_jpeg_and_preview_matches() {
     .expect("preview");
     assert_eq!(pv.after.expect("after").as_bytes(), &px[..]);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// F143: edge colours are unmixed with the background *next to* the edge, not one global mean,
+/// and faint edge pixels lean on the subject colour beside them. Image: red square on a background
+/// that is white on the left and blue on the right; the soft edge pixels are 30 % red over the
+/// local background. With one global mean (light blue-grey) they unmixed into saturated fringes.
+#[test]
+fn f143_unmix_uses_local_background() {
+    use fp_raster::{IRect, RgbaImage};
+    let (w, h) = (120usize, 60usize);
+    let red = [220.0f32, 30.0, 30.0];
+    let bg = |x: usize| {
+        if x < 60 {
+            [255.0f32, 255.0, 255.0]
+        } else {
+            [20.0, 40.0, 200.0]
+        }
+    };
+    let mut px = Vec::with_capacity(w * h);
+    let mut mask = Vec::with_capacity(w * h);
+    for y in 0..h {
+        for x in 0..w {
+            // squares x 20..40 and 80..100, y 20..40; one-pixel ring of 30 % around each
+            let inner = (20..40).contains(&y) && ((20..40).contains(&x) || (80..100).contains(&x));
+            let ring = (19..41).contains(&y)
+                && ((19..41).contains(&x) || (79..101).contains(&x))
+                && !inner;
+            let m = if inner {
+                1.0
+            } else if ring {
+                0.3
+            } else {
+                0.0
+            };
+            let b = bg(x);
+            let c: [u8; 4] = std::array::from_fn(|k| {
+                if k == 3 {
+                    255
+                } else {
+                    (m * red[k] + (1.0 - m) * b[k]).round() as u8
+                }
+            });
+            px.push(c);
+            mask.push(m);
+        }
+    }
+    let mut img = RgbaImage::from_raw(IRect::new(0, 0, w as i32, h as i32), px).expect("img");
+    apply_subject_mask(&mut img, &mask, "transparent", true);
+    for (x, y) in [(19, 30), (40, 30), (79, 30), (100, 30), (30, 19), (90, 40)] {
+        let p = img.data()[y * w + x];
+        assert_eq!(p[3], 77, "alpha = mask at ({x}, {y})");
+        for k in 0..3 {
+            assert!(
+                (p[k] as f32 - red[k]).abs() <= 12.0,
+                "edge ({x}, {y}) unmixed to {p:?}, expected about {red:?}"
+            );
+        }
+    }
 }

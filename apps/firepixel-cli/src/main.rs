@@ -14,7 +14,8 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 mod batch;
-mod language; // Unterbefehl `language` // BATCH-1: `batch --recipe` und `batch --steps` (fp-batch)
+mod language;
+mod models; // F143: `models list|download|verify` // Unterbefehl `language` // BATCH-1: `batch --recipe` und `batch --steps` (fp-batch)
 
 #[derive(Parser, Debug)]
 #[command(name = "firepixel-cli", version)]
@@ -124,6 +125,8 @@ enum Cmd {
     },
     #[command(subcommand, alias = "sprache")]
     Language(language::LanguageCmd),
+    #[command(subcommand)]
+    Models(models::ModelsCmd),
 }
 
 /// Fehler mit Meldung.
@@ -454,6 +457,7 @@ fn run(cli: Cli, sub: Option<&ArgMatches>) -> Res<Value> {
             }
         }
         Cmd::Language(c) => language::run(c, json_out).map_err(Fail),
+        Cmd::Models(c) => models::run(c, json_out).map_err(Fail),
     }
 }
 
@@ -1150,7 +1154,7 @@ mod tests {
             let mut s = c.render_help().to_string();
             for sub in [
                 "run", "batch", "render", "info", "commands", "convert", "script", "mcp",
-                "language",
+                "language", "models",
             ] {
                 if let Some(sc) = c.find_subcommand_mut(sub) {
                     s += &sc.render_help().to_string();
