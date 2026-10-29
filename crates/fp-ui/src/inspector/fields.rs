@@ -1849,11 +1849,22 @@ pub fn toggle(
     glyphs::paint(ui.painter(), r, glyph, &t, enabled);
     // Barrierefreiheit (und `ui_find`): Knopf mit dem übersetzten Tooltip als Namen und Zustand
     // (gedrückt) wie bei Kästchen
-    crate::ui_kit::icon_button_info(&resp, enabled, tip, Some(on));
+    // FB-103: an icon toggle has no visible label, so the first line of a tooltip of several
+    // lines is its name ([`crate::tips::named`]): the accessible name and the line that stays with
+    // View ▸ Tooltips off
+    let (name, named) = match tip.split_once('\n') {
+        Some((first, _)) => (first, true),
+        None => (tip, false),
+    };
+    crate::ui_kit::icon_button_info(&resp, enabled, name, Some(on));
     let clicked = enabled && resp.clicked();
     if !tip.is_empty() {
         log_tip(ui, r, tip);
-        resp.hover_tip(tip);
+        if named {
+            resp.name_tip(tip);
+        } else {
+            resp.hover_tip(tip);
+        }
     }
     clicked
 }
@@ -2218,6 +2229,17 @@ const TIP_LOG: &str = "pi-tip-log";
 /// With the layout log on ([`set_audit`]), descriptive tooltips go into a log of their own
 /// ([`take_tips`]), so the text checks of the layout log stay unchanged. Only controls inside the
 /// Properties inspector are logged (the shared buttons and colour wells of other panels are not).
+/// Like [`tip`] for a tooltip with a name line of its own ([`crate::tips::named`], FB-103): the
+/// name stays with View ▸ Tooltips off.
+pub fn named_tip(ui: &Ui, id: impl Hash + std::fmt::Debug, r: Rect, text: &str) {
+    if text.is_empty() {
+        return;
+    }
+    log_tip(ui, r, text);
+    ui.interact(r, Id::new(id).with("tip"), Sense::hover())
+        .name_tip(text);
+}
+
 pub fn log_tip(ui: &Ui, r: Rect, text: &str) {
     if !ui
         .ctx()

@@ -68,7 +68,8 @@ fn click(h: &mut H, p: Pos2) {
 }
 
 fn lock_box(h: &H) -> Option<egui::Rect> {
-    let tip = fp_i18n::t("pi-fill-lock-tip");
+    // FB-103: the toggle's accessible name is the name line of its tooltip
+    let tip = fp_i18n::t("pi-fill-lock-name");
     h.query_all(By::new().role(Role::Button).label(&tip))
         .next()
         .map(|n| n.rect())

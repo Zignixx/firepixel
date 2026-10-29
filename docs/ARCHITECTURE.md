@@ -164,7 +164,8 @@ cannot clash with a tag of the original, and other readers ignore them:
 | `fpSv` | `EXPv` | CSS sprite export options and the HTML default ALT text |
 | `fpIb` | mask group `GRPv` | `1` = **inverted mask** (FB-35, model `MaskFlags::invert`): what lies inside the mask is hidden, everything outside stays. Written only when on; a reader without it shows the plain mask |
 | `fpEi` | fill `FPLv` | `3` = **Dither edge** (FB-23). The fill is written as a feather (`FETi` 2, `FEFi` = width; `FETi` 0 at width 0) and read back as dither (model `Fill.edge` 3, width in `feather`) only when the marker is present; a reader without it shows the feather (or hard) edge. Bit `4` = **Lock pattern to document** (FB-44, model `Fill.lock_to_document`): the pattern or gradient keeps its handles in the document when the object moves; the marker is a bit set (`3`, `4` or `7`) and is not written at all when neither is used |
-| `fpDi` | fill `FPLv` | **Dither density** 1..100 % of the whole fill (FB-38, model `Fill.dither_density`); written only when not 0, a reader without it shows the plain fill |
+| `fpOi` | fill `FPLv` | **Dither density** 1..100 % empty pixels of the whole fill (FB-38, FB-109, model `Fill.dither_density`; 50 = checkerboard, 100 = empty); written only when not 0, a reader without it shows the plain fill |
+| `fpDi` | fill `FPLv` | Older dither density marker (FB-38, before FB-109): 1..100 % **kept** pixels (100 = off); only read and converted to `fpOi` (100 − value), never written |
 | `fpLv` | effect list `EFLv` | A **Firepixel live filter** (FB-38; EffectMoaID with the prefix `{firepixel-`, today only the Screentone filter `{firepixel-screentone}`): the same dictionary as an `EPSv`, written in its place in the list instead of an `EPSv`, so files of the reference format never carry an effect the original does not know |
 
 Other formats: see `fp-io` (import) and `fp-export` (export). Only pure-Rust crates or statically linked C

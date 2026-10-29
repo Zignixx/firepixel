@@ -144,8 +144,11 @@ pi-edge-feather = Weiche Kante
 pi-edge-dither = Dither
 pi-texture-transparent = Transparent
 # Firepixel-Erweiterung (FB-44): Muster bzw. Verlauf bleibt beim Verschieben im Dokument stehen
-pi-fill-lock-tip = Muster im Dokument festhalten: Muster bzw. Verlauf bleibt stehen, wenn das Objekt verschoben oder transformiert wird (Firepixel-Erweiterung)
-pi-fill-dither-density-tip = Dither-Dichte der ganzen Füllung in % (0 = aus): gleichmäßiges Raster aus deckenden und leeren Pixeln (Firepixel-Erweiterung)
+pi-fill-lock-name = Muster im Dokument festhalten
+pi-fill-lock-tip = Muster bzw. Verlauf bleibt stehen, wenn das Objekt verschoben oder transformiert wird (Firepixel-Erweiterung).
+pi-fill-dither-density-name = Dither-Dichte
+pi-fill-dither-density-tip = Dither-Dichte der Füllung in % (0 = aus, 50 = Schachbrett, 100 = leer).
+    Firepixel-Erweiterung: gleichmäßiges Raster aus deckenden und leeren Pixeln, bei einfarbigen, Verlaufs- und Musterfüllungen.
 pi-texture-other = Andere...
 pi-texture-pick-title = Textur wählen
 # Texturnamen (Dateinamen der Texturen ohne Endung) in der Texturliste
@@ -492,7 +495,7 @@ pi-colorize = Kolorieren
 pi-mask = Maske:
 pi-mask-alpha = Alphakanal
 pi-mask-gray = Graustufen
-pi-tip-bmask-alpha = Alphakanal: Die Transparenz der Masken-Bitmap schneidet den Inhalt zu. Nach „Innen einfügen“ liegt die Bitmap zusätzlich unter dem Inhalt („Füllung und Pinselstrich anzeigen“); „Als Maske gruppieren“ oder „Als Maske einfügen“ und danach „Alphakanal“ maskiert genauso, ohne Unterlage.
+pi-tip-bmask-alpha = Die Transparenz der Masken-Bitmap schneidet den Inhalt zu. Nach „Innen einfügen“ liegt die Bitmap zusätzlich unter dem Inhalt („Füllung und Pinselstrich anzeigen“); „Als Maske gruppieren“ oder „Als Maske einfügen“ und danach „Alphakanal“ maskiert genauso, ohne Unterlage.
 pi-mask-path-outline = Pfadumriss
 pi-mask-grayscale = Graustufendarstellung
 pi-mask-show-attrs = Füllung und Pinselstrich anzeigen

@@ -428,7 +428,10 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
 - *View ▸ Tooltips* (on by default, remembered as the preference `Tooltips`) switches the tooltips of
   buttons, fields and panels everywhere (Tools panel, toolbar, Property Inspector, panels, dialogs). Off,
   only the description lines go: the short first line with the name and shortcut stays, e.g. "Pointer
-  (V, 0)", and one-line tooltips of panel buttons and inspector fields stay as they are. To hide those
+  (V, 0)", and short one-line tooltips of panel buttons and inspector fields (a name such as "Opacity") stay
+  as they are. A one-line tooltip that is a description rather than a name (longer than 60 characters, or a
+  sentence) goes as well; controls that explain themselves at length show a name line of their own first,
+  e.g. "Dither density" above the explanation of the dither density field, and only that name stays. To hide those
   too, switch on *Preferences ▸ General ▸ Hide tool names too when tooltips are off*; *Tooltip delay (ms)*
   on the same page sets how long the pointer must rest before a tooltip opens (default 600, 0–5000). The
   changes apply at once.
@@ -682,12 +685,16 @@ visible); the diamond on the tab and a double-click on the tab return to the ful
 
 - **Dither (fill density):** the per-cent field with the small checkerboard icon below the fill texture name (left of *Transparent*) turns
   the whole fill into an even pattern of fully opaque and empty pixels: 50 % is a checkerboard half tone of the
-  fill colour, 25 % keeps every fourth pixel, 0 % switches it off and 100 % is the solid fill. It works for every
+  fill colour, 25 % empties every fourth pixel, 75 % keeps only every fourth, 0 % switches it off and 100 % empties
+  the whole fill (the stroke stays): the value is the share of empty pixels, so a higher value always takes away more
+  (in v0.2.20 and earlier the value was the share of kept pixels and 100 looked the same as 0; older files are converted when
+  opened). It works for every
   fill category (solid, gradient, pattern) and uses the same fixed 8 × 8 pattern as the Dither edge, anchored to
   the document pixels. Combined with a Dither edge a pixel stays on only where both keep it, so the band fades out
   from the chosen density. The arrow next to the field opens a slider; while you drag it the canvas shows the
   density live, and releasing applies it. A change is one *Fill* step in the History panel; changing the fill category keeps the
-  density. Dither density is a Firepixel extension; a `.fw.png` file stores it only in a Firepixel marker (written
+  density. Its tooltip names the field ("Dither density"); with *View ▸ Tooltips* off only that name stays. Dither
+  density is a Firepixel extension; a `.fw.png` file stores it only in a Firepixel marker (written
   when the value is not 0), other programs show the plain fill.
 
 - **Gradient and pattern fills on text:** a text takes a gradient or pattern fill like a path (`pi.fill`,

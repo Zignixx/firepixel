@@ -700,7 +700,7 @@ cmdtext-abzug-im-eigenen-strich-alt-firepixel-er-b2b123 = Abzug im eigenen Stric
 cmdtext-muster-im-dokument-festhalten-muster-bzw-77ed86 = Muster im Dokument festhalten: Muster bzw. Verlauf bleibt beim Verschieben und Transformieren des Objekts im Dokument stehen (Firepixel-Erweiterung)
 cmdtext-maske-invertieren-firepixel-erweiterung = Maske invertieren (Firepixel-Erweiterung)
 cmdtext-maske-vorher-anwenden-in-bitmap-umwandeln = Maske vorher anwenden (in Bitmap umwandeln)
-cmdtext-dither-dichte-der-ganzen-fuellung-in-0-a-10df26 = Dither-Dichte der ganzen Füllung in % (0 = aus, 100 = deckend; Firepixel-Erweiterung)
+cmdtext-dither-dichte-der-ganzen-fuellung-in-ant-f3aa3d = Dither-Dichte der ganzen Füllung in % (Anteil leerer Pixel: 0 = aus, 50 = Schachbrett, 100 = leer; Firepixel-Erweiterung)
 cmdtext-kontur-x-y-wird-geschlossen = Kontur [[x, y], …] (wird geschlossen)
 cmdtext-history-row-edit-bitmap-when-bitmap-mode-92f058 = Protokollzeile „Bitmap bearbeiten“, wenn der Bitmapmodus beginnt (Bitmap-Werkzeug bei gewählter Bitmap, Strich auf eine Bitmap, Doppelklick mit dem Zeiger)
 cmdtext-with-row-write-the-row-even-when-bitmap-942cd5 = mit `row`: die Zeile auch schreiben, wenn der Bitmapmodus schon an ist (zweite Zeile des Zeiger-Doppelklicks)

@@ -374,7 +374,8 @@ fn bitmap_mask_quad_and_layers_opacity_say_what_they_do() {
             "{lang}: no number field next to the mask rows"
         );
         let tips = inspector_tips(&mut h);
-        let tip = fp_i18n::t("pi-tip-bmask-alpha");
+        // FB-103: name line "Alpha channel" plus the explanation
+        let tip = fp_ui::tips::named(&fp_i18n::t("pi-mask-alpha"), &fp_i18n::t("pi-tip-bmask-alpha"));
         assert!(
             tips.contains(&tip),
             "{lang}: Alpha channel tooltip in {tips:?}"
@@ -396,7 +397,10 @@ fn bitmap_mask_quad_and_layers_opacity_say_what_they_do() {
         for _ in 0..60 {
             h.step();
         }
-        let want = fp_i18n::t("panel-layers-opacity-tip-mask");
+        let want = fp_ui::tips::named(
+            &fp_i18n::t("panel-layers-opacity-mask-name"),
+            &fp_i18n::t("panel-layers-opacity-tip-mask"),
+        );
         assert!(
             h.query_by_label(&want).is_some(),
             "{lang}: Layers opacity tooltip shown"

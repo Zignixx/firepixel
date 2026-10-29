@@ -1,7 +1,8 @@
 //! FB-38: uniform dither density of a fill (Firepixel extension). The whole fill is quantised to
 //! on/off pixels by the ordered 8 × 8 (Bayer) threshold on document coordinates at the given
-//! density: 50 % is a checkerboard half tone of the fill colour over transparency, 0 and 100 leave
-//! the fill unchanged, the edge (also the Dither edge) applies on top.
+//! density: the density is the share of empty pixels (FB-109, monotonic): 0 leaves the fill
+//! unchanged, 50 % is a checkerboard half tone of the fill colour over transparency, 100 empties the
+//! whole fill; the edge (also the Dither edge) applies on top.
 
 use fp_color::Argb;
 use fp_geom::{IRect, Vec2};
@@ -54,17 +55,29 @@ fn on_share(px: &[[u8; 4]]) -> f64 {
 #[test]
 fn density_function_counts_per_block() {
     for d in 0u8..=100 {
-        let on = (0..8)
+        let off = (0..8)
             .flat_map(|y| (0..8).map(move |x| (x, y)))
-            .filter(|&(x, y)| density_on(d, x, y))
+            .filter(|&(x, y)| !density_on(d, x, y))
             .count();
         let want = (d as f64 * 64.0 / 100.0).round() as usize;
         assert!(
-            (on as i64 - want as i64).abs() <= 1,
-            "density {d}: {on} of 64 on, expected about {want}"
+            (off as i64 - want as i64).abs() <= 1,
+            "density {d}: {off} of 64 off, expected about {want}"
         );
     }
-    assert!(!density_active(0) && !density_active(100) && density_active(50));
+    assert!(!density_active(0) && density_active(100) && density_active(50));
+    // FB-109: monotonic, a pixel that is off at d stays off at every higher density
+    for y in 0..8 {
+        for x in 0..8 {
+            let mut was_off = false;
+            for d in 0u8..=100 {
+                let off = !density_on(d, x, y);
+                assert!(off || !was_off, "({x},{y}) back on at {d}");
+                was_off = off;
+            }
+            assert!(density_on(0, x, y) && !density_on(100, x, y));
+        }
+    }
     // fixed to the document grid: period 8 in both directions, also for negative coordinates
     for (x, y) in [(-1, -1), (-9, 3), (5, -17)] {
         assert_eq!(density_on(37, x, y), density_on(37, x + 8, y + 16));
@@ -98,7 +111,7 @@ fn density_shares_follow_the_value() {
         let (px, _) = render_path_pixels(&rect_path(FillEdge::AntiAliased, d), WIN);
         let share = on_share(&px);
         assert!(
-            (share - d as f64 / 100.0).abs() <= 0.02,
+            (share - (1.0 - d as f64 / 100.0)).abs() <= 0.02,
             "density {d}: share {share}"
         );
         assert!(px.iter().all(|c| c[3] == 0 || c[3] == 255));
@@ -106,20 +119,27 @@ fn density_shares_follow_the_value() {
 }
 
 #[test]
-fn zero_and_full_density_leave_the_fill_unchanged() {
+fn zero_is_off_and_full_density_empties_the_fill() {
+    // FB-109: 0 and 100 used to look the same on a solid fill; now 0 = off, 100 = empty
+    let (plain, _) = render_path_pixels(&rect_path(FillEdge::Hard, 0), WIN);
+    assert_eq!(on_share(&plain), 1.0);
     for edge in [
         FillEdge::Hard,
         FillEdge::AntiAliased,
         FillEdge::Feather(6),
         FillEdge::Dither(6),
     ] {
-        let (plain, _) = render_path_pixels(&rect_path(edge, 0), WIN);
         let (full, _) = render_path_pixels(&rect_path(edge, 100), WIN);
-        assert_eq!(plain, full, "{edge:?}");
+        assert!(full.iter().all(|c| c[3] == 0), "{edge:?}");
     }
-    // 100 is a solid fill: the inside is completely opaque
-    let (full, _) = render_path_pixels(&rect_path(FillEdge::Hard, 100), WIN);
-    assert_eq!(on_share(&full), 1.0);
+    // the share of opaque pixels falls monotonically with the value
+    let mut last = 2.0;
+    for d in (0u8..=100).step_by(5) {
+        let (px, _) = render_path_pixels(&rect_path(FillEdge::Hard, d), WIN);
+        let s = on_share(&px);
+        assert!(s < last, "density {d}: share {s} not below {last}");
+        last = s;
+    }
 }
 
 #[test]
@@ -175,7 +195,7 @@ fn density_applies_to_gradients_and_patterns() {
     }
     let (px, missing) = render_path_pixels(&p, WIN);
     assert!(missing.is_empty());
-    assert!((on_share(&px) - 0.25).abs() <= 0.02);
+    assert!((on_share(&px) - 0.75).abs() <= 0.02);
     // the kept pixels carry the gradient colours (red on the left, blue on the right)
     let first_on = |range: std::ops::Range<i32>| {
         range

@@ -463,8 +463,11 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
 - *Ansicht ▸ QuickInfos* (Vorgabe: ein, wird als Voreinstellung `Tooltips` gemerkt) schaltet die QuickInfos
   (Tooltips) von Knöpfen, Feldern und Bedienfeldern überall (Werkzeugbedienfeld, Symbolleiste, Inspektor,
   Bedienfelder, Dialoge). Aus entfallen nur die Beschreibungszeilen: die kurze erste Zeile mit Name und
-  Kürzel bleibt, z. B. „Zeiger (V, 0)“, einzeilige QuickInfos von Bedienfeldknöpfen und Inspektorfeldern
-  bleiben unverändert. Um auch diese auszublenden, *Voreinstellungen ▸ Allgemein ▸ Werkzeugnamen ohne
+  Kürzel bleibt, z. B. „Zeiger (V, 0)“, kurze einzeilige QuickInfos von Bedienfeldknöpfen und Inspektorfeldern
+  (ein Name wie „Deckkraft“) bleiben unverändert. Eine einzeilige QuickInfo, die eine Beschreibung und kein
+  Name ist (länger als 60 Zeichen oder ein Satz), entfällt ebenfalls; Bedienelemente mit längerer Erklärung
+  zeigen zuerst eine eigene Namenszeile, z. B. „Dither-Dichte“ über der Erklärung des Dither-Dichte-Felds, und
+  nur dieser Name bleibt. Um auch diese auszublenden, *Voreinstellungen ▸ Allgemein ▸ Werkzeugnamen ohne
   QuickInfos auch ausblenden* einschalten; *QuickInfo-Verzögerung (ms)* auf derselben
   Seite legt fest, wie lange der Mauszeiger ruhen muss, bis eine QuickInfo erscheint (Vorgabe 600,
   0–5000). Die Änderungen wirken sofort. Erklärende QuickInfos (z. B. am roten × im Verlauf, Gründe
@@ -746,12 +749,15 @@ und eingeklappte Höhe her.
 
 - **Dither (Dichte der Füllung):** Das Prozentfeld mit dem kleinen Schachbrett-Symbol unter dem Namen der
   Fülltextur (links von *Transparent*) macht aus der ganzen Füllung ein gleichmäßiges Raster aus ganz deckenden und leeren Pixeln: 50 % ist
-  ein schachbrettartiger Halbton der Füllfarbe, 25 % behält jedes vierte Pixel, 0 % schaltet es aus, 100 % ist die
-  volle Füllung. Es wirkt bei jeder Füllart (Vollfarbe, Verlauf, Muster) und nutzt dasselbe feste 8 × 8-Raster wie
+  ein schachbrettartiger Halbton der Füllfarbe, 25 % leert jedes vierte Pixel, 75 % behält nur jedes vierte, 0 %
+  schaltet es aus, 100 % leert die ganze Füllung (der Pinselstrich bleibt): Der Wert ist der Anteil leerer Pixel, ein
+  höherer Wert nimmt also immer mehr weg (bis v0.2.20 war es der Anteil behaltener Pixel und 100 sah aus wie 0;
+  ältere Dateien werden beim Öffnen umgerechnet). Es wirkt bei jeder Füllart (Vollfarbe, Verlauf, Muster) und nutzt dasselbe feste 8 × 8-Raster wie
   der Dither-Rand, verankert an den Dokumentpixeln. Zusammen mit einem Dither-Rand bleibt ein Pixel nur an, wo
   beide es behalten; der Rand läuft also von der gewählten Dichte nach außen aus. Der Pfeil neben dem Feld öffnet einen
   Schieberegler; beim Ziehen zeigt die Leinwand die Dichte sofort, Loslassen übernimmt sie. Eine Änderung ist ein Schritt
-  *Füllen* im Protokoll; ein Wechsel der Füllart behält die Dichte. Die Dither-Dichte ist eine
+  *Füllen* im Protokoll; ein Wechsel der Füllart behält die Dichte. Die QuickInfo nennt das Feld („Dither-Dichte“);
+  mit ausgeschaltetem *Ansicht ▸ QuickInfos* bleibt nur dieser Name. Die Dither-Dichte ist eine
   Firepixel-Erweiterung; eine `.fw.png`-Datei speichert sie nur in einer Firepixel-Markierung (geschrieben, wenn
   der Wert nicht 0 ist), andere Programme zeigen die normale Füllung.
 

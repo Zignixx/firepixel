@@ -119,27 +119,35 @@ pub fn dither_on(c: u8, x: i32, y: i32) -> bool {
     (c as u32) * 128 > b * 510 + 255
 }
 
-/// Uniform dither density (Firepixel extension, FB-38): is document pixel (x, y) on at `density`
-/// per cent? On when `density / 100 > (B + 0.5) / 64` with the Bayer 8 × 8 value B, so a density
-/// d turns on round(d · 64 / 100) of the 64 pixels of every 8 × 8 block (50 = checkerboard);
-/// 0 is always off, 100 and more always on.
+/// Uniform dither density (Firepixel extension, FB-38, FB-109): is document pixel (x, y) still
+/// on at `density` per cent? The density is the share of **empty** pixels, so the effect grows
+/// monotonically with the value: a pixel stays on when `(100 − density) / 100 > (B + 0.5) / 64`
+/// with the Bayer 8 × 8 value B, so a density d empties round(d · 64 / 100) of the 64 pixels of
+/// every 8 × 8 block, the pixels with the highest B first (the same order as the Dither edge, so
+/// the two combine to the lower of their tones). 0 = off (all on), 50 = exact checkerboard, 100
+/// and more = every pixel empty. (Before FB-109 the value was the share of kept pixels, 100
+/// looked like 0.)
 #[inline]
 pub fn density_on(density: u8, x: i32, y: i32) -> bool {
-    if density >= 100 {
+    if density == 0 {
         return true;
     }
+    if density >= 100 {
+        return false;
+    }
     let b = BAYER8[y.rem_euclid(8) as usize][x.rem_euclid(8) as usize] as u32;
-    (density as u32) * 128 > (2 * b + 1) * 100
+    (100 - density as u32) * 128 > (2 * b + 1) * 100
 }
 
-/// Does `density` change a fill at all (1..99)?
+/// Does `density` change a fill at all (1..=100)?
 #[inline]
 pub fn density_active(density: u8) -> bool {
-    density > 0 && density < 100
+    density > 0
 }
 
 /// Applies the uniform dither density (FB-38) to a coverage mask: pixels that are off at
-/// `density` become 0, the others keep their coverage. Densities 0 and ≥ 100 change nothing.
+/// `density` become 0, the others keep their coverage. Density 0 changes nothing, 100 empties
+/// the whole mask.
 pub fn apply_density(cov: &mut Coverage, density: u8) {
     let w = cov.width();
     if w == 0 || !density_active(density) {

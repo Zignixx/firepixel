@@ -1220,11 +1220,21 @@ pub fn read_fill(v: &[RawNode], ctx: &mut ReadCtx) -> Fill {
         edge
     };
     let lock_to_document = ext & Fill::EXT_LOCK_TO_DOCUMENT != 0;
-    // Firepixel-own dither density marker (see `write::FILL_DENSITY_EXT`, FB-38)
-    let dither_density = r
-        .i32(crate::write::FILL_DENSITY_EXT)
-        .unwrap_or(0)
-        .clamp(0, 100);
+    // Firepixel-own dither density marker (see `write::FILL_DENSITY_EXT`, FB-38); files from
+    // before FB-109 carry the share of kept pixels in `fpDi` instead (100 = off)
+    let dither_density = match r.i32(crate::write::FILL_DENSITY_EXT) {
+        Some(v) => v.clamp(0, 100),
+        None => r
+            .i32(crate::write::FILL_DENSITY_KEPT_EXT)
+            .map(|kept| {
+                if kept <= 0 || kept >= 100 {
+                    0
+                } else {
+                    100 - kept
+                }
+            })
+            .unwrap_or(0),
+    };
     let gradient = r.list(k!(b"FGLv")).map(|g| read_gradient(g, ctx));
     let pattern = r.list(k!(b"FPTv")).map(|p| {
         let mut s = Rd::new(p);

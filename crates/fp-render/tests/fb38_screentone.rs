@@ -89,13 +89,25 @@ fn fill_density_half_is_the_bayer_half_pattern() {
 }
 
 #[test]
-fn fill_density_zero_and_full_are_unchanged() {
+fn fill_density_0_50_100_on_a_solid_fill() {
+    // FB-109: the tester saw no difference between 0 and 100 on a solid fill (100 used to mean
+    // "all pixels kept"); the value is now the share of empty pixels and acts monotonically
+    let off = render(0xff33_6699, HARD, 0, 0, Vec::new());
+    let half = render(0xff33_6699, HARD, 0, 50, Vec::new());
+    let full = render(0xff33_6699, HARD, 0, 100, Vec::new());
+    assert_eq!(share(&off), 1.0, "0 = off: the plain solid fill");
+    assert!((share(&half) - 0.5).abs() <= 0.02, "50 = checkerboard");
+    assert_eq!(share(&full), 0.0, "100 = every pixel empty");
+    assert_ne!(pixels(&off), pixels(&full));
+    // anti-aliased edge: 0 is exactly the plain fill
     let plain = render(0xff33_6699, 1, 0, 0, Vec::new());
-    assert_eq!(
-        pixels(&render(0xff33_6699, 1, 0, 100, Vec::new())),
-        pixels(&plain)
-    );
-    assert_eq!(share(&render(0xff33_6699, HARD, 0, 100, Vec::new())), 1.0);
+    assert!(pixels(&plain).iter().all(|p| p[3] == 255));
+    let mut last = 1.1;
+    for d in [10, 25, 50, 75, 90, 100] {
+        let s = share(&render(0xff33_6699, HARD, 0, d, Vec::new()));
+        assert!(s < last, "density {d}: {s} not below {last}");
+        last = s;
+    }
 }
 
 #[test]

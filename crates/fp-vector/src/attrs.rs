@@ -354,10 +354,11 @@ pub struct Fill {
     pub stamping: StampingMode,
     /// Transparenz-Dither (`FDTb`): Deckung × Schachbrett.
     pub transparency_dither: bool,
-    /// Uniform dither density in per cent (Firepixel extension, FB-38): 1..99 keeps only the
-    /// pixels whose ordered 8 × 8 (Bayer) threshold on document coordinates lies below the
-    /// density, so the whole fill becomes an on/off half tone of its colour over transparency
-    /// (50 = checkerboard); 0 and values ≥ 100 leave the fill unchanged. Applied before the edge.
+    /// Uniform dither density in per cent (Firepixel extension, FB-38, FB-109): the share of
+    /// empty pixels. 1..=100 empties the pixels whose ordered 8 × 8 (Bayer) threshold on document
+    /// coordinates lies below the density, so the whole fill becomes an on/off half tone of its
+    /// colour over transparency (50 = checkerboard, 100 = no pixel left); 0 leaves the fill
+    /// unchanged. Applied before the edge.
     #[cfg_attr(feature = "serde", serde(default))]
     pub dither_density: u8,
 }

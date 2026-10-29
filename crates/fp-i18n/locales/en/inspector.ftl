@@ -147,8 +147,11 @@ pi-edge-feather = Feather
 pi-edge-dither = Dither
 pi-texture-transparent = Transparent
 # Firepixel extension (FB-44): the pattern or gradient stays put in the document while the object moves
-pi-fill-lock-tip = Lock pattern to document: the pattern or gradient stays put when the object is moved or transformed (Firepixel extension)
-pi-fill-dither-density-tip = Dither density of the whole fill in % (0 = off): an even pattern of opaque and empty pixels (Firepixel extension)
+pi-fill-lock-name = Lock pattern to document
+pi-fill-lock-tip = The pattern or gradient stays put when the object is moved or transformed (Firepixel extension).
+pi-fill-dither-density-name = Dither density
+pi-fill-dither-density-tip = Dither density of the fill in % (0 = off, 50 = checkerboard, 100 = empty).
+    Firepixel extension: an even pattern of opaque and empty pixels, on solid, gradient and pattern fills.
 pi-texture-other = Other...
 pi-texture-pick-title = Choose Texture
 # Texturnamen (Dateinamen der Texturen ohne Endung) in der Texturliste
@@ -495,7 +498,7 @@ pi-colorize = Colorize
 pi-mask = Mask:
 pi-mask-alpha = Alpha channel
 pi-mask-gray = Grayscale
-pi-tip-bmask-alpha = Alpha channel: the transparency of the mask bitmap cuts the content. After Paste Inside the bitmap also shows under the content (Show fill and stroke); Group as Mask or Paste as Mask, then Alpha channel, masks the same way without it.
+pi-tip-bmask-alpha = The transparency of the mask bitmap cuts the content. After Paste Inside the bitmap also shows under the content (Show fill and stroke); Group as Mask or Paste as Mask, then Alpha channel, masks the same way without it.
 pi-mask-path-outline = Path outline
 pi-mask-grayscale = Grayscale
 pi-mask-show-attrs = Show fill and stroke

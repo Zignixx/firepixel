@@ -112,10 +112,11 @@ pub struct Fill {
     /// only in the Firepixel-own marker `fpEi` (bit [`Fill::EXT_LOCK_TO_DOCUMENT`]). Default off.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub lock_to_document: bool,
-    /// Uniform dither density in per cent (Firepixel extension, FB-38): 0 = off, 1..99 quantises
-    /// the whole fill to an ordered 8 × 8 on/off half tone of that density, 100 = solid. In FW-PNG
-    /// it is stored only in the Firepixel-own marker `fpDi` of the fill (written when > 0), so
-    /// other readers show the plain fill.
+    /// Uniform dither density in per cent (Firepixel extension, FB-38, FB-109): the share of
+    /// empty pixels of an ordered 8 × 8 on/off half tone of the whole fill; 0 = off,
+    /// 50 = checkerboard, 100 = every pixel empty (monotonic). In FW-PNG it is stored only in the
+    /// Firepixel-own marker `fpDe` of the fill (written when > 0), so other readers show the plain
+    /// fill; the older marker `fpDi` (share of kept pixels, 100 = off) is still read and converted.
     #[serde(default, skip_serializing_if = "is_zero_i32")]
     pub dither_density: i32,
     #[serde(default, skip_serializing_if = "Extra::is_empty")]

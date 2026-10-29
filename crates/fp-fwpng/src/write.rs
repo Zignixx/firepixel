@@ -991,9 +991,14 @@ pub const FILL_EDGE_EXT: TagKey = k!(b"fpEi");
 /// lower-case letter, so other readers ignore it and show the plain mask.
 pub const MASK_INVERT_EXT: TagKey = k!(b"fpIb");
 
-/// Firepixel-own dither density marker in a fill `FPLv` (FB-38): `fpDi` = 1..100 per cent, written
-/// only when the density is not 0. Other readers keep / drop it and show the plain fill.
-pub const FILL_DENSITY_EXT: TagKey = k!(b"fpDi");
+/// Firepixel-own dither density marker in a fill `FPLv` (FB-38, FB-109): `fpOi` = 1..100 per cent
+/// empty pixels (model `Fill::dither_density`), written only when the density is not 0. Other
+/// readers keep / drop it and show the plain fill.
+pub const FILL_DENSITY_EXT: TagKey = k!(b"fpOi");
+
+/// Older dither density marker (FB-38, files written before FB-109): `fpDi` = per cent of **kept**
+/// pixels (100 = off). Only read ([`crate::read`] converts it), never written.
+pub const FILL_DENSITY_KEPT_EXT: TagKey = k!(b"fpDi");
 
 /// Firepixel-own live effect in an effect list `EFLv` (FB-38): a Firepixel live filter (EffectMoaID
 /// with [`fp_model::effects::FIREPIXEL_MOA_PREFIX`], e.g. the Screentone filter) is written as

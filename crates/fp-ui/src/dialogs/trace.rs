@@ -3407,7 +3407,14 @@ pub fn inspector_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
         font,
         if en { c.text } else { c.text_disabled },
     );
-    if resp.hover_tip(t("trace-inspector-tip")).clicked() && en {
+    if resp
+        .name_tip(crate::tips::named(
+            &t("trace-inspector-name"),
+            &t("trace-inspector-tip"),
+        ))
+        .clicked()
+        && en
+    {
         st.push(Action::Run("modify.traceBitmap".into(), json!({})));
     }
 }

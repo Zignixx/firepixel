@@ -144,7 +144,7 @@ fn fill_json(f: &fp_model::Fill) -> Value {
         "category": f.category, "name": f.name, "shape": shape, "edgeType": edge, "feather": f.feather,
         "textureBlend": f.texture_amount, "stampingMode": if f.stamping_mode == 0 { "blend" } else { "blend opaque" },
         "webDitherTransparent": f.transparent_dither.unwrap_or(false),
-        // uniform dither density in % (Firepixel extension, FB-38; 0 = off)
+        // uniform dither density in % empty pixels (Firepixel extension, FB-38, FB-109; 0 = off)
         "ditherDensity": f.dither_density,
         "ditherColors": f.dither_colors.map(|c| c.iter().map(|x| hex(fp_color::Argb(*x))).collect::<Vec<_>>()).unwrap_or_else(|| vec!["#000000".into(), "#000000".into()]),
         "gradient": gradient, "pattern": f.pattern.as_ref().map(|p| json!({"name": p.name, "image": p.user_name.clone().unwrap_or_else(|| p.name.clone())})),

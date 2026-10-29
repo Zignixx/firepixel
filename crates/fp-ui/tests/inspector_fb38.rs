@@ -103,6 +103,93 @@ fn dither_density_field_applies_one_fill_row() {
     }
 }
 
+/// Rests the pointer on `at` for one second and tells whether a tooltip layer is open.
+fn rest_and_tooltip_open(h: &mut H, at: Pos2) -> bool {
+    ev(h, Event::PointerGone);
+    h.run_steps(2);
+    ev(h, Event::PointerMoved(at));
+    for _ in 0..60 {
+        h.step();
+    }
+    h.ctx.memory(|m| m.areas().visible_layer_ids().iter().any(|l| l.order == egui::Order::Tooltip))
+}
+
+/// FB-103: the density field's tooltip has a name line of its own ("Dither density") and the
+/// explanation below; with View ▸ Tooltips off only the name stays, with "Hide tool names too"
+/// nothing. The old one-line text stayed in full in names-only mode.
+#[test]
+fn dither_density_tooltip_keeps_only_its_name_with_tooltips_off() {
+    fp_i18n::with_language("en", || {
+        let (mut h, _) = harness_with_rect();
+        let name = fp_i18n::t("pi-fill-dither-density-name");
+        let explain = fp_i18n::t("pi-fill-dither-density-tip");
+        assert_eq!(name, "Dither density");
+        assert!(explain.starts_with("Dither density of the fill in % (0 = off"), "{explain}");
+        assert!(explain.contains("Firepixel extension"), "{explain}");
+        for lang in ["de", "en"] {
+            let n = fp_i18n::with_language(lang, || fp_i18n::t("pi-fill-dither-density-name"));
+            assert!(!n.is_empty() && n.chars().count() <= 20, "{lang}: short name {n:?}");
+        }
+        let full = fp_ui::tips::named(&name, &explain);
+        let (f, _, _) = density_field(&h);
+        let at = Pos2::new(f.left() - 4.0, f.center().y);
+        assert!(rest_and_tooltip_open(&mut h, at), "tooltip on");
+        assert!(h.query_by_label(&full).is_some(), "full tooltip with the switch on");
+        // View > Tooltips off: only the name line
+        h.state_mut().state.run("view.tooltips", json!({}));
+        h.run_steps(1);
+        assert!(rest_and_tooltip_open(&mut h, at), "name tooltip with the switch off");
+        assert!(h.query_by_label(&full).is_none(), "no explanation with the switch off");
+        assert!(h.query_by_label(&name).is_some(), "the name line stays");
+        // and "hide tool names too": nothing
+        h.state_mut()
+            .state
+            .session
+            .prefs
+            .set(fp_ui::tips::HIDE_NAMES_PREF, fp_engine::prefs::PrefValue::Bool(true));
+        h.run_steps(1);
+        assert!(!rest_and_tooltip_open(&mut h, at), "no tooltip with names hidden too");
+        h.state_mut().state.run("view.tooltips", json!({}));
+        h.run_steps(1);
+    });
+}
+
+/// FB-109: 0 / 50 / 100 typed into the field give a plain, a checkerboard and an empty solid fill
+/// on the canvas render (monotonic share of empty pixels).
+#[test]
+fn dither_density_0_50_100_change_the_solid_fill() {
+    let (mut h, id) = harness_with_rect();
+    let mut shares = Vec::new();
+    for v in ["0", "50", "100"] {
+        let (f, _, enabled) = density_field(&h);
+        assert!(enabled, "the field is enabled for a solid fill");
+        click(&mut h, f.center());
+        key(&mut h, Key::End, Modifiers::NONE);
+        key(&mut h, Key::Home, Modifiers::SHIFT);
+        for c in v.chars() {
+            ev(&mut h, Event::Text(c.to_string()));
+        }
+        key(&mut h, Key::Enter, Modifiers::NONE);
+        h.run_steps(2);
+        assert_eq!(density(&h, id).to_string(), v);
+        let d = st(&h).session.active().expect("doc");
+        let img = fp_render::Renderer::new(fp_render::RenderOptions::default()).render_page(&d.doc, d.page, 0).image;
+        // inside the rectangle 40..300 × 40..200: share of pixels showing the fill colour
+        let (mut on, mut n) = (0usize, 0usize);
+        for y in 60..180 {
+            for x in 60..280 {
+                n += 1;
+                let p = img.pixel(x, y);
+                on += ((p.r, p.g, p.b) == (0x33, 0x66, 0x99)) as usize;
+            }
+        }
+        shares.push(on as f64 / n as f64);
+    }
+    assert_eq!(shares[0], 1.0, "0 = off: {shares:?}");
+    assert!((shares[1] - 0.5).abs() <= 0.02, "50 = checkerboard: {shares:?}");
+    assert_eq!(shares[2], 0.0, "100 = empty: {shares:?}");
+}
+
 fn fx_index(label: &str) -> usize {
     effects::FX.iter().position(|f| f.menu_text() == label).unwrap_or_else(|| panic!("{label}"))
 }

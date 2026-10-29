@@ -1,5 +1,6 @@
 //! FB-38 (Firepixel extensions): the uniform dither density of a fill is stored only in the
-//! Firepixel-own marker `fpDi` of the fill, the Screentone live filter only as a Firepixel-own
+//! Firepixel-own marker `fpOi` of the fill (share of empty pixels, FB-109; the older `fpDi` with the
+//! share of kept pixels is still read), the Screentone live filter only as a Firepixel-own
 //! effect entry `fpLv` in the effect list (instead of an `EPSv`). Both round-trip; with the default
 //! values (density 0, no Firepixel filter) the file carries none of the markers, i.e. it stays a
 //! plain file of the reference format.
@@ -10,7 +11,8 @@ use std::sync::Arc;
 use fp_color::Argb;
 use fp_fwpng::read::{ReadCtx, read_effect_list, read_fill};
 use fp_fwpng::write::{
-    CachePolicy, EFFECT_EXT, FILL_DENSITY_EXT, WriteCtx, write_effect_list, write_fill,
+    CachePolicy, EFFECT_EXT, FILL_DENSITY_EXT, FILL_DENSITY_KEPT_EXT, WriteCtx, write_effect_list,
+    write_fill,
 };
 use fp_geom::Rect;
 use fp_model::effects::{Effect, EffectKind, EffectList, SCREENTONE_MOA_ID};
@@ -66,12 +68,37 @@ fn screentone() -> Effect {
 }
 
 #[test]
+fn old_kept_share_marker_is_converted() {
+    // FB-109: files written before carry `fpDi` = share of kept pixels (0 and 100 = off)
+    for (kept, want) in [(40, 60), (50, 50), (1, 99), (99, 1), (100, 0), (0, 0)] {
+        let mut f = Fill::solid();
+        f.dither_density = 1;
+        let mut w = WriteCtx::new(CachePolicy::Keep, Vec::new());
+        let mut nodes = write_fill(&f, &mut w);
+        let n = nodes
+            .iter_mut()
+            .find(|n| n.key == FILL_DENSITY_EXT)
+            .expect("marker");
+        n.key = FILL_DENSITY_KEPT_EXT;
+        n.value = RawValue::Int(kept as u32);
+        let back = fill_back(&nodes);
+        assert_eq!(back.dither_density, want, "kept {kept}");
+        assert!(!back.extra.has_raw(FILL_DENSITY_KEPT_EXT), "consumed");
+        // written again only with the new marker
+        let mut w = WriteCtx::new(CachePolicy::Keep, Vec::new());
+        let again = write_fill(&back, &mut w);
+        assert_eq!(int_of(&again, b"fpDi"), None);
+        assert_eq!(int_of(&again, b"fpOi"), (want > 0).then_some(want));
+    }
+}
+
+#[test]
 fn dither_density_lives_in_its_marker() {
     let mut f = Fill::solid();
     f.dither_density = 40;
     let mut w = WriteCtx::new(CachePolicy::Keep, Vec::new());
     let nodes = write_fill(&f, &mut w);
-    assert_eq!(int_of(&nodes, b"fpDi"), Some(40));
+    assert_eq!(int_of(&nodes, b"fpOi"), Some(40));
     let back = fill_back(&nodes);
     assert_eq!(back.dither_density, 40);
     assert!(
@@ -90,7 +117,7 @@ fn dither_density_lives_in_its_marker() {
     // density 0: no marker, the fill nodes are exactly those of a plain fill
     let mut w = WriteCtx::new(CachePolicy::Keep, Vec::new());
     let zero = write_fill(&Fill::solid(), &mut w);
-    assert_eq!(int_of(&zero, b"fpDi"), None);
+    assert_eq!(int_of(&zero, b"fpOi"), None);
     assert_eq!(zero, plain);
 }
 
@@ -179,7 +206,7 @@ fn document_round_trip_keeps_density_and_screentone() {
     let doc = doc_with(f, vec![Effect::new(DROP_SHADOW, true), screentone()]);
     let bytes = bytes_of(&doc);
     let t = all_tags(&bytes);
-    assert!(t.contains(b"fpDi") && t.contains(b"fpLv"));
+    assert!(t.contains(b"fpOi") && t.contains(b"fpLv"));
     let back = fp_fwpng::read(&bytes).expect("read");
     let LayerSlot::Own(l) = &back.pages[0].root.layers[0] else {
         panic!("no layer")
@@ -199,7 +226,7 @@ fn default_values_leave_the_reference_format_untouched() {
     let plain = doc_with(Fill::solid(), vec![Effect::new(DROP_SHADOW, true)]);
     let bytes = bytes_of(&plain);
     let t = all_tags(&bytes);
-    for k in [b"fpDi", b"fpLv", b"fpEi"] {
+    for k in [b"fpOi", b"fpLv", b"fpEi"] {
         assert!(!t.contains(k), "{}", String::from_utf8_lossy(k));
     }
     // set and reset: a file with both extensions, read back, density set to 0 and the Screentone
@@ -234,7 +261,7 @@ fn default_values_leave_the_reference_format_untouched() {
     // engine does after an edit
     doc.root_copy = None;
     let t = all_tags(&bytes_of(&doc));
-    for k in [b"fpDi", b"fpLv"] {
+    for k in [b"fpOi", b"fpLv"] {
         assert!(
             !t.contains(k),
             "after reset: {}",

@@ -471,16 +471,25 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let one_mask = en
         && selected.len() == 1
         && fp_engine::docops::mask_owner(&doc, page, selected[0]).is_some();
-    fields::tip(
-        ui,
-        "layers-opacity-help",
-        dl.r(120.0, 2.0, 21.0, 12.0),
-        &common::t(if one_mask {
-            "panel-layers-opacity-tip-mask"
-        } else {
-            "panel-layers-opacity-tip"
-        }),
-    );
+    // FB-103: the long mask text gets a name line of its own, the short text is the name
+    if one_mask {
+        fields::named_tip(
+            ui,
+            "layers-opacity-help",
+            dl.r(120.0, 2.0, 21.0, 12.0),
+            &crate::tips::named(
+                &common::t("panel-layers-opacity-mask-name"),
+                &common::t("panel-layers-opacity-tip-mask"),
+            ),
+        );
+    } else {
+        fields::tip(
+            ui,
+            "layers-opacity-help",
+            dl.r(120.0, 2.0, 21.0, 12.0),
+            &common::t("panel-layers-opacity-tip"),
+        );
+    }
     // live canvas preview of the dragged value like the inspector's opacity slider (FB-28,
     // TW-205); applied on release / pop-up close, the Blend mode menu stays a plain commit
     if en && let Some(v) = fields::slider_live(ui.ctx(), "layers-opacity") {

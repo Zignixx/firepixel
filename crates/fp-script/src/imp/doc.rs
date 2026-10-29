@@ -294,7 +294,8 @@ pub(super) fn fill_edge_code(mode: &str) -> Option<i32> {
 /// FB-23) also sets the dither edge with the object's `feather` as its width. A pattern fill
 /// (`category` "fc_Pattern" or `shape` "pattern" with `pattern.name`) sets that pattern instead of a
 /// solid fill; `lockToDocument` (Firepixel extension, FB-44) sets "Lock pattern to document",
-/// `ditherDensity` (Firepixel extension, FB-38) the uniform dither density in % of the whole fill.
+/// `ditherDensity` (Firepixel extension, FB-38) the uniform dither density (% empty pixels, 0 = off,
+/// 100 = empty, FB-109) of the whole fill.
 fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
     let pattern = fill
         .get("pattern")

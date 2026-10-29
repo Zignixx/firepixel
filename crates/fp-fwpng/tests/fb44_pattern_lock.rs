@@ -163,12 +163,12 @@ fn document_round_trip_keeps_the_lock() {
 
 #[test]
 fn lock_and_dither_density_live_side_by_side() {
-    // FB-44 and FB-38 together: the lock bit in `fpEi`, the density in its own `fpDi`
+    // FB-44 and FB-38 together: the lock bit in `fpEi`, the density in its own `fpOi`
     let mut f = pattern_fill(true);
     f.dither_density = 40;
     let nodes = write(&f);
     assert_eq!(int_of(&nodes, b"fpEi"), Some(Fill::EXT_LOCK_TO_DOCUMENT));
-    assert_eq!(int_of(&nodes, b"fpDi"), Some(40));
+    assert_eq!(int_of(&nodes, b"fpOi"), Some(40));
     let back = read_back(&nodes);
     assert!(back.lock_to_document);
     assert_eq!(back.dither_density, 40);

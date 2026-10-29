@@ -91,6 +91,7 @@ trace-svg-saved = SVG gespeichert: { $path }
 trace-svg-error = Das SVG konnte nicht gespeichert werden: { $detail }
 trace-apply-error = Bitmap nachzeichnen
 trace-inspector-button = Nachzeichnen...
+trace-inspector-name = Bitmap nachzeichnen
 trace-inspector-tip = Bitmap in bearbeitbare Vektorpfade umwandeln (Modifizieren ▸ Bitmap nachzeichnen)
 
 # Aufräumen (Logo-Nachbearbeitung im Dialog, VT-4)

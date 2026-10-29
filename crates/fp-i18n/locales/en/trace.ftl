@@ -91,6 +91,7 @@ trace-svg-saved = SVG saved: { $path }
 trace-svg-error = The SVG could not be saved: { $detail }
 trace-apply-error = Trace Bitmap
 trace-inspector-button = Trace...
+trace-inspector-name = Trace Bitmap
 trace-inspector-tip = Convert the bitmap into editable vector paths (Modify ▸ Trace Bitmap)
 
 # Clean up (logo refinement in the dialog, VT-4)

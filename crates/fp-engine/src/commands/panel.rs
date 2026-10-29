@@ -3245,7 +3245,7 @@ pub fn register(r: &mut CommandRegistry) {
                     min: Some(0),
                     max: Some(100),
                 },
-                "Dither-Dichte der ganzen Füllung in % (0 = aus, 100 = deckend; Firepixel-Erweiterung)",
+                "Dither-Dichte der ganzen Füllung in % (Anteil leerer Pixel: 0 = aus, 50 = Schachbrett, 100 = leer; Firepixel-Erweiterung)",
             )
             .opt("texture", ParamKind::String, "Texturname (leer = keine)")
             .opt(

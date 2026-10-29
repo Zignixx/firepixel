@@ -1017,6 +1017,12 @@ pub fn tooltip_at(ui: &mut Ui, id: Id, r: Rect, text: &str) {
     let _ = ui.interact(r, id, egui::Sense::hover()).hover_tip(text);
 }
 
+/// Like [`tooltip_at`] for a tooltip with a name line of its own ([`crate::tips::named`],
+/// FB-103): the name stays with View ▸ Tooltips off.
+pub fn named_tooltip_at(ui: &mut Ui, id: Id, r: Rect, text: &str) {
+    let _ = ui.interact(r, id, egui::Sense::hover()).name_tip(text);
+}
+
 /// Farbfeld mit dem Muster (Ausschnitt des Musterbilds).
 fn draw_pattern_swatch(ui: &Ui, r: Rect, name: &str) {
     let inner = r.shrink(2.0);
@@ -1140,7 +1146,7 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
             Glyph::Lock,
             lock,
             en,
-            &t("pi-fill-lock-tip"),
+            &crate::tips::named(&t("pi-fill-lock-name"), &t("pi-fill-lock-tip")),
         )
     {
         st.run("pi.fill", json!({"lockPattern": !lock}));
@@ -1175,11 +1181,14 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
             apply_fill(ui, st, tgt, json!({"ditherDensity": v as i64}));
         }
         preview_slider(ui, st, id.with("density"), den, PreviewValue::DitherDensity);
-        tooltip_at(
+        named_tooltip_at(
             ui,
             id.with("density-tip"),
             lr.union(fr),
-            &t("pi-fill-dither-density-tip"),
+            &crate::tips::named(
+                &t("pi-fill-dither-density-name"),
+                &t("pi-fill-dither-density-tip"),
+            ),
         );
     }
 }
@@ -4158,11 +4167,11 @@ pub fn bitmap_mask_radios(ui: &mut Ui, st: &mut AppState, d: Dl, id: &str) {
     }
     // FB-101: what Alpha channel does and where the Paste Inside underlay comes from (the
     // reference offers no "Show fill and stroke" for a bitmap mask, RE spec 68 §4.2 rules 2 and 5)
-    fields::tip(
+    fields::named_tip(
         ui,
         (id, "alpha-tip"),
         d.r(39.0, 2.0, 80.0, 10.0),
-        &t("pi-tip-bmask-alpha"),
+        &crate::tips::named(&t("pi-mask-alpha"), &t("pi-tip-bmask-alpha")),
     );
     if fields::radio(
         ui,

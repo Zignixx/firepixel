@@ -110,7 +110,8 @@ pub struct FillPainter<'a> {
     kind: Kind,
     tex: Option<Tex<'a>>,
     dither: bool,
-    /// Uniform dither density 1..99 (Firepixel extension, FB-38); 0 = off.
+    /// Uniform dither density 1..=100 = share of empty pixels (Firepixel extension, FB-38,
+    /// FB-109); 0 = off.
     density: u8,
 }
 

@@ -91,6 +91,7 @@ panel-states-delete = Delete State
 ## Layers
 panel-layers-opacity = Opacity
 panel-layers-opacity-tip = Opacity of the selected objects
+panel-layers-opacity-mask-name = Mask opacity
 panel-layers-opacity-tip-mask = Opacity of the selected mask object: sets how strongly Invert hides. The masking and the underlay (Show fill and stroke) keep their strength.
 panel-layers-web-layer = Web Layer
 panel-layers-kind-bitmap = Bitmap

@@ -700,7 +700,7 @@ cmdtext-abzug-im-eigenen-strich-alt-firepixel-er-b2b123 = subtraction within the
 cmdtext-muster-im-dokument-festhalten-muster-bzw-77ed86 = lock pattern to document: the pattern or gradient stays put in the document while the object is moved or transformed (Firepixel extension)
 cmdtext-maske-invertieren-firepixel-erweiterung = Invert the mask (Firepixel extension)
 cmdtext-maske-vorher-anwenden-in-bitmap-umwandeln = Apply the mask first (convert to a bitmap)
-cmdtext-dither-dichte-der-ganzen-fuellung-in-0-a-10df26 = Dither density of the whole fill in % (0 = off, 100 = solid; Firepixel extension)
+cmdtext-dither-dichte-der-ganzen-fuellung-in-ant-f3aa3d = Dither density of the whole fill in % (share of empty pixels: 0 = off, 50 = checkerboard, 100 = empty; Firepixel extension)
 cmdtext-kontur-x-y-wird-geschlossen = Outline [[x, y], …] (closed automatically)
 cmdtext-history-row-edit-bitmap-when-bitmap-mode-92f058 = History row "Edit Bitmap" when bitmap mode starts (choosing a bitmap tool with a bitmap selected, a stroke on a bitmap, a Pointer double-click)
 cmdtext-with-row-write-the-row-even-when-bitmap-942cd5 = with `row`: write the row even when bitmap mode is already on (second row of the Pointer double-click)

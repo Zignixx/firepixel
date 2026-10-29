@@ -1127,7 +1127,10 @@ fn confine_q5(ui: &mut Ui, _st: &mut AppState, r: Rect) {
     );
     let _ = ui
         .interact(rect, Id::new("retouch-confine-tip"), egui::Sense::hover())
-        .hover_tip(tx("pi-tip-confine-bounds"));
+        .name_tip(crate::tips::named(
+            &tx("pi-confine-bounds"),
+            &tx("pi-tip-confine-bounds"),
+        ));
     if let Some(v) = v {
         edit_tool_attrs(ui.ctx(), |a| a.confine_bounds = v);
     }
@@ -1161,7 +1164,10 @@ fn pointer_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
     );
     let _ = ui
         .interact(rect, Id::new("pointer-marquee-tip"), egui::Sense::hover())
-        .hover_tip(tx("pi-tip-pointer-marquee"));
+        .name_tip(crate::tips::named(
+            &tx("pi-pointer-marquee"),
+            &tx("pi-tip-pointer-marquee"),
+        ));
     if let Some(i) = pick
         && (i == 1) != lasso
     {

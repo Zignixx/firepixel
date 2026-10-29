@@ -3,8 +3,12 @@
 //!
 //! - Tooltips on: every tooltip in full ("Pointer (V, 0)" plus the description line).
 //! - Tooltips off: only the name line stays ("Pointer (V, 0)"); the description lines go.
-//!   A tooltip of one line (a panel button, an inspector control) stays as it is; a tooltip of
-//!   several lines whose first line is not a name line goes completely (FB-99).
+//!   A tooltip of one short line (a panel button, an inspector control: "Opacity") stays as it
+//!   is; a tooltip of several lines whose first line is not a name line goes completely (FB-99);
+//!   a single line that is a description and no name (longer than [`NAME_LINE_MAX`] characters,
+//!   or a sentence ending in a full stop, [`is_description_line`]) goes as well (FB-103). A control
+//!   that should keep a name gives it a name line of its own: "Dither density\nDither density of
+//!   the fill …", attached with [`HoverTip::name_tip`].
 //! - Tooltips off with "Hide tool names too" (`Firepixel_TooltipsHideNames`): no tooltip at all.
 //! - The delay before a tooltip opens is `Firepixel_TooltipDelayMs` (default 600 ms), applied
 //!   from the next frame on.
@@ -55,6 +59,23 @@ pub fn is_name_line(line: &str) -> bool {
             .all(|k| !k.is_empty() && k.chars().count() <= 20 && !k.contains(char::is_whitespace))
 }
 
+/// Longest single line that can still be a name (FB-103): longer lines are descriptions.
+pub const NAME_LINE_MAX: usize = 60;
+
+/// Whether a single-line tooltip is a description rather than a name (FB-103): longer than
+/// [`NAME_LINE_MAX`] characters, or a sentence of at least four words ending in a full stop.
+pub fn is_description_line(line: &str) -> bool {
+    let l = line.trim();
+    l.chars().count() > NAME_LINE_MAX || (l.ends_with('.') && l.split_whitespace().count() >= 4)
+}
+
+/// A tooltip with a name line of its own (FB-103): `name` (a trailing ":" of a field label
+/// dropped) on the first line, the description below; attach it with [`HoverTip::name_tip`] so
+/// the name stays with the tooltips off.
+pub fn named(name: &str, text: &str) -> String {
+    format!("{}\n{}", name.trim().trim_end_matches(':').trim_end(), text)
+}
+
 /// What a tooltip shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TipMode {
@@ -87,6 +108,7 @@ impl TipMode {
             (_, TipKind::Explain) | (TipMode::Full, _) => Some(text),
             (TipMode::Off, _) => None,
             (TipMode::NamesOnly, kind) => match text.split_once('\n') {
+                None if kind == TipKind::Describe && is_description_line(text) => None,
                 None => Some(text),
                 Some((first, _)) if kind == TipKind::Named || is_name_line(first) => Some(first),
                 Some(_) => None,
@@ -208,6 +230,44 @@ mod tests {
         for m in [TipMode::Full, TipMode::NamesOnly, TipMode::Off] {
             assert_eq!(m.shown_as(d, TipKind::Explain), Some(d));
         }
+    }
+
+    #[test]
+    fn single_line_descriptions_go_in_names_only_mode() {
+        // FB-103: one line without a name part is a description, not a name
+        let long = "Dither density of the whole fill in % (0 = off): an even pattern of opaque and empty pixels (Firepixel extension)";
+        assert!(is_description_line(long));
+        assert_eq!(TipMode::NamesOnly.shown(long), None);
+        assert_eq!(TipMode::Full.shown(long), Some(long));
+        let sentence = "Takes the selected file off the list.";
+        assert_eq!(TipMode::NamesOnly.shown(sentence), None);
+        // short names stay
+        for name in [
+            "Size",
+            "Opacity of the selected objects",
+            "Dither density",
+            "Dither:",
+        ] {
+            assert!(!is_description_line(name), "{name}");
+            assert_eq!(TipMode::NamesOnly.shown(name), Some(name));
+        }
+        // a control with a name line of its own keeps the name
+        let split = "Dither density\nDither density of the fill in % (0 = off).";
+        assert_eq!(
+            TipMode::NamesOnly.shown_as(split, TipKind::Named),
+            Some("Dither density")
+        );
+        assert_eq!(TipMode::Off.shown_as(split, TipKind::Named), None);
+        // a one-line explanation still shows in every mode
+        assert_eq!(
+            TipMode::NamesOnly.shown_as(long, TipKind::Explain),
+            Some(long)
+        );
+        // a one-line name tip is never treated as a description
+        assert_eq!(
+            TipMode::NamesOnly.shown_as(long, TipKind::Named),
+            Some(long)
+        );
     }
 
     #[test]
