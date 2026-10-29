@@ -3178,15 +3178,6 @@ fn overlays(
     )
     .then(|| st.session.prefs.get_bool("ShowSolidPoints", false));
     let preview_drag = st.session.prefs.get_bool("PreviewDrag", true);
-    let move_drag = feedback.iter().any(|o| {
-        matches!(
-            o,
-            Overlay::Ghost {
-                moved_by: Some(_),
-                ..
-            }
-        )
-    });
     let cc = st.canvases.entry(id).or_default();
     let mut had_text = false;
     for o in feedback.iter().cloned() {
@@ -3338,17 +3329,8 @@ fn overlays(
                     );
                 }
             }
-            // during a move drag the smart guides are dashed, smart-guide colour alternating
-            // with white (RE spec 76 §3); elsewhere solid as before (not measured)
-            Overlay::SmartGuide { from, to } if move_drag => {
-                dashed_segment(
-                    painter,
-                    [spp(from), spp(to)],
-                    c.smart_guide,
-                    Color32::WHITE,
-                    SMART_GUIDE_DASH,
-                );
-            }
+            // every Pointer smart guide, the snap-back lines of a move drag included: dashed 3 on /
+            // 3 off in `SmartGuideColor` (RE spec 77 §4, F142; F145 reconciles RE spec 76 §1.6)
             Overlay::SmartGuide { from, to } => {
                 let ppp = ui.ctx().pixels_per_point();
                 // a plain mesh: no feathering, the runs cover whole pixels like the reference
@@ -4129,32 +4111,6 @@ pub(crate) const TRANSFORM_FRAME: Color32 = Color32::BLACK;
 /// Outline of the moved objects during a move drag with "Preview drag" off: opaque #00A8FF,
 /// whatever the theme and the pixels below (RE spec 76 §3: same value on grey, blue and green).
 pub(crate) const DRAG_OUTLINE: Color32 = Color32::from_rgb(0x00, 0xa8, 0xff);
-/// Dash length (screen px) of the smart guides (RE spec 76 §3: dashed, alternating with white;
-/// the dash length was not measured).
-const SMART_GUIDE_DASH: f32 = 4.0;
-
-/// A 1 px line from `a` to `b` in dashes of `dash` screen px, `on` alternating with `off`.
-fn dashed_segment(
-    painter: &egui::Painter,
-    [a, b]: [Pos2; 2],
-    on: Color32,
-    off: Color32,
-    dash: f32,
-) {
-    painter.line_segment([a, b], Stroke::new(1.0, off));
-    let len = (b - a).length();
-    if len <= 0.0 || dash <= 0.0 {
-        return;
-    }
-    let dir = (b - a) / len;
-    let mut t = 0.0;
-    while t < len {
-        let e = (t + dash).min(len);
-        painter.line_segment([a + dir * t, a + dir * e], Stroke::new(1.0, on));
-        t += 2.0 * dash;
-    }
-}
-
 /// Beschriftung mit Hintergrund (Größe, Winkel, Abstand, Position).
 /// Füllgriffe eines Objekts mit Verlaufs- oder Musterfüllung: Linie Start → Ende, Start als runder
 /// Punkt, Ende als Quadrat; bei Formen mit zweiter Achse (Ellipse, Rechteck, Muster) auch deren

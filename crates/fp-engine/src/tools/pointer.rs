@@ -1540,8 +1540,8 @@ impl PointerTool {
                 if let Some(b) = bounds
                     && !constrain
                 {
-                    // the start position is a smart-guide target too (RE spec 76 §4, §7.9)
-                    let snap = Snapper::new(ctx, &ctx.selection.elements).with_target(b);
+                    // small drags snap back to the start position (RE spec 76 §4, §7.9; F145)
+                    let snap = Snapper::new(ctx, &ctx.selection.elements).with_start(b);
                     // re 41 §1.2: Zeigerpunkte mit floor auf ganze Pixel, Fang über den Gesamtzug
                     let (rx, ry) = snap.move_delta(start, cur);
                     let (dx, dy, g) = snap.move_rect(b.translate(rx, ry), rx, ry);

@@ -698,6 +698,7 @@ cmdtext-wie-das-skalieren-werkzeug-eine-reine-ac-1789a5 = wie das Skalieren-Werk
 cmdtext-fortsetzungen-eines-angehaltenen-strichs-0b4f66 = Fortsetzungen eines angehaltenen Strichs: Indizes in `points`, an denen ein neues, nicht verbundenes Stück desselben Strichs beginnt (Firepixel-Erweiterung)
 cmdtext-abzug-im-eigenen-strich-alt-firepixel-er-b2b123 = Abzug im eigenen Strich (Alt, Firepixel-Erweiterung): [{"{"}at, size, round, points{"}"}, …]; die Spitze löscht nur, was die Punkte vor `at` gemalt haben
 cmdtext-muster-im-dokument-festhalten-muster-bzw-77ed86 = Muster im Dokument festhalten: Muster bzw. Verlauf bleibt beim Verschieben und Transformieren des Objekts im Dokument stehen (Firepixel-Erweiterung)
+cmdtext-colour-already-read-from-the-screen-outs-b8a3aa = bereits außerhalb des Fensters vom Bildschirm gelesene Farbe (BA-114); ersetzt die Dokumentprobe bei `point`
 cmdtext-maske-invertieren-firepixel-erweiterung = Maske invertieren (Firepixel-Erweiterung)
 cmdtext-maske-vorher-anwenden-in-bitmap-umwandeln = Maske vorher anwenden (in Bitmap umwandeln)
 cmdtext-dither-dichte-der-ganzen-fuellung-in-ant-f3aa3d = Dither-Dichte der ganzen Füllung in % (Anteil leerer Pixel: 0 = aus, 50 = Schachbrett, 100 = leer; Firepixel-Erweiterung)

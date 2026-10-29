@@ -88,6 +88,9 @@ pub struct Snapper {
     guides_y: Vec<f32>,
     grid: Option<(Point, Point)>,
     targets: Vec<Rect>,
+    /// Start bounds of a move drag ([`Self::with_start`]): a smart-guide target only while the
+    /// whole drag is within the snap distance of the start (F145).
+    start: Option<Rect>,
     page: Option<Rect>,
     smart: bool,
     show_smart: bool,
@@ -158,6 +161,7 @@ impl Snapper {
             guides_y,
             grid,
             targets,
+            start: None,
             page: page_rect,
             smart,
             show_smart: v.show_smart_guides,
@@ -167,12 +171,15 @@ impl Snapper {
         }
     }
 
-    /// With `r` as one more smart-guide target. A move drag adds the start bounds of the moved
-    /// objects (F141, RE spec 76 §1.6, §4, §7.9): small drags snap back to the start position
-    /// (offset 0, guide line shown), which looked like a start delay in the reference.
-    pub fn with_target(mut self, r: Rect) -> Snapper {
+    /// With `r` = start bounds of the moved objects (F141, RE spec 76 §1.6, §4, §7.9): small
+    /// drags snap back to the start position (offset 0, dashed guide lines shown), which looked
+    /// like a start delay in the reference. F145 (A, FINDINGS TW-278): the start is a target only
+    /// while the drag is within the snap distance on both axes (`|zx|, |zy| ≤ tol` in
+    /// [`Self::move_rect`]), never an alignment target for longer drags along one axis (RE spec
+    /// 77 §4: a 94 px horizontal drag shows no guide).
+    pub fn with_start(mut self, r: Rect) -> Snapper {
         if self.smart && r.is_finite() {
-            self.targets.push(r);
+            self.start = Some(r);
         }
         self
     }
@@ -419,6 +426,16 @@ impl Snapper {
     /// kleinere Gesamtzug ab Ausgangslage (intelligent bei Gleichstand). Liefert die Korrektur
     /// (dx, dy) und die Rückmeldung für das korrigierte Rechteck.
     pub fn move_rect(&self, r: Rect, zx: f32, zy: f32) -> (f32, f32, Vec<Overlay>) {
+        // snap back to the start bounds only for small drags (F145, see `with_start`)
+        if let Some(st) = self.start
+            && zx.abs() <= self.tol + 1e-4
+            && zy.abs() <= self.tol + 1e-4
+        {
+            let mut s = self.clone();
+            s.start = None;
+            s.targets.push(st);
+            return s.move_rect(r, zx, zy);
+        }
         let r = r.normalized();
         let pick = |lo: f32, hi: f32, z: f32, vertical: bool| -> (f32, Option<(f32, Hit)>) {
             let grid = if self.edges {
@@ -613,6 +630,7 @@ mod tests {
             guides_y: vec![],
             grid: None,
             targets,
+            start: None,
             page: Some(Rect::new(0.0, 0.0, 300.0, 200.0)),
             smart: true,
             show_smart: true,
@@ -755,6 +773,42 @@ mod tests {
         assert_eq!(
             s.move_delta(Point::new(100.2, 100.0), Point::new(99.9, 100.5)),
             (-1.0, 0.0)
+        );
+    }
+
+    /// F145: the start bounds of a move drag are a target only while the whole drag is within
+    /// the snap distance (snap-back), never an alignment target along one axis for longer drags.
+    #[test]
+    fn start_bounds_only_snap_back_small_drags() {
+        let start = Rect::new(100.0, 100.0, 200.0, 160.0);
+        let s = Snapper {
+            page: None,
+            edges: false,
+            guides_x: vec![],
+            ..snapper(vec![])
+        }
+        .with_start(start);
+        let mv = |zx: f32, zy: f32| s.move_rect(start.translate(zx, zy), zx, zy);
+        let (dx, dy, g) = mv(3.0, 2.0);
+        assert_eq!((dx, dy), (-3.0, -2.0), "(3,2) snaps back to the start");
+        assert!(g.iter().any(|o| matches!(o, Overlay::SmartGuide { .. })));
+        let (dx, dy, _) = mv(0.0, 5.0);
+        assert_eq!(
+            (dx, dy),
+            (0.0, -5.0),
+            "exactly the snap distance still snaps back"
+        );
+        let (dx, dy, g) = mv(94.0, 0.0);
+        assert_eq!((dx, dy), (0.0, 0.0));
+        assert!(
+            !g.iter().any(|o| matches!(o, Overlay::SmartGuide { .. })),
+            "a 94 px horizontal drag shows no guide to its own start: {g:?}"
+        );
+        let (dx, dy, _) = mv(6.0, 1.0);
+        assert_eq!(
+            (dx, dy),
+            (0.0, 0.0),
+            "beyond the snap distance on one axis: free"
         );
     }
 }
