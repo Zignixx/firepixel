@@ -355,6 +355,9 @@ struct CpState {
     track: bool,
     /// Objects selected when the pop-up opened (FB-46): a choice is applied only to them.
     target: Option<PreviewTarget>,
+    /// BA-114 (F5): last screen colour read outside the window and the pointer position it was
+    /// read at (the screen is read again only when the pointer moves).
+    screen: Option<(Pos2, Option<Argb>)>,
 }
 
 fn state_id(pid: Id) -> Id {
@@ -472,6 +475,7 @@ impl CpState {
             shot_asked: f64::NEG_INFINITY,
             shot_pos: None,
             shot_pending: None,
+            screen: None,
             track: false,
             target: None,
         };
@@ -557,6 +561,18 @@ fn sample(
                 ));
             }
         }
+    }
+    // BA-114 (F5): outside the window the real screen pixel (one pixel, as inside the window);
+    // `None` where the screen cannot be read (Wayland, no permission): the working colour stays
+    if !ctx.content_rect().contains(p) {
+        if let Some((at, c)) = s.screen
+            && at == p
+        {
+            return c;
+        }
+        let c = crate::screen_pick::screen_color(ctx, p, 1);
+        s.screen = Some((p, c));
+        return c;
     }
     let img = s.shot.as_ref()?;
     let ppp = ctx.pixels_per_point();

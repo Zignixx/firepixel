@@ -765,6 +765,10 @@ fn view_and_colors() {
     let v = ex(&mut s, "color.sample", json!({"point": [1, 1], "samples": 3}));
     assert_eq!(v["color"], "#010203");
     assert_eq!(s.tools.fill_color.0, 0xff01_0203);
+    // BA-114: a colour read from the screen outside the window replaces the document sample
+    let v = ex(&mut s, "color.sample", json!({"point": [1, 1], "color": "#8040c0", "target": "stroke"}));
+    assert_eq!(v["color"], "#8040c0");
+    assert_eq!((s.tools.stroke_color.0, s.tools.fill_color.0), (0xff80_40c0, 0xff01_0203));
     ex(&mut s, "window.layers", json!({}));
     assert_eq!(s.command_state("window.layers").1, Some(false));
     ex(&mut s, "window.hidePanels", json!({}));

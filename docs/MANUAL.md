@@ -176,6 +176,13 @@ Bitmap" and the stroke row. A selected vector object is deselected and stays unc
 has its own colors (default black → white, a click on the swatch opens the gradient editor);
 "Fill selection" and tolerance are separate from the Paint Bucket. **Replace Color** has its own
 "From" and "To" colors (default green → red).
+The **Eyedropper** takes the color under the pointer into the active color box of the Tools panel (Alt:
+the other one); selected vector objects get the color too. The Sample option in the inspector ("1 Pixel", "3x3 Average", "5x5 Average") reads 1
+pixel or the 3 × 3 / 5 × 5 average. On the canvas it samples the document; press on the canvas, hold the
+mouse button and release anywhere on the screen outside the Firepixel window to take that screen color
+(also from other programs, with the same Sample option). Released beside the canvas inside the window,
+the color stays. Limits: on Linux the screen is read only under X11 (on Wayland the color stays); on
+macOS the system asks for the Screen Recording permission, without it only the desktop background is read.
 While you paint with Brush, Pencil, Eraser or Rubber Stamp, the preview appears at the bitmap's place
 in the stacking order, with its opacity, blend mode, effects and masks. A stroke that creates a new
 bitmap, or paints into a bitmap inside a symbol, is previewed on top until you release the mouse.
@@ -751,8 +758,12 @@ visible); the diamond on the tab and a double-click on the tab return to the ful
   "Other..." below the list picks an image file of your own.
 - **Color picker:** a click on a color box opens the popup with swatches, HEX field and eyedropper.
   While you move over the window, the eyedropper picks up every visible color, also over panels,
-  menus and open dialogs. A click applies the color. Outside the Firepixel window the working color
-  stays. HEX and RGB always show the base color; its opacity shows only in the opacity field and in
+  menus and open dialogs. A click applies the color. It also reads the real screen color outside the
+  Firepixel window, also from other programs: press inside the window (on the swatches or beside the
+  popup), hold the mouse button, drag out of the window and release there; while the button is held the
+  preview follows the screen color (one pixel). A click made directly in another program goes to that
+  program. On Linux the screen is read only under X11 (on Wayland the working color stays); macOS asks for
+  the Screen Recording permission. HEX and RGB always show the base color; its opacity shows only in the opacity field and in
   the preview box (the reference shows a color mixed over white when it reopens a semi-transparent
   color; Firepixel deliberately does not). Press on the opacity arrow and drag: the opacity follows
   the pointer and is applied on release, which closes the popup; Esc during the drag cancels.

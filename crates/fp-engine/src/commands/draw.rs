@@ -2270,6 +2270,11 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 json!(false),
                 "gewählte Vektoren bekommen die Farbe (Pipette)",
             )
+            .opt(
+                "color",
+                ParamKind::Color,
+                "colour already read from the screen outside the window (BA-114); replaces the document sample at `point`",
+            )
             .run(|s, p| {
                 let pt = p.point("point")?;
                 let n = match p.i64_or("samples", 1)? {
@@ -2277,7 +2282,10 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     5 => 5,
                     _ => 1,
                 };
-                let c = super::bitmap::sample_color(s, pt, n)?;
+                let c = match p.opt_color("color")? {
+                    Some(c) => c,
+                    None => super::bitmap::sample_color(s, pt, n)?,
+                };
                 let target = p.opt_str("target")?;
                 match target.as_deref() {
                     Some("stroke") => s.set_colors(Some(c), None),

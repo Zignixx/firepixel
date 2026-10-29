@@ -55,6 +55,15 @@ winit = { version = "0.30", default-features = false }
 eframe = { workspace = true, features = ["x11", "wayland"] }
 winit = { version = "0.30", default-features = false, features = ["x11", "wayland", "wayland-dlopen", "wayland-csd-adwaita"] }
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
+# BA-114 (F5): the eyedropper reads the screen outside the window; X11 through the pure-Rust X11
+# client (already in the tree via winit/arboard), no Wayland screen reading (src\screen_pick.rs)
+x11rb = { version = "0.13", default-features = false }
+
+# BA-114 (F5): the eyedropper reads the screen outside the window (src\screen_pick.rs): GDI on
+# Windows, Core Graphics on macOS through xcap (Apache-2.0, safe API; only system libraries). Not
+# used on Linux: its Linux backend needs libpipewire at build time, X11 goes through x11rb there.
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+xcap = { version = "0.9", default-features = false }
 
 # macOS: the application menu (About, Services, Hide, Quit) via muda's safe API (FB-05); winit's
 # default menu quits through `terminate:` without the save prompt, so it is replaced.

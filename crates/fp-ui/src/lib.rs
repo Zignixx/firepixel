@@ -45,6 +45,7 @@ pub mod panels;
 pub mod playback; // FB-63: animation playback on the canvas
 pub mod preview;
 pub mod screen_mode; // TW-158: Standard / full screen with menus / full screen
+pub mod screen_pick; // BA-114 (F5): eyedropper outside the window reads the screen
 mod start_window;
 pub mod theme;
 pub mod tips; // FB-98: View > Tooltips keeps the names; delay preference

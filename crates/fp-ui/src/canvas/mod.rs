@@ -2381,6 +2381,13 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
     // Werkzeug-Ereignisse
     let t_ms = (time * 1000.0) as u64;
     let mut events: Vec<ToolEvent> = Vec::new();
+    // BA-114 (F5): Eyedropper released outside the window reads the screen colour there (Sample
+    // option 1 / 3×3 / 5×5); inside the window the tool samples the document as before
+    let eyedrop = st.session.tools.active == fp_engine::ToolId::Eyedropper;
+    let eyedrop_samples = st.session.tools.options.eyedropper_samples;
+    let ui_ctx = ui.ctx().clone();
+    let window_rect = ui_ctx.content_rect();
+    let mut screen_pick: Option<(fp_color::Argb, Modifiers, Point)> = None;
     let mk = |kind: PointerKind, p: Point| ToolEvent {
         input: ToolInput::Pointer { kind, pos: p },
         mods: mods_now,
@@ -2502,7 +2509,22 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
                             let dq = to_doc(q);
                             cc.pointer_down = false;
                             cc.last_pos = Some(dq);
-                            events.push(at(PointerKind::Up, dq, tm(cur, cur_space)));
+                            let screen = if eyedrop && !window_rect.contains(q) {
+                                crate::screen_pick::screen_color(&ui_ctx, q, eyedrop_samples)
+                            } else {
+                                None
+                            };
+                            match screen {
+                                // the tool itself gets a release far off the canvas (no document
+                                // sample, which could lie under the window edge when zoomed in);
+                                // the screen colour is applied after the events below
+                                Some(c) => {
+                                    screen_pick = Some((c, tm(cur, cur_space), dq));
+                                    let off = Point::new(-1.0e9, -1.0e9);
+                                    events.push(at(PointerKind::Up, off, tm(cur, cur_space)));
+                                }
+                                None => events.push(at(PointerKind::Up, dq, tm(cur, cur_space))),
+                            }
                             // Doppelklick selbst erkennen (Windows: zweiter Klick binnen 500 ms,
                             // höchstens 4 px entfernt), je Klick – auch zwei Klicks in einem Bild
                             if cc.click_press.take().is_some_and(|c| c.distance(q) <= 4.0) {
@@ -2585,6 +2607,20 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
             cc.text = None;
         }
         tool_result(&ctx, st, r);
+    }
+    if let Some((c, m, pt)) = screen_pick {
+        // target like the tool: the active colour well, Alt the other one (PAR 07/11)
+        let stroke = st.session.tools.options.stroke_well != m.alt;
+        st.run(
+            "color.sample",
+            json!({
+                "point": [pt.x, pt.y],
+                "color": format!("#{:06x}", c.0 & 0x00ff_ffff),
+                "target": if stroke { "stroke" } else { "fill" },
+                "samples": eyedrop_samples,
+                "applyToSelection": true,
+            }),
+        );
     }
 }
 

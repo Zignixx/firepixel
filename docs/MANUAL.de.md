@@ -183,6 +183,14 @@ neue Bitmap anlegt, schreibt vor „Bitmap bearbeiten“ und der Strichzeile die
 **Verlauf** hat eigene Farben (Vorgabe Schwarz → Weiß, Klick aufs Farbfeld öffnet den
 Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
 hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
+Die **Pipette** übernimmt die Farbe unter dem Zeiger in das aktive Farbfeld des Werkzeugbedienfelds (Alt:
+das andere); gewählte Vektorobjekte bekommen die Farbe ebenfalls. Die Option „Auswahl:“ im Inspektor liest
+1 Pixel oder den Durchschnitt aus 3 × 3 bzw. 5 × 5. Auf der Leinwand tastet sie das Dokument ab; auf der
+Leinwand drücken, die Maustaste halten und irgendwo auf dem Bildschirm außerhalb des Firepixel-Fensters
+loslassen übernimmt die Bildschirmfarbe dort (auch aus anderen Programmen, mit derselben Auswahl).
+Neben der Leinwand innerhalb des Fensters losgelassen, bleibt die Farbe. Grenzen: Unter Linux wird der
+Bildschirm nur unter X11 gelesen (unter Wayland bleibt die Farbe); unter macOS fragt das System nach der
+Berechtigung „Bildschirmaufnahme“, ohne sie wird nur der Schreibtischhintergrund gelesen.
 Beim Malen mit Pinsel, Bleistift, Radiergummi oder Stempel erscheint die Vorschau an der Stelle der
 Bitmap in der Stapelreihenfolge, mit ihrer Deckkraft, Füllmethode, ihren Effekten und Masken. Ein
 Strich, der eine neue Bitmap anlegt oder in eine Bitmap in einem Symbol malt, wird bis zum Loslassen
@@ -823,8 +831,12 @@ und eingeklappte Höhe her.
   „Andere…“ unter der Liste wählt eine eigene Bilddatei.
 - **Farbwähler:** Ein Klick auf ein Farbfeld öffnet das Popup mit Farbfeldern, HEX-Feld und Pipette. Die
   Pipette nimmt beim Überfahren jede sichtbare Farbe im Fenster auf, auch über Bedienfeldern, Menüs und
-  offenen Dialogen. Ein Klick übernimmt die Farbe. Außerhalb des Firepixel-Fensters bleibt die
-  Arbeitsfarbe. HEX und RGB zeigen immer die Grundfarbe; ihre Deckkraft steht nur im Deckkraftfeld und im
+  offenen Dialogen. Ein Klick übernimmt die Farbe. Sie liest auch die echte Bildschirmfarbe außerhalb des
+  Firepixel-Fensters, auch aus anderen Programmen: im Fenster drücken (auf den Farbfeldern oder neben dem
+  Popup), die Maustaste halten, aus dem Fenster ziehen und dort loslassen; solange die Taste gehalten wird,
+  folgt die Vorschau der Bildschirmfarbe (ein Pixel). Ein Klick direkt in ein anderes Programm geht an
+  dieses Programm. Unter Linux wird der Bildschirm nur unter X11 gelesen (unter Wayland bleibt die
+  Arbeitsfarbe); macOS fragt nach der Berechtigung „Bildschirmaufnahme“. HEX und RGB zeigen immer die Grundfarbe; ihre Deckkraft steht nur im Deckkraftfeld und im
   Vorschaufeld (das Original zeigt beim erneuten Öffnen einer halbtransparenten Farbe eine über Weiß
   gemischte Farbe; Firepixel bewusst nicht). Auf den Deckkraft-Pfeil drücken und ziehen: Die Deckkraft folgt
   dem Zeiger und gilt beim Loslassen, das Popup schließt sich; Esc während des Ziehens bricht ab.
