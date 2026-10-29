@@ -377,7 +377,16 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   content; *Add Mask*, *Reveal All* / *Hide All*, *Paste as Mask* of a bitmap and *Group as Mask* give
   *Grayscale*. In grayscale the mask value is the luma (Rec. 709) of the mask's
   rendered look times its alpha: white shows, black hides, red gives 21 %, green 72 %, blue 7 %; gradients and
-  feathered edges ramp. With a mask selected (mask thumbnail in the Layers panel or *Edit Mask*) the inspector
+  feathered edges ramp. **What counts in each mode** (as in the reference): in *Path outline* without *Show fill
+  and stroke* only the path's shape cuts the content, always with a smooth (anti-aliased) edge even when the fill
+  edge is *Hard*, softened by a *Feather* edge; the fill colour and its alpha, gradients, patterns, dither, the
+  stroke, live effects and the mask object's opacity and blend mode change nothing, and the stroke does not
+  enlarge the mask. With *Show fill and stroke* the mask's fill (with its edge, feather, colour, gradient or
+  pattern) lies under the content, the content is cut sharply at the path (no feather), and the mask's stroke is
+  drawn over the content (width, softness, colour and alpha show); live effects, opacity and blend mode of the
+  mask object still do nothing. In *Grayscale* the whole rendered look counts: edge (also *Hard*), feather,
+  colour alpha, gradient (with dither), pattern, the stroke (a white stroke widens the mask, a black one hides
+  the edge) and live effects; only the mask object's opacity and blend mode are ignored. With a mask selected (mask thumbnail in the Layers panel or *Edit Mask*) the inspector
   follows the kind of the mask object, not the mode: a path, text or group (also a group of bitmaps) shows
   **Vector mask** with *Path outline* / *Grayscale*, *Show fill and stroke* (usable in *Path outline* only) and
   all fill and stroke controls in both modes; a bitmap shows **Bitmap mask** with *Alpha channel* /
@@ -726,6 +735,11 @@ visible); the diamond on the tab and a double-click on the tab return to the ful
   like an Alt drag instead of moving the handle. The fill follows live while you drag. Over a handle the pointer
   is a hollow arrow, over a handle line an arrow with a rotate sign. Pressing on a handle never moves the object;
   drag the object at a spot away from the handles. Each handle drag is one History step.
+
+- **Gradient dither:** the dither button of a gradient fill smooths the gradient as in the reference: the colours
+  follow a gentle S-curve (slower at both ends, faster in the middle) with a slight ±1 noise per colour channel,
+  which hides banding. Without it the gradient runs linearly. (The reference's exact noise pattern is unknown;
+  Firepixel uses a fixed pattern of its own, so the same file always renders the same.)
 
 - **Lock pattern to document (Firepixel extension):** normally a pattern or gradient moves with its object, as in
   the reference. Press the padlock button in the fill section of the Properties inspector (right of "Transparent",

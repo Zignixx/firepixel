@@ -260,10 +260,17 @@ fn paint(
                 .as_ref()
                 .map(|g| (stops(g.color_stops()), stops(g.opacity_stops())))
                 .unwrap_or_default();
+            let dither = f
+                .gradient
+                .as_ref()
+                .and_then(|g| g.stops.as_ref())
+                .and_then(|s| s.dither)
+                .unwrap_or(false);
             fv::FillKind::Gradient(fv::Gradient {
                 shape: fv::GradientShape::from_tags(sh, sx).unwrap_or(fv::GradientShape::Linear),
                 color_stops: cst,
                 opacity_stops: ost,
+                dither,
             })
         } else if sh == 16 {
             let d = f.dither_colors.unwrap_or([0xff00_0000; 4]);

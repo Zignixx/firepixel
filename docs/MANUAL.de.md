@@ -408,7 +408,18 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Inhalt beschneidet; *Maske hinzufügen*, *Alles einblenden* / *Alles ausblenden*, *Als Maske einfügen* einer
   Bitmap und *Als Maske gruppieren* geben *Graustufen*. In Graustufen ist
   der Maskenwert die Luma (Rec. 709) des gerenderten Maskenaussehens mal Alpha: Weiß zeigt, Schwarz blendet aus,
-  Rot ergibt 21 %, Grün 72 %, Blau 7 %; Verläufe und weiche Kanten laufen aus. Ist eine Maske gewählt
+  Rot ergibt 21 %, Grün 72 %, Blau 7 %; Verläufe und weiche Kanten laufen aus. **Was in welchem Modus zählt**
+  (wie im Original): Im *Pfadumriss* ohne *Füllung und Pinselstrich anzeigen* schneidet nur die Form des Pfads
+  den Inhalt zu, immer mit glatter (kantengeglätteter) Kante, auch wenn die Füllkante *Hart* ist, und weich bei
+  einer *Weichen Kante*; Füllfarbe und ihr Alpha, Verläufe, Muster, Dither, der Strich, Live-Effekte sowie
+  Deckkraft und Mischmodus des Maskenobjekts ändern nichts, und der Strich vergrößert die Maske nicht. Mit
+  *Füllung und Pinselstrich anzeigen* liegt die Füllung der Maske (mit Kante, weicher Kante, Farbe, Verlauf oder
+  Muster) unter dem Inhalt, der Inhalt wird scharf am Pfad abgeschnitten (ohne weiche Kante), und der Strich der
+  Maske wird über den Inhalt gezeichnet (Breite, Weichheit, Farbe und Alpha wirken); Live-Effekte, Deckkraft und
+  Mischmodus des Maskenobjekts bleiben ohne Wirkung. In *Graustufen* zählt das ganze gerenderte Aussehen: Kante
+  (auch *Hart*), weiche Kante, Farbalpha, Verlauf (mit Dither), Muster, der Strich (ein weißer Strich erweitert
+  die Maske, ein schwarzer blendet den Rand aus) und Live-Effekte; nur Deckkraft und Mischmodus des
+  Maskenobjekts werden ignoriert. Ist eine Maske gewählt
   (Maskenminiatur im Ebenen-Bedienfeld oder *Maske bearbeiten*), richtet sich der Inspektor nach der Art des
   Maskenobjekts, nicht nach dem Modus: Pfad, Text oder Gruppe (auch aus Bitmaps) zeigt **Vektormaske** mit
   *Pfadumriss* / *Graustufendarstellung*, *Füllung und Pinselstrich anzeigen* (nur im Pfadumriss bedienbar)
@@ -792,6 +803,11 @@ und eingeklappte Höhe her.
   live. Über einem Griff ist der Zeiger ein hohler Pfeil, über einer Grifflinie ein Pfeil mit Drehzeichen. Ein
   Druck auf einen Griff verschiebt nie das Objekt; das Objekt an einer Stelle abseits der Griffe ziehen. Jeder
   Griffzug ist ein Protokollschritt.
+
+- **Verlaufs-Dither:** Der Dither-Knopf einer Verlaufsfüllung glättet den Verlauf wie im Original: Die Farben
+  folgen einer sanften S-Kurve (an beiden Enden langsamer, in der Mitte schneller) mit leichtem Rauschen von ±1 je
+  Farbkanal, das Streifen verdeckt. Ohne ihn läuft der Verlauf linear. (Das genaue Rauschmuster des Originals ist
+  unbekannt; Firepixel nimmt ein festes eigenes Muster, dieselbe Datei sieht also immer gleich aus.)
 
 - **Muster im Dokument festhalten (Firepixel-Erweiterung):** Normalerweise wandert ein Muster oder Verlauf mit
   seinem Objekt, wie im Original. Mit dem Vorhängeschloss-Knopf im Füllungsteil des Eigenschaften-Inspektors (rechts

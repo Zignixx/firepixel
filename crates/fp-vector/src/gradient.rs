@@ -364,6 +364,7 @@ pub struct GradientPaint {
     t: TParam,
     mirrored: bool,
     table: GradientTable,
+    dither: bool,
 }
 
 impl GradientPaint {
@@ -376,6 +377,7 @@ impl GradientPaint {
             t: TParam::new(g.shape, h),
             mirrored: g.shape.mirrored(),
             table: GradientTable::new(&g.color_stops, &g.opacity_stops),
+            dither: g.dither,
         })
     }
 
@@ -386,13 +388,58 @@ impl GradientPaint {
         if self.mirrored {
             t = repeat_mirrored(t);
         }
-        self.table.lookup(t)
+        if !self.dither {
+            return self.table.lookup(t);
+        }
+        let c = self.table.lookup(dither_t(t)).0;
+        Argb(dither_noise(c, x as i64, y as i64))
     }
 
     /// Die Farbtabelle.
     pub fn table(&self) -> &GradientTable {
         &self.table
     }
+}
+
+/// Position mapping of a dithered gradient (RE spec 75 §1.5, B): `t' = 0.5·t + 0.5·(3t² − 2t³)`
+/// on the clamped position, before the colour table.
+#[inline]
+pub fn dither_t(t: f64) -> f64 {
+    if t.is_nan() {
+        return t;
+    }
+    let t = t.clamp(0.0, 1.0);
+    0.5 * t + 0.5 * t * t * (3.0 - 2.0 * t)
+}
+
+/// ±1 noise per colour channel of a dithered gradient (RE spec 75 §1.5: about 14 % −1, 13 % +1,
+/// independent per channel). The reference's noise source is unknown (A): a deterministic hash of
+/// the pixel and the channel stands in, so renders stay reproducible; channels at 0 or 255 keep
+/// their value (A, the measured end columns stay exact). Alpha is left alone (A, not measured).
+#[inline]
+pub fn dither_noise(argb: u32, x: i64, y: i64) -> u32 {
+    let mut out = argb & 0xFF00_0000;
+    for (ch, shift) in [16u32, 8, 0].into_iter().enumerate() {
+        let v = (argb >> shift) & 255;
+        let mut h = (x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+            ^ (y as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
+            ^ (ch as u64 + 1).wrapping_mul(0x1656_67B1_9E37_79F9);
+        h ^= h >> 33;
+        h = h.wrapping_mul(0xFF51_AFD7_ED55_8CCD);
+        h ^= h >> 33;
+        let r = h % 100;
+        let n = if v == 0 || v == 255 {
+            v
+        } else if r < 14 {
+            v - 1
+        } else if r < 27 {
+            v + 1
+        } else {
+            v
+        };
+        out |= n << shift;
+    }
+    out
 }
 
 #[cfg(test)]
@@ -404,6 +451,47 @@ mod tests {
             pos: p,
             color: Argb(c),
         }
+    }
+
+    #[test]
+    fn dither_s_curve_and_noise() {
+        // RE spec 75 §1.5: t' = 0.5·t + 0.5·(3t² − 2t³)
+        assert_eq!(dither_t(0.0), 0.0);
+        assert_eq!(dither_t(1.0), 1.0);
+        assert!((dither_t(0.5) - 0.5).abs() < 1e-12);
+        assert!((dither_t(0.1) - 0.064).abs() < 1e-12);
+        assert_eq!(dither_t(-2.0), 0.0);
+        assert_eq!(dither_t(3.0), 1.0);
+        let (mut lo, mut hi, mut n) = (0, 0, 0);
+        for y in 0..100 {
+            for x in 0..100 {
+                let c = dither_noise(0xFF80_8080, x, y);
+                assert_eq!(c >> 24, 0xFF, "alpha unchanged");
+                for sh in [16, 8, 0] {
+                    match ((c >> sh) & 255) as i32 - 128 {
+                        -1 => lo += 1,
+                        1 => hi += 1,
+                        0 => {}
+                        d => panic!("noise {d}"),
+                    }
+                    n += 1;
+                }
+            }
+        }
+        let (lo, hi) = (lo as f64 / n as f64, hi as f64 / n as f64);
+        assert!(
+            (0.11..0.17).contains(&lo) && (0.10..0.16).contains(&hi),
+            "{lo} {hi}"
+        );
+        assert_eq!(
+            dither_noise(0xFFFF_0000, 3, 4),
+            0xFFFF_0000,
+            "ends stay exact"
+        );
+        assert_eq!(
+            dither_noise(0xFF12_3456, 7, 9),
+            dither_noise(0xFF12_3456, 7, 9)
+        );
     }
 
     #[test]

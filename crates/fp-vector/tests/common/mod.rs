@@ -271,6 +271,7 @@ pub fn vector_path(pth: Tags, extra: &Extra, as_f32: bool) -> VectorPath {
                 shape: GradientShape::from_tags(sh, sx).unwrap_or(GradientShape::Linear),
                 color_stops: cst,
                 opacity_stops: ost,
+                dither: false,
             })
         } else if sh == 16 {
             FillKind::WebDither([

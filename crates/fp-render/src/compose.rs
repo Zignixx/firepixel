@@ -1458,22 +1458,28 @@ impl Renderer {
                 };
                 src.map(|i| if gray { to_gray(i) } else { i })
             }
-            ElementKind::Path(p) if !gray => {
+            // a path without fill and stroke is always a path outline (RE spec 75 §1.1)
+            ElementKind::Path(p)
+                if !gray || (p.attrs.fill.is_none() && p.attrs.brush.is_none()) =>
+            {
                 if !self.options.rasterize {
                     rep.miss("GRPv:mask");
                     return None;
                 }
-                let mut vp = convert::fill_only(convert::vector_path(p, &st.map));
-                if show
-                    && let Some(f) = &mut vp.fill
+                outline_mask(p, &st.map, show)
+            }
+            ElementKind::CompoundShape(c)
+                if !gray
+                    && self.options.rasterize
                     && matches!(
-                        f.edge,
-                        fp_vector::FillEdge::Feather(_) | fp_vector::FillEdge::Dither(_)
-                    )
-                {
-                    f.edge = fp_vector::FillEdge::AntiAliased;
+                        c.result.as_ref().map(|r| &r.kind),
+                        Some(ElementKind::Path(_))
+                    ) =>
+            {
+                match c.result.as_ref().map(|r| &r.kind) {
+                    Some(ElementKind::Path(p)) => outline_mask(p, &st.map, show),
+                    _ => None,
                 }
-                fp_vector::render_path_layer(&vp).map(|l| l.image)
             }
             _ if gray => self
                 .look(doc, me, st, rep)
@@ -1654,6 +1660,27 @@ pub fn find_bitmap(
             .find_map(|c| in_list(&c.elements, id.0, &mut path))
             .map(|e| (e, path.clone()))
     })
+}
+
+/// Path-outline mask value of a path (RE spec 75 §1.1–§1.3, §5): only the geometry counts and it
+/// is ALWAYS antialiased (the fill's edge "Hard" is ignored); without "Show fill and stroke" the
+/// fill's feather softens it (Firepixel's dither edge keeps its quantised ramp), with it the
+/// content is clipped hard to the antialiased geometry. Fill colour and alpha, gradient, pattern,
+/// texture, dither, the stroke, live effects and the mask object's opacity and blend mode do not
+/// count; the stroke does not extend the mask.
+fn outline_mask(p: &fp_model::PathElem, map: &PointMap, show: bool) -> Option<RgbaImage> {
+    let mut vp = convert::fill_only(convert::vector_path(p, map));
+    if let Some(f) = &mut vp.fill {
+        let keep = !show
+            && matches!(
+                f.edge,
+                fp_vector::FillEdge::Feather(r) | fp_vector::FillEdge::Dither(r) if r > 0
+            );
+        if !keep {
+            f.edge = fp_vector::FillEdge::AntiAliased;
+        }
+    }
+    fp_vector::render_path_layer(&vp).map(|l| l.image)
 }
 
 /// Firepixel extension (FB-35, RE spec 68 §6): strength of an inverted mask, `None` for a normal

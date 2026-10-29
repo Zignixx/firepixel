@@ -311,6 +311,10 @@ pub struct Gradient {
     pub color_stops: Vec<GradientStop>,
     /// Deckkraftstopps (liefern Alpha); leer = Alpha 255.
     pub opacity_stops: Vec<GradientStop>,
+    /// Gradient "Dither" (`FGDb`, RE spec 75 §1.5): S-shaped position mapping
+    /// `t' = 0.5·t + 0.5·(3t² − 2t³)` plus ±1 noise per colour channel.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub dither: bool,
 }
 
 /// Art der Füllung.
