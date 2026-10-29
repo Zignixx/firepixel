@@ -29,6 +29,24 @@ gh run watch
 
 Alternatively on GitHub: *Actions ▸ prerelease ▸ Run workflow* (field *Version*, empty = automatic).
 
+### Branch ruleset on `main` (since 29 Oct 2026)
+
+`main` has a repository ruleset ("main: pull requests for contributors"): deleting the branch is blocked
+and every push must come through a pull request, except for repository admins, who bypass the rule.
+The workflow's own push of the version commit (`github-actions[bot]`) does **not** bypass it, so an
+admin sets the version before starting the workflow:
+
+```powershell
+# in Cargo.toml [workspace.package] set version = "0.5.0", then
+cargo update --workspace
+git commit -am "Version 0.5.0 [skip ci]"
+git push origin main
+gh workflow run prerelease.yml --ref main -f version=0.5.0
+```
+
+The workflow then finds nothing to change and skips its commit (its *Set version* step only commits
+when `Cargo.toml`/`Cargo.lock` differ). Contributors open pull requests against `main`.
+
 Steps in the workflow:
 
 1. **Set version**: highest tag `v0.*.0`, otherwise `[workspace.package] version` from `Cargo.toml`;
