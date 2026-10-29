@@ -3057,14 +3057,20 @@ fn overlays(
     let page_painter = painter.with_clip_rect(page_clip);
     // the transform tools draw the frame line and its handles 1 screen pixel left of and above the
     // frame, at every zoom (RE spec 67 §1.1); other handles sit on their points
-    let xform_shift = if matches!(
+    let xform_tool = matches!(
         st.session.tools.active,
         fp_engine::ToolId::Scale | fp_engine::ToolId::Skew | fp_engine::ToolId::Distort
-    ) {
+    );
+    let xform_shift = if xform_tool {
         vec2(-1.0, -1.0)
     } else {
         vec2(0.0, 0.0)
     };
+    // TW-220 (RE spec 67 §1.1, §2.10): the transform frame is a 1 px black line through the
+    // centres of solid black 5 × 5 handle squares; both sit on the screen pixel left of and above
+    // the frame coordinate, so line and squares are laid on that pixel's centre
+    let half_px = 0.5 / ppp_px;
+    let xform_handle = |p: Pos2| Rect::from_center_size(p + vec2(half_px, half_px), vec2(5.0, 5.0));
     // Subselection tool: point display per re 54 (Some(ShowSolidPoints))
     let subsel_points = matches!(
         st.session.tools.active,
@@ -3143,9 +3149,14 @@ fn overlays(
                     }
                 }
             }
+            Overlay::Handles { points } if xform_tool => {
+                for p in points {
+                    painter.rect_filled(xform_handle(spp(p) + xform_shift), 0.0, TRANSFORM_FRAME);
+                }
+            }
             Overlay::Handles { points } => {
                 for p in points {
-                    let h = Rect::from_center_size(spp(p) + xform_shift, vec2(5.0, 5.0));
+                    let h = Rect::from_center_size(spp(p), vec2(5.0, 5.0));
                     painter.rect_filled(h, 0.0, c.handle_fill);
                     painter.rect_stroke(
                         h,
@@ -3155,8 +3166,9 @@ fn overlays(
                     );
                 }
             }
-            Overlay::TransformBox { quad, center } => {
-                let v: Vec<Pos2> = quad.iter().map(|p| spp(*p) + xform_shift).collect();
+            // the 9-slice tool's frame keeps the selection colours (not measured, TW-220)
+            Overlay::TransformBox { quad, .. } if !xform_tool => {
+                let v: Vec<Pos2> = quad.iter().map(|p| spp(*p)).collect();
                 painter.add(egui::Shape::closed_line(
                     v.clone(),
                     Stroke::new(1.0, c.selection),
@@ -3170,6 +3182,17 @@ fn overlays(
                         Stroke::new(1.0, c.handle_border),
                         StrokeKind::Outside,
                     );
+                }
+            }
+            Overlay::TransformBox { quad, center } => {
+                let v: Vec<Pos2> = quad.iter().map(|p| spp(*p) + xform_shift).collect();
+                let line: Vec<Pos2> = v.iter().map(|p| *p + vec2(half_px, half_px)).collect();
+                painter.add(egui::Shape::closed_line(
+                    line,
+                    Stroke::new(1.0, TRANSFORM_FRAME),
+                ));
+                for p in &v {
+                    painter.rect_filled(xform_handle(*p), 0.0, TRANSFORM_FRAME);
                 }
                 let _ = center;
             }
@@ -3318,10 +3341,25 @@ fn overlays(
                     painter.rect_filled(s.intersect(area), 0.0, c.crop_shade);
                 }
             }
-            Overlay::Pivot { at } => {
+            Overlay::Pivot { at } if !xform_tool => {
                 let p = spp(at);
                 painter.circle_stroke(p, 4.0, Stroke::new(1.0, c.selection));
                 painter.circle_filled(p, 1.5, c.selection);
+            }
+            Overlay::Pivot { at } => {
+                // the pivot of the transform frame is a small diamond at the rounded frame centre
+                // (RE spec 67 §2.10; its size and black colour are assumed like the frame's)
+                let p = spp(at) + vec2(half_px, half_px);
+                let r = 3.0;
+                painter.add(egui::Shape::closed_line(
+                    vec![
+                        p + vec2(0.0, -r),
+                        p + vec2(r, 0.0),
+                        p + vec2(0.0, r),
+                        p + vec2(-r, 0.0),
+                    ],
+                    Stroke::new(1.0, TRANSFORM_FRAME),
+                ));
             }
             Overlay::GradientHandles { start, end } => {
                 // re 37 §3: schwarze 1-px-Linie vom festen Griff zum Zeiger, Griffsymbol am Zeiger
@@ -3904,6 +3942,9 @@ fn fill_live_shows_handles(tool: fp_engine::ToolId) -> bool {
 
 /// Linie der Verlaufsgriff-Vorschau: schwarz, 1 px, nicht am Objekt beschnitten (re 37 §3).
 const GRADIENT_PREVIEW_LINE: Color32 = Color32::BLACK;
+/// Line, handles and pivot of the transform frame (Scale, Skew, Distort, Ctrl+T; TW-220, RE spec 67
+/// §1.1): black whatever the theme, only the Pointer's selection handles use `handle_fill`
+pub(crate) const TRANSFORM_FRAME: Color32 = Color32::BLACK;
 
 /// Beschriftung mit Hintergrund (Größe, Winkel, Abstand, Position).
 /// Füllgriffe eines Objekts mit Verlaufs- oder Musterfüllung: Linie Start → Ende, Start als runder
