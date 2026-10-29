@@ -161,6 +161,8 @@ fn rectangle_drag_shows_size_label_and_creates_shape() {
 #[test]
 fn moving_hides_original_and_shows_ghost() {
     let mut h = harness();
+    // the live move renders the canvas image (F141): render in the same frame
+    h.state_mut().state.sync_render = true;
     let _ = h
         .state_mut()
         .state
@@ -174,22 +176,21 @@ fn moving_hides_original_and_shows_ghost() {
     mv(&mut h, b);
     {
         let cc = h.state().state.canvases.values().next().expect("Leinwand");
-        // der Auswahlrahmen wandert mit (Zeiger 60/10 Dokumentpixel nach rechts/unten)
-        let f = cc.sel_frames.first().expect("Auswahlrahmen");
-        assert_eq!((f[0].x, f[0].y), (110.0, 60.0), "{f:?}");
+        // F141 (RE spec 76): no selection frame and no handles while dragging
+        assert!(cc.sel_frames.is_empty(), "{:?}", cc.sel_frames);
+        assert!(cc.feedback.iter().any(|o| matches!(
+            o,
+            Overlay::Ghost {
+                moved_by: Some(_),
+                ..
+            }
+        )));
+        // the canvas image is the document with the object moved (no hidden original, no sprite)
         assert!(
-            cc.feedback
-                .iter()
-                .any(|o| matches!(o, Overlay::Ghost { .. }))
+            cc.shown.is_some_and(|k| k.variant == 0 && k.preview != 0),
+            "rendered from the moved copy"
         );
-        assert!(
-            cc.shown.is_some_and(|k| k.variant != 0),
-            "Original im Hintergrundbild ausgeblendet"
-        );
-        assert!(
-            cc.ghosts.drag.iter().any(Option::is_some),
-            "gerenderte Vorschau"
-        );
+        assert!(cc.ghosts.drag.iter().all(Option::is_none), "no sprite");
     }
     button(&mut h, b, PointerButton::Primary, false, Modifiers::NONE);
     h.run_steps(2);
@@ -206,11 +207,13 @@ fn moving_hides_original_and_shows_ghost() {
 }
 
 /// FB-73 (TW-241): a Pointer drag inside a pixel selection of a bitmap previews only the
-/// selected pixels: the moved sprite covers the selection bounds (not the whole bitmap), the
-/// bitmap stays in place with the hole, the marching ants move along; the release moves the pixels.
+/// selected pixels moving (since F141 through the page pipeline: a render-only copy with the
+/// pixels moved, the bitmap keeps the hole), the marching ants move along; the release moves the
+/// pixels.
 #[test]
 fn pixel_selection_drag_previews_only_the_selected_pixels() {
     let mut h = harness();
+    h.state_mut().state.sync_render = true;
     {
         let s = &mut h.state_mut().state.session;
         let img = fp_raster::RgbaImage::filled(
@@ -248,22 +251,12 @@ fn pixel_selection_drag_previews_only_the_selected_pixels() {
             cc.ghosts.drag.iter().all(Option::is_none),
             "no whole-object preview"
         );
-        let pg = cc.ghosts.pixels.as_ref().expect("pixel preview");
-        let cl = pg.cluster.sprite.as_ref().expect("selected pixels");
-        assert_eq!(
-            (
-                cl.bounds.left,
-                cl.bounds.top,
-                cl.bounds.right,
-                cl.bounds.bottom
-            ),
-            (100, 100, 150, 150),
-            "the moved sprite covers only the selection"
-        );
-        assert!(pg.hole.sprite.is_some(), "bitmap with the hole in place");
+        // F141: every bitmap up to 16 Mpx previews through the page pipeline (render-only copy
+        // with the pixels moved), no separate hole/pixel sprites
+        assert!(cc.ghosts.pixels.is_none(), "no pixel sprites");
         assert!(
-            cc.shown.is_some_and(|k| k.variant != 0),
-            "original bitmap hidden in the background image"
+            cc.shown.is_some_and(|k| k.variant == 0 && k.preview != 0),
+            "rendered from the copy with the pixels moved"
         );
     }
     button(&mut h, b, PointerButton::Primary, false, Modifiers::NONE);
@@ -372,26 +365,40 @@ fn shared_layer_element_moves_with_mouse() {
             .expect("teilen");
         let _ = s.execute("select.none", json!({}));
     }
+    h.state_mut().state.sync_render = true;
     set_tool(&mut h, ToolId::Pointer);
     h.run_steps(2);
+    let before = {
+        let cc = h.state().state.canvases.values().next().expect("Leinwand");
+        cc.shown_image.clone().expect("Bild")
+    };
     let (a, b) = (at(&h, 100.0, 80.0), at(&h, 130.0, 100.0));
     mv(&mut h, a);
     button(&mut h, a, PointerButton::Primary, true, Modifiers::NONE);
     mv(&mut h, a + egui::vec2(10.0, 5.0));
     mv(&mut h, b);
+    h.run_steps(2);
+    let during = {
+        let cc = h.state().state.canvases.values().next().expect("Leinwand");
+        // F141: the element of the shared layer is moved in the render-only copy
+        assert!(
+            cc.shown.is_some_and(|k| k.variant == 0 && k.preview != 0),
+            "Bild aus der verschobenen Kopie"
+        );
+        cc.shown_image.clone().expect("Bild")
+    };
+    assert_ne!(
+        during.as_bytes(),
+        before.as_bytes(),
+        "Vorschau zeigt den Zug"
+    );
+    button(&mut h, b, PointerButton::Primary, false, Modifiers::NONE);
+    h.run_steps(3);
     {
         let cc = h.state().state.canvases.values().next().expect("Leinwand");
-        assert!(
-            cc.shown.is_some_and(|k| k.variant != 0),
-            "Original der geteilten Ebene ausgeblendet"
-        );
-        assert!(
-            cc.ghosts.drag.iter().any(Option::is_some),
-            "Vorschau gerendert"
-        );
+        let after = cc.shown_image.clone().expect("Bild");
+        assert_eq!(during.as_bytes(), after.as_bytes(), "gehalten = danach");
     }
-    button(&mut h, b, PointerButton::Primary, false, Modifiers::NONE);
-    h.run_steps(2);
     let d = h.state().state.session.active().expect("d");
     let id = d.selection.elements.first().copied().expect("Auswahl");
     let e = fp_engine::docops::element_on_page(&d.doc, d.page, id).expect("Element");
@@ -714,6 +721,8 @@ fn drag_preview_is_clipped_to_the_canvas() {
     let ctx = egui::Context::default();
     let mut app = FirepixelApp::with_session(&ctx, session, UiSettings::default(), false);
     app.state.os_clipboard = false;
+    // the live move renders the canvas image (F141): render in the same frame
+    app.state.sync_render = true;
     let mut h = Harness::builder()
         .with_size(egui::vec2(1500.0, 950.0))
         .with_pixels_per_point(1.0)

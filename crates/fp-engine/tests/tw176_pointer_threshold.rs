@@ -17,6 +17,11 @@ fn setup(zoom: f64) -> (Session, fp_model::ElementId) {
     s.set_tool(ToolId::Pointer)
         .unwrap_or_else(|e| panic!("{e}"));
     ex(&mut s, "view.setZoom", json!({"zoom": zoom}));
+    // measured with smart-guide snapping off (re 55 §7.4); with it on, small drags snap back to
+    // the start position (RE spec 76 §4, F141)
+    if let Some(d) = s.active_mut() {
+        d.view.snap_to_smart_guides = false;
+    }
     (s, a)
 }
 
@@ -123,4 +128,47 @@ fn zero_move_past_the_threshold_writes_a_move_row() {
 fn a_click_without_travel_writes_no_row() {
     let (mut s, _) = setup(1.0);
     assert_eq!(drag_row(&mut s, 30.0, 30.0, 1), None);
+}
+
+/// RE spec 76 §4 (F141): with smart guides on (default) a small move snaps back to the start
+/// position: 4 px down at 100 % starts the drag but writes `edit.move` x:0, y:0; a larger drag
+/// moves freely.
+#[test]
+fn small_drag_snaps_back_to_the_start_with_smart_guides() {
+    let mut s = doc_session(300.0, 200.0);
+    let a = rect(&mut s, 10.0, 10.0, 50.0, 50.0);
+    select(&mut s, &[a]);
+    s.set_tool(ToolId::Pointer)
+        .unwrap_or_else(|e| panic!("{e}"));
+    let n0 = rows(&s);
+    events(
+        &mut s,
+        &[
+            ToolEvent::down(30.5, 30.5),
+            ToolEvent::drag(30.5, 34.5),
+            ToolEvent::up(30.5, 34.5),
+        ],
+    );
+    let d = s.active().expect("doc");
+    let st = d.history.steps();
+    assert_eq!(st.len(), n0 + 1, "the drag started");
+    let t = st.last().expect("row");
+    assert_eq!(t.command, "edit.move");
+    assert_eq!((t.params["dx"].as_f64(), t.params["dy"].as_f64()), (Some(0.0), Some(0.0)));
+    assert!(rect_approx(
+        bounds(&s, a),
+        fp_geom::Rect::new(10.0, 10.0, 50.0, 50.0)
+    ));
+    events(
+        &mut s,
+        &[
+            ToolEvent::down(30.5, 30.5),
+            ToolEvent::drag(30.5, 60.5),
+            ToolEvent::up(30.5, 60.5),
+        ],
+    );
+    assert!(rect_approx(
+        bounds(&s, a),
+        fp_geom::Rect::new(10.0, 40.0, 50.0, 80.0)
+    ));
 }

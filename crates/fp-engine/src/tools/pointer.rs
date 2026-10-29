@@ -204,6 +204,16 @@ pub(crate) fn outline_overlay(doc: &Document, e: &Element) -> Overlay {
     }
 }
 
+/// Outline of a dragged element with "Preview drag" off (F141, RE spec 76 §3, §7.7): its path
+/// contours (groups and compound shapes: those of their paths), or its frame for bitmaps, texts
+/// and symbol instances. The canvas draws it 1 px opaque at the new position.
+pub fn drag_outline(doc: &Document, e: &Element) -> (Vec<Contour>, Option<Rect>) {
+    match outline_overlay(doc, e) {
+        Overlay::Highlight { contours, rect } => (contours, rect),
+        _ => (Vec::new(), None),
+    }
+}
+
 /// Strichbreite eines Elements (für die Vorauswahl über die Grenzen).
 fn stroke_margin(e: &Element) -> f32 {
     match &e.kind {
@@ -404,6 +414,19 @@ fn ghost(ctx: &ToolContext, rect: Rect, quad: [Point; 4], copy: bool) -> Overlay
         quad,
         copy,
         pixels: false,
+        moved_by: None,
+    }
+}
+
+/// Preview of a whole-object move drag by `(dx, dy)`: the offset the release commits (F141).
+fn move_ghost(ctx: &ToolContext, rect: Rect, dx: f32, dy: f32, copy: bool) -> Overlay {
+    Overlay::Ghost {
+        ids: ctx.selection.elements.iter().map(|i| i.0).collect(),
+        rect,
+        quad: rect.translate(dx, dy).corners(),
+        copy,
+        pixels: false,
+        moved_by: Some(Point::new(dx, dy)),
     }
 }
 
@@ -428,6 +451,7 @@ pub(crate) fn pixel_ghost(ctx: &ToolContext, dx: f32, dy: f32, copy: bool) -> Op
         quad: b.translate(dx, dy).corners(),
         copy,
         pixels: true,
+        moved_by: None,
     })
 }
 
@@ -1516,7 +1540,8 @@ impl PointerTool {
                 if let Some(b) = bounds
                     && !constrain
                 {
-                    let snap = Snapper::new(ctx, &ctx.selection.elements);
+                    // the start position is a smart-guide target too (RE spec 76 §4, §7.9)
+                    let snap = Snapper::new(ctx, &ctx.selection.elements).with_target(b);
                     // re 41 §1.2: Zeigerpunkte mit floor auf ganze Pixel, Fang über den Gesamtzug
                     let (rx, ry) = snap.move_delta(start, cur);
                     let (dx, dy, g) = snap.move_rect(b.translate(rx, ry), rx, ry);
@@ -1545,8 +1570,8 @@ impl PointerTool {
                     let c = if dup { Cursor::Copy } else { Cursor::Move };
                     return ToolResponse::with_overlay(self.overlay.clone(), c);
                 } else if let Some(b) = bounds {
-                    let q = b.translate(cur.x - start.x, cur.y - start.y);
-                    self.overlay.push(ghost(ctx, b, q.corners(), copy));
+                    let (dx, dy) = (cur.x - start.x, cur.y - start.y);
+                    self.overlay.push(move_ghost(ctx, b, dx, dy, copy));
                 }
                 self.overlay.extend(guides);
                 ToolResponse::with_overlay(

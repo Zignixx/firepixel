@@ -115,6 +115,18 @@ Doppelklick auf eine Bitmap öffnet den Bitmapmodus; Doppelklick auf Text bearbe
 Rechtsklick öffnet das zum Werkzeug und zur Auswahl passende Kontextmenü. Esc ohne laufende Aktion hebt
 die Objektauswahl auf (offene Popups und Menüs schließt das erste Esc).
 
+**Objekte verschieben:** ein gewähltes Objekt mit dem Zeiger ziehen (Alt: eine Kopie). Bei gedrückter
+Taste stehen die Objekte wirklich an der neuen Stelle, verrechnet mit allem darüber und darunter
+(Mischmodus, Deckkraft, Live-Effekte wie ein Schlagschatten wandern mit); was man sieht, ist genau das
+Ergebnis nach dem Loslassen. Auswahlrahmen und Griffe verschwinden beim Ziehen und kommen beim Loslassen
+zurück. Der Zug beginnt, wenn der Zeiger mehr als 3·√Zoom Bildschirmpixel weit bewegt wurde (100 %: 4 px,
+800 %: 9 px), und verschiebt in ganzen Dokumentpixeln. Mit intelligenten Hilfslinien rastet ein kleiner
+Zug auf die Ausgangslage zurück (eine gestrichelte Hilfslinie zeigt das). Das Loslassen schreibt einen
+Verlaufsschritt „Verschieben“; Esc bei gedrückter Taste setzt die Objekte ohne Schritt zurück.
+**Voreinstellungen ▸ Bearbeitung ▸ Vorschau beim Ziehen** (`PreviewDrag`, ab Werk an): aus, bleibt beim
+Ziehen das alte Bild stehen und nur der Umriss der Objekte (1 px blau) folgt dem Zeiger. Sehr große
+Auswahlen (mehr als 400 Objekte) werden als bewegtes Bild gezeigt, damit das Ziehen flüssig bleibt.
+
 **Auswählen mit Zeiger und Teilauswahl:** Ziehen auf leerer Fläche zieht einen Auswahlrahmen auf; jedes
 berührte Objekt wird gewählt, der Rahmen schreibt keine Verlaufszeile. Mit dem **Zeiger** **schaltet**
 Umschalt (auch Umschalt+Alt) jedes Objekt im Rahmen **um**: nicht gewählte kommen hinzu, gewählte werden

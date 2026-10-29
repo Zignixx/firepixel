@@ -111,6 +111,18 @@ bitmap to enter bitmap mode; double-click text to edit it. A right-click opens t
 that fits the tool and the selection. Esc with no action in progress deselects all objects (the first
 Esc closes open popups and menus).
 
+**Moving objects:** drag a selected object with the Pointer (Alt: a copy). While the button is held the
+objects are really shown at the new place, composed with everything above and below them (blend modes,
+opacity, live effects such as a drop shadow move along), so what you see is exactly the result after
+releasing; the selection frame and the handles disappear while dragging and come back on release. The
+drag starts once the pointer has moved more than 3·√zoom screen pixels (4 px at 100 %, 9 px at 800 %)
+and moves by whole document pixels. With smart guides on, a small drag snaps back to the start
+position (a dashed guide line shows it). Releasing writes one History row "Move"; Esc while the button
+is held puts the objects back without a row. **Preferences ▸ Edit ▸ Preview drag** (`PreviewDrag`,
+default on): off, the old image stays during the drag and only the outline of the objects (1 px blue)
+follows the pointer. Very large selections (more than 400 objects) are shown as a moving picture instead,
+to keep dragging smooth.
+
 **Selecting with the Pointer and the Subselection:** dragging on empty canvas draws a marquee; every
 object it touches is selected, and the marquee writes no History row. With the **Pointer**, Shift (also
 Shift+Alt) **toggles** each object inside the marquee: unselected objects are added, selected ones are

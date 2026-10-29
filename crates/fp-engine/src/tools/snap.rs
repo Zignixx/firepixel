@@ -167,6 +167,16 @@ impl Snapper {
         }
     }
 
+    /// With `r` as one more smart-guide target. A move drag adds the start bounds of the moved
+    /// objects (F141, RE spec 76 §1.6, §4, §7.9): small drags snap back to the start position
+    /// (offset 0, guide line shown), which looked like a start delay in the reference.
+    pub fn with_target(mut self, r: Rect) -> Snapper {
+        if self.smart && r.is_finite() {
+            self.targets.push(r);
+        }
+        self
+    }
+
     /// Ohne intelligente Hilfslinien (Pixelauswahl, Freihand).
     pub fn without_smart(mut self) -> Snapper {
         self.smart = false;

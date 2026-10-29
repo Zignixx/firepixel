@@ -116,7 +116,7 @@ against the flat PNG preview stored in FW-PNG files (corpus and golden tests). T
 512-px texture tiles on a device-pixel grid anchored at the page corner (`Renderer::render_device`, so parts of
 one view fit together and equal a whole render): scrolling uploads only new tiles, an edit only the changed
 rectangle of the tiles it touches, and after a zoom the visible tiles come first and the margin follows (BA-098;
-without a GPU, texture upload runs at only ~30 MB/s). The drag preview texture likewise holds only the part of the
+without a GPU, texture upload runs at only ~30 MB/s). The drag preview texture of the sprite fallback (see below) likewise holds only the part of the
 dragged objects in view plus half a view of margin and is re-cut when scrolling or zooming leaves it (BA-097).
 Partial rendering and caches keep large documents interactive. For live bitmap painting the canvas renders the changed rectangle with `Renderer::render_region_with` and a `PixelOverride` that swaps in the
 scratch pixels of the painted bitmap, so the preview sits in the right stacking position with its opacity, blend
@@ -137,6 +137,20 @@ opacity below 100 %, another blend mode or live effects, two sprites would apply
 (`ghost::pixel_move_needs_pipeline`) the canvas instead renders a render-only copy of the document with the pixels
 moved (`ghost::apply_live_pixels`, own render key `live_pixels_key`) through the element pipeline; the preview then
 equals the committed result (FB-87, TW-241).
+Since F141 this pipeline is the rule for every bitmap up to 16 Mpx; the two sprites remain the fallback for larger
+ones.
+
+A whole-object move drag (Pointer, Select Behind, Subselection, Alt copy included) reports `Overlay::Ghost` with
+`moved_by` = the exact offset the release commits (F141, *RE spec* 76, TW-278). With *Preview drag* on the canvas
+draws no sprite: `ghost::live_move` turns the overlay into a `LiveMove`, `ghost::apply_live_move` applies it to a
+render-only copy of the document with `commands::preview_move` (the helpers `edit.move` uses on release), and the
+copy is rendered under its own `RenderKey.preview` through the normal page pipeline, so blend modes, opacity, live
+effects and the objects above and below are composed as after the release. The renderer's tile cache recomposes only
+the 256-px document tiles the moved objects touch at the old and the new offset, and the canvas uploads only the
+changed rectangles (BA-098). Selection frames, handles and outlines are not drawn during such a drag; with *Preview
+drag* off the old image stays and the canvas draws each object's outline (`tools::drag_outline`) at the offset.
+Selections of more than 400 elements keep the sprite preview of BA-097 (stack plan with hidden originals and
+transparent layers above, N34) as a performance fallback.
 
 The brush tip outline at the pointer (Brush, Eraser and the retouch tools; the Pencil has none) is drawn by
 `fp-ui/src/canvas/tip_outline.rs` (F131, measured rule): it has no colour of its own, each outline pixel is the

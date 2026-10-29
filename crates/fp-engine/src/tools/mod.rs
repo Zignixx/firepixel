@@ -42,7 +42,7 @@ pub use pathedit::{FreeformTool, KnifeTool, ScrubTool};
 pub use pointer::{
     ALT_MARQUEE_DESELECT_PREF, ARROW_KEYS_MOVE_PIXELS_PREF, CropTool,
     DUPLICATE_WITH_CTRL_DRAG_PREF, POINTER_EDITS_POINTS_PREF, POINTER_LASSO_PREF, PointerTool,
-    SHIFT_MARQUEE_ADDS_ONLY_PREF, TransformTool, pointer_edits_points,
+    SHIFT_MARQUEE_ADDS_ONLY_PREF, TransformTool, drag_outline, pointer_edits_points,
 };
 pub use retouch::RetouchTool;
 pub use text::{TextEditView, TextTool};
@@ -316,6 +316,13 @@ pub enum Overlay {
     /// Subselection drag inside a pixel selection, Ctrl+drag of a bitmap selection tool): `rect`
     /// is the selection bounds, only the selected pixels move to `quad`, the rest of the bitmap
     /// stays in place with the hole the move leaves.
+    ///
+    /// `moved_by` (F141, RE spec 76): a whole-object move drag of the Pointer, Select Behind or
+    /// Subselection with the exact offset the release commits (`edit.move` `dx`/`dy`). With
+    /// "Preview drag" on, the UI renders the document with the objects moved (normal composition:
+    /// blend modes, opacity, live effects, objects above and below) instead of a sprite, and
+    /// draws no selection frame or handles while the button is held. `None` for scale and
+    /// transform previews and pixel moves.
     Ghost {
         ids: Vec<u64>,
         rect: Rect,
@@ -323,6 +330,8 @@ pub enum Overlay {
         copy: bool,
         #[serde(default)]
         pixels: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        moved_by: Option<Point>,
     },
     /// Abdunkeln außerhalb des Rechtecks (Zuschneiden, Exportbereich).
     Shade { rect: Rect },

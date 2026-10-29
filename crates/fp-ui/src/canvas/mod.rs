@@ -1094,10 +1094,19 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 .and_then(|d| ghost::live_pixels(&feedback, &d.doc, d.page))
         })
         .flatten();
+    // F141 (RE spec 76 §7.1): a whole-object move drag renders the document with the objects
+    // moved (normal composition, render-only copy), no sprite; huge selections keep the sprites
+    let live_mv = preview_drag
+        .then(|| {
+            st.session
+                .active()
+                .and_then(|d| ghost::live_move(&feedback, &d.doc, d.page))
+        })
+        .flatten();
     for o in &feedback {
         match o {
             Overlay::Ghost { ids, copy, .. }
-                if preview_drag && source.is_none() && live_px.is_none() =>
+                if preview_drag && source.is_none() && live_px.is_none() && live_mv.is_none() =>
             {
                 source = Some((ids.clone(), *copy, true))
             }
@@ -1228,6 +1237,12 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     });
     let preview =
         crate::inspector::preview::combined_key(preview, live_px_mask.map_or(0, |(_, k)| k));
+    let preview = crate::inspector::preview::combined_key(
+        preview,
+        live_mv
+            .as_ref()
+            .map_or(0, |lm| ghost::live_move_key(generation, page, lm)),
+    );
     let cc = st.canvases.entry(id).or_default();
     // Ergebnisse des Threads übernehmen
     let gamma = view.gamma_preview;
@@ -1280,7 +1295,9 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             .as_ref()
             .is_some_and(|k| !holds(k, around(0.25)) && k.dev != cap(around(0.5)));
     if !visible_dev.is_empty() && ((!covered && !pending_ok) || margin_due) {
-        let dev = cap(if same_zoom || margin_due {
+        // a live move drag renders only the visible tiles per step (RE spec 76 §7.6); the margin
+        // follows once the pointer rests (`margin_due`)
+        let dev = cap(if (same_zoom && live_mv.is_none()) || margin_due {
             around(0.5)
         } else {
             render::snap_to_tiles(visible_dev, extent)
@@ -1309,7 +1326,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 Some((t, cs)) => crate::inspector::preview::apply_live_path(&base, page, t, cs),
                 None => base,
             };
-            match (
+            let base = match (
                 live_px_mask,
                 st.session
                     .active()
@@ -1317,6 +1334,10 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             ) {
                 (Some((lp, _)), Some(m)) => ghost::apply_live_pixels(&base, page, &lp, m),
                 _ => base,
+            };
+            match &live_mv {
+                Some(lm) => ghost::apply_live_move(&base, page, lm),
+                None => base,
             }
         } else {
             docarc
@@ -2870,6 +2891,17 @@ fn overlays(
         } => fp_geom::Matrix3::rect_to_quad(rect, quad).map(|m| (ids.clone(), m)),
         _ => None,
     });
+    // F141 (RE spec 76 §3, §7.3): while a whole-object move drag is held, the moved objects show
+    // no selection frame and no handles (they return on release)
+    let move_drag = feedback.iter().any(|o| {
+        matches!(
+            o,
+            Overlay::Ghost {
+                moved_by: Some(_),
+                ..
+            }
+        )
+    });
     let mut frames: Vec<[Point; 4]> = Vec::new();
     // Text im Editor: dessen Rahmen zeichnet der Editor aus dem aktuellen Satz (wächst live mit)
     let editing_target = feedback.iter().find_map(|o| match o {
@@ -2944,6 +2976,9 @@ fn overlays(
                 continue;
             };
             let is_moving = moving_ids.contains(&eid.0);
+            if is_moving && move_drag {
+                continue;
+            }
             let corners = match moving.as_ref().filter(|_| is_moving) {
                 Some((_, m)) => b.corners().map(|p| m.apply(p)),
                 None => b.corners(),
@@ -3142,6 +3177,16 @@ fn overlays(
         fp_engine::ToolId::Subselection | fp_engine::ToolId::MaskElementSelect
     )
     .then(|| st.session.prefs.get_bool("ShowSolidPoints", false));
+    let preview_drag = st.session.prefs.get_bool("PreviewDrag", true);
+    let move_drag = feedback.iter().any(|o| {
+        matches!(
+            o,
+            Overlay::Ghost {
+                moved_by: Some(_),
+                ..
+            }
+        )
+    });
     let cc = st.canvases.entry(id).or_default();
     let mut had_text = false;
     for o in feedback.iter().cloned() {
@@ -3293,6 +3338,17 @@ fn overlays(
                     );
                 }
             }
+            // during a move drag the smart guides are dashed, smart-guide colour alternating
+            // with white (RE spec 76 §3); elsewhere solid as before (not measured)
+            Overlay::SmartGuide { from, to } if move_drag => {
+                dashed_segment(
+                    painter,
+                    [spp(from), spp(to)],
+                    c.smart_guide,
+                    Color32::WHITE,
+                    SMART_GUIDE_DASH,
+                );
+            }
             Overlay::SmartGuide { from, to } => {
                 painter.line_segment([spp(from), spp(to)], Stroke::new(1.0, c.smart_guide));
             }
@@ -3383,6 +3439,37 @@ fn overlays(
                                 StrokeKind::Inside,
                             );
                         }
+                    }
+                }
+            }
+            // F141 (RE spec 76 §3): a move drag with "Preview drag" on shows the moved objects
+            // themselves, without any outline
+            Overlay::Ghost {
+                moved_by: Some(_), ..
+            } if preview_drag => {}
+            // "Preview drag" off: the old image stays, the path outline of each moved object is
+            // drawn 1 px opaque #00A8FF at the new position (RE spec 76 §3, §7.7)
+            Overlay::Ghost {
+                ids,
+                moved_by: Some(off),
+                ..
+            } => {
+                let ids: Vec<fp_model::ElementId> =
+                    ids.iter().map(|i| fp_model::ElementId(*i)).collect();
+                let line = Stroke::new(1.0, DRAG_OUTLINE);
+                let moved = |p: Point| spp(Point::new(p.x + off.x, p.y + off.y));
+                for path in fp_engine::docops::find_many_on_page(&d.doc, d.page, &ids)
+                    .iter()
+                    .flatten()
+                {
+                    let Some(e) = d.doc.element_at(path) else {
+                        continue;
+                    };
+                    let (contours, rect) = fp_engine::tools::drag_outline(&d.doc, e);
+                    paint_path_outline(painter, &contours, &moved, line);
+                    if let Some(r) = rect {
+                        let v: Vec<Pos2> = r.corners().iter().map(|p| moved(*p)).collect();
+                        painter.add(egui::Shape::closed_line(crisp_outline(&v), line));
                     }
                 }
             }
@@ -3643,12 +3730,21 @@ fn preview_stack(
                 quad,
                 copy,
                 pixels,
+                ..
             } => {
                 had_ghost = true;
                 // FB-87: drawn by the canvas image itself (moved bitmap in a render-only copy)
                 if *pixels && preview_drag && ghost::live_pixels(feedback, &d.doc, page_i).is_some()
                 {
                     cc.ghosts.linger = None;
+                    continue;
+                }
+                // F141: a whole-object move is drawn by the canvas image itself (objects moved in
+                // a render-only copy, normal composition): no sprite, nothing to linger
+                if !*pixels && preview_drag && ghost::live_move(feedback, &d.doc, page_i).is_some()
+                {
+                    cc.ghosts.linger = None;
+                    cc.ghosts.drag.clear();
                     continue;
                 }
                 cc.ghosts.linger = Some(ghost::Linger {
@@ -4021,6 +4117,34 @@ const GRADIENT_PREVIEW_LINE: Color32 = Color32::BLACK;
 /// Line, handles and pivot of the transform frame (Scale, Skew, Distort, Ctrl+T; TW-220, RE spec 67
 /// §1.1): black whatever the theme, only the Pointer's selection handles use `handle_fill`
 pub(crate) const TRANSFORM_FRAME: Color32 = Color32::BLACK;
+/// Outline of the moved objects during a move drag with "Preview drag" off: opaque #00A8FF,
+/// whatever the theme and the pixels below (RE spec 76 §3: same value on grey, blue and green).
+pub(crate) const DRAG_OUTLINE: Color32 = Color32::from_rgb(0x00, 0xa8, 0xff);
+/// Dash length (screen px) of the smart guides (RE spec 76 §3: dashed, alternating with white;
+/// the dash length was not measured).
+const SMART_GUIDE_DASH: f32 = 4.0;
+
+/// A 1 px line from `a` to `b` in dashes of `dash` screen px, `on` alternating with `off`.
+fn dashed_segment(
+    painter: &egui::Painter,
+    [a, b]: [Pos2; 2],
+    on: Color32,
+    off: Color32,
+    dash: f32,
+) {
+    painter.line_segment([a, b], Stroke::new(1.0, off));
+    let len = (b - a).length();
+    if len <= 0.0 || dash <= 0.0 {
+        return;
+    }
+    let dir = (b - a) / len;
+    let mut t = 0.0;
+    while t < len {
+        let e = (t + dash).min(len);
+        painter.line_segment([a + dir * t, a + dir * e], Stroke::new(1.0, on));
+        t += 2.0 * dash;
+    }
+}
 
 /// Beschriftung mit Hintergrund (Größe, Winkel, Abstand, Position).
 /// Füllgriffe eines Objekts mit Verlaufs- oder Musterfüllung: Linie Start → Ende, Start als runder

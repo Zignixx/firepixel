@@ -353,26 +353,80 @@ fn duplicate(s: &mut Session, offset: (f32, f32)) -> Result<CommandOutput> {
         }
         let page = d.page;
         let doc = Arc::make_mut(&mut d.doc);
-        let mut new_ids = Vec::new();
-        // je Element direkt darüber einfügen, unten beginnen, damit Indizes gültig bleiben
-        for (path, e) in els.iter().rev() {
-            let mut c = docops::reassign(doc, e);
-            // a duplicate of a locked fill shows the same pattern phase in the document (FB-44)
-            docops::move_element(&mut c, offset.0, offset.1);
-            let id = c.id;
-            if let Some(cur) = docops::find_on_page(doc, page, e.id)
-                && let Some((list, idx)) = docops::parent_list_mut(doc, &cur)
-            {
-                list.insert(idx, Arc::new(c));
-                new_ids.push(id);
-            } else {
-                let _ = path;
-            }
-        }
-        new_ids.reverse();
+        let new_ids = insert_duplicates(doc, page, &els, offset);
         d.selection.set(new_ids.clone());
         Ok(CommandOutput::doc_with(json!({"ids": ids_json(&new_ids)})))
     })
+}
+
+/// Inserts a copy of each element of `els` (top first) moved by `offset` directly above its
+/// original; returns the new ids (top first). Shared by `edit.duplicate`, `edit.move` with
+/// `copy` and the live drag preview ([`preview_move`]).
+fn insert_duplicates(
+    doc: &mut fp_model::Document,
+    page: usize,
+    els: &[(fp_model::traverse::ElementPath, Arc<Element>)],
+    offset: (f32, f32),
+) -> Vec<ElementId> {
+    let mut new_ids = Vec::new();
+    // je Element direkt darüber einfügen, unten beginnen, damit Indizes gültig bleiben
+    for (_, e) in els.iter().rev() {
+        let mut c = docops::reassign(doc, e);
+        // a duplicate of a locked fill shows the same pattern phase in the document (FB-44)
+        docops::move_element(&mut c, offset.0, offset.1);
+        let id = c.id;
+        if let Some(cur) = docops::find_on_page(doc, page, e.id)
+            && let Some((list, idx)) = docops::parent_list_mut(doc, &cur)
+        {
+            list.insert(idx, Arc::new(c));
+            new_ids.push(id);
+        }
+    }
+    new_ids.reverse();
+    new_ids
+}
+
+/// Moves the elements `ids` of page `page` by `(dx, dy)` (the object part of `edit.move`).
+fn move_ids(
+    doc: &mut fp_model::Document,
+    page: usize,
+    ids: &[ElementId],
+    dx: f32,
+    dy: f32,
+) -> bool {
+    // Adressen in einem Durchlauf (PERF-1: Pfeiltaste mit Tausenden gewählten Objekten);
+    // Verschieben ändert die Baumstruktur nicht, die Adressen bleiben gültig
+    let paths = docops::find_many_on_page(doc, page, ids);
+    let mut any = false;
+    // a fill locked to the document keeps its handles (FB-44)
+    for path in paths.iter().flatten() {
+        any |= docops::move_at(doc, path, dx, dy).is_some();
+    }
+    any
+}
+
+/// Render-only preview of a whole-object move drag (F141, RE spec 76 §7.1): `doc` (a copy of the
+/// session's document) gets exactly what `edit.move` does to the elements `ids` on release, so
+/// the image while the button is held equals the image after it: moved by `(dx, dy)`, or with
+/// `copy` a moved duplicate directly above each unlocked original. No history, no selection
+/// change; returns whether anything changed.
+pub fn preview_move(
+    doc: &mut fp_model::Document,
+    page: usize,
+    ids: &[ElementId],
+    (dx, dy): (f32, f32),
+    copy: bool,
+) -> bool {
+    if copy {
+        let els: Vec<_> = docops::paths_sorted(doc, page, ids)
+            .into_iter()
+            .filter(|p| !docops::is_locked(doc, page, p))
+            .filter_map(|p| doc.element_at(&p).cloned().map(|e| (p, e)))
+            .collect();
+        !insert_duplicates(doc, page, &els, (dx, dy)).is_empty()
+    } else {
+        move_ids(doc, page, ids, dx, dy)
+    }
 }
 
 /// Arrow-key nudge (`edit.move` with `nudge`, `edit.nudge.*`): with a pixel selection only the
@@ -477,14 +531,7 @@ pub(crate) fn move_selection(
     with_doc(s, |d| {
         let page = d.page;
         let ids = d.selection.elements.clone();
-        // Adressen in einem Durchlauf (PERF-1: Pfeiltaste mit Tausenden gewählten Objekten);
-        // Verschieben ändert die Baumstruktur nicht, die Adressen bleiben gültig
-        let paths = docops::find_many_on_page(&d.doc, page, &ids);
-        let doc = Arc::make_mut(&mut d.doc);
-        // a fill locked to the document keeps its handles (FB-44)
-        for path in paths.iter().flatten() {
-            docops::move_at(doc, path, dx, dy);
-        }
+        move_ids(Arc::make_mut(&mut d.doc), page, &ids, dx, dy);
         if let Some(m) = &mut d.selection.pixels
             && ids.is_empty()
         {

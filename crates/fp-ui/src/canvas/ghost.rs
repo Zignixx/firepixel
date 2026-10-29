@@ -336,17 +336,18 @@ impl GhostCache {
 
 // ------------------------------------------------- FB-87: pixel move through the element pipeline
 
-/// Does a pixel move of this element need the element's own render pipeline for an exact live
-/// preview (TW-241)? With opacity below 100 %, another blend mode or live effects, the bitmap
-/// with the hole and the moved pixels drawn as two separate sprites would apply them twice.
-pub fn pixel_move_needs_pipeline(e: &Element) -> bool {
+/// Largest bitmap (pixels) whose pixel move previews through the page pipeline; larger ones keep
+/// the two sprites of FB-73 (PERF-3 fallback, F141).
+pub const LIVE_PIXELS_MAX: f64 = 16.0e6;
+
+/// Does a pixel move of this element preview through the page pipeline (a render-only copy of
+/// the document with the pixels moved)? FB-87 needed it for opacity, blend modes and live effects
+/// (two sprites applied them twice); since F141 (RE spec 76 §7.1) every bitmap up to
+/// [`LIVE_PIXELS_MAX`] uses it, so objects above with a blend mode compose right as well.
+pub fn pixel_move_needs_pipeline(doc: &Document, e: &Element) -> bool {
     matches!(e.kind, fp_model::ElementKind::Bitmap(_))
-        && (e.common.opacity != fp_color::Opacity::default()
-            || e.common.blend != fp_model::BlendMode::default()
-            || e.common
-                .effects
-                .as_ref()
-                .is_some_and(|l| !l.effects.is_empty()))
+        && fp_engine::docops::element_bounds(doc, e)
+            .is_some_and(|b| (b.width() as f64) * (b.height() as f64) <= LIVE_PIXELS_MAX)
 }
 
 /// A live pixel move that renders through the element pipeline (FB-87): the bitmap, the offset
@@ -373,10 +374,11 @@ pub fn live_pixels(
             quad,
             copy,
             pixels: true,
+            ..
         } => {
             let id = ElementId(*ids.first()?);
             let e = fp_engine::docops::element_on_page(doc, page, id)?;
-            pixel_move_needs_pipeline(&e).then(|| LivePixels {
+            pixel_move_needs_pipeline(doc, &e).then(|| LivePixels {
                 id,
                 dx: (quad[0].x - rect.left).round() as i32,
                 dy: (quad[0].y - rect.top).round() as i32,
@@ -428,6 +430,114 @@ pub fn apply_live_pixels(
         (lp.dx, lp.dy),
         lp.copy,
     ) {
+        Arc::new(out)
+    } else {
+        Arc::clone(doc)
+    }
+}
+
+// ------------------------------------------- F141: whole-object move through the page pipeline
+
+/// Most elements (with the children of groups) a live move renders through the page pipeline;
+/// larger selections keep the sprite preview of BA-097 (PERF-3 fallback, F141).
+pub const LIVE_MOVE_MAX_ELEMENTS: usize = 400;
+
+/// A whole-object move drag with "Preview drag" on (RE spec 76 §7.1): the canvas image is the
+/// document with the elements `ids` moved by `(dx, dy)` (or duplicated there with `copy`),
+/// composed normally, so it equals the image after the release.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiveMove {
+    pub ids: Vec<ElementId>,
+    pub dx: f32,
+    pub dy: f32,
+    pub copy: bool,
+}
+
+/// Elements in `e` (itself and the children of groups, masks and compound shapes), at most `cap`.
+fn count_elements(e: &Element, cap: usize) -> usize {
+    let mut n = 1;
+    let add = |c: &Element, n: &mut usize| {
+        if *n < cap {
+            *n += count_elements(c, cap - *n);
+        }
+    };
+    match &e.kind {
+        fp_model::ElementKind::Group(g) => {
+            for c in g.mask.iter().chain(&g.children) {
+                add(c, &mut n);
+            }
+        }
+        fp_model::ElementKind::CompoundShape(c) => {
+            for o in c.result.iter().chain(&c.operands) {
+                add(o, &mut n);
+            }
+        }
+        _ => {}
+    }
+    n.min(cap)
+}
+
+/// The whole-object move drag in the tool feedback that renders through the page pipeline;
+/// `None` without one, for scale/transform previews, pixel moves and selections over
+/// [`LIVE_MOVE_MAX_ELEMENTS`] (those keep the sprites).
+pub fn live_move(
+    feedback: &[fp_engine::tools::Overlay],
+    doc: &Document,
+    page: usize,
+) -> Option<LiveMove> {
+    feedback.iter().find_map(|o| match o {
+        fp_engine::tools::Overlay::Ghost {
+            ids,
+            copy,
+            pixels: false,
+            moved_by: Some(d),
+            ..
+        } => {
+            if ids.is_empty() || ids.len() > LIVE_MOVE_MAX_ELEMENTS {
+                return None;
+            }
+            let ids: Vec<ElementId> = ids.iter().map(|i| ElementId(*i)).collect();
+            let cap = LIVE_MOVE_MAX_ELEMENTS + 1;
+            let mut n = 0;
+            for p in fp_engine::docops::find_many_on_page(doc, page, &ids)
+                .iter()
+                .flatten()
+            {
+                if let Some(e) = doc.element_at(p) {
+                    n += count_elements(e, cap);
+                }
+                if n > LIVE_MOVE_MAX_ELEMENTS {
+                    return None;
+                }
+            }
+            Some(LiveMove {
+                ids,
+                dx: d.x,
+                dy: d.y,
+                copy: *copy,
+            })
+        }
+        _ => None,
+    })
+}
+
+/// Non-zero render key of a live move (generation, page, elements, offset, copy).
+pub fn live_move_key(generation: u64, page: usize, lm: &LiveMove) -> u64 {
+    let mut v: Vec<u64> = vec![
+        page as u64,
+        lm.dx.to_bits() as u64,
+        lm.dy.to_bits() as u64,
+        lm.copy as u64,
+    ];
+    v.extend(lm.ids.iter().map(|i| i.0));
+    hash_ids(generation ^ 0x4d4f_5645, &v) | 1
+}
+
+/// `doc` with the live move applied like `edit.move` on release (a copy; the session's
+/// document is not touched).
+pub fn apply_live_move(doc: &Arc<Document>, page: usize, lm: &LiveMove) -> Arc<Document> {
+    let mut out = (**doc).clone();
+    if fp_engine::commands::preview_move(&mut out, page, &lm.ids, (lm.dx, lm.dy), lm.copy) {
         Arc::new(out)
     } else {
         Arc::clone(doc)

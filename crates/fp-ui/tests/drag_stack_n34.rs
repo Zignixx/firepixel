@@ -92,8 +92,10 @@ fn dragged_object_stays_below_object_above_n34() {
     {
         let st = &h.state().state;
         let cc = st.canvases.values().next().expect("Leinwand");
-        assert!(cc.shown.is_some_and(|k| k.variant != 0), "Hintergrundbild ohne Grau und Grün");
-        assert!(cc.layers.iter().any(Option::is_some), "Schicht mit dem grünen Rechteck über der Vorschau");
+        // F141 (RE spec 76): no sprite over a background with hidden objects any more, the canvas
+        // image is the document with the grey rectangle moved, composed normally
+        assert!(cc.shown.is_some_and(|k| k.variant == 0 && k.preview != 0), "Bild aus der verschobenen Kopie");
+        assert!(cc.layers.is_empty(), "keine Schichten über einer Vorschau");
     }
     let Some(overlap) = rgb(&mut h, 185.0, 80.0) else { return };
     assert!(near(overlap, GREEN), "Überlappung während des Ziehens: Grün liegt oben, war {overlap:?}");
