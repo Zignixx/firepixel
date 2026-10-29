@@ -466,9 +466,17 @@ impl Snapper {
                         &[t.left, t.right]
                     };
                     if w.iter().any(|w| (w - v).abs() < 0.01) {
+                        // reference values (RE spec 77 section 4): edges span the top and bottom
+                        // of both boxes, a centre match spans the two centres; the canvas widens
+                        // the line by max(40, 0.2 * span) at both ends
+                        let (a, b) = if c {
+                            (mcy, (t.top + t.bottom) / 2.0)
+                        } else {
+                            (m.top.min(t.top), m.bottom.max(t.bottom))
+                        };
                         guides.push(Overlay::SmartGuide {
-                            from: Point::new(v, m.top.min(t.top)),
-                            to: Point::new(v, m.bottom.max(t.bottom)),
+                            from: Point::new(v, a.min(b)),
+                            to: Point::new(v, a.max(b)),
                         });
                     }
                 }
@@ -488,9 +496,14 @@ impl Snapper {
                         &[t.top, t.bottom]
                     };
                     if w.iter().any(|w| (w - v).abs() < 0.01) {
+                        let (a, b) = if c {
+                            (mcx, (t.left + t.right) / 2.0)
+                        } else {
+                            (m.left.min(t.left), m.right.max(t.right))
+                        };
                         guides.push(Overlay::SmartGuide {
-                            from: Point::new(m.left.min(t.left), v),
-                            to: Point::new(m.right.max(t.right), v),
+                            from: Point::new(a.min(b), v),
+                            to: Point::new(a.max(b), v),
                         });
                     }
                 }
@@ -536,7 +549,7 @@ impl Snapper {
             && m.left - t.right <= max_gap
             && m.left - t.right > 0.5
         {
-            out.push(Overlay::SmartGuide {
+            out.push(Overlay::GuideLine {
                 from: Point::new(t.right, cy),
                 to: Point::new(m.left, cy),
             });
@@ -549,7 +562,7 @@ impl Snapper {
             && t.left - m.right <= max_gap
             && t.left - m.right > 0.5
         {
-            out.push(Overlay::SmartGuide {
+            out.push(Overlay::GuideLine {
                 from: Point::new(m.right, cy),
                 to: Point::new(t.left, cy),
             });
@@ -562,7 +575,7 @@ impl Snapper {
             && m.top - t.bottom <= max_gap
             && m.top - t.bottom > 0.5
         {
-            out.push(Overlay::SmartGuide {
+            out.push(Overlay::GuideLine {
                 from: Point::new(cx, t.bottom),
                 to: Point::new(cx, m.top),
             });
@@ -575,7 +588,7 @@ impl Snapper {
             && t.top - m.bottom <= max_gap
             && t.top - m.bottom > 0.5
         {
-            out.push(Overlay::SmartGuide {
+            out.push(Overlay::GuideLine {
                 from: Point::new(cx, m.bottom),
                 to: Point::new(cx, t.top),
             });

@@ -293,8 +293,14 @@ pub enum Overlay {
     },
     /// Pinselabdrücke (Kreise).
     Stroke { points: Vec<Point>, diameter: f32 },
-    /// Intelligente Hilfslinie (Ausrichtung an anderen Objekten, Seitenrand, Mitte).
+    /// Smart guide (alignment to other objects, the page edge or centre). `from`/`to` are the
+    /// reference values in document pixels (edges: top/bottom or left/right of both boxes,
+    /// centres: both centres, RE spec 77 section 4); the canvas widens the line at both ends by
+    /// `max(40, trunc(0.2 * span))` screen pixels and draws it dashed 3 on / 3 off.
     SmartGuide { from: Point, to: Point },
+    /// Plain guide line in `SmartGuideColor`, drawn solid from `from` to `to` without widening:
+    /// the 9-slice guides and the gap measurement lines beside a moved object.
+    GuideLine { from: Point, to: Point },
     /// Beschriftung an einem Punkt (Abstand, Winkel, Größe).
     Label { at: Point, text: String },
     /// Hervorhebung beim Überfahren (Konturen, sonst Rahmen) – `SelectionMouseOverPreview`.

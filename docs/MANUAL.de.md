@@ -279,9 +279,14 @@ und ein Ring mit Strich zum Verbinden. Beim Zeichnen zeigt der Pfad seinen Umris
 Ankerpunkt (der zuletzt gesetzte gefüllt), keinen Begrenzungsrahmen und keine Füllung, bis er geschlossen ist; nach
 dem Schließen ist der erste Ankerpunkt gefüllt. Wird der Stift bei einem gewählten offenen Pfad gewählt, geht das
 Zeichnen an dessen Endpunkt weiter; ein gewählter geschlossener Pfad zeigt seinen Umriss mit hohlen Ankerpunkten.
-Punkte werden innerhalb des
-*Ausrichtungsabstands* aus den Voreinstellungen getroffen. Ein Doppelklick oder ein Werkzeugwechsel beendet den
-Pfad; die Eingabetaste und Esc bewirken beim Zeichnen nichts (der nächste Klick setzt denselben Pfad fort). Jeder Punkt ist ein eigener Schritt „Stift“ im Verlauf: Strg+Z (oder die Rücktaste) entfernt beim Zeichnen nur
+Punkte werden innerhalb eines Quadrats aus dem größeren Wert von *Ausrichtungsabstand* und *Markierungsabstand*
+aus den Voreinstellungen getroffen (ab Werk je 5 Bildschirmpixel; ein Klick 5 px rechts und 5 px unter dem
+Anfangspunkt schließt also noch), auch bei nicht gewählten Pfaden. Ein Doppelklick (er setzt seinen Punkt, danach
+ist kein Ankerpunkt mehr gewählt) oder ein Werkzeugwechsel beendet den Pfad; ein Klick auf den Anfangspunkt
+schließt ihn, und der nächste Klick beginnt einen neuen Pfad; die Eingabetaste und Esc bewirken beim Zeichnen
+nichts (der letzte Ankerpunkt bleibt gewählt, der nächste Klick setzt denselben Pfad fort). Stiftpunkte rasten
+innerhalb des Ausrichtungsabstands an Hilfslinien und am Raster ein, nicht an intelligenten Hilfslinien und nicht
+am Seitenrand. Jeder Punkt ist ein eigener Schritt „Stift“ im Verlauf: Strg+Z (oder die Rücktaste) entfernt beim Zeichnen nur
 den letzten Punkt, und Sie zeichnen vom vorigen Punkt aus weiter; das Beenden des Pfads erzeugt keinen Schritt.
 
 **Hintere auswählen** (im Platz des Zeigers): Ruht der Mauszeiger über Objekten, umrahmt ein roter Rahmen das
@@ -313,7 +318,11 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Design, Sprache. *Ansicht ▸ An Pixeln einrasten* (ein eigener Schalter von Firepixel, ab Werk aus) rundet Anker
   und Griffe, die mit der Teilauswahl gezogen werden, auf ganze Pixel; ausgeschaltet bewegen sie sich frei in
   Schritten von 1/Zoom wie im Original. Verschiebungen mit dem Zeiger und die Punkte des Stifts liegen immer auf
-  ganzen Pixeln. Gezogene Anker rasten nicht an intelligenten Hilfslinien ein. *Modifizieren ▸ An Pixeln
+  ganzen Pixeln. Gezogene Anker rasten nicht an intelligenten Hilfslinien ein. Verschiebt der Zeiger ein Objekt,
+  rasten intelligente Hilfslinien seine Kanten (auch an der Gegenkante) und seine Mitte innerhalb von
+  5 Bildschirmpixeln an den Begrenzungsrahmen anderer Objekte ein; die Hilfslinie ist eine gestrichelte
+  magentafarbene Linie (3 px Strich, 3 px Lücke), die mindestens 40 px über beide Objekte hinausreicht.
+  *Modifizieren ▸ An Pixeln
   ausrichten* (Strg+K) richtet die Auswahl weiterhin einmalig aus.
   *Ansicht ▸ Live-Vorschau beim Ziehen von Punkten* (ein eigener Schalter von Firepixel, ab Werk aus) zeichnet das
   Objekt beim Ziehen von Ankern oder Griffen live mit Füllung, Strich und Effekten statt nur seines Umrisses.

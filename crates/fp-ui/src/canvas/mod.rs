@@ -3350,6 +3350,15 @@ fn overlays(
                 );
             }
             Overlay::SmartGuide { from, to } => {
+                let ppp = ui.ctx().pixels_per_point();
+                // a plain mesh: no feathering, the runs cover whole pixels like the reference
+                let mut mesh = egui::Mesh::default();
+                for r in smart_guide_dashes(spp(from), spp(to), ppp) {
+                    mesh.add_colored_rect(r, c.smart_guide);
+                }
+                painter.add(egui::Shape::mesh(mesh));
+            }
+            Overlay::GuideLine { from, to } => {
                 painter.line_segment([spp(from), spp(to)], Stroke::new(1.0, c.smart_guide));
             }
             Overlay::Label { at, text } => {
@@ -4225,6 +4234,38 @@ fn argb(a: fp_color::Argb) -> Color32 {
 }
 
 /// „Laufende Ameisen“: gestrichelter Rahmen, dessen Muster mit der Zeit wandert.
+/// Pixel runs of a smart guide line between the screen points `from` and `to` (RE spec 77
+/// section 4): the line is widened at both ends by `max(40, trunc(0.2 * span))` screen pixels
+/// (A: screen pixels, the reference was measured at 100 % only), 1 px wide on the pixel the
+/// coordinate falls in, dashed 3 px on / 3 px off from the upper (left) end, no anti-aliasing.
+/// `ppp` = physical pixels per point; the runs are returned in points.
+pub fn smart_guide_dashes(from: Pos2, to: Pos2, ppp: f32) -> Vec<Rect> {
+    let ppp = ppp.max(0.01);
+    let (a, b) = (from * ppp, to * ppp);
+    let vertical = (a.x - b.x).abs() <= (a.y - b.y).abs();
+    let (lo, hi, at) = if vertical {
+        (a.y.min(b.y), a.y.max(b.y), a.x)
+    } else {
+        (a.x.min(b.x), a.x.max(b.x), a.y)
+    };
+    let ext = (0.2 * (hi - lo)).trunc().max(40.0);
+    let (start, end) = ((lo - ext).floor(), (hi + ext).floor());
+    let line = at.floor();
+    let mut out = Vec::new();
+    let mut p = start;
+    while p <= end {
+        let q = (p + 3.0).min(end + 1.0);
+        let r = if vertical {
+            Rect::from_min_max(pos2(line, p), pos2(line + 1.0, q))
+        } else {
+            Rect::from_min_max(pos2(p, line), pos2(q, line + 1.0))
+        };
+        out.push(Rect::from_min_max(r.min / ppp, r.max / ppp));
+        p += 6.0;
+    }
+    out
+}
+
 pub(crate) fn dashed_rect(painter: &egui::Painter, r: Rect, a: Color32, b: Color32, time: f64) {
     painter.rect_stroke(r, 0.0, Stroke::new(1.0, b), StrokeKind::Middle);
     let phase = ((time * 8.0) as i64 % 8) as f32;

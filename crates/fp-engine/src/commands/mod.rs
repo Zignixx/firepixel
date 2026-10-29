@@ -43,8 +43,8 @@ pub use modify::preview_set_contours;
 pub use select::{preview_move_pixels, restore_bitmap_selection_preview};
 pub(crate) use text::store_font_default as text_store_font_default;
 pub use text::{
-    convert_leading, effective_alignment, leading_field_value, new_text_pref_attrs,
-    preview_text_attributes, tool_text_defaults,
+    convert_leading, effective_alignment, leading_field_value, leading_from_field,
+    new_text_pref_attrs, preview_text_attributes, tool_text_defaults,
 };
 pub(crate) use text::{editor_patch, reset_text_tool_paragraph_defaults, store_editor_prefs};
 

@@ -3620,7 +3620,7 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
         0,
         en,
     ) {
-        let val = if v.leading_px { x } else { x / 100.0 };
+        let val = fp_engine::commands::leading_from_field(x, v.leading_px);
         set_text(
             ui,
             st,
@@ -3630,7 +3630,7 @@ pub fn text_row1(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target) {
     }
     let live = fields::slider_live(ui.ctx(), id.with("lead")).filter(|_| en);
     preview_text(st, live, |x| {
-        let val = if v.leading_px { x } else { x / 100.0 };
+        let val = fp_engine::commands::leading_from_field(x, v.leading_px);
         json!({"leading": val, "leadingMode": v.leading_px as i64})
     });
     fields::tip(

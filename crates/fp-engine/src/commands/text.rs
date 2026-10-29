@@ -1543,16 +1543,30 @@ pub(crate) fn reset_text_tool_paragraph_defaults(s: &mut Session) {
 }
 
 /// Leading value after switching the Properties panel unit (measured, re 56 section 5.4,
-/// TW-178): the conversion starts from the displayed field value, rounded half up, and stores
-/// the result unrounded. % -> px is `round(factor * 100) * size / 100` (123 % at 30 pt -> 36.9,
-/// 125 % -> 37.5), px -> % is `round(px) / size` (37.5 shown as 38 -> 1.2667), with the size
-/// limited to 1000 (observed once); same unit unchanged.
+/// TW-178; formula from RE spec 77 section 5.2, TW-280): the conversion starts from the displayed
+/// field value, rounded half away from zero, and stores the result unrounded. The size is limited
+/// to `[4, 1000]`. % -> px is `clamp(round(factor * 100) / 100 * size, 0, 10000)` (123 % at 30 pt
+/// -> 36.9, 125 % -> 37.5), px -> % is `clamp(round(px) / size, 0, 100)` (37 -> 1.2333, 37.5
+/// shown as 38 -> 1.2667); the same unit leaves the value unchanged.
 pub fn convert_leading(leading: f32, size: f32, from_px: bool, to_px: bool) -> f32 {
-    let (leading, size) = (leading as f64, size as f64);
+    let (leading, size) = (leading as f64, (size as f64).clamp(4.0, 1000.0));
     match (from_px, to_px) {
-        (false, true) => ((leading * 100.0).round() * size / 100.0) as f32,
-        (true, false) => (leading.round() / size.clamp(1.0, 1000.0)) as f32,
+        (false, true) => {
+            let f = (leading * 100.0).round() / 100.0;
+            (f.clamp(0.0, 100.0) * size).clamp(0.0, 10000.0) as f32
+        }
+        (true, false) => (leading.round().clamp(0.0, 10000.0) / size).clamp(0.0, 100.0) as f32,
         _ => leading as f32,
+    }
+}
+
+/// Leading stored for a number typed into the Properties panel leading field (RE spec 77
+/// section 5.2): px fields `clamp(v, 0, 10000)`, % fields `clamp(v / 100, 0, 100)`.
+pub fn leading_from_field(v: f64, px: bool) -> f64 {
+    if px {
+        v.clamp(0.0, 10000.0)
+    } else {
+        (v / 100.0).clamp(0.0, 100.0)
     }
 }
 

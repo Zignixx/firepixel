@@ -709,9 +709,24 @@ enum DrawHit {
     },
 }
 
-/// Anchor hit radius of the pen: `SnapDistance` screen pixels (default 5, re 52 §1.3).
+/// Anchor hit tolerance of the pen in document pixels: `max(SnapDistance, PickDistance)` screen
+/// pixels (both default 5) divided by the zoom (RE spec 77 section 2.1).
 fn pen_tol(ctx: &ToolContext) -> f32 {
-    (ctx.prefs.snap_distance() / ctx.zoom.max(1e-6)) as f32
+    let px = ctx.prefs.snap_distance().max(ctx.prefs.pick_distance());
+    (px / ctx.zoom.max(1e-6)) as f32
+}
+
+/// Anchor hit of the pen (RE spec 77 section 2.1): a square, `|dx| <= tol` and `|dy| <= tol`
+/// (border included), not a circle; returns `max(|dx|, |dy|)` so the nearest of several anchors
+/// can win.
+fn near_anchor(a: Point, p: Point, tol: f32) -> Option<f32> {
+    let d = (a.x - p.x).abs().max((a.y - p.y).abs());
+    (d <= tol + 1e-4).then_some(d)
+}
+
+/// Is `p` within the pen's square anchor tolerance of `a`?
+fn on_anchor(a: Point, p: Point, tol: f32) -> bool {
+    near_anchor(a, p, tol).is_some()
 }
 
 /// Laufendes Alt-Ziehen an einem vorhandenen Punkt (BA-003).
@@ -812,6 +827,8 @@ impl PenTool {
         skip: Option<(ElementId, usize)>,
     ) -> Option<PenHit> {
         let tol = pen_tol(ctx);
+        // the nearest end point wins (smallest max(|dx|, |dy|)), on a tie the topmost
+        let mut best: Option<(f32, PenHit)> = None;
         for id in docops::selectable_ids(ctx.doc, ctx.page, ctx.frame) {
             let Some(e) = docops::element_on_page(ctx.doc, ctx.page, id) else {
                 continue;
@@ -827,23 +844,23 @@ impl PenTool {
                 if c.closed || n < 2 || skip == Some((id, ci)) {
                     continue;
                 }
-                if dist(c.nodes[n - 1].anchor, p) <= tol {
-                    return Some(PenHit::End {
-                        id,
-                        contour: ci,
-                        at_start: false,
-                    });
-                }
-                if dist(c.nodes[0].anchor, p) <= tol {
-                    return Some(PenHit::End {
-                        id,
-                        contour: ci,
-                        at_start: true,
-                    });
+                for (node, at_start) in [(n - 1, false), (0, true)] {
+                    if let Some(d) = near_anchor(c.nodes[node].anchor, p, tol)
+                        && best.as_ref().is_none_or(|(b, _)| d < *b - 1e-6)
+                    {
+                        best = Some((
+                            d,
+                            PenHit::End {
+                                id,
+                                contour: ci,
+                                at_start,
+                            },
+                        ));
+                    }
                 }
             }
         }
-        None
+        best.map(|(_, h)| h)
     }
 
     fn pen_hit_selected(ctx: &ToolContext, p: Point) -> Option<PenHit> {
@@ -865,14 +882,14 @@ impl PenTool {
                 continue;
             }
             if !c.closed {
-                if dist(c.nodes[n - 1].anchor, p) <= tol {
+                if on_anchor(c.nodes[n - 1].anchor, p, tol) {
                     return Some(PenHit::End {
                         id,
                         contour: ci,
                         at_start: false,
                     });
                 }
-                if dist(c.nodes[0].anchor, p) <= tol {
+                if on_anchor(c.nodes[0].anchor, p, tol) {
                     return Some(PenHit::End {
                         id,
                         contour: ci,
@@ -881,7 +898,7 @@ impl PenTool {
                 }
             }
             for (ni, k) in c.nodes.iter().enumerate() {
-                if dist(k.anchor, p) <= tol {
+                if on_anchor(k.anchor, p, tol) {
                     return Some(PenHit::Point {
                         id,
                         contour: ci,
@@ -1032,16 +1049,16 @@ impl PenTool {
             return None;
         }
         let tol = pen_tol(ctx);
-        if n >= 2 && dist(p, self.nodes[0].0) <= tol {
+        if n >= 2 && on_anchor(self.nodes[0].0, p, tol) {
             return Some(DrawHit::Close);
         }
-        if dist(p, self.nodes[n - 1].0) <= tol {
+        if on_anchor(self.nodes[n - 1].0, p, tol) {
             return Some(DrawHit::Last);
         }
         if shift {
             return None;
         }
-        if let Some(i) = (1..n - 1).find(|&i| dist(p, self.nodes[i].0) <= tol) {
+        if let Some(i) = (1..n - 1).find(|&i| on_anchor(self.nodes[i].0, p, tol)) {
             return Some(DrawHit::Interior(i));
         }
         if n >= 2 {
@@ -1278,7 +1295,7 @@ impl PenTool {
                 self.convert = None;
                 self.smooth_drag = false;
                 self.alt_point = None;
-                if self.nodes.len() >= 2 && dist(*pos, self.nodes[0].0) <= tol {
+                if self.nodes.len() >= 2 && on_anchor(self.nodes[0].0, *pos, tol) {
                     self.closing = true;
                     return ToolResponse {
                         cursor: Cursor::PenClose,

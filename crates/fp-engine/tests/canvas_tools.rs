@@ -1607,7 +1607,7 @@ fn nine_slice_keeps_corners() {
     let fb = s.tool_feedback();
     assert_eq!(
         fb.iter()
-            .filter(|o| matches!(o, Overlay::SmartGuide { .. }))
+            .filter(|o| matches!(o, Overlay::GuideLine { .. }))
             .count(),
         4,
         "vier 9-Slice-Hilfslinien"

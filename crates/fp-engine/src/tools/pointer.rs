@@ -2749,19 +2749,19 @@ impl TransformTool {
                 Overlay::Handles {
                     points: handles(b).to_vec(),
                 },
-                Overlay::SmartGuide {
+                Overlay::GuideLine {
                     from: Point::new(g[0], b.top),
                     to: Point::new(g[0], b.bottom),
                 },
-                Overlay::SmartGuide {
+                Overlay::GuideLine {
                     from: Point::new(b.left, g[1]),
                     to: Point::new(b.right, g[1]),
                 },
-                Overlay::SmartGuide {
+                Overlay::GuideLine {
                     from: Point::new(g[2], b.top),
                     to: Point::new(g[2], b.bottom),
                 },
-                Overlay::SmartGuide {
+                Overlay::GuideLine {
                     from: Point::new(b.left, g[3]),
                     to: Point::new(b.right, g[3]),
                 },

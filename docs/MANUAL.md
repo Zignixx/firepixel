@@ -260,9 +260,12 @@ rubber band is hidden then), a "/" over the end of an unselected open path (cont
 joining. While you draw, the path shows its outline and a square on each anchor (the last placed one filled), no
 bounding box and no fill until it is closed; after closing the first anchor is filled. Choosing the Pen with an
 open path selected continues that path from its end point; a selected closed path shows its outline with hollow
-anchors. Points are hit within the
-*Snap distance* set in the preferences. A double-click or a change of tool ends the path; Enter
-and Escape do nothing while a path is drawn (the next click adds to the same path). Every point is its own
+anchors. Points are hit within a square of the larger of *Snap distance* and *Pick distance* from the preferences
+(5 screen pixels each by default, so a click 5 px right and 5 px below the start point still closes), also on
+unselected paths. A double-click (it places its point, then no anchor stays selected) or a change of tool ends the
+path; a click on the start point closes it and the next click starts a new path; Enter and Escape do nothing while
+a path is drawn (the last anchor stays selected and the next click adds to the same path). Pen points snap to
+guides and the grid within the snap distance, but not to smart guides or the page edge. Every point is its own
 History step "Pen": Ctrl+Z (or Backspace) while drawing removes only the last point and you keep drawing from the
 point before; ending the path adds no step.
 
@@ -292,7 +295,10 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
 - **View:** Magnification, Fit Selection/Fit All, Rulers, Grid, Guides, Smart Guides, Theme, Language.
   *View ▸ Snap to Pixels* (Firepixel's own switch, off by default) rounds anchors and handles dragged with the
   Subselection tool to whole pixels; off, they move freely in steps of 1/zoom like in the original. Pointer moves
-  and Pen points always land on whole pixels. Dragged anchors do not snap to smart guides. *Modify ▸ Snap to
+  and Pen points always land on whole pixels. Dragged anchors do not snap to smart guides. When the Pointer moves
+  an object, smart guides snap its edges (also to the opposite edge) and its centre to the bounding boxes of other
+  objects within 5 screen pixels; the guide is a dashed magenta line (3 px on, 3 px off) that reaches at least
+  40 px beyond both objects. *Modify ▸ Snap to
   Pixel* (Ctrl+K) still snaps the selection once.
   *View ▸ Live Preview While Dragging Points* (Firepixel's own switch, off by default) redraws the object with its
   fill, stroke and effects while you drag anchors or handles, instead of only its outline.
