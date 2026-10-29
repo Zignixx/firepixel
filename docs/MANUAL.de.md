@@ -196,8 +196,8 @@ neue Bitmap anlegt, schreibt vor „Bitmap bearbeiten“ und der Strichzeile die
 Verlaufseditor), „Auswahl füllen“ und Toleranz gelten getrennt vom Farbeimer. **Farbe ersetzen**
 hat eigene Farben „Von“ und „in“ (Vorgabe Grün → Rot).
 Die **Pipette** übernimmt die Farbe unter dem Zeiger in das aktive Farbfeld des Werkzeugbedienfelds (Alt:
-das andere); gewählte Vektorobjekte bekommen die Farbe ebenfalls. Die Option „Auswahl:“ im Inspektor liest
-1 Pixel oder den Durchschnitt aus 3 × 3 bzw. 5 × 5. Auf der Leinwand tastet sie das Dokument ab; auf der
+das andere); gewählte Vektorobjekte bekommen die Farbe ebenfalls. Die Option „Auswahl:“ im Inspektor („1 Pixel“,
+„3x3 Durchschnitt“, „5x5 Durchschnitt“) liest 1 Pixel oder den Durchschnitt aus 3 × 3 bzw. 5 × 5. Auf der Leinwand tastet sie das Dokument ab; auf der
 Leinwand drücken, die Maustaste halten und irgendwo auf dem Bildschirm außerhalb des Firepixel-Fensters
 loslassen übernimmt die Bildschirmfarbe dort (auch aus anderen Programmen, mit derselben Auswahl).
 Neben der Leinwand innerhalb des Fensters losgelassen, bleibt die Farbe. Grenzen: Unter Linux wird der

@@ -12,8 +12,10 @@ executable with no runtime to install.
 - **Automation:** one command registry drives the UI, the CLI, JSF scripts and an **MCP server** (headless or as a
   bridge into the running app), so AI agents can do everything a user can
 - Extras on top of the original: modern formats (WebP, APNG, AVIF, JPEG XL, QOI, ICO, SVG), a batch studio,
-  bitmap-to-vector tracing, on-device AI selection (pure-Rust CPU inference) and a split document view with a
-  page per pane, side by side or one above the other (*Window ▸ Duplicate Window*, *Window ▸ Split*)
+  bitmap-to-vector tracing, on-device AI selection (pure-Rust CPU inference; `firepixel-cli models` lists, downloads
+  and verifies the models), a split document view with up to four panes, a page per pane, side by side or one above
+  the other (*Window ▸ Duplicate Window*, *Window ▸ Split*), an eyedropper that also picks colours from the screen
+  outside the window, and a PSD-style Stroke live effect that exports to PSD as a layer effect
 
 > Firepixel is an independent project. It is not affiliated with, endorsed by or derived from the code or
 > assets of the reference application or its vendor. See [Clean room](CONTRIBUTING.md#clean-room).
@@ -30,8 +32,8 @@ every UI tweak). They are attached to [releases](../../releases) and to issues i
 | Stage | feature-complete preview; parity polishing |
 | Parity (scripted comparison, 49 units) | **49 units equal except for design**, 0 real deviations, 0 unclear, 0 under-measured (follow-up run 44 on top of full run 43, 24 Oct 2026) |
 | Proven 1:1 | **100 %** (49 / 49 units); measurement quota 88.0 %; canvas image pairs within 1 %: 195 / 224 |
-| Tests | **3445 passed** (full workspace run on the code of v0.2.16, 25 Oct 2026, GT-2c); the run on the tree with tester feedback batch 10 is 3489 passed, 0 real failures (one wgpu render flake green on rerun), 142 ignored (GT-2d, `df412989`); the run on the tree with tester feedback batch 11 is 3499 passed, 0 failed, 142 ignored (GT-2f, `43fe3e6b`); the run on the tree with batch 12 and the night round is 3533 passed, 0 failed, 142 ignored (GT-2g, `1e2fbb98`); the run on the tree with batch 13 and the open-list round is 3560 passed, 0 failed, 142 ignored (GT-2h, `b0b82656`); batch and export tests also run on macOS and Linux in CI |
-| Open findings | 107 fixable rows (mostly fixed or done and waiting for the click-test or the macOS re-test), 5 deferred items, 53 informational rows (850+ closed) — see [docs/FINDINGS.md](docs/FINDINGS.md) |
+| Tests | **3445 passed** (full workspace run on the code of v0.2.16, 25 Oct 2026, GT-2c); the run on the tree with tester feedback batch 10 is 3489 passed, 0 real failures (one wgpu render flake green on rerun), 142 ignored (GT-2d, `df412989`); the run on the tree with tester feedback batch 11 is 3499 passed, 0 failed, 142 ignored (GT-2f, `43fe3e6b`); the run on the tree with batch 12 and the night round is 3533 passed, 0 failed, 142 ignored (GT-2g, `1e2fbb98`); the run on the tree with batch 13 and the open-list round is 3560 passed, 0 failed, 142 ignored (GT-2h, `b0b82656`); the run on the tree with batch 14 and the open-list round is 3651 passed, 157 ignored (GT-2i, `43af680f`; its 3 failures were fixed by F145 and rerun green); batch and export tests also run on macOS and Linux in CI |
+| Open findings | 113 fixable rows (mostly fixed or done and waiting for the click-test or the macOS re-test), 4 deferred items, 55 informational rows (850+ closed) — see [docs/FINDINGS.md](docs/FINDINGS.md) |
 
 Details and method: [docs/STATUS.md](docs/STATUS.md), [docs/PARITY.md](docs/PARITY.md),
 [ROADMAP.md](ROADMAP.md). The German working notes, run reports and screenshots of the development phase are
@@ -93,7 +95,7 @@ Contributions are welcome — please read [CONTRIBUTING.md](CONTRIBUTING.md) and
 
 Thanks to the people who contributed testing feedback:
 
-- **E-Man** – hands-on testing feedback on the pen tool, Select Behind, macOS and the Subselection display, the Pen undo steps, redo, the inspector sliders and the Subselection snapping, and batch 9: the bitmap mode button, painting into bitmaps, keys during a brush stroke, page multi-selection and moving pixel selections, and batch 10: the Layers mask rows, the mask inspector, the idea of a separate mask selection tool, Ctrl-drag, Shift-marquee and Shift + wheel options, the dither slider, screentone anti-alias, Undo of bitmap mode and dragging several pages, and batch 11: the invisible Exit Bitmap Mode button, the History markers and moving pixels with the arrow keys, and batch 12: the split view with a second page, Ctrl for a new bitmap and the tooltip options, and batch 13: the History tooltip with tooltips off, the undo limit with the stroke rows and the bitmap mask underlay with the Layers thumbnails (October 2026)
+- **E-Man** – hands-on testing feedback on the pen tool, Select Behind, macOS and the Subselection display, the Pen undo steps, redo, the inspector sliders and the Subselection snapping, and batch 9: the bitmap mode button, painting into bitmaps, keys during a brush stroke, page multi-selection and moving pixel selections, and batch 10: the Layers mask rows, the mask inspector, the idea of a separate mask selection tool, Ctrl-drag, Shift-marquee and Shift + wheel options, the dither slider, screentone anti-alias, Undo of bitmap mode and dragging several pages, and batch 11: the invisible Exit Bitmap Mode button, the History markers and moving pixels with the arrow keys, and batch 12: the split view with a second page, Ctrl for a new bitmap and the tooltip options, and batch 13: the History tooltip with tooltips off, the undo limit with the stroke rows and the bitmap mask underlay with the Layers thumbnails, and batch 14: tooltips with tooltips off, the dither density, mask values, opacity and blend modes in masks and dragging objects (October 2026)
 - **Hunter** – for the animation playback and brush layer reports (October 2026)
 
 Code contributions:
