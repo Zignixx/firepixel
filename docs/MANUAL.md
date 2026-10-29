@@ -193,8 +193,10 @@ only the outline of the brush tip (it disappears when the pointer leaves the can
 can be edited the pointer shows "not allowed". The tip outline of the Brush, the Eraser and these tools
 has no colour of its own: it inverts what is on screen below it (each pixel XOR #FFFF00, so it is blue
 over white, yellow over black and green over red), 1 screen pixel wide at every zoom and as large as the
-tip at the current zoom; it looks the same whatever the tool colour and also while a mask is edited. The
-Pencil shows no outline. **Smudge** is never cut off at the bitmap edge, no
+tip at the current zoom; it looks the same whatever the tool colour and also while a mask is edited.
+While you paint it inverts the stroke painted so far as well (green over a fresh red stroke). A tip of
+at most 4 screen pixels also gets a small inverting crosshair: four short dashes 4 to 5 pixels above,
+below, left and right of the pointer. The Pencil shows no outline. **Smudge** is never cut off at the bitmap edge, no
 matter whether the brush centre was on the bitmap or beside it when you pressed (with the bitmap
 selected, a stroke pressed beside it works like one pressed on it; with nothing selected a press beside
 the bitmap does nothing): color carried past the edge fades out semi-transparent and the bitmap grows to
@@ -510,23 +512,31 @@ made in one pane appears in the other at once.
 - The new right pane has the focus and starts on the same page. Pick another page with the page
   list at the top of the pane (or in the Pages panel).
 - The pane you clicked last has the focus (the accent line on its header): the tools, the panels
-  (Pages, Layers, States, Properties …), the rulers, the status bar and the keyboard shortcuts act on
-  it. Clicking or turning the wheel over the other pane gives it the focus first, so a tool always
-  works in the pane under the pointer.
+  (Pages, Layers, States, Properties …), the rulers and the keyboard shortcuts act on it. Clicking or
+  turning the wheel over another pane gives it the focus first, so a tool always works in the pane
+  under the pointer.
+- The status bar (document size, zoom, state number, tool hints) and the pointer position in the
+  Info panel show the pane the pointer is over; when the pointer is outside every pane (for example
+  over the status bar itself or a panel) they show the focused pane.
 - The pane without the focus still follows the pointer: the tool cursor, the hover highlight
   (also Select Behind's frame and path points), the brush tip outline and the coordinate tag appear
   in whichever pane the pointer is over; only a click or a wheel turn moves the focus.
-- *Window ▸ Next Pane* (Shift+F6) moves the focus to the other pane (Ctrl+Tab and Ctrl+F6 keep
-  switching between documents).
+- *Window ▸ Duplicate Window* again splits the focused pane once more: a new pane appears after
+  it (to the right, or below when the panes are one above the other) and gets the focus. Up to four
+  panes are possible, each with its own page, state, zoom and scroll position.
+- *Window ▸ Next Pane* (Shift+F6) moves the focus to the next pane, through all panes in turn
+  (Ctrl+Tab and Ctrl+F6 keep switching between documents).
 - *Window ▸ Split ▸ Side by Side / Top and Bottom* arranges the panes next to each other (the
   default) or one above the other; both keep their page and zoom.
-- Drag the bar between the panes to change their sizes; the position and the arrangement are
-  remembered for the document until you quit. Original/Preview/2-Up/4-Up apply to the focused
+- Drag the bars between the panes to change their sizes (each pane keeps at least a tenth of the
+  area); the positions and the arrangement are remembered for the document until you quit. Original/Preview/2-Up/4-Up apply to the focused
   pane.
-- Close a pane with the × in its header or with *Window ▸ Close Duplicate Window* (the focused pane
-  stays). The split is not saved with the document or the workspace.
-- There is one split per document (two panes). In the pane without the focus the hover feedback
-  starts from an idle tool, so an operation running in the focused pane is not shown there.
+- Close a pane with the × in its header (the focus stays where it is) or close the focused pane
+  with *Window ▸ Close Duplicate Window* (the focus goes to the pane before it); its space goes to its
+  neighbour. With one pane left the document area is undivided again. The split is not saved with
+  the document or the workspace.
+- In a pane without the focus the hover feedback starts from an idle tool, so an operation running
+  in the focused pane is not shown there.
 
 ## Panels
 

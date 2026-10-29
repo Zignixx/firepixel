@@ -1,5 +1,6 @@
 //! FB-97 / TW-272: Window ▸ Duplicate Window splits the document window into two panes, each with
-//! its own page, state, zoom, scroll and selection; both show the same document. The focused pane's
+//! its own page, state, zoom, scroll and selection; both show the same document. F137 / TW-275: up
+//! to four panes. The focused pane's
 //! state is the live one (`d.view`, `d.page` …), so commands, panels and MCP address it unchanged.
 
 use crate::common;
@@ -46,9 +47,12 @@ fn duplicate_window_splits_with_an_independent_page_and_zoom() {
     assert_eq!((d.page, d.view.zoom), (0, 2.0));
     assert_eq!(d.other_pane().map(|p| p.page), Some(1));
     assert_eq!(d.other_pane().map(|p| p.view.zoom), Some(right_zoom));
-    // a second Duplicate Window keeps the split as it is
-    ex(&mut s, "window.duplicateWindow", json!({}));
-    assert_eq!(s.active().map(|d| d.live_pane()), Some(0));
+    // F137: a second Duplicate Window splits the focused pane again: a third pane after it
+    let v = ex(&mut s, "window.duplicateWindow", json!({}));
+    assert_eq!((v["panes"].as_u64(), v["pane"].as_u64()), (Some(3), Some(1)));
+    let d = s.active().expect("doc");
+    assert_eq!((d.page, d.view.zoom), (0, 2.0), "a copy of the focused pane");
+    assert_eq!(d.parked_pane(2).map(|p| p.page), Some(1), "the old right pane");
 }
 
 #[test]
@@ -93,8 +97,9 @@ fn each_pane_keeps_its_selection_and_stale_ids_are_dropped() {
     assert!(s.active().is_some_and(|d| d.selection.elements.is_empty()));
 }
 
+/// F137: Close Duplicate Window closes the focused pane; the remaining pane fills the window.
 #[test]
-fn close_duplicate_keeps_the_focused_pane() {
+fn close_duplicate_closes_the_focused_pane() {
     let mut s = two_pages();
     assert!(s.execute("window.closeDuplicate", json!({})).is_err());
     assert!(s.execute("window.focusPane", json!({"pane": 1})).is_err());
@@ -104,7 +109,117 @@ fn close_duplicate_keeps_the_focused_pane() {
     assert_eq!(v["closed"], true, "{v}");
     let d = s.active().expect("doc");
     assert!(!d.is_split());
-    assert_eq!((d.page, d.live_pane()), (1, 0));
+    assert_eq!((d.page, d.live_pane()), (0, 0), "the left pane on page 0 stays");
+    // with `pane` another pane closes and the focused one stays
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    ex(&mut s, "page.setCurrent", json!({"index": 1}));
+    let v = ex(&mut s, "window.closeDuplicate", json!({"pane": 0}));
+    assert_eq!((v["panes"].as_u64(), v["page"].as_u64()), (Some(1), Some(1)));
+    assert!(s.active().is_some_and(|d| !d.is_split()));
+    assert!(s.execute("window.closeDuplicate", json!({"pane": 0})).is_err());
+}
+
+/// F137: up to four panes; each keeps its own page and zoom, Next Pane cycles all of them, a
+/// closed pane in the middle gives its space to the pane before it and the focus stays where it
+/// is; at four panes Duplicate Window is unavailable.
+#[test]
+fn up_to_four_panes_each_with_its_own_view() {
+    let mut s = two_pages();
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    let d = s.active().expect("doc");
+    assert_eq!((d.pane_count(), d.live_pane()), (4, 3));
+    assert!(!s.command_state("window.duplicateWindow").0, "four is the most");
+    assert!(s.execute("window.duplicateWindow", json!({})).is_err());
+    let d = s.active().expect("doc");
+    // the splitters: four panes, increasing, every pane at least 10 %
+    let spans = d.split_layout.spans(4);
+    assert_eq!(spans.len(), 4);
+    assert!(spans.iter().all(|(a, b)| b - a >= 0.099), "{spans:?}");
+    assert_eq!(d.split_layout.bounds.len(), 3);
+    // give every pane its own page and zoom
+    for p in 0..4usize {
+        ex(&mut s, "window.focusPane", json!({"pane": p}));
+        ex(&mut s, "page.setCurrent", json!({"index": p % 2}));
+        s.active_mut().expect("doc").view.zoom = 1.0 + p as f64;
+    }
+    for p in 0..4usize {
+        let d = s.active().expect("doc");
+        assert_eq!(
+            d.pane_summary(p).map(|(page, _, z)| (page, z)),
+            Some((p % 2, 1.0 + p as f64)),
+            "pane {p}"
+        );
+    }
+    // Next Pane cycles 3 -> 0 -> 1 -> 2 -> 3
+    let mut seen = Vec::new();
+    for _ in 0..4 {
+        let v = ex(&mut s, "window.nextPane", json!({}));
+        seen.push(v["pane"].as_u64().unwrap_or(9));
+    }
+    assert_eq!(seen, vec![0, 1, 2, 3]);
+    assert!(s.execute("window.focusPane", json!({"pane": 4})).is_err());
+    // close pane 1 (not focused): pane 3 keeps the focus, now as pane 2
+    let bounds = s
+        .active()
+        .map(|d| d.split_layout.bounds.clone())
+        .expect("doc");
+    let v = ex(&mut s, "window.closeDuplicate", json!({"pane": 1}));
+    assert_eq!((v["panes"].as_u64(), v["pane"].as_u64()), (Some(3), Some(2)));
+    let d = s.active().expect("doc");
+    assert_eq!(d.view.zoom, 4.0);
+    assert_eq!(d.pane_summary(1).map(|(_, _, z)| z), Some(3.0));
+    assert_eq!(d.split_layout.bounds, vec![bounds[1], bounds[2]], "pane 0 grew");
+    // the focused pane closes: the focus goes to the pane before it
+    let v = ex(&mut s, "window.closeDuplicate", json!({}));
+    assert_eq!((v["panes"].as_u64(), v["pane"].as_u64()), (Some(2), Some(1)));
+    assert_eq!(s.active().map(|d| d.view.zoom), Some(3.0));
+    assert!(s.command_state("window.duplicateWindow").0);
+}
+
+/// F137: the splitters keep their distance (10 % per pane) and are remembered for the document;
+/// splitting a pane halves it.
+#[test]
+fn splitter_positions_are_clamped_and_remembered() {
+    use fp_engine::view_pane::SplitLayout;
+    let mut l = SplitLayout::default();
+    assert_eq!(l.fitted_bounds(2), vec![0.5]);
+    assert!(l.set_bound(2, 0, 0.7));
+    assert_eq!((l.bounds.clone(), l.ratio), (vec![0.7], 0.7));
+    assert!(l.set_bound(2, 0, 0.99));
+    assert!((l.bounds[0] - 0.9).abs() < 1e-6);
+    assert!(!l.set_bound(2, 1, 0.5), "no second splitter");
+    assert_eq!(l.fitted_bounds(3).len(), 2, "stored bounds for another count: even");
+    let mut s = two_pages();
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    s.active_mut()
+        .expect("doc")
+        .split_layout
+        .set_bound(2, 0, 0.6);
+    // the right pane (0.6 .. 1.0) is split in the middle
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    let b = s
+        .active()
+        .map(|d| d.split_layout.bounds.clone())
+        .expect("doc");
+    assert_eq!(b.len(), 2);
+    assert!((b[0] - 0.6).abs() < 1e-6 && (b[1] - 0.8).abs() < 1e-6, "{b:?}");
+    // the middle splitter cannot pass its neighbours
+    let d = s.active_mut().expect("doc");
+    d.split_layout.set_bound(3, 1, 0.1);
+    assert!((d.split_layout.bounds[1] - 0.7).abs() < 1e-6);
+    // closed down to one pane and split again: two panes at the last two-pane position
+    ex(&mut s, "window.closeDuplicate", json!({}));
+    ex(&mut s, "window.closeDuplicate", json!({}));
+    let d = s.active().expect("doc");
+    assert!(!d.is_split());
+    let ratio = d.split_layout.ratio;
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    assert_eq!(
+        s.active().map(|d| d.split_layout.bounds.clone()),
+        Some(vec![ratio])
+    );
 }
 
 #[test]
@@ -228,4 +343,32 @@ fn hover_probe_runs_nothing() {
             .iter()
             .any(|o| matches!(o, fp_engine::Overlay::Highlight { .. }))
     );
+}
+
+/// F137: every pane keeps a stable key while other panes open and close (the UI keeps the
+/// pane's canvas cache under it); the remaining pane of a closed split keeps its key.
+#[test]
+fn pane_keys_are_stable() {
+    let mut s = two_pages();
+    assert_eq!(s.active().map(|d| d.pane_key(0)), Some(0));
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    let keys = |s: &Session| {
+        let d = s.active().expect("doc");
+        (0..d.pane_count()).map(|p| d.pane_key(p)).collect::<Vec<_>>()
+    };
+    let k = keys(&s);
+    assert_eq!(k.len(), 3);
+    assert_eq!(k[0], 0, "the first pane keeps the key of the unsplit view");
+    assert!(k[0] != k[1] && k[1] != k[2] && k[0] != k[2], "{k:?}");
+    ex(&mut s, "window.closeDuplicate", json!({"pane": 1}));
+    assert_eq!(keys(&s), vec![k[0], k[2]]);
+    ex(&mut s, "window.closeDuplicate", json!({"pane": 0}));
+    let d = s.active().expect("doc");
+    assert!(!d.is_split());
+    assert_eq!(d.pane_key(0), k[2], "the remaining pane keeps its key");
+    ex(&mut s, "window.duplicateWindow", json!({}));
+    let k2 = keys(&s);
+    assert_eq!(k2[0], k[2]);
+    assert!(!k.contains(&k2[1]), "a new key: {k2:?}");
 }

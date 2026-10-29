@@ -95,13 +95,23 @@ pub struct AppState {
     pub theme: Arc<Theme>,
     pub settings: UiSettings,
     pub canvases: HashMap<DocId, CanvasCache>,
-    /// FB-97 / TW-272: canvas caches of the pane of a split view whose cache is not in
-    /// [`AppState::canvases`] (swapped in while that pane is drawn, `canvas::split`).
-    pub pane_canvases: HashMap<DocId, CanvasCache>,
-    /// FB-97: the pane of a split document whose cache is in [`AppState::canvases`] (missing = 0).
-    pub cache_panes: HashMap<DocId, usize>,
-    /// FB-97: the canvas being drawn is the pane without the focus (drawn, takes no input).
+    /// FB-97 / TW-272: canvas caches of the panes of a split view whose cache is not in
+    /// [`AppState::canvases`], by document and pane (swapped in while that pane is drawn,
+    /// `canvas::split`; F137: up to three parked panes per document).
+    pub pane_canvases: HashMap<(DocId, u64), CanvasCache>,
+    /// FB-97: the pane (F137: its stable key, `DocumentState::pane_key`) of a split document
+    /// whose cache is in [`AppState::canvases`] (missing = 0).
+    pub cache_panes: HashMap<DocId, u64>,
+    /// FB-97: the canvas being drawn is a pane without the focus (drawn, takes no input).
     pub pane_passive: bool,
+    /// F137: key of the focused pane of the split view being drawn (valid while `pane_passive`).
+    pub pane_focus_key: u64,
+    /// F137 / TW-275: the pane of the active split document under the pointer (`None`: the
+    /// pointer is over no pane, or the view is not split). The status bar and the Info panel
+    /// follow it, else the focused pane.
+    pub hover_pane: Option<usize>,
+    /// F137: the pane [`AppState::pointer_doc`] was measured in (rulers mark it only there).
+    pub pointer_pane: usize,
     pub worker: RenderWorker,
     pub renderer: Arc<fp_render::Renderer>,
     pub dialogs: Dialogs,
@@ -152,23 +162,24 @@ pub struct AppState {
 }
 
 impl AppState {
-    /// FB-97: the pane of document `id` whose canvas cache is in [`AppState::canvases`].
-    pub fn cache_pane(&self, id: DocId) -> usize {
+    /// FB-97: the pane (key) of document `id` whose canvas cache is in [`AppState::canvases`].
+    pub fn cache_pane(&self, id: DocId) -> u64 {
         self.cache_panes.get(&id).copied().unwrap_or(0)
     }
 
     /// FB-97: puts the canvas cache of `pane` of document `id` into [`AppState::canvases`] (the
-    /// other pane's cache goes to [`AppState::pane_canvases`]).
-    pub fn use_pane_cache(&mut self, id: DocId, pane: usize) {
-        if self.cache_pane(id) == pane {
+    /// cache there goes to [`AppState::pane_canvases`] under its own pane).
+    pub fn use_pane_cache(&mut self, id: DocId, pane: u64) {
+        let cur = self.cache_pane(id);
+        if cur == pane {
             return;
         }
         let a = self.canvases.remove(&id);
-        if let Some(b) = self.pane_canvases.remove(&id) {
+        if let Some(b) = self.pane_canvases.remove(&(id, pane)) {
             self.canvases.insert(id, b);
         }
         if let Some(a) = a {
-            self.pane_canvases.insert(id, a);
+            self.pane_canvases.insert((id, cur), a);
         }
         if pane == 0 {
             self.cache_panes.remove(&id);
@@ -197,6 +208,9 @@ impl AppState {
             pane_canvases: HashMap::new(),
             cache_panes: HashMap::new(),
             pane_passive: false,
+            pane_focus_key: 0,
+            hover_pane: None,
+            pointer_pane: 0,
             worker,
             renderer,
             dialogs: Dialogs::default(),
@@ -302,14 +316,14 @@ impl AppState {
             match e {
                 SessionEvent::DocumentClosed(id) => {
                     self.canvases.remove(&id);
-                    self.pane_canvases.remove(&id);
+                    self.pane_canvases.retain(|k, _| k.0 != id);
                     self.cache_panes.remove(&id);
                 }
                 SessionEvent::DocumentChanged { doc, .. } | SessionEvent::LocationChanged(doc) => {
                     if let Some(c) = self.canvases.get_mut(&doc) {
                         c.invalidate();
                     }
-                    if let Some(c) = self.pane_canvases.get_mut(&doc) {
+                    for (_, c) in self.pane_canvases.iter_mut().filter(|(k, _)| k.0 == doc) {
                         c.invalidate();
                     }
                 }

@@ -674,19 +674,24 @@ pub(super) fn register(r: &mut CommandRegistry) {
             }),
     );
     // FB-97 / TW-272: Duplicate Window splits the document window into two panes side by side
-    // (each with its own page, state, zoom and scroll, `crate::view_pane`); the new right pane
-    // gets the focus. Already split: nothing changes.
+    // (each with its own page, state, zoom and scroll, `crate::view_pane`); the new pane gets
+    // the focus. F137: on a split view it splits the focused pane again, up to four panes; at four
+    // panes it is unavailable.
     r.add(
         cmd("window.duplicateWindow")
             .requires(super::DOC)
+            .available(|s| {
+                s.active()
+                    .is_some_and(|d| d.pane_count() < crate::view_pane::MAX_PANES)
+            })
             .run(|s, _| {
                 let d = s.doc_mut()?;
                 let id = d.id;
-                d.split_view();
-                let pane = d.live_pane();
+                let added = d.split_view();
+                let (pane, panes) = (d.live_pane(), d.pane_count());
                 s.emit(SessionEvent::PanelsChanged);
                 Ok(CommandOutput::session_with(
-                    json!({"doc": id.0, "panes": 2, "pane": pane}),
+                    json!({"doc": id.0, "panes": panes, "pane": pane, "added": added}),
                 ))
             }),
     );
@@ -694,14 +699,40 @@ pub(super) fn register(r: &mut CommandRegistry) {
         cmd("window.closeDuplicate")
             .label("Zusätzliches Fenster schließen")
             .requires(super::DOC)
+            .opt(
+                "pane",
+                ParamKind::Integer {
+                    min: Some(0),
+                    max: Some(crate::view_pane::MAX_PANES as i64 - 1),
+                },
+                "Zu schließender Bereich (sonst der aktive)",
+            )
             .available(|s| s.active().is_some_and(|d| d.is_split()))
-            .run(|s, _| {
-                // the pane without the focus closes; the focused one fills the window again
-                let closed = s.doc_mut()?.unsplit();
-                s.emit(SessionEvent::PanelsChanged);
-                Ok(CommandOutput::session_with(
-                    json!({"closed": closed, "panes": 1}),
-                ))
+            .run(|s, p| {
+                // F137: the focused pane (or `pane`) closes; the focus goes to its neighbour, the
+                // last remaining pane fills the window again
+                let d = s.doc()?;
+                if !d.is_split() {
+                    return Err(EngineError::Failed(fp_i18n::t("err-view-not-split")));
+                }
+                let pane = match p.opt_i64("pane")? {
+                    Some(v) => usize::try_from(v).unwrap_or(usize::MAX),
+                    None => d.live_pane(),
+                };
+                if pane >= d.pane_count() {
+                    return Err(EngineError::InvalidParams {
+                        name: "pane".into(),
+                        message: pane.to_string(),
+                    });
+                }
+                let closed = s.close_pane(pane)?;
+                let d = s.doc()?;
+                Ok(CommandOutput::session_with(json!({
+                    "closed": closed,
+                    "panes": d.pane_count(),
+                    "pane": d.live_pane(),
+                    "page": d.page,
+                })))
             }),
     );
     // F132: arrangement of the split view (side by side or one above the other); remembered for
@@ -737,7 +768,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 })))
             }),
     );
-    // F132: Window ▸ Next Pane: the focus goes to the other pane of the split view
+    // F132: Window ▸ Next Pane: the focus goes to the next pane of the split view (F137: cycling
+    // through all panes)
     r.add(
         cmd("window.nextPane")
             .label("Nächster Bereich")
@@ -764,14 +796,21 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 "pane",
                 ParamKind::Integer {
                     min: Some(0),
-                    max: Some(1),
+                    max: Some(crate::view_pane::MAX_PANES as i64 - 1),
                 },
-                "Bereich der geteilten Ansicht (0 links, 1 rechts)",
+                "Bereich der geteilten Ansicht (ab 0)",
             )
             .run(|s, p| {
                 let pane = p.usize("pane")?;
-                if !s.doc()?.is_split() {
+                let d = s.doc()?;
+                if !d.is_split() {
                     return Err(EngineError::Failed(fp_i18n::t("err-view-not-split")));
+                }
+                if pane >= d.pane_count() {
+                    return Err(EngineError::InvalidParams {
+                        name: "pane".into(),
+                        message: pane.to_string(),
+                    });
                 }
                 let changed = s.focus_pane(pane)?;
                 let d = s.doc()?;

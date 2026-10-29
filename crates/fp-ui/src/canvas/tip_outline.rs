@@ -8,7 +8,14 @@
 //!
 //! egui has no XOR blend, so the canvas samples the displayed canvas image (`CanvasCache::
 //! shown_image`) under each outline pixel and paints that pixel in the XOR colour; outside the
-//! image the pasteboard colour is the underlying colour.
+//! image the pasteboard colour is the underlying colour. F137 / TW-273: during a stroke the live
+//! paint preview (`paint_preview::LiveLayer`) is composed over that image first ([`over`]), so the
+//! outline XORs the freshly painted pixels as measured (RE spec 74 §2 case a3).
+//!
+//! F137: small tips (RE spec 74 §2, last item): when the tip is at most [`SMALL_TIP_MAX`] screen
+//! pixels across, an inverting crosshair joins the outline: four 1 × 2 pixel strokes 4 and 5 pixels
+//! above, below, left and right of the hotspot pixel, each pixel the inverse of the displayed
+//! colour (all three channels). The outline stays (a 1 px tip: 3 pixels in a 2 × 2 box).
 
 use egui::{Color32, Mesh, Painter, Pos2, Rect, pos2};
 use fp_raster::RgbaImage;
@@ -20,6 +27,50 @@ pub const XOR: [u8; 3] = [0xFF, 0xFF, 0x00];
 /// Colour of an outline pixel over the displayed colour `under`.
 pub fn outline_color(under: Color32) -> Color32 {
     Color32::from_rgb(under.r() ^ XOR[0], under.g() ^ XOR[1], under.b() ^ XOR[2])
+}
+
+/// Largest screen diameter (pixels at 100 % UI scale) of a tip that gets the small-tip
+/// crosshair (RE spec 74 §2: tips 1, 2 and 4 at 100 % yes, 5 and 6 not, 4 at 150 % = 6 px not).
+pub const SMALL_TIP_MAX: f32 = 4.0;
+
+/// Colour of a crosshair pixel over the displayed colour `under`: inverted (system cursor
+/// inversion, RE spec 74 §2).
+pub fn crosshair_color(under: Color32) -> Color32 {
+    Color32::from_rgb(255 - under.r(), 255 - under.g(), 255 - under.b())
+}
+
+/// Device pixels of the small-tip crosshair around the hotspot pixel (`hx`, `hy`): four strokes
+/// of 1 × 2 pixels at a distance of 4 and 5 pixels (RE spec 74 §2), all sizes × `scale` (the UI
+/// scale rounded, 1 at 100 %; other scales were not measured).
+pub fn crosshair_pixels(hx: i32, hy: i32, scale: i32) -> Vec<(i32, i32)> {
+    let s = scale.max(1);
+    let mut v = Vec::with_capacity((8 * s * s) as usize);
+    for d in 4 * s..6 * s {
+        for w in 0..s {
+            v.push((hx + w, hy - d - (s - 1)));
+            v.push((hx + w, hy + d));
+            v.push((hx - d - (s - 1), hy + w));
+            v.push((hx + d, hy + w));
+        }
+    }
+    v.sort_unstable();
+    v.dedup();
+    v
+}
+
+/// Displayed colour where the live paint pixel `live` (straight alpha, `None` = no stroke pixel
+/// there) lies over the colour `base` (F137: the live stroke composed over the canvas image).
+pub fn over(base: Color32, live: Option<[u8; 4]>) -> Color32 {
+    let Some(px) = live.filter(|p| p[3] > 0) else {
+        return base;
+    };
+    let a = px[3] as u32;
+    let mix = |s: u8, d: u8| ((s as u32 * a + d as u32 * (255 - a) + 127) / 255) as u8;
+    Color32::from_rgb(
+        mix(px[0], base.r()),
+        mix(px[1], base.g()),
+        mix(px[2], base.b()),
+    )
 }
 
 /// Device pixels of the 1 px outline of a tip centred at (`cx`, `cy`) (device pixels, continuous)
@@ -104,12 +155,24 @@ pub fn paint(
         round,
     );
     let mut mesh = Mesh::default();
-    for (x, y) in px {
-        let r = Rect::from_min_max(
+    let quad = |x: i32, y: i32| {
+        Rect::from_min_max(
             pos2(x as f32 / ppp, y as f32 / ppp),
             pos2((x + 1) as f32 / ppp, (y + 1) as f32 / ppp),
-        );
+        )
+    };
+    for (x, y) in px {
+        let r = quad(x, y);
         mesh.add_colored_rect(r, outline_color(under(r.center())));
+    }
+    // F137: the inverting crosshair of small tips (RE spec 74 §2)
+    if diameter_pt <= SMALL_TIP_MAX {
+        let (hx, hy) = ((at.x * ppp).floor() as i32, (at.y * ppp).floor() as i32);
+        let scale = ppp.round().max(1.0) as i32;
+        for (x, y) in crosshair_pixels(hx, hy, scale) {
+            let r = quad(x, y);
+            mesh.add_colored_rect(r, crosshair_color(under(r.center())));
+        }
     }
     painter.add(mesh);
 }
@@ -228,6 +291,104 @@ mod tests {
             Color32::from_rgb(55, 55, 200),
             "no canvas image yet"
         );
+    }
+
+    /// RE spec 74 §2: a 1 px tip keeps its outline: 3 pixels in a 2 × 2 box; 2 → 3 × 3.
+    #[test]
+    fn tiny_tips_keep_their_outline_re74() {
+        let px = ring_pixels(100.5, 80.5, 1.0, true);
+        assert_eq!((px.len(), bbox(&px)), (3, (2, 2)), "{px:?}");
+        assert_eq!(bbox(&ring_pixels(100.5, 80.5, 2.0, true)), (3, 3));
+    }
+
+    /// F137 (RE spec 74 §2): four 1 × 2 strokes 4 and 5 px around the hotspot, inverted colour.
+    #[test]
+    fn small_tip_crosshair_shape_and_colour_re74() {
+        let px = crosshair_pixels(50, 40, 1);
+        assert_eq!(
+            px,
+            vec![
+                (45, 40),
+                (46, 40),
+                (50, 35),
+                (50, 36),
+                (50, 44),
+                (50, 45),
+                (54, 40),
+                (55, 40)
+            ]
+        );
+        // twice the UI scale: everything twice as large, same layout
+        let px2 = crosshair_pixels(50, 40, 2);
+        assert_eq!(px2.len(), 32);
+        assert!(px2.contains(&(58, 40)) && px2.contains(&(61, 41)));
+        assert!(!px2.iter().any(|&(x, y)| (x - 50).abs() < 8
+            && (y - 40).abs() < 8
+            && !(x == 50 || x == 51 || y == 40 || y == 41)));
+        assert_eq!(
+            crosshair_color(Color32::WHITE),
+            Color32::BLACK,
+            "inverting, not XOR yellow"
+        );
+        assert_eq!(
+            crosshair_color(Color32::from_rgb(255, 0, 0)),
+            Color32::from_rgb(0, 255, 255)
+        );
+    }
+
+    /// The crosshair joins the outline up to 4 screen px and not from 5 px on (RE spec 74 §2:
+    /// tips 1, 2, 4 at 100 % yes; 5, 6 and 4 at 150 % = 6 px no).
+    #[test]
+    fn small_tip_crosshair_threshold_re74() {
+        let quads = |d: f32| {
+            let ctx = egui::Context::default();
+            let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+                paint(ui.painter(), pos2(50.5, 50.5), d, true, 1.0, |_| {
+                    Color32::WHITE
+                });
+            });
+            out.textures_delta.clear();
+            let mut n = 0;
+            let mut black = 0;
+            for s in &out.shapes {
+                if let egui::Shape::Mesh(m) = &s.shape {
+                    n += m.vertices.len() / 4;
+                    black += m
+                        .vertices
+                        .iter()
+                        .filter(|v| v.color == Color32::BLACK)
+                        .count()
+                        / 4;
+                }
+            }
+            (n, black)
+        };
+        for d in [1.0f32, 2.0, 4.0] {
+            let ring = ring_pixels(50.5, 50.5, d as f64, true).len();
+            assert_eq!(quads(d), (ring + 8, 8), "tip {d}");
+        }
+        for d in [5.0f32, 6.0] {
+            let ring = ring_pixels(50.5, 50.5, d as f64, true).len();
+            assert_eq!(quads(d), (ring, 0), "tip {d}");
+        }
+    }
+
+    /// F137: the live stroke pixel is composed over the canvas image before the XOR.
+    #[test]
+    fn live_pixels_are_composed_before_the_xor_re74() {
+        let white = Color32::WHITE;
+        assert_eq!(over(white, None), white);
+        assert_eq!(over(white, Some([255, 0, 0, 0])), white, "transparent");
+        assert_eq!(
+            over(white, Some([255, 0, 0, 255])),
+            Color32::from_rgb(255, 0, 0)
+        );
+        assert_eq!(
+            outline_color(over(white, Some([255, 0, 0, 255]))),
+            Color32::from_rgb(0, 255, 0),
+            "red stroke on white: green outline"
+        );
+        assert_eq!(over(white, Some([0, 0, 0, 128])), Color32::from_gray(127));
     }
 
     /// The painted mesh has one 1-device-pixel quad per outline pixel in its XOR colour.

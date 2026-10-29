@@ -286,10 +286,11 @@ pub struct DocumentState {
     /// RE spec 59 section 2.3: the tool fill "none" belongs to the document; whether it was none
     /// when this document was left (a new or opened document starts with a solid fill).
     pub tool_fill_none: bool,
-    /// FB-97 / TW-272: the document is shown in two panes (Window ▸ Duplicate Window); the
-    /// fields above hold the focused pane, this the other one ([`crate::view_pane`]).
+    /// FB-97 / TW-272: the document is shown in two or more panes (Window ▸ Duplicate Window,
+    /// F137: up to four); the fields above hold the focused pane, this the others
+    /// ([`crate::view_pane`]).
     pub split: Option<crate::view_pane::SplitView>,
-    /// F132: orientation and splitter position of the split view, remembered for the session.
+    /// F132: orientation and splitter positions of the split view, remembered for the session.
     pub split_layout: crate::view_pane::SplitLayout,
 }
 
@@ -945,12 +946,12 @@ impl Session {
         Ok(())
     }
 
-    /// FB-97 / TW-272: gives pane `pane` (0 left, 1 right) of the active document's split view
-    /// the focus ([`DocumentState::focus_pane`]); a running tool operation belongs to the pane
-    /// left and is finished first. Returns `true` if the focus changed.
+    /// FB-97 / TW-272: gives pane `pane` (0 left or top, counting on) of the active document's
+    /// split view the focus ([`DocumentState::focus_pane`]); a running tool operation belongs to
+    /// the pane left and is finished first. Returns `true` if the focus changed.
     pub fn focus_pane(&mut self, pane: usize) -> Result<bool> {
         let d = self.doc()?;
-        if !d.is_split() || pane > 1 || d.live_pane() == pane {
+        if !d.is_split() || pane >= d.pane_count() || d.live_pane() == pane {
             return Ok(false);
         }
         let _ = self.finish_tool();
@@ -963,15 +964,36 @@ impl Session {
         Ok(changed)
     }
 
-    /// F132: gives the focus to the other pane of the active document's split view (Window ▸
-    /// Next Pane); like [`Session::focus_pane`]. `false` without a split.
+    /// F132: gives the focus to the next pane of the active document's split view (Window ▸
+    /// Next Pane, F137: cycling through all panes); like [`Session::focus_pane`]. `false` without
+    /// a split.
     pub fn next_pane(&mut self) -> Result<bool> {
         let d = self.doc()?;
         if !d.is_split() {
             return Ok(false);
         }
-        let other = 1 - d.live_pane();
-        self.focus_pane(other)
+        let next = (d.live_pane() + 1) % d.pane_count();
+        self.focus_pane(next)
+    }
+
+    /// F137: closes pane `pane` of the active document's split view
+    /// ([`DocumentState::close_pane`]); closing the focused pane finishes a running tool operation
+    /// first (it belongs to that pane). Returns `true` if a pane closed.
+    pub fn close_pane(&mut self, pane: usize) -> Result<bool> {
+        let d = self.doc()?;
+        if !d.is_split() || pane >= d.pane_count() {
+            return Ok(false);
+        }
+        if d.live_pane() == pane {
+            let _ = self.finish_tool();
+            self.tools.machine = tools::make_machine(self.tools.active);
+            self.tools.held = None;
+        }
+        let closed = self.doc_mut()?.close_pane(pane);
+        if closed {
+            self.events.push(SessionEvent::PanelsChanged);
+        }
+        Ok(closed)
     }
 
     /// F132: hover feedback for the split-view pane without the focus. The UI swaps that pane's

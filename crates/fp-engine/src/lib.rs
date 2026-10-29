@@ -77,5 +77,5 @@ pub use shortcuts::{Shortcut, ShortcutSet};
 pub use tool_follow::ToolStyle;
 pub use tools::{Modifiers, Overlay, StrokePause, ToolEvent, ToolId, ToolKey, ToolResponse};
 pub use view::ViewState;
-pub use view_pane::{SplitView, ViewPane};
+pub use view_pane::{MAX_PANES, SplitView, ViewPane};
 pub use warnings::{TargetWarning, WarningChoice};

@@ -235,6 +235,23 @@ cursor and coordinate tag follow the pointer without a focus change. Orientation
 side by side or one above the other) and splitter position live in `DocumentState::split_layout`, outside
 `split`, so they are remembered per document for the session; `window.nextPane` (Shift+F6, since Ctrl+Tab and
 Ctrl+F6 cycle the documents) moves the focus through `Session::next_pane`.
+F137 / TW-275 lifts the two-pane limit: `SplitView` holds the parked `ViewPane` of every pane (`panes`, `None` at
+`live`) and a stable key per pane (`keys`, `DocumentState::pane_key`), up to `view_pane::MAX_PANES` = 4 in one
+row or one column. Duplicate Window on a split view splits the focused pane (the new pane after it gets the focus
+and half of its space; unavailable at four), `window.closeDuplicate {pane?}` closes the focused pane or the given
+one (`Session::close_pane`: the focus goes to the pane before a closed focused pane, the first pane's to the one
+after it; its space to the same neighbour), `window.focusPane` takes 0 to 3 and `window.nextPane` cycles all
+panes. The splitter positions are `SplitLayout::bounds` (shares of the area, at least `MIN_SHARE` = 10 % per
+pane, `set_bound`), `ratio` keeps the two-pane position for the next split. `split.rs` swaps each parked pane in
+with `DocumentState::swap_with` and keys the canvas caches and render jobs by the pane key
+(`AppState::pane_canvases[(doc, key)]`, `RenderKey::pane`), so a pane keeps its cache while others open and close.
+**Status bar rule (F137):** the status bar (size, zoom, state number, the tool's status text) and the pointer
+position (Info panel X/Y and pixel colour, ruler markers) follow the pane under the pointer while it hovers over a
+pane (`AppState::hover_pane`, `canvas::status_pane` / `status_view`; the passive pane's hover sets
+`pointer_doc` and `pointer_pane`) and fall back to the focused pane when the pointer is outside every pane (over
+the status bar, a panel, a menu or outside the window). Everything that acts (status bar zoom menu and state
+buttons, panels, shortcuts) still addresses the focused pane; to use the status bar the pointer leaves the panes,
+so what it shows then is the focused pane.
 
 Tooltips go through one module, `fp-ui/src/tips.rs` (FB-37, FB-98 / TW-226, TW-271). Widgets attach their tooltip
 with `HoverTip::hover_tip` instead of egui's `on_hover_text`; `TipMode` (Full / names only / off) comes from View ▸

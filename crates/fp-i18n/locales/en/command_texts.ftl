@@ -710,7 +710,8 @@ cmdtext-seitenindizes-0-2-vorgabe-gewaehlte-seiten = Page indices [0, 2, …] (d
 cmdtext-seite-die-bleibt-wenn-alle-seiten-geloes-a6c88f = Page that stays when all pages would be deleted (default: the first)
 cmdtext-single-nur-diese-seite-wird-aktuell-rang-713897 = single = only this page (becomes current), range = range from the current page, toggle = add or remove the page
 cmdtext-seitenindizes-0-2-als-block = Page indices [0, 2, …] as a block
-cmdtext-bereich-der-geteilten-ansicht-0-links-1-rechts = Pane of the split view (0 left, 1 right)
+cmdtext-bereich-der-geteilten-ansicht-ab-0 = Pane of the split view (from 0, left or top first)
+cmdtext-zu-schliessender-bereich-sonst-der-aktive = Pane to close (default: the focused one)
 cmdtext-anordnung-der-bereiche = Arrangement of the panes (vertical side by side, horizontal one above the other)
 cmdtext-index-eines-psd-live-effekts-fehlt-neu = Index of a PSD live effect (missing: new effect)
 cmdtext-groesse-in-pixeln-vorgabe-3 = Size in pixels (default 3)

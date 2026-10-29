@@ -1,6 +1,7 @@
 //! FB-97 / TW-272: split document view (Window ▸ Duplicate Window) in the whole main window:
 //! two panes with different pages drawn side by side, a click gives a pane the focus, tools act in
-//! the pane under the pointer, closing the pane.
+//! the pane under the pointer, closing the pane. F137 / TW-275: up to four panes, the status bar
+//! follows the pane under the pointer.
 
 use crate::FirepixelApp;
 use crate::app_state::UiSettings;
@@ -56,21 +57,22 @@ fn exec(h: &mut Harness<'static, FirepixelApp>, name: &str, p: serde_json::Value
     h.run_steps(3);
 }
 
-/// Canvas areas of the left and right pane.
-fn areas(h: &Harness<'static, FirepixelApp>) -> (Rect, Rect) {
+/// Canvas area of pane `p`.
+fn pane_area(h: &Harness<'static, FirepixelApp>, p: usize) -> Rect {
     let st = &h.state().state;
     let d = st.session.active().expect("doc");
-    let live = st.canvases.get(&d.id).and_then(|c| c.area).expect("live");
-    let other = st
-        .pane_canvases
-        .get(&d.id)
-        .and_then(|c| c.area)
-        .expect("other pane");
-    if d.live_pane() == 0 {
-        (live, other)
+    let key = d.pane_key(p);
+    let cc = if st.cache_pane(d.id) == key {
+        st.canvases.get(&d.id)
     } else {
-        (other, live)
-    }
+        st.pane_canvases.get(&(d.id, key))
+    };
+    cc.and_then(|c| c.area).expect("pane area")
+}
+
+/// Canvas areas of the left and right pane.
+fn areas(h: &Harness<'static, FirepixelApp>) -> (Rect, Rect) {
+    (pane_area(h, 0), pane_area(h, 1))
 }
 
 fn click(h: &mut Harness<'static, FirepixelApp>, p: Pos2) {
@@ -209,7 +211,10 @@ fn closing_the_pane_returns_to_one_view() {
     let st = &h.state().state;
     let d = st.session.active().expect("doc");
     assert!(!d.is_split());
-    assert_eq!(d.page, 1, "the focused pane stays");
+    assert_eq!(
+        d.page, 0,
+        "F137: the focused pane closed, the left one on page 0 stays"
+    );
     assert!(st.pane_canvases.is_empty());
     let area = st.canvases.get(&d.id).and_then(|c| c.area).expect("canvas");
     assert!(
@@ -232,11 +237,12 @@ fn hover(h: &mut Harness<'static, FirepixelApp>, p: Pos2) {
     h.run_steps(3);
 }
 
-/// The parked (passive) pane's canvas cache.
+/// The parked (passive) pane's canvas cache (two panes).
 fn passive_cache<'a>(h: &'a Harness<'static, FirepixelApp>) -> &'a super::render::CanvasCache {
     let st = &h.state().state;
-    let id = st.session.active().expect("doc").id;
-    st.pane_canvases.get(&id).expect("passive cache")
+    let d = st.session.active().expect("doc");
+    let key = d.pane_key(1 - d.live_pane());
+    st.pane_canvases.get(&(d.id, key)).expect("passive cache")
 }
 
 /// F132: the pane without the focus shows the hover feedback of the active tool (coordinate tag,
@@ -395,4 +401,118 @@ fn shift_f6_moves_the_focus_to_the_next_pane() {
     h.key_press_modifiers(shift, egui::Key::F6);
     h.run_steps(2);
     assert_eq!(live(&h), (1, 1));
+}
+
+/// F137 / TW-275: Duplicate Window on a split view splits the focused pane again, up to four
+/// panes in a row, each with its own page; Shift+F6 cycles all of them; the × of a pane header
+/// closes that pane and the focus stays.
+#[test]
+fn four_panes_in_a_row_cycle_and_close() {
+    let mut h = harness(true);
+    exec(&mut h, "window.duplicateWindow", json!({}));
+    exec(&mut h, "window.duplicateWindow", json!({}));
+    exec(&mut h, "window.duplicateWindow", json!({}));
+    h.run_steps(3);
+    let d = h.state().state.session.active().expect("doc");
+    assert_eq!((d.pane_count(), d.live_pane()), (4, 3));
+    // pane 3 shows page 1, the others page 0
+    exec(&mut h, "page.setCurrent", json!({"index": 1}));
+    h.run_steps(4);
+    let r: Vec<Rect> = (0..4).map(|p| pane_area(&h, p)).collect();
+    for w in r.windows(2) {
+        assert!(w[0].right() <= w[1].left(), "in a row: {r:?}");
+    }
+    // each split halves the focused pane: 1/2, 1/4, 1/8, 1/8 of the area
+    assert!(r.iter().all(|a| a.width() > 100.0), "{r:?}");
+    assert!(r[0].width() > 3.0 * r[3].width(), "{r:?}");
+    if let Ok(shot) = h.render() {
+        let px = |p: Pos2| {
+            let v = shot.get_pixel(p.x as u32, p.y as u32).0;
+            (v[0], v[1], v[2])
+        };
+        assert_eq!(px(r[0].center()), (255, 0, 0), "pane 0 on page 0");
+        assert_eq!(px(r[2].center()), (255, 0, 0), "pane 2 on page 0");
+        assert_eq!(px(r[3].center()), (0, 0, 255), "pane 3 on page 1");
+    } else {
+        eprintln!("no graphics adapter, pixel check skipped");
+    }
+    // Shift+F6 cycles 3 -> 0 -> 1 -> 2 -> 3
+    let shift = Modifiers {
+        shift: true,
+        ..Default::default()
+    };
+    let mut seen = Vec::new();
+    for _ in 0..4 {
+        h.key_press_modifiers(shift, egui::Key::F6);
+        h.run_steps(2);
+        seen.push(live(&h).0);
+    }
+    assert_eq!(seen, vec![0, 1, 2, 3]);
+    // the × of pane 1 (top right of its header): pane 1 closes, pane 3 keeps the focus (now 2)
+    let a1 = pane_area(&h, 1);
+    let x = egui::pos2(
+        a1.right() - 11.0,
+        a1.top() - super::split::HEADER_H / 2.0 + 1.0,
+    );
+    click(&mut h, x);
+    h.run_steps(3);
+    let d = h.state().state.session.active().expect("doc");
+    assert_eq!((d.pane_count(), d.live_pane(), d.page), (3, 2, 1));
+    // Close Duplicate Window closes the focused pane: the focus goes to the pane before it
+    exec(&mut h, "window.closeDuplicate", json!({}));
+    let d = h.state().state.session.active().expect("doc");
+    assert_eq!((d.pane_count(), d.live_pane(), d.page), (2, 1, 0));
+    h.run_steps(3);
+    let (l, rr) = areas(&h);
+    assert!(l.right() <= rr.left() && rr.width() > 200.0, "{l:?} {rr:?}");
+}
+
+/// F137 / TW-275: the status bar (size, zoom, state) and the pointer position follow the pane
+/// under the pointer; outside every pane they show the focused pane.
+#[test]
+fn status_bar_follows_the_pane_under_the_pointer() {
+    let mut h = harness(false);
+    exec(&mut h, "window.duplicateWindow", json!({}));
+    exec(&mut h, "page.setCurrent", json!({"index": 1}));
+    exec(&mut h, "view.zoomIn", json!({}));
+    h.run_steps(3);
+    let (l, r) = areas(&h);
+    let (live_zoom, left_zoom) = {
+        let d = h.state().state.session.active().expect("doc");
+        (
+            d.view.zoom,
+            d.other_pane().map(|p| p.view.zoom).expect("left"),
+        )
+    };
+    assert!(live_zoom > left_zoom);
+    let shown = |h: &Harness<'static, FirepixelApp>| {
+        let st = &h.state().state;
+        (st.hover_pane, super::status_view(st))
+    };
+    // over the left pane (no focus): its page and zoom
+    let _ = h.state_mut().state.session.set_tool(ToolId::Rectangle);
+    hover(&mut h, l.center());
+    assert_eq!(live(&h), (1, 1), "hovering does not move the focus");
+    assert_eq!(shown(&h), (Some(0), Some((0, 0, left_zoom))));
+    let pd = h.state().state.pointer_doc.expect("pointer position");
+    assert_eq!(h.state().state.pointer_pane, 0);
+    let left_doc = {
+        let d = h.state().state.session.active().expect("doc");
+        let v = &d.other_pane().expect("left").view;
+        v.screen_to_doc(
+            (l.center().x - l.left()) as f64,
+            (l.center().y - l.top()) as f64,
+        )
+    };
+    assert!(
+        (pd.x - left_doc.x).abs() < 1.0 && (pd.y - left_doc.y).abs() < 1.0,
+        "{pd:?} vs {left_doc:?}"
+    );
+    // over the focused pane: its own
+    hover(&mut h, r.center());
+    assert_eq!(shown(&h), (Some(1), Some((1, 0, live_zoom))));
+    assert_eq!(h.state().state.pointer_pane, 1);
+    // outside every pane (status bar): the focused pane
+    hover(&mut h, egui::pos2(r.center().x, 945.0));
+    assert_eq!(shown(&h), (None, Some((1, 0, live_zoom))));
 }

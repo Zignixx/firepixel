@@ -32,6 +32,47 @@ pub struct PaintPreviewCache {
     ended: bool,
     /// Composite mode (BA-039): scratch bitmap of the stroke.
     composite: Option<Box<Scratch>>,
+    /// F137: the pixels of the tile textures (document coordinates, straight alpha) for the brush
+    /// tip outline ([`LiveLayer`]).
+    cpu: HashMap<(i32, i32), Arc<RgbaImage>>,
+}
+
+/// F137 / TW-273: the pixels of the live stroke as drawn over the canvas image (the tiles of
+/// [`paint`] or [`paint_composite`]), for the XOR of the brush tip outline (RE spec 74 §2 case
+/// a3). Kept while the preview is drawn or lingers, dropped with it.
+#[derive(Clone, Default)]
+pub struct LiveLayer {
+    tiles: Vec<Arc<RgbaImage>>,
+}
+
+impl LiveLayer {
+    /// The live pixel at the document pixel (`x`, `y`), `None` where the stroke drew nothing.
+    pub fn pixel(&self, x: i32, y: i32) -> Option<[u8; 4]> {
+        self.tiles
+            .iter()
+            .filter_map(|t| t.get(x, y))
+            .find(|p| p[3] > 0)
+    }
+}
+
+fn live_key(doc: fp_engine::DocId) -> egui::Id {
+    egui::Id::new(("fp-paint-live", doc.0))
+}
+
+/// The live stroke of document `doc` (F137), while its preview is drawn or lingers.
+pub fn live_layer(ctx: &egui::Context, doc: fp_engine::DocId) -> Option<LiveLayer> {
+    ctx.data(|d| d.get_temp::<LiveLayer>(live_key(doc)))
+}
+
+/// Puts the cache back and publishes its [`LiveLayer`].
+fn store(ctx: &egui::Context, doc: fp_engine::DocId, c: PaintPreviewCache) {
+    let live = LiveLayer {
+        tiles: c.cpu.values().cloned().collect(),
+    };
+    ctx.data_mut(|d| {
+        d.insert_temp(live_key(doc), live);
+        d.insert_temp(key(doc), c);
+    });
 }
 
 /// Scratch raster of the painted bitmap during a composited stroke (BA-039).
@@ -108,6 +149,7 @@ pub fn paint(
     c.last_seen = time;
     c.ended = false;
     for t in p.tiles.iter() {
+        c.cpu.insert(t.key, Arc::clone(&t.image));
         match c.tiles.get_mut(&t.key) {
             Some((_, ver, _)) if *ver == t.version => {}
             Some((tex, ver, _)) => {
@@ -127,7 +169,7 @@ pub fn paint(
         }
     }
     draw(painter, &c, spp);
-    ctx.data_mut(|d| d.insert_temp(key(doc), c));
+    store(ctx, doc, c);
     uploads
 }
 
@@ -145,6 +187,8 @@ pub fn linger(
     let Some(mut c) = ctx.data_mut(|d| d.remove_temp::<PaintPreviewCache>(key(doc))) else {
         return;
     };
+    // F137: the live layer goes with the cache (put back below while the preview lingers)
+    ctx.data_mut(|d| d.remove_temp::<LiveLayer>(live_key(doc)));
     if c.tiles.is_empty() {
         return;
     }
@@ -155,7 +199,7 @@ pub fn linger(
     let waiting = time - c.last_seen < 2.0 && shown_generation.is_none_or(|g| g != generation);
     if waiting {
         draw(painter, &c, spp);
-        ctx.data_mut(|d| d.insert_temp(key(doc), c));
+        store(ctx, doc, c);
         ctx.request_repaint_after(std::time::Duration::from_millis(16));
     }
 }
@@ -297,7 +341,7 @@ pub fn paint_composite(
             .is_none_or(|s| s.target.0 != target || s.doc_generation != input.generation);
     if fresh {
         let Some(sc) = begin(input, target) else {
-            ctx.data_mut(|d| d.insert_temp(key(doc), c));
+            store(ctx, doc, c);
             return None;
         };
         c = PaintPreviewCache {
@@ -310,7 +354,7 @@ pub fn paint_composite(
     c.ended = false;
     let uploads = update_composite(ctx, &mut c, p, input, page_rect);
     draw(painter, &c, spp);
-    ctx.data_mut(|d| d.insert_temp(key(doc), c));
+    store(ctx, doc, c);
     uploads
 }
 
@@ -403,6 +447,18 @@ fn update_composite(
         entry.0.set_partial(pos, part, TextureOptions::NEAREST);
         entry.1 += 1;
         uploads += 1;
+        // F137: the same pixels for the brush tip outline
+        let cpu = c
+            .cpu
+            .entry(k)
+            .or_insert_with(|| Arc::new(RgbaImage::new(tr).unwrap_or_default()));
+        let cpu = Arc::make_mut(cpu);
+        for y in sub.top..sub.bottom {
+            for x in sub.left..sub.right {
+                let v = img.get(x, y).unwrap_or([0; 4]);
+                cpu.set_pixel(x, y, fp_color::Rgba8::new(v[0], v[1], v[2], v[3]));
+            }
+        }
     }
     Some(uploads)
 }

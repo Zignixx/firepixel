@@ -95,19 +95,34 @@ pub fn show_document_area(ui: &mut Ui, st: &mut AppState) {
         top = bar.bottom();
     }
     let canvas = Rect::from_min_max(pos2(full.left(), top), pos2(full.right(), footer.top()));
-    // FB-97 / TW-272: split view (Window ▸ Duplicate Window): two panes, each with its own body
+    // FB-97 / TW-272: split view (Window ▸ Duplicate Window): two to four panes (F137), each
+    // with its own body
     let split = st.session.active().is_some_and(|d| d.is_split());
-    let split_docs: Vec<fp_engine::DocId> = st
+    // F137: the panes (stable keys) of every document; an unsplit document shows the cache of
+    // its remaining pane, the caches of closed panes go
+    let docs: Vec<(fp_engine::DocId, bool, Vec<u64>)> = st
         .session
         .documents()
         .iter()
-        .filter(|d| d.is_split())
-        .map(|d| d.id)
+        .map(|d| {
+            let keys = (0..d.pane_count()).map(|p| d.pane_key(p)).collect();
+            (d.id, d.is_split(), keys)
+        })
         .collect();
-    st.pane_canvases.retain(|id, _| split_docs.contains(id));
+    for (id, is_split, keys) in &docs {
+        if !is_split && let Some(&k) = keys.first() {
+            st.use_pane_cache(*id, k);
+        }
+    }
+    st.pane_canvases.retain(|k, _| {
+        docs.iter()
+            .any(|(id, is_split, keys)| *is_split && *id == k.0 && keys.contains(&k.1))
+    });
     if split {
         split::show(ui, st, canvas, &mut pane_body);
     } else {
+        st.hover_pane = None;
+        st.pointer_pane = 0;
         pane_body(ui, st, canvas);
     }
     if chrome.footer {
@@ -930,8 +945,10 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let c = theme.colors.clone();
     let Some(d) = st.session.active() else { return };
     let id = d.id;
-    // FB-97: pane of the split view (the pane without the focus is drawn but takes no input)
-    let pane = d.live_pane();
+    // FB-97: pane of the split view (a pane without the focus is drawn but takes no input);
+    // F137: the render key carries the pane's stable key
+    let pane = d.pane_key(d.live_pane());
+    let pane_index = d.live_pane();
     let passive = st.pane_passive;
     let chrome = crate::screen_mode::current(st);
     let show_rulers = d.view.show_rulers && chrome.rulers;
@@ -1029,6 +1046,16 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 time_ms: (t * 1000.0) as u64,
             }
         });
+        // F137 / TW-275: the pointer position (Info panel, rulers) follows the pointer into
+        // this pane
+        if let Some(ToolEvent {
+            input: ToolInput::Pointer { pos, .. },
+            ..
+        }) = &hover
+        {
+            st.pointer_doc = Some(*pos);
+            st.pointer_pane = pane_index;
+        }
         let (fb, cursor) = st.session.tool_hover_probe(hover.as_ref());
         (fb, hover.map(|_| cursor))
     } else {
@@ -1491,10 +1518,10 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
 /// over it moves the focus first; a drag from the focused pane keeps its own feedback), while the
 /// focused pane pans, drags a guide or runs a press, or while a dialog is open.
 fn passive_hover_free(ui: &Ui, st: &AppState, id: fp_engine::DocId) -> bool {
-    // while the passive pane is drawn, the focused pane's canvas cache is the parked one
+    // while a passive pane is drawn, the focused pane's canvas cache is a parked one
     let focused_busy = st
         .pane_canvases
-        .get(&id)
+        .get(&(id, st.pane_focus_key))
         .is_some_and(|c| c.pointer_down || c.panning || c.guide_move.is_some());
     !focused_busy
         && !st.dialogs.any_open()
@@ -2054,6 +2081,7 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
         |p: Pos2| view.screen_to_doc((p.x - area.left()) as f64, (p.y - area.top()) as f64);
     if let Some(p) = pointer.filter(|p| area.contains(*p)) {
         st.pointer_doc = Some(to_doc(p));
+        st.pointer_pane = st.session.active().map_or(0, |d| d.live_pane());
     }
     // Zoom (Strg+Mausrad, Zwei-Finger-Zoom): je volle Rastung genau eine der 17 Stufen um den
     // Mauszeiger. Ausgewertet werden die rohen Ereignisse dieses Frames (nicht `zoom_delta`, das
@@ -2706,6 +2734,7 @@ fn overlays(
     let c = &theme.colors;
     let ctx = ui.ctx().clone();
     let time = ui.input(|i| i.time);
+    let passive = st.pane_passive;
     let Some(d) = st.session.active() else { return };
     let id = d.id;
     let (generation, frame_i) = (d.generation, d.frame);
@@ -3497,8 +3526,19 @@ fn overlays(
                 let p = spp(at);
                 let dia = (diameter as f64 * view.zoom).max(1.0) as f32;
                 let (img, tr, pb) = (cc.shown_image.as_ref(), cc.tex_rect, c.canvas_bg);
+                // F137 / TW-273: during a stroke the outline XORs the live pixels (the stroke
+                // preview over the canvas image), as measured (RE spec 74 §2 case a3); the
+                // panes without the focus show no stroke preview
+                let live = (!passive)
+                    .then(|| paint_preview::live_layer(&ctx, id))
+                    .flatten();
                 tip_outline::paint(painter, p, dia, round, ppp_px, |q| {
-                    tip_outline::under_color(img, tr, pb, q)
+                    let base = tip_outline::under_color(img, tr, pb, q);
+                    let Some(l) = &live else { return base };
+                    let dp =
+                        view.screen_to_doc((q.x - area.left()) as f64, (q.y - area.top()) as f64);
+                    let px = l.pixel(dp.x.floor() as i32, dp.y.floor() as i32);
+                    tip_outline::over(base, px)
                 });
             }
             Overlay::ControlPoint { at, tooltip, hot } => {
@@ -4166,7 +4206,12 @@ fn rulers(ui: &mut Ui, st: &mut AppState, rect: Rect, area: Rect, view: &fp_engi
         }
         y += minor;
     }
-    if let Some(pd) = st.pointer_doc {
+    // F137: the pointer marker only in the pane the pointer position was measured in
+    let marked_here = st
+        .session
+        .active()
+        .is_none_or(|d| d.live_pane() == st.pointer_pane);
+    if let Some(pd) = st.pointer_doc.filter(|_| marked_here) {
         let sx = area.left() + ((pd.x as f64 - view.origin.0) * z) as f32;
         let sy = area.top() + ((pd.y as f64 - view.origin.1) * z) as f32;
         p.vline(sx, top.y_range(), Stroke::new(1.0, c.ruler_marker));
@@ -4436,16 +4481,39 @@ pub fn footer_status(st: &AppState, now: f64, alt: bool) -> String {
     if let Some(s) = stroke_pause_status(st, alt) {
         return s;
     }
-    let info = st
-        .session
-        .active_id()
-        .and_then(|id| st.canvases.get(&id))
-        .and_then(|c| c.info.clone());
+    // F137 / TW-275: the tool's label of the pane under the pointer, else of the focused pane
+    let info = st.session.active().and_then(|d| {
+        let key = d.pane_key(status_pane(st));
+        if st.cache_pane(d.id) == key {
+            st.canvases.get(&d.id)
+        } else {
+            st.pane_canvases.get(&(d.id, key))
+        }
+        .and_then(|c| c.info.clone())
+    });
     match (&st.status, info) {
         (Some((s, t)), _) if now - t < AppState::STATUS_SECONDS => s.clone(),
         (_, Some(i)) => i,
         _ => selection_info(st),
     }
+}
+
+/// F137 / TW-275: the pane the status bar and the Info panel show: the pane of the split view
+/// under the pointer, else (pointer outside every pane, or no split) the focused pane.
+pub fn status_pane(st: &AppState) -> usize {
+    let Some(d) = st.session.active() else {
+        return 0;
+    };
+    st.hover_pane
+        .filter(|&p| p < d.pane_count())
+        .unwrap_or_else(|| d.live_pane())
+}
+
+/// F137 / TW-275: page, frame and zoom the status bar shows ([`status_pane`]).
+pub fn status_view(st: &AppState) -> Option<(usize, usize, f64)> {
+    let d = st.session.active()?;
+    d.pane_summary(status_pane(st))
+        .or(Some((d.page, d.frame, d.view.zoom)))
 }
 
 /// Temp-data key of the last drawn status bar rectangle and its size box (FB-91 layout checks).
@@ -4458,15 +4526,17 @@ fn footer_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let now = ui.input(|i| i.time);
     let alt = ui.input(|i| i.modifiers.alt);
     let status = footer_status(st, now, alt);
+    let Some((page, frame, zoom)) = status_view(st) else {
+        return;
+    };
     let Some(d) = st.session.active() else { return };
-    let (frames, frame) = (d.frame_count(), d.frame);
+    let frames = d.frame_count();
     let (w, h) = d
         .doc
         .pages
-        .get(d.page)
+        .get(page)
         .map(|p| (p.canvas.width, p.canvas.height))
         .unwrap_or((0.0, 0.0));
-    let zoom = d.view.zoom;
     let bitmap_mode = d.bitmap_mode;
     // rechts: Zoom, Größe, Status-Steuerung
     let zr = Rect::from_min_max(

@@ -160,8 +160,9 @@ pub struct RenderKey {
     /// Bitmap mask in bitmap editing (0 = none); the "Show fill and stroke" underlay stays
     /// visible (RE spec 73 §7, TW-225, FB-90).
     pub mask_edit: u64,
-    /// FB-97 / TW-272: pane of the split view the image is for (0 = left or the only one).
-    pub pane: usize,
+    /// FB-97 / TW-272: pane of the split view the image is for (F137: the pane's stable key,
+    /// `DocumentState::pane_key`; 0 = the first pane of a document never split).
+    pub pane: u64,
 }
 
 /// Stand der Leinwand eines Dokuments (Render-Cache und Interaktionszustand der Werkzeuge).

@@ -234,7 +234,9 @@ impl FirepixelApp {
             let cc = if st.cache_pane(res.key.doc) == res.key.pane {
                 st.canvases.entry(res.key.doc).or_default()
             } else {
-                st.pane_canvases.entry(res.key.doc).or_default()
+                st.pane_canvases
+                    .entry((res.key.doc, res.key.pane))
+                    .or_default()
             };
             if cc.requested.as_ref() == Some(&res.key) || cc.shown.is_none() {
                 canvas::render::show_result(&ctx, cc, res);

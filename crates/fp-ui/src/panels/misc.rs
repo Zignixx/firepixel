@@ -292,25 +292,31 @@ pub fn info(ui: &mut Ui, st: &mut AppState) {
     }
 }
 
+/// Cache key of the Info panel's pixel: document, generation, (page, frame), x, y.
+type PixelKey = (u64, u64, (usize, usize), i32, i32);
+
 fn pixel_under_pointer(ctx: &egui::Context, st: &AppState) -> Option<fp_color::Rgba8> {
     let d = st.session.active()?;
     let p = st.pointer_doc?;
+    // F137 / TW-275: the page of the pane the pointer is in
+    let (page, frame, _) =
+        d.pane_summary(st.pointer_pane)
+            .unwrap_or((d.page, d.frame, d.view.zoom));
     let (x, y) = (p.x.floor() as i32, p.y.floor() as i32);
     let key = Id::new("info-pixel");
-    if let Some((k, c)) =
-        ctx.data(|dd| dd.get_temp::<((u64, u64, i32, i32), Option<fp_color::Rgba8>)>(key))
-        && k == (d.id.0, d.generation, x, y)
+    if let Some((k, c)) = ctx.data(|dd| dd.get_temp::<(PixelKey, Option<fp_color::Rgba8>)>(key))
+        && k == (d.id.0, d.generation, (page, frame), x, y)
     {
         return c;
     }
     let rect = fp_geom::IRect::new(x, y, x + 1, y + 1);
-    let out = st.renderer.render_rect(&d.doc, d.page, d.frame, rect);
+    let out = st.renderer.render_rect(&d.doc, page, frame, rect);
     let px = if out.image.width() == 1 && out.image.height() == 1 {
         Some(out.image.pixel(x, y))
     } else {
         None
     };
-    ctx.data_mut(|dd| dd.insert_temp(key, ((d.id.0, d.generation, x, y), px)));
+    ctx.data_mut(|dd| dd.insert_temp(key, ((d.id.0, d.generation, (page, frame), x, y), px)));
     px
 }
 

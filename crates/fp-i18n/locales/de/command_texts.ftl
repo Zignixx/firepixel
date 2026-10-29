@@ -710,7 +710,8 @@ cmdtext-seitenindizes-0-2-vorgabe-gewaehlte-seiten = Seitenindizes [0, 2, …] (
 cmdtext-seite-die-bleibt-wenn-alle-seiten-geloes-a6c88f = Seite, die bleibt, wenn alle Seiten gelöscht würden (Vorgabe: erste)
 cmdtext-single-nur-diese-seite-wird-aktuell-rang-713897 = single = nur diese Seite (wird aktuell), range = Bereich ab der aktuellen Seite, toggle = Seite hinzu oder weg
 cmdtext-seitenindizes-0-2-als-block = Seitenindizes [0, 2, …] als Block
-cmdtext-bereich-der-geteilten-ansicht-0-links-1-rechts = Bereich der geteilten Ansicht (0 links, 1 rechts)
+cmdtext-bereich-der-geteilten-ansicht-ab-0 = Bereich der geteilten Ansicht (ab 0)
+cmdtext-zu-schliessender-bereich-sonst-der-aktive = Zu schließender Bereich (sonst der aktive)
 cmdtext-anordnung-der-bereiche = Anordnung der Bereiche (vertical nebeneinander, horizontal untereinander)
 cmdtext-index-eines-psd-live-effekts-fehlt-neu = Index eines PSD-Live-Effekts (fehlt: neu)
 cmdtext-groesse-in-pixeln-vorgabe-3 = Größe in Pixeln (Vorgabe 3)

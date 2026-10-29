@@ -204,7 +204,10 @@ sobald der Zeiger die Leinwand verlässt); wo keine Bitmap bearbeitet werden kan
 Er kehrt um, was darunter auf dem Bildschirm steht (jedes Pixel XOR #FFFF00, also blau über Weiß, gelb
 über Schwarz und grün über Rot), ist bei jedem Zoom 1 Bildschirmpixel breit und so groß wie die Spitze
 beim aktuellen Zoom; er sieht unabhängig von der Werkzeugfarbe gleich aus, auch beim Bearbeiten einer
-Maske. Der Bleistift zeigt keinen Umriss. **Verwischen** wird nie am Bitmaprand abgeschnitten, gleich ob die Pinselmitte beim
+Maske. Beim Malen kehrt er auch den bisher gemalten Strich um (grün über einem frischen roten Strich).
+Eine Spitze von höchstens 4 Bildschirmpixeln bekommt zusätzlich ein kleines invertierendes Fadenkreuz:
+vier kurze Striche 4 bis 5 Pixel über, unter, links und rechts vom Zeiger. Der Bleistift zeigt keinen
+Umriss. **Verwischen** wird nie am Bitmaprand abgeschnitten, gleich ob die Pinselmitte beim
 Drücken auf der Bitmap oder daneben lag (bei gewählter Bitmap wirkt ein daneben begonnener Strich wie
 ein auf ihr begonnener; ist nichts gewählt, bewirkt ein Druck neben der Bitmap nichts): Über den Rand
 getragene Farbe läuft halbtransparent aus, und die Bitmap wächst mit; nur hineingezogene Transparenz
@@ -551,26 +554,34 @@ dasselbe Dokument; eine Änderung in einem Bereich erscheint sofort auch im ande
 - Der neue rechte Bereich hat den Fokus und beginnt auf derselben Seite. Eine andere Seite wählen
   Sie in der Seitenliste oben im Bereich (oder im Bedienfeld Seiten).
 - Der zuletzt angeklickte Bereich hat den Fokus (Akzentlinie an seiner Kopfleiste): Werkzeuge,
-  Bedienfelder (Seiten, Ebenen, Status, Eigenschaften …), Lineale, Statusleiste und Tastenkürzel
-  wirken auf ihn. Ein Klick oder Mausrad über dem anderen Bereich gibt diesem zuerst den Fokus, ein
-  Werkzeug arbeitet also immer im Bereich unter dem Zeiger.
+  Bedienfelder (Seiten, Ebenen, Status, Eigenschaften …), Lineale und Tastenkürzel wirken auf ihn.
+  Ein Klick oder Mausrad über einem anderen Bereich gibt diesem zuerst den Fokus, ein Werkzeug
+  arbeitet also immer im Bereich unter dem Zeiger.
+- Statusleiste (Dokumentgröße, Zoom, Statusnummer, Werkzeughinweise) und Zeigerposition im
+  Bedienfeld Info zeigen den Bereich, über dem der Zeiger steht; steht der Zeiger über keinem
+  Bereich (etwa über der Statusleiste selbst oder einem Bedienfeld), zeigen sie den Bereich mit
+  Fokus.
 - Auch der Bereich ohne Fokus folgt dem Zeiger: Werkzeugzeiger, Hervorhebung beim Überfahren
   (auch der Rahmen von „Dahinter auswählen“ und Pfadpunkte), Pinselspitze und Koordinatenanzeige
   erscheinen in dem Bereich, über dem der Zeiger steht; erst ein Klick oder Mausrad gibt den Fokus
   weiter.
-- *Fenster ▸ Nächster Bereich* (Umschalt+F6) gibt dem anderen Bereich den Fokus (Strg+Tab und
-  Strg+F6 wechseln weiterhin zwischen den Dokumenten).
+- *Fenster ▸ Fenster duplizieren* teilt den Bereich mit Fokus erneut: Ein neuer Bereich erscheint
+  dahinter (rechts davon, bei Anordnung untereinander darunter) und erhält den Fokus. Bis zu vier
+  Bereiche sind möglich, jeder mit eigener Seite, eigenem Status, Zoom und Bildlauf.
+- *Fenster ▸ Nächster Bereich* (Umschalt+F6) gibt dem nächsten Bereich den Fokus, reihum durch alle
+  Bereiche (Strg+Tab und Strg+F6 wechseln weiterhin zwischen den Dokumenten).
 - *Fenster ▸ Teilung ▸ Nebeneinander / Untereinander* ordnet die Bereiche nebeneinander (Vorgabe)
   oder übereinander an; beide behalten Seite und Zoom.
-- Mit dem Steg zwischen den Bereichen ändern Sie ihre Größe; Lage und Anordnung merkt sich
-  Firepixel für das Dokument bis zum Beenden. Original/Vorschau/2-fach/4-fach gelten für den
+- Mit den Stegen zwischen den Bereichen ändern Sie ihre Größe (jeder Bereich behält mindestens ein
+  Zehntel der Fläche); Lage und Anordnung merkt sich Firepixel für das Dokument bis zum Beenden. Original/Vorschau/2-fach/4-fach gelten für den
   Bereich mit Fokus.
-- Einen Bereich schließen Sie mit dem × in seiner Kopfleiste oder mit *Fenster ▸ Zusätzliches
-  Fenster schließen* (der Bereich mit Fokus bleibt). Die Teilung wird weder im Dokument noch im
-  Arbeitsbereich gespeichert.
-- Es gibt eine Teilung je Dokument (zwei Bereiche). Im Bereich ohne Fokus beginnt die Rückmeldung
-  beim Überfahren mit einem ruhenden Werkzeug; ein im Bereich mit Fokus laufender Vorgang erscheint
-  dort nicht.
+- Einen Bereich schließen Sie mit dem × in seiner Kopfleiste (der Fokus bleibt, wo er ist); den
+  Bereich mit Fokus schließt *Fenster ▸ Zusätzliches Fenster schließen* (der Fokus geht an den
+  Bereich davor). Seine Fläche übernimmt der Nachbar; bleibt ein Bereich übrig, ist der
+  Dokumentbereich wieder ungeteilt. Die Teilung wird weder im Dokument noch im Arbeitsbereich
+  gespeichert.
+- Im Bereich ohne Fokus beginnt die Rückmeldung beim Überfahren mit einem ruhenden Werkzeug; ein im
+  Bereich mit Fokus laufender Vorgang erscheint dort nicht.
 
 ## Bedienfelder
 
