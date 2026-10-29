@@ -331,12 +331,79 @@ fn color_fill(e: &Effect) -> DescValue {
     )
 }
 
+/// Blend mode keyword of the PSD-style stroke record → enum value of the descriptor.
+fn ps_mode_enum(mode: &str) -> &'static str {
+    match mode {
+        "multiply" => "Mltp",
+        "screen" => "Scrn",
+        "overlay" => "Ovrl",
+        "darken" => "Drkn",
+        "lighten" => "Lghn",
+        "colorBurn" => "CBrn",
+        "colorDodge" => "CDdg",
+        "linearDodge" => "linearDodge",
+        "softLight" => "SftL",
+        "hardLight" => "HrdL",
+        "difference" => "Dfrn",
+        "exclusion" => "Xclu",
+        "dissolve" => "Dslv",
+        _ => "Nrml",
+    }
+}
+
+/// Stroke layer effect (`FrFX`) of a PSD-style stroke record (F138): enabled, position (`FStl`:
+/// `OutF` outside, `InsF` inside, `CtrF` centre), fill type solid colour (`FrFl`/`SClr`), blend
+/// mode, opacity, size and colour.
+pub fn frame_fx(sp: &fp_effects::StrokeParams) -> DescValue {
+    use fp_effects::StrokePosition as P;
+    let c = Argb(
+        0xFF00_0000 | (sp.color[0] as u32) << 16 | (sp.color[1] as u32) << 8 | sp.color[2] as u32,
+    );
+    DescValue::Obj(
+        "FrFX",
+        vec![
+            ("enab", DescValue::Bool(sp.enabled)),
+            (
+                "Styl",
+                DescValue::Enum(
+                    "FStl",
+                    match sp.position {
+                        P::Outside => "OutF",
+                        P::Inside => "InsF",
+                        P::Center => "CtrF",
+                    },
+                ),
+            ),
+            ("PntT", DescValue::Enum("FrFl", "SClr")),
+            ("Md  ", DescValue::Enum("BlnM", ps_mode_enum(&sp.mode))),
+            (
+                "Opct",
+                DescValue::Unit("#Prc", sp.opacity.clamp(0.0, 100.0)),
+            ),
+            ("Sz  ", DescValue::Unit("#Pxl", sp.size.clamp(1.0, 250.0))),
+            ("Clr ", rgb(c)),
+        ],
+    )
+}
+
+/// The enabled solid-colour stroke of a PSD live effect container, if any.
+fn psd_stroke(e: &Effect) -> Option<fp_effects::StrokeParams> {
+    if e.kind() != EffectKind::PhotoshopLive {
+        return None;
+    }
+    let sp = fp_effects::StrokeParams::from_record(e.get("stroke")?);
+    (sp.enabled && sp.is_solid()).then_some(sp)
+}
+
 /// Layer effects block (`lfx2`) of the live effects that PSD has natively: drop shadow, inner
-/// shadow, outer glow, inner glow, bevel/emboss and colour fill (one of each kind; the model has
-/// no stroke effect). Returns the block data and the indices of the effects it contains; the
-/// rest stays baked into the pixels. `None` when no effect can be mapped.
-pub fn effects_block(effects: &[Effect]) -> Option<(Vec<u8>, Vec<usize>)> {
+/// shadow, outer glow, inner glow, bevel/emboss, colour fill and the solid-colour stroke of a
+/// PSD live effect container (`FrFX`, F138); one of each kind. The mapped effects are taken out
+/// of `effects` (a container that holds more than the stroke keeps the rest with the stroke
+/// switched off), the others stay to be baked into the pixels. `None` (and `effects` unchanged)
+/// when no effect can be mapped.
+pub fn effects_block(effects: &mut Vec<Effect>) -> Option<Vec<u8>> {
     let mut used: Vec<usize> = Vec::new();
+    let mut stroke_off: Option<usize> = None;
     let mut items: Vec<(&'static str, DescValue)> = vec![
         ("Scl ", DescValue::Unit("#Prc", 100.0)),
         ("masterFXSwitch", DescValue::Bool(true)),
@@ -359,6 +426,7 @@ pub fn effects_block(effects: &[Effect]) -> Option<(Vec<u8>, Vec<usize>)> {
                 4 => Some(("OrGl", glow(e, true))),
                 _ => None,
             },
+            EffectKind::PhotoshopLive => psd_stroke(e).map(|sp| ("FrFX", frame_fx(&sp))),
             _ => None,
         };
         if let Some((key, v)) = entry
@@ -366,16 +434,41 @@ pub fn effects_block(effects: &[Effect]) -> Option<(Vec<u8>, Vec<usize>)> {
         {
             taken.push(key);
             items.push((key, v));
-            used.push(i);
+            // a container with other enabled sub-effects stays (baked) without its stroke
+            let others = e.kind() == EffectKind::PhotoshopLive
+                && e.psd_sub_effects()
+                    .iter()
+                    .any(|k| *k != "stroke" && e.get(k).is_some_and(|r| r.starts_with("1&")));
+            if others {
+                stroke_off = Some(i);
+            } else {
+                used.push(i);
+            }
         }
     }
-    if used.is_empty() {
+    if used.is_empty() && stroke_off.is_none() {
         return None;
     }
+    if let Some(i) = stroke_off
+        && let Some(e) = effects.get_mut(i)
+        && let Some(r) = e.get("stroke").map(fp_effects::StrokeParams::from_record)
+    {
+        let off = fp_effects::StrokeParams {
+            enabled: false,
+            ..r
+        };
+        e.set("stroke", off.to_record());
+    }
+    let mut i = 0;
+    effects.retain(|_| {
+        let keep = !used.contains(&i);
+        i += 1;
+        keep
+    });
     let mut out = Vec::new();
     w_u32(&mut out, 0);
     out.extend(descriptor("null", &items));
-    Some((out, used))
+    Some(out)
 }
 
 /// String of the EngineData: UTF-16BE with byte order mark, `(`, `)` and `\` escaped.
@@ -554,4 +647,114 @@ pub fn vector_mask_block(contours: &[Contour], origin: (f64, f64), w: f64, h: f6
 /// Section divider block (`lsct`): 1 open group, 3 end of group.
 pub fn section_block(kind: u32) -> Vec<u8> {
     kind.to_be_bytes().to_vec()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fp_effects::{StrokeParams, StrokePosition};
+
+    struct B(Vec<u8>);
+    impl B {
+        fn u32(&mut self, v: u32) -> &mut Self {
+            self.0.extend_from_slice(&v.to_be_bytes());
+            self
+        }
+        fn raw(&mut self, s: &[u8]) -> &mut Self {
+            self.0.extend_from_slice(s);
+            self
+        }
+        /// 4-character key with length 0.
+        fn key(&mut self, k: &[u8; 4]) -> &mut Self {
+            self.u32(0).raw(k)
+        }
+        fn f64(&mut self, v: f64) -> &mut Self {
+            self.raw(&v.to_be_bytes())
+        }
+        /// Empty class name (Unicode string of length 1: the terminating zero).
+        fn no_name(&mut self) -> &mut Self {
+            self.u32(1).raw(&[0, 0])
+        }
+    }
+
+    fn stroke_effect(sp: &StrokeParams) -> Effect {
+        let mut e = Effect::new(EffectKind::PhotoshopLive.moa_id().unwrap(), true);
+        e.set("stroke", sp.to_record());
+        e
+    }
+
+    #[test]
+    fn frame_fx_descriptor_bytes() {
+        let sp = StrokeParams {
+            size: 4.0,
+            position: StrokePosition::Inside,
+            mode: "multiply".into(),
+            opacity: 60.0,
+            color: [0, 128, 255],
+            ..StrokeParams::default()
+        };
+        let got = descriptor("null", &[("FrFX", frame_fx(&sp))]);
+        let mut b = B(Vec::new());
+        b.u32(16).no_name().key(b"null").u32(1);
+        b.key(b"FrFX").raw(b"Objc").no_name().key(b"FrFX").u32(7);
+        b.key(b"enab").raw(b"bool").raw(&[1]);
+        b.key(b"Styl").raw(b"enum").key(b"FStl").key(b"InsF");
+        b.key(b"PntT").raw(b"enum").key(b"FrFl").key(b"SClr");
+        b.key(b"Md  ").raw(b"enum").key(b"BlnM").key(b"Mltp");
+        b.key(b"Opct").raw(b"UntF").raw(b"#Prc").f64(60.0);
+        b.key(b"Sz  ").raw(b"UntF").raw(b"#Pxl").f64(4.0);
+        b.key(b"Clr ").raw(b"Objc").no_name().key(b"RGBC").u32(3);
+        b.key(b"Rd  ").raw(b"doub").f64(0.0);
+        b.key(b"Grn ").raw(b"doub").f64(128.0);
+        b.key(b"Bl  ").raw(b"doub").f64(255.0);
+        assert_eq!(got, b.0);
+        // the other positions and a mode with a string ID
+        let c = StrokeParams {
+            position: StrokePosition::Center,
+            mode: "linearDodge".into(),
+            ..StrokeParams::default()
+        };
+        let DescValue::Obj(_, items) = frame_fx(&c) else {
+            panic!("object")
+        };
+        assert_eq!(items[1].1, DescValue::Enum("FStl", "CtrF"));
+        assert_eq!(items[3].1, DescValue::Enum("BlnM", "linearDodge"));
+        let DescValue::Obj(_, items) = frame_fx(&StrokeParams::default()) else {
+            panic!("object")
+        };
+        assert_eq!(items[1].1, DescValue::Enum("FStl", "OutF"));
+    }
+
+    #[test]
+    fn effects_block_takes_the_stroke() {
+        // stroke-only container: mapped and taken out of the list
+        let mut fx = vec![stroke_effect(&StrokeParams::default())];
+        let data = effects_block(&mut fx).expect("block");
+        assert!(fx.is_empty());
+        assert_eq!(&data[..4], &[0, 0, 0, 0], "object effects version 0");
+        assert!(data.windows(4).any(|w| w == b"FrFX"));
+        // container with another enabled sub-effect: stays without its stroke
+        let mut e = stroke_effect(&StrokeParams::default());
+        e.set("satin", "1&1&1&50.000000&19.000000&11.000000&14.000000&multiply&RGBColor;0;0;0&2$$0.000000;0.000000;1$255.000000;255.000000;1");
+        let mut fx = vec![e];
+        assert!(effects_block(&mut fx).is_some());
+        assert_eq!(fx.len(), 1);
+        assert!(!StrokeParams::from_record(fx[0].get("stroke").unwrap()).enabled);
+        assert!(fx[0].get("satin").unwrap().starts_with("1&"));
+        // switched off or gradient strokes are not mapped
+        let off = StrokeParams {
+            enabled: false,
+            ..StrokeParams::default()
+        };
+        let mut fx = vec![stroke_effect(&off)];
+        assert!(effects_block(&mut fx).is_none());
+        assert_eq!(fx.len(), 1);
+        let grad = StrokeParams {
+            paint: "gradientFill&0&1&90.000000&100.000000&0.000000&0.000000&linear&nogradient"
+                .into(),
+            ..StrokeParams::default()
+        };
+        let mut fx = vec![stroke_effect(&grad)];
+        assert!(effects_block(&mut fx).is_none());
+    }
 }

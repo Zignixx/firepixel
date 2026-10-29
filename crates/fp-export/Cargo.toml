@@ -12,6 +12,8 @@ fp-geom = { workspace = true }
 fp-color = { workspace = true }
 fp-raster = { workspace = true }
 fp-model = { workspace = true }
+# PSD-style stroke record → `FrFX` layer effect (F138)
+fp-effects = { workspace = true }
 # text layout for invisible PDF text and PSD type layers (same layout as the renderer)
 fp-text = { workspace = true }
 fp-render = { workspace = true }

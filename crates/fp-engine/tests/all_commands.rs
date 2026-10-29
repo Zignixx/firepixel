@@ -1171,6 +1171,10 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
         "element.setVisible" => rs(json!({"visible": false}), sel_ids(vec![ellipse])),
         "element.setLocked" => rs(json!({"locked": true}), sel_ids(vec![ellipse])),
         "element.addEffect" => rs(json!({"effect": "dropShadow"}), sel_ids(vec![rect])),
+        "effect.stroke" => rs(
+            json!({"size": 4, "position": "inside", "opacity": 50}),
+            sel_ids(vec![rect]),
+        ),
         "element.setEffect" => rs(
             json!({"effect": "glow", "params": {"GlowWidth": "8"}}),
             sel_ids(vec![rect]),
@@ -2552,6 +2556,7 @@ const ADDITIVE: &[&str] = &[
     "path.",
     "bitmap.",
     "element.addEffect",
+    "effect.stroke",
     "file.import",
     "modify.canvas.imageSize",
     "modify.canvas.canvasSize",

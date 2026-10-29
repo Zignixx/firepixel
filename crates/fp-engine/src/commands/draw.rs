@@ -463,6 +463,8 @@ pub fn effect_moa_id(name: &str) -> Option<String> {
         "converttoalpha" => EffectKind::ConvertToAlpha,
         // Firepixel extension (FB-38)
         "screentone" => EffectKind::Screentone,
+        // PSD-style stroke (F138): the PSD live effect container with one `stroke` record
+        "stroke" | "psdlive" => EffectKind::PhotoshopLive,
         _ => return None,
     };
     k.moa_id().map(|s| s.to_string())
@@ -517,6 +519,11 @@ fn menu_preset(name: &str) -> &'static [(&'static str, &'static str)] {
             ("GlowStartDistance", "0"),
             ("GlowWidth", "5"),
         ],
+        // PSD-style stroke (F138): `fp_effects::StrokeParams::default()` (3 px outside, red)
+        "stroke" => &[(
+            "stroke",
+            "1&100.000000&3.000000&normal&RGBColor;255.000000;0.000000;0.000000&outsetFrame&solidColor&",
+        )],
         // Screentone (Firepixel extension, FB-38): dots, 8 px, the classic 45° screen, tone from
         // the luminance, black ink
         "screentone" => &[
@@ -1320,6 +1327,136 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     }
                     if let Some(v) = vis {
                         e.set("EffectIsVisible", if v { "true" } else { "false" });
+                    }
+                    Ok(())
+                })
+            }),
+    );
+    // PSD-style Stroke live effect (F138): one `stroke` record in the PSD live effect container
+    // `{8eeadf50-…}` (05 §9.2), the format the reference stores and the PSD import produces
+    r.add(
+        ids_opt(cmd("effect.stroke").label("Kontur").requires(DOC))
+            .opt(
+                "index",
+                ParamKind::Integer {
+                    min: Some(0),
+                    max: None,
+                },
+                "Index eines PSD-Live-Effekts (fehlt: neu)",
+            )
+            .opt(
+                "size",
+                ParamKind::Number {
+                    min: Some(1.0),
+                    max: Some(250.0),
+                },
+                "Größe in Pixeln (Vorgabe 3)",
+            )
+            .opt(
+                "position",
+                ParamKind::Enum {
+                    values: fp_effects::StrokePosition::NAMES
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect(),
+                },
+                "Position (Vorgabe outside)",
+            )
+            .opt(
+                "blendMode",
+                ParamKind::Enum {
+                    values: fp_effects::photoshop::STROKE_BLEND_MODES
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect(),
+                },
+                "Mischmodus (Vorgabe normal)",
+            )
+            .opt(
+                "opacity",
+                ParamKind::Number {
+                    min: Some(0.0),
+                    max: Some(100.0),
+                },
+                "Deckkraft in Prozent (Vorgabe 100)",
+            )
+            .opt("color", ParamKind::Color, "Farbe (Vorgabe #ff0000)")
+            .opt("enabled", ParamKind::Bool, "eingeschaltet (Vorgabe ja)")
+            .run(|s, p| {
+                let index = p.opt_i64("index")?.map(|v| v.max(0) as usize);
+                let size = p.opt_f64("size")?;
+                let position = match p.opt_str("position")? {
+                    Some(v) => {
+                        Some(fp_effects::StrokePosition::from_name(&v).ok_or_else(|| {
+                            EngineError::InvalidParams {
+                                name: p.command.clone(),
+                                message: fp_i18n::tr!("err-param-invalid", key = "position"),
+                            }
+                        })?)
+                    }
+                    None => None,
+                };
+                let mode = match p.opt_str("blendMode")? {
+                    Some(m) if fp_effects::photoshop::STROKE_BLEND_MODES.contains(&m.as_str()) => {
+                        Some(m)
+                    }
+                    Some(_) => {
+                        return Err(EngineError::InvalidParams {
+                            name: p.command.clone(),
+                            message: fp_i18n::tr!("err-param-invalid", key = "blendMode"),
+                        });
+                    }
+                    None => None,
+                };
+                let opacity = p.opt_f64("opacity")?;
+                let color = p.opt_color("color")?;
+                let enabled = p.opt_bool("enabled")?;
+                let apply = move |sp: &mut fp_effects::StrokeParams| {
+                    if let Some(v) = size {
+                        let (lo, hi) = fp_effects::StrokeParams::SIZE_RANGE;
+                        sp.size = v.clamp(lo, hi);
+                    }
+                    if let Some(v) = position {
+                        sp.position = v;
+                    }
+                    if let Some(v) = &mode {
+                        sp.mode = v.clone();
+                    }
+                    if let Some(v) = opacity {
+                        sp.opacity = v.clamp(0.0, 100.0);
+                    }
+                    if let Some(c) = color {
+                        sp.color = [c.r(), c.g(), c.b()];
+                    }
+                    if let Some(v) = enabled {
+                        sp.enabled = v;
+                    }
+                };
+                edit_effects(s, p, move |l| {
+                    match index {
+                        Some(i) => {
+                            let e = l
+                                .effects
+                                .get_mut(i)
+                                .filter(|e| e.kind() == EffectKind::PhotoshopLive)
+                                .ok_or_else(|| {
+                                    EngineError::NotFound(fp_i18n::t("err-nf-effect"))
+                                })?;
+                            let mut sp = e
+                                .get("stroke")
+                                .map(fp_effects::StrokeParams::from_record)
+                                .unwrap_or_default();
+                            apply(&mut sp);
+                            e.set("stroke", sp.to_record());
+                        }
+                        None => {
+                            let moa = EffectKind::PhotoshopLive.moa_id().unwrap_or_default();
+                            let mut e = Effect::new(moa, true);
+                            let mut sp = fp_effects::StrokeParams::default();
+                            apply(&mut sp);
+                            e.set("stroke", sp.to_record());
+                            l.effects.push(e);
+                        }
                     }
                     Ok(())
                 })

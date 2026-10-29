@@ -328,6 +328,177 @@ impl PsEffects {
     }
 }
 
+/// Position of the PSD-style stroke relative to the object edge (`style` of the `stroke` record,
+/// 05 §9.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum StrokePosition {
+    /// `outsetFrame`: the band lies outside the edge (default of the PSD format).
+    #[default]
+    Outside,
+    /// `insetFrame`: the band lies inside the edge.
+    Inside,
+    /// `centeredFrame`: half inside, half outside.
+    Center,
+}
+
+impl StrokePosition {
+    /// Technical names (`outside`, `inside`, `center`) of the command and batch parameter.
+    pub const NAMES: [&'static str; 3] = ["outside", "inside", "center"];
+
+    /// Keyword of the record (`outsetFrame`, `insetFrame`, `centeredFrame`).
+    pub fn keyword(self) -> &'static str {
+        match self {
+            StrokePosition::Outside => "outsetFrame",
+            StrokePosition::Inside => "insetFrame",
+            StrokePosition::Center => "centeredFrame",
+        }
+    }
+
+    /// From the record keyword (unknown: outside).
+    pub fn from_keyword(s: &str) -> StrokePosition {
+        match s {
+            "insetFrame" => StrokePosition::Inside,
+            "centeredFrame" => StrokePosition::Center,
+            _ => StrokePosition::Outside,
+        }
+    }
+
+    /// From the technical name (`outside`, `inside`, `center`) or the record keyword.
+    pub fn from_name(s: &str) -> Option<StrokePosition> {
+        match s {
+            "outside" | "outsetFrame" => Some(StrokePosition::Outside),
+            "inside" | "insetFrame" => Some(StrokePosition::Inside),
+            "center" | "centre" | "centeredFrame" => Some(StrokePosition::Center),
+            _ => None,
+        }
+    }
+
+    /// Technical name.
+    pub fn name(self) -> &'static str {
+        match self {
+            StrokePosition::Outside => "outside",
+            StrokePosition::Inside => "inside",
+            StrokePosition::Center => "center",
+        }
+    }
+
+    /// Index 0..2 in [`StrokePosition::NAMES`].
+    pub fn index(self) -> usize {
+        match self {
+            StrokePosition::Outside => 0,
+            StrokePosition::Inside => 1,
+            StrokePosition::Center => 2,
+        }
+    }
+
+    /// From an index 0..2 (out of range: outside).
+    pub fn from_index(i: usize) -> StrokePosition {
+        match i {
+            1 => StrokePosition::Inside,
+            2 => StrokePosition::Center,
+            _ => StrokePosition::Outside,
+        }
+    }
+}
+
+/// Blend modes the stroke offers (PSD keywords of 05 §9.4 that the renderer mixes).
+pub const STROKE_BLEND_MODES: [&str; 10] = [
+    "normal",
+    "multiply",
+    "screen",
+    "overlay",
+    "darken",
+    "lighten",
+    "colorBurn",
+    "colorDodge",
+    "linearDodge",
+    "softLight",
+];
+
+/// Parameters of the PSD-style stroke live effect (`stroke` record of the PSD live effect
+/// container, 05 §9.2: enabled, opacity %, size px, mode, color, style, paintType + sub-record).
+/// Defaults are the defaults of the PSD format (A): 3 px outside, normal, 100 %, red.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StrokeParams {
+    /// Sub-effect switched on.
+    pub enabled: bool,
+    /// Width of the band in pixels (1..250).
+    pub size: f64,
+    /// Position relative to the edge.
+    pub position: StrokePosition,
+    /// Blend mode (PSD keyword, see [`STROKE_BLEND_MODES`]).
+    pub mode: String,
+    /// Opacity 0..100 %.
+    pub opacity: f64,
+    /// Colour (RGB).
+    pub color: [u8; 3],
+    /// Fill type and sub-record kept verbatim (`solidColor&` for a solid colour; gradient and
+    /// pattern strokes of imported files keep their sub-record).
+    pub paint: String,
+}
+
+impl Default for StrokeParams {
+    fn default() -> Self {
+        StrokeParams {
+            enabled: true,
+            size: 3.0,
+            position: StrokePosition::Outside,
+            mode: "normal".into(),
+            opacity: 100.0,
+            color: [255, 0, 0],
+            paint: "solidColor&".into(),
+        }
+    }
+}
+
+impl StrokeParams {
+    /// Range of the size in pixels (like the PSD format).
+    pub const SIZE_RANGE: (f64, f64) = (1.0, 250.0);
+
+    /// Reads a `stroke` record (missing fields: defaults).
+    pub fn from_record(s: &str) -> StrokeParams {
+        let r = PsRecord::parse("stroke", s);
+        let d = StrokeParams::default();
+        let paint = match (r.get("paintType"), r.get("sub")) {
+            (Some(p), Some(sub)) => format!("{p}&{sub}"),
+            (Some(p), None) => format!("{p}&"),
+            _ => d.paint.clone(),
+        };
+        StrokeParams {
+            enabled: r.get("enabled").is_none_or(|v| v == "1"),
+            size: r.num("size", d.size),
+            position: StrokePosition::from_keyword(r.get("style").unwrap_or("outsetFrame")),
+            mode: r.get("mode").unwrap_or("normal").to_string(),
+            opacity: r.num("opacity", d.opacity),
+            color: r.color("color").map(|c| c.rgb()).unwrap_or(d.color),
+            paint,
+        }
+    }
+
+    /// Writes the `stroke` record like the reference (`%d&%f&%f&%s&%s&%s&%s&` + sub-record, numbers
+    /// with 6 decimals, colour `RGBColor;r;g;b`).
+    pub fn to_record(&self) -> String {
+        let (lo, hi) = Self::SIZE_RANGE;
+        format!(
+            "{}&{:.6}&{:.6}&{}&RGBColor;{:.6};{:.6};{:.6}&{}&{}",
+            if self.enabled { 1 } else { 0 },
+            self.opacity.clamp(0.0, 100.0),
+            self.size.clamp(lo, hi),
+            self.mode,
+            self.color[0] as f64,
+            self.color[1] as f64,
+            self.color[2] as f64,
+            self.position.keyword(),
+            self.paint
+        )
+    }
+
+    /// Is the fill a solid colour?
+    pub fn is_solid(&self) -> bool {
+        self.paint.starts_with("solidColor")
+    }
+}
+
 /// Versatz des PS-Schlagschattens (Lichtrichtung, Schatten gegenüber; ,5 aufgerundet).
 pub fn ps_offset(distance: f64, angle: f64) -> (i32, i32) {
     let a = angle.to_radians();
@@ -772,9 +943,70 @@ fn shadow_layer(obj: &RgbaImage, ds: &PsRecord) -> RgbaImage {
     out
 }
 
-/// Kontur (A, Photoshop-Semantik): Band der Breite `size` außen, innen bzw. mittig um die
-/// Objektkante (euklidischer Abstand zur Kante, Kantenglättung über den Bruchteil), Farbe mit
-/// Deckkraft darüber. Nur Vollton (`solidColor`); Verlaufs-/Musterkonturen als Vollton.
+/// Squared Euclidean distance (between pixel centres) of every pixel to the nearest pixel with
+/// `feature` set (exact, two 1D passes of the lower-envelope transform). Without any feature
+/// pixel the distances stay at `f64::MAX`.
+fn sq_distance(feature: &[bool], w: usize, h: usize) -> Vec<f64> {
+    const INF: f64 = 1e20;
+    fn pass(f: &[f64], d: &mut [f64], v: &mut [usize], z: &mut [f64]) {
+        let n = f.len();
+        let isect = |q: usize, p: usize| {
+            ((f[q] + (q * q) as f64) - (f[p] + (p * p) as f64)) / (2.0 * (q as f64 - p as f64))
+        };
+        let mut k = 0usize;
+        v[0] = 0;
+        z[0] = f64::NEG_INFINITY;
+        z[1] = f64::INFINITY;
+        for q in 1..n {
+            let mut s = isect(q, v[k]);
+            while s <= z[k] {
+                // z[0] is -inf, so k never drops below 0
+                k -= 1;
+                s = isect(q, v[k]);
+            }
+            k += 1;
+            v[k] = q;
+            z[k] = s;
+            z[k + 1] = f64::INFINITY;
+        }
+        k = 0;
+        for q in 0..n {
+            while z[k + 1] < q as f64 {
+                k += 1;
+            }
+            let p = v[k];
+            let dq = q as f64 - p as f64;
+            d[q] = dq * dq + f[p];
+        }
+    }
+    let n = w.max(h);
+    let (mut v, mut z) = (vec![0usize; n], vec![0.0f64; n + 1]);
+    let (mut f, mut d) = (vec![0.0f64; n], vec![0.0f64; n]);
+    let mut grid: Vec<f64> = feature.iter().map(|&b| if b { 0.0 } else { INF }).collect();
+    for x in 0..w {
+        for y in 0..h {
+            f[y] = grid[y * w + x];
+        }
+        pass(&f[..h], &mut d[..h], &mut v, &mut z);
+        for y in 0..h {
+            grid[y * w + x] = d[y];
+        }
+    }
+    for y in 0..h {
+        f[..w].copy_from_slice(&grid[y * w..(y + 1) * w]);
+        pass(&f[..w], &mut d[..w], &mut v, &mut z);
+        grid[y * w..(y + 1) * w].copy_from_slice(&d[..w]);
+    }
+    grid.into_iter()
+        .map(|v| if v >= INF / 2.0 { f64::MAX } else { v })
+        .collect()
+}
+
+/// Stroke (A, PSD semantics, `stroke` record 05 §9.2): band of width `size` outside, inside or
+/// centred on the object edge (Euclidean distance between pixel centres to the nearest pixel of
+/// the other side, anti-aliased by the fraction), colour with opacity on top, mixed with the
+/// blend mode where the object has pixels (on transparent pixels every mode acts like "normal").
+/// Solid colour only; gradient and pattern strokes are drawn in their colour.
 fn stroke(img: &RgbaImage, obj: &RgbaImage, rec: &PsRecord) -> RgbaImage {
     let size = rec.num("size", 3.0).max(0.0);
     let style = rec.get("style").unwrap_or("outsetFrame");
@@ -787,48 +1019,48 @@ fn stroke(img: &RgbaImage, obj: &RgbaImage, rec: &PsRecord) -> RgbaImage {
     let g = outer.ceil() as i32 + 1;
     let frame = IRect::new(b.left - g, b.top - g, b.right + g, b.bottom + g);
     let (w, h) = (frame.width() as usize, frame.height() as usize);
+    if w == 0 || h == 0 {
+        return img.clone();
+    }
     let a = alpha_in(obj, frame);
-    // Abstand jedes Pixels zur Kante (Mittelpunkt des nächsten Pixels der Gegenseite)
-    let reach = (outer.max(inner).ceil() as i64) + 1;
+    let inside: Vec<bool> = a.iter().map(|&v| v >= 128).collect();
+    let outside: Vec<bool> = inside.iter().map(|&v| !v).collect();
+    // distance of outside pixels to the object, of inside pixels to the outside (the frame has a
+    // transparent margin, so every inside pixel has an outside pixel in the frame)
+    let to_inside = sq_distance(&inside, w, h);
+    let to_outside = sq_distance(&outside, w, h);
     let op = opacity255(rec.num("opacity", 100.0));
     let c = rec.color("color").map(|c| c.rgb()).unwrap_or([255, 0, 0]);
+    let mode = rec.get("mode").unwrap_or("normal").to_string();
     let mut out = on_frame(img, frame);
-    for y in 0..h as i64 {
-        for x in 0..w as i64 {
-            let inside = a[y as usize * w + x as usize] >= 128;
-            let mut best = f64::MAX;
-            for oy in -reach..=reach {
-                for ox in -reach..=reach {
-                    let (sx, sy) = (x + ox, y + oy);
-                    if sx < 0 || sy < 0 || sx >= w as i64 || sy >= h as i64 {
-                        if inside {
-                            best = best.min(((ox * ox + oy * oy) as f64).sqrt());
-                        }
-                        continue;
-                    }
-                    if (a[sy as usize * w + sx as usize] >= 128) != inside {
-                        best = best.min(((ox * ox + oy * oy) as f64).sqrt());
-                    }
-                }
-            }
-            if best == f64::MAX {
-                continue;
-            }
-            let d = best - 0.5; // Abstand Pixelmitte → Kante
-            let width = if inside { inner } else { outer };
-            let cov = (width - d).clamp(0.0, 1.0);
-            if cov <= 0.0 {
-                continue;
-            }
-            let al = mul((cov * 255.0 + 0.5) as u8, op);
-            let i = y as usize * w + x as usize;
-            let p = out.data()[i];
-            out.data_mut()[i] = if p[3] == 0 {
-                [c[0], c[1], c[2], al]
-            } else {
-                over_exact(Rgba8::new(c[0], c[1], c[2], al), px(p)).to_array()
-            };
+    for i in 0..w * h {
+        let (sq, width) = if inside[i] {
+            (to_outside[i], inner)
+        } else {
+            (to_inside[i], outer)
+        };
+        if sq == f64::MAX || width <= 0.0 {
+            continue;
         }
+        let d = sq.sqrt() - 0.5; // pixel centre → edge
+        let cov = (width - d).clamp(0.0, 1.0);
+        if cov <= 0.0 {
+            continue;
+        }
+        let al = mul((cov * 255.0 + 0.5) as u8, op);
+        let p = out.data()[i];
+        out.data_mut()[i] = if p[3] == 0 {
+            [c[0], c[1], c[2], al]
+        } else {
+            // blend mode against the object colour, then on top with the stroke's coverage
+            let m = if mode == "normal" {
+                c
+            } else {
+                let q = inner_mix([p[0], p[1], p[2], 255], c, 255, &mode);
+                [q[0], q[1], q[2]]
+            };
+            over_exact(Rgba8::new(m[0], m[1], m[2], al), px(p)).to_array()
+        };
     }
     out
 }
@@ -998,5 +1230,143 @@ mod tests {
         );
         assert_eq!(r.get("sub"), Some(""));
         assert_eq!(r.get("style"), Some("outsetFrame"));
+    }
+
+    fn stroke_fx(p: &StrokeParams) -> PsEffects {
+        PsEffects {
+            records: vec![(
+                "stroke".to_string(),
+                PsRecord::parse("stroke", &p.to_record()),
+            )],
+            result_rect: None,
+        }
+    }
+
+    fn gray_box() -> RgbaImage {
+        RgbaImage::filled(IRect::new(10, 10, 30, 30), Rgba8::rgb(128, 128, 128)).unwrap()
+    }
+
+    #[test]
+    fn stroke_record_round_trip() {
+        let d = StrokeParams::default();
+        assert_eq!(
+            d.to_record(),
+            "1&100.000000&3.000000&normal&RGBColor;255.000000;0.000000;0.000000&outsetFrame&solidColor&"
+        );
+        assert_eq!(StrokeParams::from_record(&d.to_record()), d);
+        let p = StrokeParams {
+            enabled: false,
+            size: 7.0,
+            position: StrokePosition::Center,
+            mode: "multiply".into(),
+            opacity: 40.0,
+            color: [1, 2, 3],
+            paint: "solidColor&".into(),
+        };
+        assert_eq!(StrokeParams::from_record(&p.to_record()), p);
+        // a gradient stroke of an imported file keeps its sub-record
+        let g = "1&100.000000&3.000000&normal&nocolor&insetFrame&gradientFill&0&1&90.000000&100.000000&0.000000&0.000000&linear&x,customStops,4096.000000$0$0";
+        let gp = StrokeParams::from_record(g);
+        assert!(!gp.is_solid());
+        assert_eq!(gp.position, StrokePosition::Inside);
+        assert_eq!(
+            gp.to_record().split_once("&insetFrame&").unwrap().1,
+            g.split_once("&insetFrame&").unwrap().1
+        );
+        assert_eq!(
+            StrokePosition::from_name("center"),
+            Some(StrokePosition::Center)
+        );
+        assert_eq!(
+            StrokeParams {
+                size: 900.0,
+                ..d.clone()
+            }
+            .to_record()
+            .split('&')
+            .nth(2),
+            Some("250.000000")
+        );
+    }
+
+    #[test]
+    fn stroke_outside_inside_center_and_opacity() {
+        let obj = gray_box();
+        let red = |p: Rgba8| (p.r, p.g, p.b);
+        // outside 3 px: two full rows, the third anti-aliased by half (A: coverage width − d)
+        let out = render(&obj, &stroke_fx(&StrokeParams::default()));
+        assert_eq!(out.bounds(), IRect::new(6, 6, 34, 34));
+        assert_eq!(out.pixel(9, 20), Rgba8::new(255, 0, 0, 255));
+        assert_eq!(out.pixel(8, 20), Rgba8::new(255, 0, 0, 255));
+        assert_eq!(out.pixel(7, 20).a, 128);
+        assert_eq!(out.pixel(6, 20).a, 0);
+        assert_eq!(out.pixel(10, 20), Rgba8::rgb(128, 128, 128));
+        assert_eq!(out.pixel(30, 20), Rgba8::new(255, 0, 0, 255));
+        // inside 2 px: band over the object, nothing outside
+        let inside = StrokeParams {
+            size: 2.0,
+            position: StrokePosition::Inside,
+            ..StrokeParams::default()
+        };
+        let out = render(&obj, &stroke_fx(&inside));
+        assert_eq!(out.pixel(9, 20).a, 0);
+        assert_eq!(red(out.pixel(10, 20)), (255, 0, 0));
+        let half = out.pixel(11, 20);
+        assert!(
+            half.r > 180 && half.r < 200 && half.g > 60 && half.g < 70,
+            "{half:?}"
+        );
+        assert_eq!(out.pixel(12, 20), Rgba8::rgb(128, 128, 128));
+        // centre 4 px: 2 outside, 2 inside
+        let center = StrokeParams {
+            size: 4.0,
+            position: StrokePosition::Center,
+            ..StrokeParams::default()
+        };
+        let out = render(&obj, &stroke_fx(&center));
+        assert_eq!(out.pixel(9, 20), Rgba8::new(255, 0, 0, 255));
+        assert_eq!(out.pixel(8, 20).a, 128);
+        assert_eq!(red(out.pixel(10, 20)), (255, 0, 0));
+        assert_eq!(out.pixel(12, 20), Rgba8::rgb(128, 128, 128));
+        // opacity 50 %: coverage · 128
+        let op = StrokeParams {
+            opacity: 50.0,
+            ..StrokeParams::default()
+        };
+        let out = render(&obj, &stroke_fx(&op));
+        assert_eq!(out.pixel(9, 20), Rgba8::new(255, 0, 0, 128));
+        // switched off: the object stays as it is
+        let off = StrokeParams {
+            enabled: false,
+            ..StrokeParams::default()
+        };
+        assert_eq!(render(&obj, &stroke_fx(&off)), obj);
+    }
+
+    #[test]
+    fn stroke_blend_mode_and_large_size() {
+        let obj = gray_box();
+        // multiply inside: red · gray = (128, 0, 0) on the object, plain red on transparency
+        let m = StrokeParams {
+            size: 4.0,
+            position: StrokePosition::Center,
+            mode: "multiply".into(),
+            ..StrokeParams::default()
+        };
+        let out = render(&obj, &stroke_fx(&m));
+        assert_eq!(out.pixel(10, 20), Rgba8::rgb(128, 0, 0));
+        assert_eq!(out.pixel(9, 20), Rgba8::new(255, 0, 0, 255));
+        // a big stroke stays fast (distance transform) and round
+        let big = StrokeParams {
+            size: 120.0,
+            ..StrokeParams::default()
+        };
+        let out = render(&obj, &stroke_fx(&big));
+        assert_eq!(out.bounds(), IRect::new(-111, -111, 151, 151));
+        // corner: Euclidean distance, the diagonal point at 120 px is outside the band
+        assert_eq!(out.pixel(10 - 86, 10 - 86).a, 0);
+        assert_eq!(out.pixel(10 - 85, 10 - 85).a, 74);
+        assert_eq!(out.pixel(10 - 84, 10 - 84).a, 255);
+        assert_eq!(out.pixel(-100, 20).a, 255);
     }
 }

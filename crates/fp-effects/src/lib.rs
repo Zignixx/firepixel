@@ -61,7 +61,7 @@ pub use bevel::{BevelParams, BevelType, ButtonState};
 pub use chain::{ChainResult, EffectEntry, LiveEffect, apply_chain, chain_growth};
 pub use color_fill::ColorFillParams;
 pub use inner_glow::InnerGlowParams;
-pub use photoshop::PsEffects;
+pub use photoshop::{PsEffects, StrokeParams, StrokePosition};
 pub use screentone::{ScreentoneKind, ScreentoneParams};
 pub use shadow::ShadowParams;
 pub use solid::SolidShadowParams;

@@ -66,6 +66,7 @@ effect-inner-glow = Inneres Glühen
 effect-solid-shadow = Einfarbiger Schatten
 effect-color-fill = Farbfüllung
 effect-photoshop-live = PSD-Live-Effekte
+effect-stroke = Kontur
 effect-screentone = Rasterfolie
 effect-generic = Effekt
 

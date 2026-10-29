@@ -206,6 +206,20 @@ pub const EFFECT_MOA_IDS: &[(&str, EffectKind)] = &[
     ),
 ];
 
+/// Sub-effect keys of the PSD live effect container (`{8eeadf50-…}`, 05 §9.1), in file order.
+pub const PSD_SUB_EFFECTS: [&str; 10] = [
+    "dropShadow",
+    "innerShadow",
+    "outerGlow",
+    "innerGlow",
+    "bevelEmboss",
+    "satin",
+    "solidFill",
+    "gradientFill",
+    "patternFill",
+    "stroke",
+];
+
 /// Präfix der Photoshop-Plugin-IDs.
 pub const PLUGIN_MOA_PREFIX: &str = "{d810e821-f86b-11d0-";
 
@@ -309,6 +323,8 @@ impl Effect {
             EffectKind::InnerGlow => "effect-inner-glow",
             EffectKind::SolidShadow => "effect-solid-shadow",
             EffectKind::ColorFill => "effect-color-fill",
+            // a container holding only the stroke is shown as "Stroke" (F138)
+            EffectKind::PhotoshopLive if self.is_psd_stroke_only() => "effect-stroke",
             EffectKind::PhotoshopLive => "effect-photoshop-live",
             EffectKind::GaussianBlur => "filter-blur-gaussian",
             EffectKind::Blur => "filter-blur-blur",
@@ -331,6 +347,24 @@ impl Effect {
             EffectKind::Screentone => "effect-screentone",
             _ => return None,
         })
+    }
+
+    /// Sub-effects of a PSD live effect container present in the parameters (file order).
+    pub fn psd_sub_effects(&self) -> Vec<&'static str> {
+        if self.kind() != EffectKind::PhotoshopLive {
+            return Vec::new();
+        }
+        PSD_SUB_EFFECTS
+            .iter()
+            .copied()
+            .filter(|k| self.params.get_str(k).is_some())
+            .collect()
+    }
+
+    /// Is this a PSD live effect container whose only sub-effect is the stroke (the Stroke live
+    /// effect of the Filters menu, F138)?
+    pub fn is_psd_stroke_only(&self) -> bool {
+        self.psd_sub_effects() == ["stroke"]
     }
 
     /// Anzeigename, den das Original nur schreibt (`mkbFile_WriteOnly_TemporaryEffectUiName`) bzw. `name`.

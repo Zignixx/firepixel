@@ -235,7 +235,20 @@ pub const FX: &[Fx] = &[
         "filter-blur-zoom",
         FxKind::Filter("filter.blur.zoom"),
     ),
+    // PSD live effects (submenu after the separator, where the original has its entry): the
+    // Stroke (F138)
+    fx(
+        PSD_GROUP,
+        "effect-stroke",
+        FxKind::Effect {
+            name: "stroke",
+            bevel: None,
+        },
+    ),
 ];
+
+/// Group of the PSD live effects: not sorted with the others, a submenu after the separator.
+pub const PSD_GROUP: &str = "effect-photoshop-live";
 
 /// Anzeigename eines Effekts in der Filterliste (Namen aus `filter.ftl` über
 /// `Effect::label_key`; unbekannte Effekte: Name aus der Datei bzw. „Effekt“).
@@ -279,7 +292,7 @@ pub fn editable(e: &Effect) -> bool {
             | EffectKind::HueSaturation
             | EffectKind::Curves
             | EffectKind::Levels
-    )
+    ) || (e.kind() == EffectKind::PhotoshopLive && e.get("stroke").is_some())
 }
 
 /// Ziel beim Bearbeiten eines vorhandenen Kurven- bzw. Tonwert-Effekts über ⓘ
@@ -445,7 +458,7 @@ pub fn add_menu(ui: &mut Ui, resp: &Response, st: &mut AppState) {
             });
             let mut groups: Vec<&str> = Vec::new();
             for f in FX {
-                if !groups.contains(&f.group) {
+                if f.group != PSD_GROUP && !groups.contains(&f.group) {
                     groups.push(f.group);
                 }
             }
@@ -461,7 +474,14 @@ pub fn add_menu(ui: &mut Ui, resp: &Response, st: &mut AppState) {
                 });
             }
             ui.separator();
-            let _ = fields::list_item(ui, &t("dlg-fx-photoshop-unavailable"), false);
+            ui.menu_button(t(PSD_GROUP), |ui| {
+                for (i, f) in FX.iter().enumerate().filter(|(_, f)| f.group == PSD_GROUP) {
+                    if fields::list_item(ui, &f.menu_text(), false).clicked() {
+                        chosen = Some(i);
+                        ui.close();
+                    }
+                }
+            });
         });
     for a in acts {
         st.push(a);
@@ -535,6 +555,7 @@ pub fn begin_edit(st: &mut AppState, index: usize, e: &Effect) {
         }
         EffectKind::ColorFill => Some(effect_form("colorFill", None, Some(e), Some(index), fill)),
         EffectKind::Screentone => Some(effect_form("screentone", None, Some(e), Some(index), fill)),
+        EffectKind::PhotoshopLive => Some(effect_form("stroke", None, Some(e), Some(index), fill)),
         _ => filter_effect_form(e, index),
     };
     if let Some(d) = d {
@@ -808,6 +829,23 @@ fn effect_params(d: &FormDialog) -> Value {
             // FB-86: anti-aliased dot edges (missing in older files = off)
             params.insert("screentone_anti_alias".into(), json!(flag("anti_alias")));
         }
+        "stroke" => {
+            // PSD-style stroke (F138): parameters of the command `effect.stroke`
+            let mut out = json!({
+                "size": n("size"),
+                "position": s("position").as_str().unwrap_or("outside"),
+                "blendMode": s("mode").as_str().unwrap_or("normal"),
+                "opacity": n("opacity"),
+                "color": rgb_only(s("color").as_str().unwrap_or("#ff0000")),
+            });
+            if let Some(i) = d.base.get("index") {
+                out["index"] = i.clone();
+            }
+            if let Some(ids) = d.base.get("ids") {
+                out["ids"] = ids.clone();
+            }
+            return out;
+        }
         _ => {}
     }
     let mut out = match d.base.get("index").and_then(|x| x.as_u64()) {
@@ -819,6 +857,22 @@ fn effect_params(d: &FormDialog) -> Value {
         out["ids"] = ids.clone();
     }
     out
+}
+
+/// Fluent key of a PSD blend mode keyword in the stroke dialog (names of the blend mode list).
+pub fn stroke_mode_key(mode: &str) -> &'static str {
+    match mode {
+        "multiply" => "blend-multiply",
+        "screen" => "blend-screen",
+        "overlay" => "blend-overlay",
+        "darken" => "blend-darken",
+        "lighten" => "blend-lighten",
+        "colorBurn" => "blend-colorburn",
+        "colorDodge" => "blend-colordodge",
+        "linearDodge" => "blend-lineardodge",
+        "softLight" => "blend-softlight1",
+        _ => "blend-normal",
+    }
 }
 
 /// Ausgewählte Elemente als Ziel des Dialogs.
@@ -1037,6 +1091,81 @@ pub fn effect_form(
                 ],
             )
         }
+        "stroke" => {
+            // PSD-style stroke (F138): fields of the PSD stroke page (size, position, blend mode,
+            // opacity, fill type, colour); defaults `fp_effects::StrokeParams::default()`
+            let sp = e
+                .and_then(|x| x.get("stroke"))
+                .map(fp_effects::StrokeParams::from_record)
+                .unwrap_or_default();
+            let positions = [
+                t("dlg-fx-stroke-outside"),
+                t("dlg-fx-stroke-inside"),
+                t("dlg-fx-stroke-center"),
+            ];
+            let pos_names: Vec<&str> = positions.iter().map(|s| s.as_str()).collect();
+            let pos_vals: Vec<Value> = fp_effects::StrokePosition::NAMES
+                .iter()
+                .map(|n| json!(n))
+                .collect();
+            let modes: Vec<String> = fp_effects::photoshop::STROKE_BLEND_MODES
+                .iter()
+                .map(|m| t(stroke_mode_key(m)))
+                .collect();
+            let mode_names: Vec<&str> = modes.iter().map(|s| s.as_str()).collect();
+            let mode_vals: Vec<Value> = fp_effects::photoshop::STROKE_BLEND_MODES
+                .iter()
+                .map(|m| json!(m))
+                .collect();
+            let mode_idx = fp_effects::photoshop::STROKE_BLEND_MODES
+                .iter()
+                .position(|m| *m == sp.mode)
+                .unwrap_or(0);
+            let (lo, hi) = fp_effects::StrokeParams::SIZE_RANGE;
+            (
+                t("effect-stroke"),
+                vec![
+                    Field::slider("size", t("dlg-fx-stroke-size").as_str(), sp.size, lo, hi)
+                        .unit("px"),
+                    Field::choice_of(
+                        "position",
+                        t("dlg-fx-stroke-position").as_str(),
+                        &pos_names,
+                        pos_vals,
+                        sp.position.index(),
+                    ),
+                    Field::choice_of(
+                        "mode",
+                        t("dlg-lbl-blend-mode").as_str(),
+                        &mode_names,
+                        mode_vals,
+                        mode_idx,
+                    ),
+                    Field::slider(
+                        "opacity",
+                        t("dlg-lbl-opacity").as_str(),
+                        sp.opacity,
+                        0.0,
+                        100.0,
+                    )
+                    .unit("%"),
+                    Field::choice(
+                        "fill",
+                        t("dlg-fx-stroke-fill-type").as_str(),
+                        &[t("dlg-fx-stroke-fill-color").as_str()],
+                        0,
+                    ),
+                    Field::color(
+                        "color",
+                        t("dlg-lbl-color").as_str(),
+                        &format!(
+                            "#{:02x}{:02x}{:02x}ff",
+                            sp.color[0], sp.color[1], sp.color[2]
+                        ),
+                    ),
+                ],
+            )
+        }
         "screentone" => {
             // Firepixel extension (FB-38): defaults and ranges like `fp_effects::ScreentoneParams`
             // and `element.addEffect` "screentone" (dots, 8 px, 45°, tone from the luminance,
@@ -1222,7 +1351,10 @@ pub fn effect_form(
     if let Some(i) = index {
         base["index"] = json!(i);
     }
-    let command = if index.is_some() {
+    let command = if name == "stroke" {
+        // own command: History row "Stroke", edits only the stroke record (F138)
+        "effect.stroke"
+    } else if index.is_some() {
         "pi.effect.set"
     } else {
         "element.addEffect"

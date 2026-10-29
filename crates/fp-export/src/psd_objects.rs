@@ -4,7 +4,8 @@
 //! (bottom to top). Each object is rendered on its own: a copy of the document holds only that
 //! object in its layer. With the export options:
 //! - **Effects editable:** live effects that PSD has natively go into the layer effects block
-//!   (`lfx2`) and are left out of the pixels; all others stay baked in.
+//!   (`lfx2`, including the solid-colour PSD-style stroke as `FrFX`) and are left out of the
+//!   pixels; all others stay baked in.
 //! - **Text editable:** text objects become type layers (`TySh`) with their rendered pixels.
 //! - **Vector editable:** paths with a plain solid fill (no stroke, texture, feather or baked
 //!   effect) become solid colour fill layers (`SoCo`) with a vector mask (`vmsk`).
@@ -233,15 +234,9 @@ pub fn psd_layers(
                 .is_some_and(|fx| fx.has_visible());
             if ed.effects
                 && let Some(fx) = el.common.effects.as_mut()
-                && let Some((data, used)) = pb::effects_block(&fx.effects)
+                && let Some(data) = pb::effects_block(&mut fx.effects)
             {
                 blocks.push((*b"lfx2", data));
-                let mut i = 0;
-                fx.effects.retain(|_| {
-                    let keep = !used.contains(&i);
-                    i += 1;
-                    keep
-                });
                 baked_left = fx.has_visible();
             }
             match &e.kind {

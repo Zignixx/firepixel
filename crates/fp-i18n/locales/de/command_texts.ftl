@@ -712,3 +712,10 @@ cmdtext-single-nur-diese-seite-wird-aktuell-rang-713897 = single = nur diese Sei
 cmdtext-seitenindizes-0-2-als-block = Seitenindizes [0, 2, …] als Block
 cmdtext-bereich-der-geteilten-ansicht-0-links-1-rechts = Bereich der geteilten Ansicht (0 links, 1 rechts)
 cmdtext-anordnung-der-bereiche = Anordnung der Bereiche (vertical nebeneinander, horizontal untereinander)
+cmdtext-index-eines-psd-live-effekts-fehlt-neu = Index eines PSD-Live-Effekts (fehlt: neu)
+cmdtext-groesse-in-pixeln-vorgabe-3 = Größe in Pixeln (Vorgabe 3)
+cmdtext-position-vorgabe-outside = Position (Vorgabe outside)
+cmdtext-mischmodus-vorgabe-normal = Mischmodus (Vorgabe normal)
+cmdtext-deckkraft-in-prozent-vorgabe-100 = Deckkraft in Prozent (Vorgabe 100)
+cmdtext-farbe-vorgabe-ff0000 = Farbe (Vorgabe #ff0000)
+cmdtext-eingeschaltet-vorgabe-ja = eingeschaltet (Vorgabe ja)

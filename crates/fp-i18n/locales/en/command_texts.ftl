@@ -712,3 +712,10 @@ cmdtext-single-nur-diese-seite-wird-aktuell-rang-713897 = single = only this pag
 cmdtext-seitenindizes-0-2-als-block = Page indices [0, 2, …] as a block
 cmdtext-bereich-der-geteilten-ansicht-0-links-1-rechts = Pane of the split view (0 left, 1 right)
 cmdtext-anordnung-der-bereiche = Arrangement of the panes (vertical side by side, horizontal one above the other)
+cmdtext-index-eines-psd-live-effekts-fehlt-neu = Index of a PSD live effect (missing: new effect)
+cmdtext-groesse-in-pixeln-vorgabe-3 = Size in pixels (default 3)
+cmdtext-position-vorgabe-outside = Position (default outside)
+cmdtext-mischmodus-vorgabe-normal = Blending mode (default normal)
+cmdtext-deckkraft-in-prozent-vorgabe-100 = Opacity in percent (default 100)
+cmdtext-farbe-vorgabe-ff0000 = Color (default #ff0000)
+cmdtext-eingeschaltet-vorgabe-ja = switched on (default yes)

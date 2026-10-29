@@ -1123,6 +1123,7 @@ cmd-element-addEffect = Add Filter
 cmd-element-setEffect = Set Filter
 cmd-element-removeEffect = Remove Filter
 cmd-element-setEffectVisible = Show/Hide Filter
+cmd-effect-stroke = Stroke
 cmd-element-setGradient = Gradient
 cmd-layer-add = Add Layer
 cmd-layer-delete = Delete Layer

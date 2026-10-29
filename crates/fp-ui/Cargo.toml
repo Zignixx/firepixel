@@ -16,6 +16,8 @@ fp-geom = { workspace = true }
 fp-color = { workspace = true }
 fp-raster = { workspace = true }
 fp-model = { workspace = true }
+# PSD-style stroke parameters for its dialog (F138)
+fp-effects = { workspace = true }
 fp-fwpng = { workspace = true }
 fp-render = { workspace = true }
 fp-engine = { workspace = true }

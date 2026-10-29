@@ -802,6 +802,20 @@ und eingeklappte Höhe her.
   Die Art steht im Menüeintrag; der Dialog hat dafür kein eigenes Feld. Doppelklick auf einen Eintrag
   der Filterliste öffnet seine Einstellungen.
 
+- **Kontur (PSD-Live-Effekt):** *PSD-Live-Effekte* ▸ *Kontur*, das Untermenü nach dem Trennstrich am Ende des
+  Menüs „+“, zieht ein Band um den deckenden Teil des Objekts, wie der Ebeneneffekt Kontur von PSD-Dateien.
+  Einstellungen: *Größe* (1–250 px, Vorgabe 3), *Position* (Außen, Innen oder Mitte auf der Objektkante),
+  *Mischmodus* (Normal, Multiplizieren, Negativ multiplizieren, Überlagern, Abdunkeln, Aufhellen, Farbig
+  nachbelichten, Farbig abwedeln, Linear abwedeln, Weiches Licht; auf transparenten Pixeln wirkt jeder Modus wie
+  Normal), *Deckkraft* (0–100 %), *Füllart* (Farbe) und *Farbe* (Vorgabe Rot). Die Filterliste zeigt sie als
+  *Kontur*; Doppelklick ändert sie. Gespeichert wird sie so, wie das Original seine PSD-Live-Effekte speichert (ein
+  `stroke`-Datensatz im PSD-Live-Effekt der Effektliste), `.fw.png`-Dateien behalten sie also für beide Programme.
+  Ein aus einer PSD-Datei importierter PSD-Live-Effekt mit weiteren Effekten heißt *PSD-Live-Effekte*; sein Dialog
+  ändert nur die Kontur. Skripte nutzen `fp.run("effect.stroke", {size, position, blendMode, opacity, color})`
+  (`index` ändert einen vorhandenen Effekt); der Stapelschritt *Kontur* (`effect.stroke`) wendet sie auf Bilder an.
+  Verlaufs- und Musterkonturen importierter Dateien behalten ihre Einstellungen, werden aber in ihrer Farbe
+  gezeichnet.
+
 - **Rasterfolie (Live-Filter, Firepixel-Erweiterung):** *Andere* ▸ *Rasterfolie* wandelt die Pixel des Objekts in
   ein Halbtonraster wie die gedruckten Rasterfolien in Schwarzweiß-Illustrationen und Manga-Seiten. Einstellungen:
   *Muster* (Punkte, Linien, Kreuzschraffur), *Rasterweite* (Zellenabstand 2–32 px), *Winkel* (0–180°, Vorgabe das
@@ -931,8 +945,9 @@ PDF 1.5; mit „PDF 1.3“ oder „PDF 1.4“ wird die Datei daher als PDF 1.5 g
   sichtbar.
 - PSD, „In PSD-Ebenen konvertieren“: Jedes Objekt wird zu einer eigenen PSD-Ebene, gruppiert nach
   Dokumentebene. Mit „Bearbeitbarkeit beibehalten“ werden bei Text die Textobjekte zu bearbeitbaren
-  Textebenen, bei Effekten Schlagschatten, innerer Schatten, Leuchten, Abgeflachte Kante/Relief und
-  Farbfüllung zu Ebeneneffekten, bei Vektor Pfade mit einfacher Füllung zu Füllebenen mit Vektormaske.
+  Textebenen, bei Effekten Schlagschatten, innerer Schatten, Leuchten, Abgeflachte Kante/Relief,
+  Farbfüllung und die Kontur (PSD-Live-Effekt, Vollton) zu Ebeneneffekten (eine wieder geöffnete PSD-Datei bringt
+  die Kontur als denselben Live-Effekt zurück), bei Vektor Pfade mit einfacher Füllung zu Füllebenen mit Vektormaske.
   Die anderen Einstellungen rechnen Text, Effekte und Vektoren in die Pixel ein.
 
 **Web-Funktionen:**

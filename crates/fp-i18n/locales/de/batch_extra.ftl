@@ -499,3 +499,27 @@ batch-param-filter-screentone-keepColor = Bildfarbe beibehalten
     .tooltip = Die Punkte behalten die Farbe des Bildes statt der Rasterfarbe.
 batch-param-filter-screentone-antiAlias = Glätten
     .tooltip = Glatte Punktränder mit Zwischentönen. Aus: harte Punkte nur aus Farbe und Transparenz.
+
+## PSD-Kontur-Live-Effekt (F138)
+batch-step-effect-stroke = Kontur
+    .description = Zieht eine Kontur um den deckenden Teil jedes Bildes (außen, innen oder mittig auf der Kante) und rechnet sie ein.
+batch-param-effect-stroke-size = Größe
+    .tooltip = Breite der Kontur in Pixeln.
+batch-param-effect-stroke-position = Position
+batch-value-effect-stroke-position-outside = Außen
+batch-value-effect-stroke-position-inside = Innen
+batch-value-effect-stroke-position-center = Mitte
+batch-param-effect-stroke-blendMode = Mischmodus
+batch-value-effect-stroke-blendMode-normal = Normal
+batch-value-effect-stroke-blendMode-multiply = Multiplizieren
+batch-value-effect-stroke-blendMode-screen = Negativ multiplizieren
+batch-value-effect-stroke-blendMode-overlay = Überlagern
+batch-value-effect-stroke-blendMode-darken = Abdunkeln
+batch-value-effect-stroke-blendMode-lighten = Aufhellen
+batch-value-effect-stroke-blendMode-colorBurn = Farbig nachbelichten
+batch-value-effect-stroke-blendMode-colorDodge = Farbig abwedeln
+batch-value-effect-stroke-blendMode-linearDodge = Linear abwedeln
+batch-value-effect-stroke-blendMode-softLight = Weiches Licht
+batch-param-effect-stroke-opacity = Deckkraft
+batch-param-effect-stroke-color = Farbe
+batch-param-effect-stroke-expandCanvas = Leinwand erweitern

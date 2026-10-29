@@ -25,6 +25,8 @@ fp-raster = { workspace = true }
 fp-model = { workspace = true }
 fp-fwpng = { workspace = true }
 fp-text = { workspace = true }
+# PSD-style stroke parameters (record format of the PSD live effect container, F138)
+fp-effects = { workspace = true }
 # Export (Exportieren, Bildvorschau, HTML, PSD/PDF …) und Import (Importieren, Öffnen anderer Formate)
 fp-export = { workspace = true }
 fp-io = { workspace = true }

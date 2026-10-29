@@ -1123,6 +1123,7 @@ cmd-element-addEffect = Effekt hinzufügen
 cmd-element-setEffect = Effekt einstellen
 cmd-element-removeEffect = Effekt entfernen
 cmd-element-setEffectVisible = Effekt ein-/ausblenden
+cmd-effect-stroke = Kontur
 cmd-element-setGradient = Verlauf
 cmd-layer-add = Ebene hinzufügen
 cmd-layer-delete = Ebene löschen

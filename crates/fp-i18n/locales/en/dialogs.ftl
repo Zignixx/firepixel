@@ -402,7 +402,6 @@ dlg-style-other = &Other text attributes
 
 ## Live filters (effects.rs)
 dlg-fx-options = Options
-dlg-fx-photoshop-unavailable = PSD Live Effects (not available yet)
 dlg-fx-slope-flat = Flat
 dlg-fx-slope-smooth = Smooth
 dlg-fx-slope-sloped = Sloped
@@ -433,6 +432,14 @@ dlg-fx-screentone-density = Density:
 dlg-fx-screentone-from-luminance = Density from luminance
 dlg-fx-screentone-keep-color = Keep object color
 dlg-fx-screentone-anti-alias = Anti-alias
+# PSD-style stroke live effect (F138)
+dlg-fx-stroke-size = Size:
+dlg-fx-stroke-position = Position:
+dlg-fx-stroke-outside = Outside
+dlg-fx-stroke-inside = Inside
+dlg-fx-stroke-center = Center
+dlg-fx-stroke-fill-type = Fill type:
+dlg-fx-stroke-fill-color = Color
 
 ## Form dialogs (form.rs)
 dlg-preview = Preview

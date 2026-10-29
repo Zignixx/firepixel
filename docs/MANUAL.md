@@ -735,6 +735,18 @@ visible); the diamond on the tab and a double-click on the tab return to the ful
   *Inner Bevel*, *Outer Bevel*, *Inset Emboss*, *Raised Emboss*. The kind is part of the menu item;
   the dialog has no separate field for it. Double-click an entry in the filter list to open its settings.
 
+- **Stroke (PSD live effect):** *PSD Live Effects* ▸ *Stroke*, the submenu after the separator at the end of the
+  “+” menu, draws a band around the opaque part of the object, like the stroke layer effect of PSD files. Settings:
+  *Size* (1–250 px, default 3), *Position* (Outside, Inside or Center on the object edge), *Blending mode* (Normal,
+  Multiply, Screen, Overlay, Darken, Lighten, Color Burn, Color Dodge, Linear Dodge, Soft Light; on transparent
+  pixels every mode acts like Normal), *Opacity* (0–100 %), *Fill type* (Color) and *Color* (default red). The filter
+  list shows it as *Stroke*; double-click it to change it. It is stored like the reference application stores its
+  PSD live effects (one `stroke` record in the PSD live effect entry of the effect list), so `.fw.png` files keep it
+  for both programs. A PSD live effect imported from a PSD file with more effects shows as *PSD Live Effects*; its
+  dialog edits only the stroke. Scripts use `fp.run("effect.stroke", {size, position, blendMode, opacity, color})`
+  (`index` changes an existing effect); the batch step *Stroke* (`effect.stroke`) applies it to images. Gradient and
+  pattern strokes of imported files keep their settings but are drawn in their colour.
+
 - **Screentone (Live Filter, Firepixel extension):** *Other* ▸ *Screentone* turns the object's pixels into a
   halftone screen like the printed tones of black and white illustrations and manga pages. Settings: *Pattern*
   (Dots, Lines, Cross-hatch), *Size* (cell pitch 2–32 px), *Angle* (0–180°, default the classic 45° screen),
@@ -855,7 +867,8 @@ Transparency goes into a separate soft mask, as with JPEG. JPEG 2000 exists from
   image.
 - PSD, "Convert to PSD layers": every object becomes its own PSD layer, grouped by document layer. With
   "Maintain editability" for Text, text objects become editable type layers; for Effects, drop shadow,
-  inner shadow, glows, bevel/emboss and colour fill become layer effects; for Vector, paths with a plain
+  inner shadow, glows, bevel/emboss, colour fill and the Stroke (PSD live effect, solid colour) become layer
+  effects (a PSD file opened again brings the stroke back as the same live effect); for Vector, paths with a plain
   fill become fill layers with a vector mask. The other choices render text, effects and vectors into
   the pixels.
 

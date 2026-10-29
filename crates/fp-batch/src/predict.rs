@@ -120,7 +120,9 @@ pub fn step_size(id: &str, w: u32, h: u32, p: &Value) -> Option<(u32, u32)> {
             } as u32;
             Some((w + 2 * bw, h + 2 * bw))
         }
-        "background.shadow" | "effect.live" if !b(p, "expandCanvas", true) => Some((w, h)),
+        "background.shadow" | "effect.live" | "effect.stroke" if !b(p, "expandCanvas", true) => {
+            Some((w, h))
+        }
         "ai.upscale" => {
             let s = crate::steps::upscale::scale_param(p) as i64;
             Some((clamp(wi * s), clamp(hi * s)))

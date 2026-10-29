@@ -41,6 +41,7 @@ pub const FILTER_BLUR: &str = "filter.blur";
 pub const FILTER_REGISTRY: &str = "filter.registry";
 pub const EFFECT_LIVE: &str = "effect.live";
 pub const FILTER_SCREENTONE: &str = "filter.screentone";
+pub const EFFECT_STROKE: &str = "effect.stroke";
 
 /// Registriert die Schritte der Gruppe.
 pub fn register(r: &mut StepRegistry) {
@@ -55,6 +56,7 @@ pub fn register(r: &mut StepRegistry) {
     r.register(Arc::new(FilterRegistry));
     r.register(Arc::new(EffectLive));
     r.register(Arc::new(FilterScreentone));
+    r.register(Arc::new(EffectStroke));
 }
 
 // =================================================================== Hilfen
@@ -820,6 +822,14 @@ pub(crate) fn scale_live_effect(e: &mut fp_effects::LiveEffect, s: f64) {
             p.start = su(p.start);
         }
         L::SolidShadow(p) => p.distance *= s,
+        // PSD-style stroke (F138): the size in its record
+        L::Photoshop(p) => {
+            for (k, r) in p.records.iter_mut().filter(|(k, _)| k == "stroke") {
+                let mut sp = fp_effects::StrokeParams::from_record(&r.raw);
+                sp.size *= s;
+                *r = fp_effects::photoshop::PsRecord::parse(k.as_str(), &sp.to_record());
+            }
+        }
         _ => {}
     }
 }
@@ -867,61 +877,8 @@ impl Step for EffectLive {
         if let Some(b) = bevel {
             ep.insert("BevelType".into(), ParamValue::Text(b.into()));
         }
-        let mut effect = fp_effects::LiveEffect::parse(moa, &ep);
-        // Vorschau auf dem Proxy: Pixelangaben des Effekts mitverkleinern (BATCH-11a, Befund BATCH-4)
-        let scale = preview_scale(item, ctx);
-        if scale < 1.0 {
-            scale_live_effect(&mut effect, scale);
-        }
-        let entry = fp_effects::EffectEntry {
-            effect,
-            visible: true,
-        };
-        let fx_ctx = fp_effects::EffectContext::default();
-        let expand = p_bool(params, "expandCanvas", true);
-        let mut frames = frames_mut(item)?;
-        // erst alle Frames rechnen, dann gemeinsame Grenzen (Animation: alle Frames gleich groß)
-        let mut results = Vec::with_capacity(frames.len());
-        let mut issues = Vec::new();
-        let mut target: Option<fp_raster::IRect> = None;
-        for img in frames.iter() {
-            ctx.check_cancel()?;
-            let orig = img.bounds();
-            let r = fp_effects::apply_chain(img, std::slice::from_ref(&entry), &fx_ctx);
-            issues.extend(r.issues);
-            let b = if expand {
-                let ab = r.image.alpha_bounds();
-                if ab.is_empty() { orig } else { ab.union(&orig) }
-            } else {
-                orig
-            };
-            target = Some(target.map_or(b, |t| t.union(&b)));
-            results.push(r.image);
-        }
-        let Some(target) = target else {
-            return Ok(());
-        };
-        if (target.width() as u64) * (target.height() as u64) > fp_raster::MAX_PIXELS as u64 {
-            return Err(crate::steps::geometry::too_large(
-                target.width() as i64,
-                target.height() as i64,
-            ));
-        }
-        for (img, r) in frames.iter_mut().zip(results) {
-            **img = r
-                .copy_rect(target)
-                .map_err(|e| BatchError::Invalid(e.to_string()))?;
-        }
-        drop(frames);
-        if !issues.is_empty() {
-            ctx.warn(fp_i18n::tr!(
-                "batch-warn-effect-unsupported",
-                effect = name.to_string()
-            ));
-        }
-        finish(item);
-        refresh_transparency(item);
-        Ok(())
+        let effect = fp_effects::LiveEffect::parse(moa, &ep);
+        apply_live_effect(item, effect, params, ctx, name)
     }
     fn summary(&self, p: &Value) -> String {
         fp_i18n::t(&format!(
@@ -929,6 +886,72 @@ impl Step for EffectLive {
             p_str(p, "effect", "dropShadow")
         ))
     }
+}
+
+/// Runs one live effect on every frame of a pixel item (`effect.live`, `effect.stroke`): the
+/// preview proxy scales the pixel values, all frames get common bounds, `expandCanvas` grows the
+/// image to the effect.
+fn apply_live_effect(
+    item: &mut Item,
+    mut effect: fp_effects::LiveEffect,
+    params: &Value,
+    ctx: &mut StepContext,
+    name: &str,
+) -> Result<()> {
+    // Vorschau auf dem Proxy: Pixelangaben des Effekts mitverkleinern (BATCH-11a, Befund BATCH-4)
+    let scale = preview_scale(item, ctx);
+    if scale < 1.0 {
+        scale_live_effect(&mut effect, scale);
+    }
+    let entry = fp_effects::EffectEntry {
+        effect,
+        visible: true,
+    };
+    let fx_ctx = fp_effects::EffectContext::default();
+    let expand = p_bool(params, "expandCanvas", true);
+    let mut frames = frames_mut(item)?;
+    // erst alle Frames rechnen, dann gemeinsame Grenzen (Animation: alle Frames gleich groß)
+    let mut results = Vec::with_capacity(frames.len());
+    let mut issues = Vec::new();
+    let mut target: Option<fp_raster::IRect> = None;
+    for img in frames.iter() {
+        ctx.check_cancel()?;
+        let orig = img.bounds();
+        let r = fp_effects::apply_chain(img, std::slice::from_ref(&entry), &fx_ctx);
+        issues.extend(r.issues);
+        let b = if expand {
+            let ab = r.image.alpha_bounds();
+            if ab.is_empty() { orig } else { ab.union(&orig) }
+        } else {
+            orig
+        };
+        target = Some(target.map_or(b, |t| t.union(&b)));
+        results.push(r.image);
+    }
+    let Some(target) = target else {
+        return Ok(());
+    };
+    if (target.width() as u64) * (target.height() as u64) > fp_raster::MAX_PIXELS as u64 {
+        return Err(crate::steps::geometry::too_large(
+            target.width() as i64,
+            target.height() as i64,
+        ));
+    }
+    for (img, r) in frames.iter_mut().zip(results) {
+        **img = r
+            .copy_rect(target)
+            .map_err(|e| BatchError::Invalid(e.to_string()))?;
+    }
+    drop(frames);
+    if !issues.is_empty() {
+        ctx.warn(fp_i18n::tr!(
+            "batch-warn-effect-unsupported",
+            effect = name.to_string()
+        ));
+    }
+    finish(item);
+    refresh_transparency(item);
+    Ok(())
 }
 
 // =================================================================== filter.screentone
@@ -993,5 +1016,70 @@ impl Step for FilterScreentone {
         finish(item);
         refresh_transparency(item);
         Ok(())
+    }
+}
+
+// =================================================================== effect.stroke
+
+/// `effect.stroke`: the PSD-style Stroke live effect (F138) on the pixels of every image, with the
+/// parameters of its dialog (size, position, blend mode, opacity, colour).
+struct EffectStroke;
+
+/// Stroke parameters of an `effect.stroke` step.
+pub fn stroke_params(p: &Value) -> fp_effects::StrokeParams {
+    let d = fp_effects::StrokeParams::default();
+    let (lo, hi) = fp_effects::StrokeParams::SIZE_RANGE;
+    let c = p_color(p, "color", [255, 0, 0, 255]);
+    let mode = p_str(p, "blendMode", "normal");
+    fp_effects::StrokeParams {
+        size: p_f64(p, "size", d.size).clamp(lo, hi),
+        position: fp_effects::StrokePosition::from_name(p_str(p, "position", "outside"))
+            .unwrap_or_default(),
+        mode: if fp_effects::photoshop::STROKE_BLEND_MODES.contains(&mode) {
+            mode.to_string()
+        } else {
+            d.mode.clone()
+        },
+        opacity: p_f64(p, "opacity", d.opacity).clamp(0.0, 100.0),
+        color: [c[0], c[1], c[2]],
+        ..d
+    }
+}
+
+impl Step for EffectStroke {
+    fn id(&self) -> &str {
+        EFFECT_STROKE
+    }
+    fn group(&self) -> StepGroup {
+        StepGroup::Color
+    }
+    fn params(&self) -> Vec<ParamDef> {
+        vec![
+            ParamDef::int("size", 1, 250, 3).unit("px").beginner(),
+            ParamDef::choice("position", &fp_effects::StrokePosition::NAMES, "outside").beginner(),
+            ParamDef::choice(
+                "blendMode",
+                &fp_effects::photoshop::STROKE_BLEND_MODES,
+                "normal",
+            ),
+            ParamDef::int("opacity", 0, 100, 100).unit("%"),
+            ParamDef::color("color", "#ff0000").beginner(),
+            ParamDef::bool("expandCanvas", true),
+        ]
+    }
+    fn applies_to(&self) -> &[ItemKind] {
+        &ItemKind::PIXELS
+    }
+    fn apply(&self, item: &mut Item, params: &Value, ctx: &mut StepContext) -> Result<()> {
+        let mut ep = fp_raster::filters::EffectParams::new();
+        ep.insert(
+            "stroke".into(),
+            ParamValue::Text(stroke_params(params).to_record()),
+        );
+        let moa = fp_model::EffectKind::PhotoshopLive
+            .moa_id()
+            .unwrap_or_default();
+        let effect = fp_effects::LiveEffect::parse(moa, &ep);
+        apply_live_effect(item, effect, params, ctx, EFFECT_STROKE)
     }
 }

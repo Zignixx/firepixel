@@ -499,3 +499,27 @@ batch-param-filter-screentone-keepColor = Keep image color
     .tooltip = The dots keep the color of the image instead of the ink color.
 batch-param-filter-screentone-antiAlias = Anti-alias
     .tooltip = Smooth dot edges with intermediate tones. Off: hard dots of only ink and transparency.
+
+## PSD-style Stroke live effect (F138)
+batch-step-effect-stroke = Stroke
+    .description = Draws a stroke around the opaque part of every image (outside, inside or centred on its edge) and flattens it.
+batch-param-effect-stroke-size = Size
+    .tooltip = Width of the stroke in pixels.
+batch-param-effect-stroke-position = Position
+batch-value-effect-stroke-position-outside = Outside
+batch-value-effect-stroke-position-inside = Inside
+batch-value-effect-stroke-position-center = Center
+batch-param-effect-stroke-blendMode = Blending mode
+batch-value-effect-stroke-blendMode-normal = Normal
+batch-value-effect-stroke-blendMode-multiply = Multiply
+batch-value-effect-stroke-blendMode-screen = Screen
+batch-value-effect-stroke-blendMode-overlay = Overlay
+batch-value-effect-stroke-blendMode-darken = Darken
+batch-value-effect-stroke-blendMode-lighten = Lighten
+batch-value-effect-stroke-blendMode-colorBurn = Color Burn
+batch-value-effect-stroke-blendMode-colorDodge = Color Dodge
+batch-value-effect-stroke-blendMode-linearDodge = Linear Dodge
+batch-value-effect-stroke-blendMode-softLight = Soft Light
+batch-param-effect-stroke-opacity = Opacity
+batch-param-effect-stroke-color = Color
+batch-param-effect-stroke-expandCanvas = Expand canvas
