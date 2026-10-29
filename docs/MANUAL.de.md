@@ -411,7 +411,8 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   *Maske deaktivieren* schaltet die Maske ab; der Menüeintrag heißt dann *Maske aktivieren*, und die
   Maskenminiatur zeigt ein rotes X. *Maske löschen* fragt zuerst: *Anwenden* (Vorgabe) backt die Maske in
   das Objekt, das dabei zu einer Bitmap wird; *Verwerfen* entfernt die Maske und behält das Objekt;
-  *Abbrechen* tut nichts. *Gruppierung aufheben* ergibt das Maskenobjekt über dem Inhalt, beide gewählt.
+  *Abbrechen* tut nichts. *Gruppierung aufheben* ergibt das Maskenobjekt über dem Inhalt (eine Maskengruppe bleibt als
+  normale Gruppe), beide gewählt.
   Firepixel-Erweiterungen über das Original hinaus: Ist eine **Gruppenmaske** gewählt, wählt ein weiterer
   Klick mit der Maskenelement-Auswahl oder der Teilauswahl (oder ein Doppelklick mit dem Zeiger) das Kind unter dem Zeiger, sodass sich
   seine Punkte einzeln bearbeiten lassen und die Maske folgt; der Masken-Inspektor hat ein Kästchen
@@ -465,11 +466,22 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   kein Kontrollkästchen dafür; die Quickinfo von *Alphakanal* sagt das. Wer mit der Transparenz der Bitmap
   maskieren will, ohne Unterlage, nimmt *Als Maske gruppieren* oder *Als Maske einfügen* und wählt danach
   *Alphakanal*; auch der Wechsel einer vorhandenen Maske zu *Graustufen* nimmt sie weg (der Maskenwert folgt
-  dann der Helligkeit); Skripte schalten sie mit `setElementMaskShowAttrs(false)` ab. Das Feld *Deckkraft*
-  oben im Ebenen-Bedienfeld wirkt auf das gewählte Objekt: Bei gewählter Maske ist es die Deckkraft des
-  Maskenobjekts selbst, die nur bestimmt, wie stark *Invertieren* ausblendet; Maskierung und Unterlage
-  behalten ihre Stärke (das sagt seine Quickinfo). Bei gewähltem maskierten Objekt blenden die
-  Deckkraft-Felder den Inhalt aus, die Unterlage scheint dann stärker durch.
+  dann der Helligkeit); Skripte schalten sie mit `setElementMaskShowAttrs(false)` ab.
+- **Deckkraft und Mischmodus bei Masken.** Wie im Original zählen Deckkraft und Mischmodus des
+  Maskenobjekts selbst (auch die aus der Zeit vor dem Maskieren) nie, werden nicht angezeigt und kommen
+  beim *Gruppierung aufheben* unverändert zurück. Es zählt das **maskierte Element**: Bei einem Inhalt ist
+  es der Inhalt selbst (es entsteht keine Gruppe), seine Deckkraft und sein Mischmodus wirken auf das ganze
+  maskierte Ergebnis samt sichtbarer Maskenfüllung gegen den Hintergrund; bei mehreren Inhalten ist es eine
+  neue Gruppe mit 100 % / Normal (oder die vorhandene Gruppe, die maskiert wurde, mit ihren Werten). Eine
+  solche Maskengruppe wird für sich gezeichnet: Die Kinder behalten ihre Deckkraft, ihre Mischmodi wirken
+  darin aber wie Normal; Deckkraft und Mischmodus der Gruppe wirken dann gegen den Hintergrund. Eine
+  normale Gruppe ohne Maske reicht die Mischmodi ihrer Kinder weiter an das Darunterliegende durch. Bei
+  gewählter Maske (Maskenminiatur oder *Maske bearbeiten*) zeigen und ändern die Felder *Deckkraft* und
+  *Mischmodus* im Ebenen-Bedienfeld und in den Eigenschaften das maskierte Element (das sagt die
+  Quickinfo), bei gewähltem Kind einer Maskengruppe dessen eigene Werte. *Gruppierung aufheben* legt das
+  Maskenobjekt mit seinen alten Werten wieder oben hin; ein einzelner Inhalt behält seine Werte (auch die
+  während der Maskierung geänderten); eine Maskengruppe wird zu einer normalen Gruppe mit ihren Werten, ein
+  zweites *Gruppierung aufheben* löst sie auf.
 - *Auswählen ▸ Auswahl umkehren* kehrt nur eine Pixelauswahl um; ohne sie erscheint eine Warnung, und
   die gewählten Objekte bleiben unverändert.
 - *Text ▸ Größe ▸ Größer / Kleiner* ändern die Größe um genau 1 pt (24 → 25 → 24), bei gewählten Texten

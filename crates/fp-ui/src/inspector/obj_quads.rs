@@ -1946,46 +1946,21 @@ pub fn saved_brushes(st: &AppState) -> Vec<String> {
 /// Teilfeld „Deckkraft und Mischmodus“ der Auswahl.
 pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
     let theme = Theme::current(ui.ctx());
-    // maskiertes Einzelbild: Werte des Bildes, nicht der Maskengruppe (re 29b §2, BA-006); die
-    // Befehle schreiben ebenso an den Inhalt
-    // a selected mask: opacity and blend mode belong to the masked element (RE spec 68 §6)
-    let owner = st
-        .session
-        .active()
-        .and_then(|ds| match ds.selection.elements.as_slice() {
-            [id] => fp_engine::docops::mask_owner(&ds.doc, ds.page, *id),
-            _ => None,
-        });
-    let target_ids = owner.as_ref().map(|o| vec![o.id.0]);
-    let sel: Vec<Arc<Element>> = owner
-        .map(|o| vec![o])
-        .unwrap_or_else(|| selection(st))
-        .into_iter()
-        .map(|e| e.masked_single().map(|(c, _)| Arc::clone(c)).unwrap_or(e))
-        .collect();
-    let with_ids = |mut v: Value| {
-        if let Some(ids) = &target_ids {
-            v["ids"] = json!(ids);
-        }
-        v
-    };
-    let f = sel.first().cloned();
-    let en = f.is_some();
-    // gemischte Werte (Mehrfachauswahl mit verschiedenen Werten) zeigen wie im Original ein leeres Feld
-    let mixed_op = sel
-        .windows(2)
-        .any(|w| w[0].common.opacity != w[1].common.opacity);
-    let mixed_bl = sel
-        .windows(2)
-        .any(|w| w[0].common.blend != w[1].common.blend);
-    let op = f
-        .as_ref()
-        .map(|e| (e.common.opacity.to_percent()).round())
+    // RE spec 75 §2.4 (re 29b §2, BA-006): the values of the masked element — for a selected mask
+    // (the mask thumbnail) the masked single element or mask group, never the mask object; a
+    // masked single element shows its content's values. The commands map the selection the same
+    // way (`docops::blend_target`)
+    let shown = st.session.active().and_then(|ds| {
+        fp_engine::docops::shown_opacity_blend(&ds.doc, ds.page, &ds.selection.elements)
+    });
+    let en = shown.is_some();
+    let mixed_op = shown.is_some_and(|v| v.0.is_none());
+    let mixed_bl = shown.is_some_and(|v| v.1.is_none());
+    let op = shown
+        .and_then(|v| v.0)
+        .map(|o| o.to_percent().round())
         .unwrap_or(100.0);
-    let bl = f
-        .as_ref()
-        .and_then(|e| blend_index(e.common.blend))
-        .unwrap_or(0);
+    let bl = shown.and_then(|v| v.1).and_then(blend_index).unwrap_or(0);
     super::glyphs::paint(
         ui.painter(),
         d.r(0.0, 1.0, 9.0, 11.0),
@@ -2001,7 +1976,7 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
         (en && !mixed_op).then_some(op),
         en,
     ) {
-        st.run("element.setOpacity", with_ids(json!({"opacity": v})));
+        st.run("element.setOpacity", json!({"opacity": v}));
     }
     // live preview of the dragged value on the canvas (FB-09, Firepixel enhancement)
     if en && let Some(v) = fields::slider_live(ui.ctx(), "pi-opacity") {
@@ -2019,10 +1994,7 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
     ) {
         let m = BLEND_ITEMS[i].1;
         if m >= 0 {
-            st.run(
-                "element.setBlendMode",
-                with_ids(json!({"mode": m.to_string()})),
-            );
+            st.run("element.setBlendMode", json!({"mode": m.to_string()}));
         }
     }
     fields::tip(

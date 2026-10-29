@@ -378,7 +378,8 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   *Disable Mask* turns the mask off; the menu entry then reads *Enable Mask* and the mask thumbnail
   shows a red X. *Delete Mask* asks first: *Apply* (the default) bakes the mask into the object, which
   becomes one bitmap; *Discard* removes the mask and keeps the object; *Cancel* does nothing.
-  *Ungroup* gives the mask object on top of the content, both selected.
+  *Ungroup* gives the mask object on top of the content (a mask group stays as a normal group), both
+  selected.
   Firepixel extensions beyond the original: with a **group mask** selected, a further click with the
   Mask Element Selection or the Subselection (or a Pointer double-click) selects the child under the pointer, so its anchors can be edited
   one by one and the mask follows; the mask inspector has an **Invert** checkbox (vector and bitmap
@@ -426,10 +427,20 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   tooltip of *Alpha channel* says so. To mask by the bitmap's transparency without the underlay, use
   *Group as Mask* or *Paste as Mask* and then pick *Alpha channel*; switching an existing mask to
   *Grayscale* also drops it (the mask value then follows the brightness); scripts can turn it off with
-  `setElementMaskShowAttrs(false)`. The *Opacity* field at the top of the Layers panel acts on the
-  selected object: with the mask selected it is the mask object's own opacity, which only sets how
-  strongly *Invert* hides; the masking and the underlay keep their strength (its tooltip says so). With
-  the masked object selected, the opacity fields fade the content, so the underlay shows through more.
+  `setElementMaskShowAttrs(false)`.
+- **Opacity and blend mode of masks.** As in the original, the mask object's own opacity and blend mode
+  (also those it had before it became a mask) never count, are not shown and come back unchanged on
+  *Ungroup*. What counts is the **masked element**: with one content it is the content itself (no group
+  is made), and its opacity and blend mode apply to the whole masked result, the visible mask fill
+  included, against the background; with several contents it is a new group at 100 % / Normal (or the
+  existing group that was masked, with its values). Such a mask group is drawn on its own: the children
+  keep their opacity, but their blend modes act like Normal inside it; the group's opacity and blend mode
+  then apply against the background. A plain group without a mask still passes its children's blend
+  modes through to what lies below. With the mask selected (mask thumbnail or *Edit Mask*) the *Opacity*
+  and *Blend mode* fields of the Layers panel and the Properties show and change the masked element (its
+  tooltip says so), with a child of a mask group selected its own values. *Ungroup* puts the mask object
+  back on top with its old values; a single content keeps its values (also those changed while it was
+  masked); a mask group becomes a normal group with its values, and a second *Ungroup* dissolves it.
 - *Select ▸ Select Inverse* inverts a pixel selection only; without one it shows a warning and leaves
   the selected objects alone.
 - *Text ▸ Size ▸ Larger / Smaller* change the size by exactly 1 pt (24 → 25 → 24), on selected texts

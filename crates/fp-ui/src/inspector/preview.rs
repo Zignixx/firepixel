@@ -31,8 +31,8 @@
 use crate::app_state::AppState;
 use fp_color::Argb;
 use fp_engine::DocId;
-use fp_model::element::ElementKind;
-use fp_model::{Document, Element, ElementId};
+
+use fp_model::{Document, ElementId};
 use std::cell::RefCell;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -85,11 +85,19 @@ impl InspectorPreview {
         if d.selection.elements.is_empty() {
             return None;
         }
+        // the opacity preview acts where `element.setOpacity` acts (RE spec 75 §2.4: a selected
+        // mask previews on the masked element)
+        let ids = match value {
+            PreviewValue::Opacity(_) => {
+                fp_engine::docops::blend_targets(&d.doc, d.page, &d.selection.elements)
+            }
+            _ => d.selection.elements.clone(),
+        };
         Some(InspectorPreview {
             doc: d.id,
             generation: d.generation,
             page: d.page,
-            ids: d.selection.elements.clone(),
+            ids,
             value,
         })
     }
@@ -133,7 +141,8 @@ impl InspectorPreview {
         for &id in &self.ids {
             let _ = fp_engine::docops::edit_by_id(&mut out, self.page, id, |e| match &self.value {
                 PreviewValue::Opacity(v) => {
-                    content_of(e).common.opacity = fp_color::Opacity::from_percent(*v);
+                    let o = fp_color::Opacity::from_percent(*v);
+                    fp_engine::docops::edit_opacity_blend(e, &|c| c.opacity = o);
                 }
                 PreviewValue::StrokeWidth(v) => {
                     fp_engine::docops::edit_path_attrs(e, &|a| {
@@ -205,18 +214,6 @@ impl InspectorPreview {
         }
         out
     }
-}
-
-/// Like the engine's opacity target: a single masked image gets the value on its content.
-fn content_of(e: &mut Element) -> &mut Element {
-    if e.masked_single().is_none() || !matches!(e.kind, ElementKind::Group(_)) {
-        return e;
-    }
-    e.cache = None;
-    let ElementKind::Group(g) = &mut e.kind else {
-        unreachable!("masked_single is a group")
-    };
-    Element::edit(&mut g.children[0])
 }
 
 /// The document to render for `doc` (id `id`, generation `generation`): the preview copy while a

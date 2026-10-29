@@ -1075,7 +1075,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             )
             .run(|s, p| {
                 let o = Opacity::from_percent(p.f64("opacity")?);
-                common_edit(s, p, move |e| content_of(e).common.opacity = o)
+                blend_edit(s, p, move |c| c.opacity = o)
             }),
     );
     r.add(
@@ -1097,7 +1097,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     name: p.command.clone(),
                     message: fp_i18n::tr!("err-unknown-blend", name = m.as_str()),
                 })?;
-            common_edit(s, p, move |e| content_of(e).common.blend = mode)
+            blend_edit(s, p, move |c| c.blend = mode)
         }),
     );
     r.add(
@@ -2527,22 +2527,24 @@ pub(super) fn register(r: &mut CommandRegistry) {
     }));
 }
 
-/// Ziel von Deckkraft/Mischmodus: bei einem maskierten Einzelbild ([`Element::masked_single`]) der
-/// **Inhalt**, nicht die umhüllende Maskengruppe (re 29b §2, BA-006: das Original zeigt und ändert
-/// die Werte des Bildes), sonst das Element selbst.
-fn content_of(e: &mut Element) -> &mut Element {
-    if e.masked_single().is_none() {
-        return e;
-    }
-    e.cache = None;
-    match &mut e.kind {
-        ElementKind::Group(g) => {
-            let c = Arc::make_mut(&mut g.children[0]);
-            c.cache = None;
-            c
+/// `element.setOpacity` / `element.setBlendMode` (RE spec 75 §2.1, §2.4): the targets are mapped
+/// with [`docops::blend_target`] (a selected mask changes the masked element, never the mask
+/// object) and changed with [`docops::edit_opacity_blend`].
+fn blend_edit(
+    s: &mut Session,
+    p: &Params,
+    f: impl Fn(&mut fp_model::CommonAttrs),
+) -> Result<CommandOutput> {
+    with_doc(s, |d| {
+        let page = d.page;
+        let ids = docops::blend_targets(&d.doc, page, &target_ids(d, p)?);
+        let doc = Arc::make_mut(&mut d.doc);
+        for id in ids {
+            docops::edit_by_id(doc, page, id, |e| docops::edit_opacity_blend(e, &f))
+                .ok_or(EngineError::ElementNotFound(id.0))?;
         }
-        _ => unreachable!("masked_single ist eine Gruppe"),
-    }
+        Ok(CommandOutput::doc())
+    })
 }
 
 fn common_edit(s: &mut Session, p: &Params, f: impl Fn(&mut Element)) -> Result<CommandOutput> {

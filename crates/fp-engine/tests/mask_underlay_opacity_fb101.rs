@@ -1,9 +1,9 @@
-//! FB-101 (TW-273, *RE spec* 68 §4.2 rules 2 and 5, *RE spec* 73): with a Paste-Inside bitmap mask
-//! (Alpha channel, "Show fill and stroke" on) selected, the only opacity field the UI offers is the
-//! Layers panel's *Opacity*, and it acts on the selected object, the mask bitmap itself
-//! (`element.setOpacity` on the selection). In the Alpha channel mode the mask value is the alpha of
-//! the mask pixels, so the masking stays; what fades is the underlay (the mask bitmap drawn under
-//! the content). The measured way to remove the underlay is the "Show fill and stroke" option
+//! FB-101 (TW-273, *RE spec* 68 §4.2 rules 2 and 5, *RE spec* 73), updated by TW-277 (*RE spec* 75
+//! §2.4, FB-126): with a Paste-Inside bitmap mask (Alpha channel, "Show fill and stroke" on)
+//! selected, the Layers panel's *Opacity* (`element.setOpacity` on the selection) acts on the
+//! masked element, never on the mask object; the masked element's opacity applies to the whole
+//! masked result including the underlay (*RE spec* 26 D2, *RE spec* 75 §2.5). The measured way to
+//! remove the underlay is the "Show fill and stroke" option
 //! (`modify.mask.options {showAttrs}`, script `setElementMaskShowAttrs`), which the reference's
 //! bitmap mask inspector does not offer (*RE spec* 68 §4.2 rule 2: only the mode radios).
 
@@ -93,22 +93,29 @@ fn mask_opacity_fades_neither_the_underlay_nor_the_masking() {
     for v in [50, 0] {
         ex(&mut s, "element.setOpacity", json!({"opacity": v}));
         assert_eq!(
-            el(&s, m).common.opacity.to_percent().round(),
+            el(&s, m).common.opacity.0,
+            255,
+            "{v}: the mask object's own opacity is not touched"
+        );
+        assert_eq!(
+            el(&s, g).placement().0.to_percent().round(),
             v as f64,
-            "the mask's own opacity"
+            "{v}: the masked element's opacity"
         );
         let p = fresh(&s);
-        assert!(
-            is(px(&p, 60, 50), [255, 0, 0]),
-            "{v}: the underlay keeps its strength"
-        );
-        assert!(is(px(&p, 40, 50), [0, 0, 255]), "{v}: the masking stays");
+        if v == 0 {
+            assert!(is(px(&p, 60, 50), [255, 255, 255]), "0: underlay gone too");
+            assert!(is(px(&p, 40, 50), [255, 255, 255]), "0: content gone");
+        } else {
+            assert!(is(px(&p, 60, 50), [255, 127, 127]), "50: the underlay fades");
+            assert!(is(px(&p, 40, 50), [127, 127, 255]), "50: the content fades");
+        }
         assert!(is(px(&p, 10, 50), [255, 255, 255]), "{v}: still masked out");
     }
 }
 
 #[test]
-fn masked_object_opacity_fades_the_content_over_the_underlay() {
+fn masked_object_opacity_fades_the_whole_masked_result() {
     let (mut s, g, _) = setup();
     let fresh = |s: &Session| {
         page(
@@ -119,11 +126,8 @@ fn masked_object_opacity_fades_the_content_over_the_underlay() {
     select(&mut s, &[g]);
     ex(&mut s, "element.setOpacity", json!({"opacity": 0}));
     let p = fresh(&s);
-    assert!(
-        is(px(&p, 40, 50), [255, 0, 0]),
-        "content gone, the underlay shows"
-    );
-    assert!(is(px(&p, 60, 50), [255, 0, 0]), "underlay stays");
+    assert!(is(px(&p, 40, 50), [255, 255, 255]), "content gone");
+    assert!(is(px(&p, 60, 50), [255, 255, 255]), "the underlay with it");
 }
 
 #[test]

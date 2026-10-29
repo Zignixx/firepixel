@@ -876,6 +876,23 @@ impl Element {
         g.mask.as_ref().map(|m| (child, m))
     }
 
+    /// Opacity and blend mode the element is put onto the backdrop with (RE spec 75 §2.3). A masked
+    /// single element ([`Element::masked_single`]) **is** its content: its opacity and blend mode
+    /// apply once to the whole masked result (content × mask, underlay and stroke of the mask)
+    /// against the backdrop, the content itself goes into the surface at 100 % / Normal. The
+    /// reference's files carry these values on the wrapping group and the same copy on the content
+    /// (RE spec 26); the group's values count, the content's only while the group has 100 % /
+    /// Normal (documents whose content alone was changed). The mask object's opacity and blend mode
+    /// never count. Any other element: its own values.
+    pub fn placement(&self) -> (crate::Opacity, crate::BlendMode) {
+        match self.masked_single() {
+            Some((c, _)) if self.common.opacity.0 == 255 && self.common.blend.0 == 0 => {
+                (c.common.opacity, c.common.blend)
+            }
+            _ => (self.common.opacity, self.common.blend),
+        }
+    }
+
     /// Maske als **Attribut des Elements** (re 31 §5.1/§5.2; im Original Zeiger an `CDbElement`+0x18,
     /// Flagbyte +0x2F). Im Speicher hält Firepixel die Maske weiter an einer Maskengruppe (Datei-
     /// Darstellung `GRPv{GRTi}`); diese Sicht liefert für jedes maskierte Element – Einzelelement

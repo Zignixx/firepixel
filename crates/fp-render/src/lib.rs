@@ -64,7 +64,7 @@ pub mod tiles;
 
 pub use cache::{CacheStats, Look, RenderCache};
 pub use compose::{
-    PixelOverride, RenderOutput, Renderer, find_bitmap, has_visible_effects, kind_tag,
+    PixelOverride, RenderOutput, Renderer, find_bitmap, has_visible_effects, kind_tag, placement,
 };
 pub use hit::{Hit, HitOptions};
 pub use nine::{AxisMap, PointMap, Stage};

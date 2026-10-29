@@ -105,7 +105,8 @@ fn masked_image_values_belong_to_the_image() {
     let (child, _) = g.masked_single().expect("bleibt Einzelbild");
     assert_eq!(child.common.opacity.to_percent().round(), 40.0, "Deckkraft am Bild");
     assert_eq!(Some(child.common.blend), fp_color::BlendMode::from_name("multiply"));
-    assert_eq!(g.common.opacity.to_percent().round(), 100.0, "Gruppe unverändert");
+    // RE spec 75 §2.1 / spec 26: the group carries the same copy, like the reference's files
+    assert_eq!(g.placement().0.to_percent().round(), 40.0, "the element's opacity");
     let d = s.active().expect("d");
     assert_eq!(fp_engine::docops::ids_info_bounds(&d.doc, d.page, &[g.id]), Some(Rect::new(300.0, 50.0, 450.0, 200.0)), "Bildgrenzen");
 }

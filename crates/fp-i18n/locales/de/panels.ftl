@@ -91,8 +91,8 @@ panel-states-delete = Status löschen
 ## Ebenen
 panel-layers-opacity = Deckkraft
 panel-layers-opacity-tip = Deckkraft der ausgewählten Objekte
-panel-layers-opacity-mask-name = Deckkraft der Maske
-panel-layers-opacity-tip-mask = Deckkraft des ausgewählten Maskenobjekts: bestimmt, wie stark „Invertieren“ ausblendet. Maskierung und Unterlage („Füllung und Pinselstrich anzeigen“) behalten ihre Stärke.
+panel-layers-opacity-mask-name = Deckkraft des maskierten Objekts
+panel-layers-opacity-tip-mask = Bei gewählter Maske zeigt und ändert das Feld die Deckkraft des maskierten Objekts (des einzelnen Inhalts bzw. der Maskengruppe), ebenso der Mischmodus. Die eigene Deckkraft und der eigene Mischmodus des Maskenobjekts zählen nicht und kommen beim Aufheben der Gruppierung zurück.
 panel-layers-web-layer = Webebene
 panel-layers-kind-bitmap = Bitmap
 panel-layers-kind-bitmap-mask = Bitmap-Maske

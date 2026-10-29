@@ -33,8 +33,8 @@ impl PageRenderer for FpRenderer {
                 continue;
             }
             let opt = fp_raster::CompositeOptions {
-                mode: e.common.blend,
-                opacity: e.common.opacity,
+                mode: fp_render::placement(e).1,
+                opacity: fp_render::placement(e).0,
                 ..fp_raster::CompositeOptions::default()
             };
             let base = match out {

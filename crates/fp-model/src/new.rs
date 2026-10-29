@@ -389,6 +389,17 @@ impl Element {
             g.mask = Some(mask);
             g.mask_flags.hide_attrs = true;
         }
+        // RE spec 75 §2.1: one content is the masked element itself; its opacity and blend mode
+        // are the element's, kept on the group like the reference's files do (a copy stays on the
+        // content). Several contents get a new group at 100 % / Normal. The mask object keeps its
+        // own values (they never count).
+        let single = e
+            .masked_single()
+            .map(|(c, _)| (c.common.opacity, c.common.blend));
+        if let Some((op, blend)) = single {
+            e.common.opacity = op;
+            e.common.blend = blend;
+        }
         e
     }
 

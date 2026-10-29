@@ -415,22 +415,14 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     let dl = Dl::at(head.min + vec2(2.0, 1.0));
     let en = first_sel.is_some();
     // both act on the selected objects (layers have no opacity or blend mode of their own); mixed
-    // values of several selected objects show a blank field (RE-29, re 61 §4)
-    let sel_elems: Vec<Arc<fp_model::Element>> = selected
-        .iter()
-        .filter_map(|id| fp_engine::docops::element_on_page(&doc, page, *id))
-        .collect();
-    let mixed_op = sel_elems
-        .windows(2)
-        .any(|w| w[0].common.opacity != w[1].common.opacity);
-    let mixed_bl = sel_elems
-        .windows(2)
-        .any(|w| w[0].common.blend != w[1].common.blend);
+    // values of several selected objects show a blank field (RE-29, re 61 §4). RE spec 75 §2.4: a
+    // selected mask shows and changes the masked element (single content or mask group), never
+    // the mask object; a masked single element shows its content's values
+    let shown = fp_engine::docops::shown_opacity_blend(&doc, page, &selected);
+    let mixed_op = shown.is_some_and(|v| v.0.is_none());
+    let mixed_bl = shown.is_some_and(|v| v.1.is_none());
     let names = blend_names();
-    let bl = first_sel
-        .as_ref()
-        .and_then(|e| blend_index(e.common.blend))
-        .unwrap_or(0);
+    let bl = shown.and_then(|v| v.1).and_then(blend_index).unwrap_or(0);
     if let Some(i) = fields::combo(
         ui,
         "layers-blend",
@@ -451,9 +443,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         &common::t("panel-layers-opacity"),
         true,
     );
-    let op = first_sel
-        .as_ref()
-        .map(|e| e.common.opacity.to_percent().round());
+    let op = shown.and_then(|v| v.0).map(|o| o.to_percent().round());
     // whole per cents at 2 px each like the reference's opacity pop-up (R-32, RE spec 61 §4.1)
     if let Some(v) = fields::opacity_number(
         ui,
@@ -465,9 +455,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     ) {
         st.run("element.setOpacity", json!({"opacity": v}));
     }
-    // FB-101: the field acts on the selected objects; with a mask selected on the mask object
-    // itself, whose opacity only sets how strongly Invert hides (the masking and the "Show fill
-    // and stroke" underlay keep their strength, RE spec 68 §4.2, compose rule of the underlay)
+    // FB-101, RE spec 75 §2.4 (FB-126, FB-127): with a mask selected the field acts on the masked
+    // element, the tooltip says so
     let one_mask = en
         && selected.len() == 1
         && fp_engine::docops::mask_owner(&doc, page, selected[0]).is_some();

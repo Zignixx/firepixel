@@ -125,8 +125,8 @@ pub fn render_elements_in(
     };
     for (p, e) in &parts {
         let opt = fp_raster::CompositeOptions {
-            mode: e.common.blend,
-            opacity: e.common.opacity,
+            mode: fp_render::placement(e).1,
+            opacity: fp_render::placement(e).0,
             ..fp_raster::CompositeOptions::default()
         };
         fp_raster::composite(&mut out, p, None, &opt);

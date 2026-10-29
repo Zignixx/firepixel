@@ -432,9 +432,38 @@ fn ungroup(d: &mut DocumentState, only_masks: bool) -> Result<Vec<ElementId>> {
         }
         let mut items: Vec<Arc<Element>> = Vec::new();
         if !only_masks && let Some(m) = &g.mask {
+            // RE spec 75 §2.2: the mask object comes back on top with its own, unchanged values
             items.push(Arc::clone(m));
         }
-        items.extend(g.children.iter().cloned());
+        if g.kind.is_mask() && e.masked_single().is_some() {
+            // the content of a masked single element keeps the element's values (also those
+            // changed while it was masked) and its effects
+            let mut c = (*g.children[0]).clone();
+            (c.common.opacity, c.common.blend) = e.placement();
+            if c.common
+                .effects
+                .as_ref()
+                .is_none_or(|l| l.effects.is_empty())
+            {
+                c.common.effects = e.common.effects.clone();
+            }
+            c.cache = None;
+            items.push(Arc::new(c));
+        } else if g.kind.is_mask() && !only_masks {
+            // a mask group becomes a normal group with its values; a second Ungroup dissolves it
+            let mut ng = (*e).clone();
+            if let ElementKind::Group(gg) = &mut ng.kind {
+                gg.kind = fp_model::GroupKind::Normal;
+                gg.mask = None;
+                gg.mask_flags = fp_model::MaskFlags::default();
+                gg.replacement = None;
+                gg.replacement_extra = Default::default();
+            }
+            ng.cache = None;
+            items.push(Arc::new(ng));
+        } else {
+            items.extend(g.children.iter().cloned());
+        }
         let Some(cur) = docops::find_on_page(doc, page, e.id) else {
             continue;
         };

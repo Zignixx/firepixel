@@ -122,6 +122,96 @@ pub fn mask_owner(doc: &Document, page: usize, id: ElementId) -> Option<Arc<Elem
     doc.element_at(&p).cloned()
 }
 
+/// RE spec 75 §2.4: the element whose opacity and blend mode the Layers panel and the Properties
+/// show and change for the selected `id`. A selected mask (the mask thumbnail) stands for the
+/// masked element: its owner (a masked single element or a mask group), never the mask object,
+/// whose own values stay unreachable. The content of a masked single element **is** that element
+/// (in the reference there is no group), so it stands for its owner too. Any other element
+/// (also a child of a mask group with several contents): itself.
+pub fn blend_target(doc: &Document, page: usize, id: ElementId) -> ElementId {
+    blend_targets(doc, page, &[id])
+        .first()
+        .copied()
+        .unwrap_or(id)
+}
+
+/// The element a found address `p` stands for in [`blend_target`] (the owner of a mask, the masked
+/// single element of its content, otherwise the element itself).
+fn blend_target_at(doc: &Document, mut p: ElementPath) -> Option<Arc<Element>> {
+    match p.steps.last() {
+        Some(PathStep::Mask) => {
+            p.steps.pop();
+        }
+        Some(PathStep::Child(0)) if p.steps.len() > 1 => {
+            let own = doc.element_at(&p).cloned();
+            p.steps.pop();
+            if !doc
+                .element_at(&p)
+                .is_some_and(|e| e.masked_single().is_some())
+            {
+                return own;
+            }
+        }
+        _ => {}
+    }
+    doc.element_at(&p).cloned()
+}
+
+/// The elements [`blend_target`] gives for `ids`, without duplicates (order kept); one pass over
+/// the page (PERF-1: thousands of selected objects).
+pub fn blend_target_elements(doc: &Document, page: usize, ids: &[ElementId]) -> Vec<Arc<Element>> {
+    let mut seen = std::collections::HashSet::new();
+    find_many_on_page(doc, page, ids)
+        .into_iter()
+        .flatten()
+        .filter_map(|p| blend_target_at(doc, p))
+        .filter(|e| seen.insert(e.id))
+        .collect()
+}
+
+/// [`blend_target`] for every id, without duplicates (order kept).
+pub fn blend_targets(doc: &Document, page: usize, ids: &[ElementId]) -> Vec<ElementId> {
+    blend_target_elements(doc, page, ids)
+        .iter()
+        .map(|e| e.id)
+        .collect()
+}
+
+/// The opacity and blend mode the Layers panel and the Properties show for the selection `ids`
+/// (RE spec 75 §2.4): those of the [`blend_targets`], as drawn (`Element::placement`); `None` for a
+/// value that differs between the targets (blank field), `None` overall for an empty selection.
+pub fn shown_opacity_blend(
+    doc: &Document,
+    page: usize,
+    ids: &[ElementId],
+) -> Option<(Option<fp_model::Opacity>, Option<fp_model::BlendMode>)> {
+    let vals: Vec<(fp_model::Opacity, fp_model::BlendMode)> = blend_target_elements(doc, page, ids)
+        .iter()
+        .map(|e| e.placement())
+        .collect();
+    let first = *vals.first()?;
+    let op = vals.iter().all(|v| v.0 == first.0).then_some(first.0);
+    let bl = vals.iter().all(|v| v.1 == first.1).then_some(first.1);
+    Some((op, bl))
+}
+
+/// Changes the opacity / blend mode of `e` with `f` (RE spec 75 §2.1). For a masked single element
+/// the values belong to the element: like the reference's files they are kept on the wrapping
+/// group **and** on its content (the renderer applies them once, `fp_render::placement`); the
+/// mask object is never touched.
+pub fn edit_opacity_blend(e: &mut Element, f: &dyn Fn(&mut fp_model::CommonAttrs)) {
+    e.cache = None;
+    f(&mut e.common);
+    if e.masked_single().is_some()
+        && let ElementKind::Group(g) = &mut e.kind
+        && let Some(c) = g.children.first_mut()
+    {
+        let c = Arc::make_mut(c);
+        c.cache = None;
+        f(&mut c.common);
+    }
+}
+
 pub fn element_on_page(doc: &Document, page: usize, id: ElementId) -> Option<Arc<Element>> {
     find_on_page(doc, page, id).and_then(|p| doc.element_at(&p).cloned())
 }

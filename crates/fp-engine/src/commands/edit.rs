@@ -40,14 +40,6 @@ pub(crate) fn masked_pixels(img: &RgbaImage, mask: &Mask) -> RgbaImage {
     out
 }
 
-/// Hat das Element eigene Effekte?
-fn has_own_effects(e: &Element) -> bool {
-    e.common
-        .effects
-        .as_ref()
-        .is_some_and(|l| !l.effects.is_empty())
-}
-
 /// Ergebnis von „Innen einfügen“ (re 26 §2.2, Hinweise für die Umsetzung): Das Ziel wird Maske
 /// (Pfadumriss, verknüpft, aktiv, Füllung und Pinselstrich anzeigen), der Inhalt der Zwischenablage
 /// wird maskiert und behält seine Lage.
@@ -80,30 +72,12 @@ pub(crate) fn paste_inside_result(
         }
         return g;
     }
-    let single = content.len() == 1
-        && !has_own_effects(&content[0])
-        && !matches!(&content[0].kind, ElementKind::Group(c) if c.kind.is_mask());
     let mut mask = (**target).clone();
     let fx = mask.common.effects.take();
-    let (mut opacity, mut blend) = (fp_model::Opacity(255), fp_model::BlendMode(0));
-    let content: Vec<Arc<Element>> = if single {
-        content
-            .into_iter()
-            .map(|c| {
-                let mut c = (*c).clone();
-                (opacity, blend) = (c.common.opacity, c.common.blend);
-                c.common.opacity = fp_model::Opacity(255);
-                c.common.blend = fp_model::BlendMode(0);
-                Arc::new(c)
-            })
-            .collect()
-    } else {
-        content
-    };
+    // RE spec 75 §2.1: one content keeps its values and they are the element's (the group gets
+    // the same copy in `new_mask_group`); several contents get a new group at 100 % / Normal
     let mut g = Element::new_mask_group(idg, Arc::new(mask), content, true);
     g.common.effects = fx;
-    g.common.opacity = opacity;
-    g.common.blend = blend;
     if let ElementKind::Group(gr) = &mut g.kind {
         // Flagbyte 0x17: Pfadumriss, verknüpft, aktiv, Füllung und Pinselstrich anzeigen (kein `MNAb`)
         gr.mask_flags.linked = true;

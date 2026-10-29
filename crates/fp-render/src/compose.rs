@@ -732,6 +732,22 @@ impl Renderer {
         st: &State,
         rep: &mut RenderReport,
     ) {
+        self.draw_element_as(doc, cv, e, depth, st, rep, Place::Own);
+    }
+
+    /// [`Renderer::draw_element`] with the element's opacity and blend mode replaced as `place`
+    /// says (children of a mask group, RE spec 75 §2.3).
+    #[allow(clippy::too_many_arguments)]
+    fn draw_element_as(
+        &self,
+        doc: &Document,
+        cv: &mut Canvas,
+        e: &Arc<Element>,
+        depth: u32,
+        st: &State,
+        rep: &mut RenderReport,
+        place: Place,
+    ) {
         if !e.common.visible {
             return;
         }
@@ -755,18 +771,21 @@ impl Renderer {
             _ => {}
         }
         if let Some(look) = self.look(doc, e, st, rep) {
+            let (own_op, own_blend) = match place {
+                Place::Own => placement(e),
+                Place::NormalBlend => (placement(e).0, BlendMode(0)),
+                Place::Neutral => (Opacity(255), BlendMode(0)),
+            };
             let op = match look.extra_opacity {
-                Some(x) => {
-                    Opacity(fp_color::round::mul255(x as u32, e.common.opacity.0 as u32) as u8)
-                }
-                None => e.common.opacity,
+                Some(x) => Opacity(fp_color::round::mul255(x as u32, own_op.0 as u32) as u8),
+                None => own_op,
             };
             // Mischmodi von Elementen in Symbolinstanzen wirken wie Normal (Korpus: Instanz-Caches
             // +185.000 exakte Pixel, Menu_Bar_07 15.984/15.984; A für die Ursache).
             let blend = if !st.symbols.is_empty() && !self.options.symbol_blend_modes {
                 BlendMode(0)
             } else {
-                e.common.blend
+                own_blend
             };
             cv.draw_look(&look.image, op, blend);
             rep.drawn += 1;
@@ -784,10 +803,14 @@ impl Renderer {
         if e.common.opacity.0 != 255 || e.common.blend.0 != 0 {
             return false;
         }
-        if e.cache.is_some() && self.cache_allowed(doc, e) {
+        // RE spec 75 §2.3 (`grp`): a plain group passes its children's blend modes through to the
+        // backdrop; its stored cache is an isolated look and cannot show that (measured: 47.200 of
+        // 60.000 pixels with the cache, all without)
+        let blends = g.children.iter().any(|c| c.common.blend.0 != 0);
+        if e.cache.is_some() && self.cache_allowed(doc, e) && !blends {
             return false;
         }
-        !self.options.isolate_groups || g.children.iter().any(|c| c.common.blend.0 != 0)
+        !self.options.isolate_groups || blends
     }
 
     fn cache_allowed(&self, doc: &Document, e: &Element) -> bool {
@@ -1324,9 +1347,38 @@ impl Renderer {
         st: &State,
         rep: &mut RenderReport,
     ) -> Option<RgbaImage> {
+        // RE spec 75 §2.3: a mask group is an isolated surface. A masked single element (one
+        // content) goes in at 100 % / Normal, its own opacity and blend mode apply to the whole
+        // masked result against the backdrop ([`placement`]); the children of a mask group with
+        // several contents keep their opacity but their blend modes are ignored (Normal). A plain
+        // group is drawn the same way here (its blend modes act inside its own surface).
+        // A masked plain group (`gam2b`: an existing group becomes the masked element) is such a
+        // mask group too: its children go in Normal, its values apply outside.
         let mut cv = Canvas::growable();
-        for c in g.children.iter().rev() {
-            self.draw_element(doc, &mut cv, c, 0, st, rep);
+        match e.masked_single().map(|(c, _)| c) {
+            Some(c)
+                if c.common.visible
+                    && matches!(&c.kind, ElementKind::Group(cg)
+                        if cg.kind == GroupKind::Normal && cg.smart_shape.is_none()) =>
+            {
+                if let ElementKind::Group(cg) = &c.kind {
+                    for k in cg.children.iter().rev() {
+                        self.draw_element_as(doc, &mut cv, k, 0, st, rep, Place::NormalBlend);
+                    }
+                }
+            }
+            single => {
+                let place = if !g.kind.is_mask() {
+                    Place::Own
+                } else if single.is_some() {
+                    Place::Neutral
+                } else {
+                    Place::NormalBlend
+                };
+                for c in g.children.iter().rev() {
+                    self.draw_element_as(doc, &mut cv, c, 0, st, rep, place);
+                }
+            }
         }
         let mut img = cv.img;
         let masked = g.kind.is_mask() && g.mask_flags.enabled;
@@ -1681,6 +1733,23 @@ fn outline_mask(p: &fp_model::PathElem, map: &PointMap, show: bool) -> Option<Rg
         }
     }
     fp_vector::render_path_layer(&vp).map(|l| l.image)
+}
+
+/// How a child is put into its parent's surface (RE spec 75 §2.3).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Place {
+    /// With its own opacity and blend mode ([`placement`]).
+    Own,
+    /// Child of a mask group with several contents: own opacity, blend mode Normal.
+    NormalBlend,
+    /// Content of a masked single element: 100 % / Normal (its values apply outside the mask).
+    Neutral,
+}
+
+/// Opacity and blend mode an element is put onto the backdrop with (RE spec 75 §2.3), see
+/// [`Element::placement`].
+pub fn placement(e: &Element) -> (Opacity, BlendMode) {
+    e.placement()
 }
 
 /// Firepixel extension (FB-35, RE spec 68 §6): strength of an inverted mask, `None` for a normal
