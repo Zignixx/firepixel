@@ -256,3 +256,132 @@ fn big_playback_gif_export() {
         assert_eq!(got, want, "{name}: frame delays");
     }
 }
+
+/// F146 (FB-129, TW-281): latency of the canvas during playback with the real render thread
+/// (`sync_render` off) and the other corpus file open in a second tab. The UI runs in real time
+/// (frames of 1/60 s, paced by the wall clock); for every switch of the state the time from the
+/// frame that made the state current (its due instant, within one frame) to the frame in which
+/// the canvas shows it. Prints the numbers, checks only that every switch reaches the canvas.
+#[test]
+#[ignore = "corpus: needs re/_testdateien/big_playback_0*.fw.png"]
+fn big_playback_canvas_latency() {
+    let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    fp_engine::shell::disable();
+    let (Some(p1), Some(p2)) = (corpus(FILES[0]), corpus(FILES[1])) else {
+        return;
+    };
+    for (play_path, other) in [(&p1, &p2), (&p2, &p1)] {
+        latency(play_path, other);
+    }
+}
+
+fn latency(path: &Path, other: &Path) {
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
+    let name = name.unwrap_or_default();
+    let mut s = fp_engine::Session::default();
+    s.execute("file.open", json!({"path": other}))
+        .expect("open other");
+    s.execute("file.open", json!({"path": path})).expect("open");
+    let dt = 1.0 / 60.0;
+    let ctx = egui::Context::default();
+    let mut app = FirepixelApp::with_session(
+        &ctx,
+        s,
+        UiSettings {
+            theme: ThemeKind::Normal,
+            ..UiSettings::default()
+        },
+        false,
+    );
+    app.state.sync_render = false;
+    app.state.os_clipboard = false;
+    let mut h = Harness::builder()
+        .with_size(vec2(1400.0, 900.0))
+        .with_pixels_per_point(1.0)
+        .with_max_steps(8)
+        .with_step_dt(dt as f32)
+        .build_ui_state(|ui, app: &mut FirepixelApp| app.root_ui(ui), app);
+    // first image of the current state on the canvas (real render thread)
+    let shown = |h: &Harness<'_, FirepixelApp>| {
+        let st = &h.state().state;
+        let d = st.session.active()?;
+        let k = st.canvases.get(&d.id)?.shown?;
+        Some((d.frame, k.frame))
+    };
+    let start = Instant::now();
+    loop {
+        h.run_steps(1);
+        std::thread::sleep(std::time::Duration::from_secs_f64(dt));
+        if shown(&h).is_some_and(|(a, b)| a == b) || start.elapsed().as_secs() > 60 {
+            break;
+        }
+    }
+    h.state_mut()
+        .state
+        .push(Action::Run("view.togglePlayback".into(), json!({})));
+    let st0 = states(&h.state().state.session);
+    let pass: f64 = st0
+        .iter()
+        .filter(|s| s.1)
+        .map(|s| s.0.max(1) as f64 / 100.0)
+        .sum();
+    let wall = Instant::now();
+    let mut next_frame = Instant::now();
+    // (state, wall time it became current, frames until it was on the canvas)
+    let mut pending: Option<(usize, Instant, usize)> = None;
+    let mut lat_ms = Vec::new();
+    let mut lat_frames = Vec::new();
+    let mut skipped = 0usize;
+    let mut last = shown(&h).map(|s| s.0);
+    while wall.elapsed().as_secs_f64() < 1.5 * pass + 0.5 {
+        next_frame += std::time::Duration::from_secs_f64(dt);
+        h.run_steps(1);
+        let Some((cur, on_canvas)) = shown(&h) else {
+            continue;
+        };
+        if let Some((s, t0, n)) = pending.as_mut() {
+            if on_canvas == *s {
+                lat_ms.push(t0.elapsed().as_secs_f64() * 1000.0);
+                lat_frames.push(*n);
+                pending = None;
+            } else {
+                *n += 1;
+            }
+        }
+        if last != Some(cur) {
+            if pending.is_some() {
+                // the next state became due before the previous one reached the canvas
+                skipped += 1;
+            }
+            last = Some(cur);
+            pending = (on_canvas != cur).then(|| (cur, Instant::now(), 1));
+            if on_canvas == cur {
+                lat_ms.push(0.0);
+                lat_frames.push(0);
+            }
+        }
+        let now = Instant::now();
+        if next_frame > now {
+            std::thread::sleep(next_frame - now);
+        }
+    }
+    h.state_mut()
+        .state
+        .push(Action::Run("view.togglePlayback".into(), json!({})));
+    h.run_steps(2);
+    let mut sorted = lat_ms.clone();
+    sorted.sort_by(f64::total_cmp);
+    let n = sorted.len().max(1);
+    let same_frame = lat_frames.iter().filter(|f| **f == 0).count();
+    eprintln!(
+        "{name} (other tab open): {} switches, shown in the due frame {same_frame}, \
+         latency ms median {:.1} p90 {:.1} max {:.1}, frames mean {:.2}, \
+         not on the canvas before the next switch {skipped}",
+        lat_ms.len(),
+        sorted.get(n / 2).copied().unwrap_or(0.0),
+        sorted.get(n * 9 / 10).copied().unwrap_or(0.0),
+        sorted.last().copied().unwrap_or(0.0),
+        lat_frames.iter().sum::<usize>() as f64 / n as f64,
+    );
+    assert!(!lat_ms.is_empty(), "{name}: switches reached the canvas");
+}

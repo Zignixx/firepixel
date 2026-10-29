@@ -120,6 +120,9 @@ pub struct AppState {
     pub status: Option<(String, f64)>,
     /// Synchron rendern (Tests, Bildschirmfotos).
     pub sync_render: bool,
+    /// F146: with `sync_render`, also pre-render the coming playback states (tests of the
+    /// prefetch; off by default so that synchronous tests render only what they show).
+    pub sync_prefetch: bool,
     /// Live preview of a pending inspector slider value on the canvas (FB-09/FB-10); reset at the
     /// start of every frame, set by the inspector while a slider holds a pending value.
     pub inspector_preview: Option<crate::inspector::preview::InspectorPreview>,
@@ -217,6 +220,7 @@ impl AppState {
             actions: Vec::new(),
             status: None,
             sync_render: false,
+            sync_prefetch: false,
             inspector_preview: None,
             theme_dirty: true,
             quit_confirmed: false,
@@ -319,6 +323,11 @@ impl AppState {
                     self.pane_canvases.retain(|k, _| k.0 != id);
                     self.cache_panes.remove(&id);
                 }
+                // F146 (FB-129): a state switch of the running playback renders nothing anew: the
+                // frame is part of the render key, the shown and the prefetched images stay valid
+                // (before, every switch rendered the new state twice)
+                SessionEvent::LocationChanged(doc)
+                    if self.session.ui.playing && self.playback.doc() == Some(doc) => {}
                 SessionEvent::DocumentChanged { doc, .. } | SessionEvent::LocationChanged(doc) => {
                     if let Some(c) = self.canvases.get_mut(&doc) {
                         c.invalidate();

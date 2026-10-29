@@ -940,6 +940,26 @@ pub(crate) fn pane_id(st: &AppState, base: Id) -> Id {
     }
 }
 
+/// F146 (FB-129): drops the pre-rendered playback states of every canvas whose document does not
+/// play (any more): their images are as large as the canvas image.
+pub fn drop_idle_prefetches(st: &mut AppState) {
+    let playing = st.session.ui.playing.then(|| st.playback.doc()).flatten();
+    let mut queued = false;
+    for (id, cc) in st.canvases.iter_mut() {
+        if Some(*id) != playing {
+            queued |= cc.clear_prefetch();
+        }
+    }
+    for ((id, _), cc) in st.pane_canvases.iter_mut() {
+        if Some(*id) != playing {
+            queued |= cc.clear_prefetch();
+        }
+    }
+    if queued {
+        st.worker.drop_prefetches();
+    }
+}
+
 fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     let theme = Theme::current(ui.ctx());
     let c = theme.colors.clone();
@@ -1243,25 +1263,48 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             .as_ref()
             .map_or(0, |lm| ghost::live_move_key(generation, page, lm)),
     );
+    // F146 (FB-129, TW-281): the states the running playback shows next (pre-rendered below)
+    let ahead = if st.session.ui.playing && st.playback.doc() == Some(id) {
+        crate::playback::states_ahead(st, frame, render::MAX_PREFETCH)
+    } else {
+        Vec::new()
+    };
+    let prefetch_doc = std::sync::Arc::clone(&docarc);
     let cc = st.canvases.entry(id).or_default();
     // Ergebnisse des Threads übernehmen
     let gamma = view.gamma_preview;
-    let fresh = |k: &RenderKey| {
+    let epoch = cc.epoch;
+    // the key fits the current view with state `f`
+    let fresh_at = |k: &RenderKey, f: usize| {
         k.doc == id
             && k.preview == preview
             && k.mask_edit == mask_edit
             && k.generation == generation
-            && k.epoch == cc.epoch
+            && k.epoch == epoch
             && k.page == page
-            && k.frame == frame
+            && k.frame == f
             && k.variant == variant
             && k.gamma == gamma
             && k.page_rect == pr
             && (k.zoom - zoom_dev).abs() < 1e-9
     };
+    let fresh = |k: &RenderKey| fresh_at(k, frame);
     let holds = |k: &RenderKey, r: IRect| fresh(k) && k.dev.intersect(&r) == r;
-    let covered = cc.shown.as_ref().is_some_and(|k| holds(k, visible_dev));
+    let mut covered = cc.shown.as_ref().is_some_and(|k| holds(k, visible_dev));
     let pending_ok = cc.requested.as_ref().is_some_and(|k| holds(k, visible_dev));
+    // F146: the state just became current and was pre-rendered: on screen in this frame
+    if !covered
+        && !pending_ok
+        && let Some(i) = cc
+            .prefetched
+            .iter()
+            .position(|r| r.key.pane == pane && holds(&r.key, visible_dev))
+    {
+        let res = cc.prefetched.remove(i);
+        cc.requested = Some(res.key);
+        render::show_result(ui.ctx(), cc, res);
+        covered = true;
+    }
     // Rand erst, wenn der sichtbare Teil steht (BA-098: nach dem Zoomen zuerst nur die sichtbaren
     // Kacheln hochladen); nachgefordert, sobald der Rand auf ein Viertel der Ansicht schrumpft
     let same_zoom = cc
@@ -1348,10 +1391,68 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 doc: docarc,
                 hidden: hidden.clone(),
                 layers: layers.clone(),
+                prefetch: None,
             },
             st.sync_render,
         ) {
             render::show_result(ui.ctx(), st.canvases.entry(id).or_default(), res);
+        }
+    }
+    // F146 (FB-129, TW-281): while the playback runs, the coming states are rendered ahead on the
+    // render thread with the key of the shown image (only the state differs), so that the state
+    // is on screen in the frame it becomes due instead of one render later. Stale ones (edit,
+    // zoom, scroll beyond the image, another state order, playback stopped) are dropped.
+    {
+        let token = st.worker.prefetch_token();
+        let cc = st.canvases.entry(id).or_default();
+        let wanted = |k: &RenderKey| {
+            k.pane == pane
+                && ahead.contains(&k.frame)
+                && fresh_at(k, k.frame)
+                && k.dev.intersect(&visible_dev) == visible_dev
+        };
+        cc.prefetched.retain(|r| wanted(&r.key));
+        // a queued job of the current token no longer wanted: skip it at the worker
+        let queued_stale = cc
+            .prefetching
+            .iter()
+            .any(|(k, t)| *t == token && !wanted(k));
+        cc.prefetching.retain(|(k, t)| *t == token && wanted(k));
+        if queued_stale {
+            st.worker.drop_prefetches();
+        }
+        let token = st.worker.prefetch_token();
+        let cc = st.canvases.entry(id).or_default();
+        cc.prefetching.retain(|(_, t)| *t == token);
+        let shown = cc.shown.filter(|_| covered && cc.requested == cc.shown);
+        if let Some(shown) = shown
+            && preview == 0
+            && (!st.sync_render || st.sync_prefetch)
+        {
+            for &f in &ahead {
+                let key = RenderKey { frame: f, ..shown };
+                if cc.prefetched.iter().any(|r| r.key == key) {
+                    // done: one more state ahead
+                    continue;
+                }
+                if cc.prefetching.iter().any(|(k, _)| *k == key)
+                    || cc.prefetched.len() + cc.prefetching.len() >= render::MAX_PREFETCH
+                {
+                    break;
+                }
+                let job = RenderJob {
+                    key,
+                    doc: std::sync::Arc::clone(&prefetch_doc),
+                    hidden: hidden.clone(),
+                    layers: layers.clone(),
+                    prefetch: Some(token),
+                };
+                match st.worker.request(job, st.sync_render) {
+                    Some(res) => cc.prefetched.push(res),
+                    None => cc.prefetching.push((key, token)),
+                }
+                break;
+            }
         }
     }
     // Seitenlage in ganzen Gerätepixeln, abgeleitet aus derselben Abtastregel wie die Textur

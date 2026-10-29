@@ -238,6 +238,14 @@ impl FirepixelApp {
                     .entry((res.key.doc, res.key.pane))
                     .or_default()
             };
+            if res.prefetch {
+                // F146: kept until its state is due (only while still wanted)
+                if let Some(i) = cc.prefetching.iter().position(|(k, _)| *k == res.key) {
+                    cc.prefetching.remove(i);
+                    cc.prefetched.push(res);
+                }
+                continue;
+            }
             if cc.requested.as_ref() == Some(&res.key) || cc.shown.is_none() {
                 canvas::render::show_result(&ctx, cc, res);
             }
@@ -283,6 +291,7 @@ impl FirepixelApp {
         crate::bridge::frame(&ctx, st);
         // FB-63: animation playback (advances the state after its delay)
         playback::frame(&ctx, st);
+        canvas::drop_idle_prefetches(st);
         // the selection the pop-up sliders of this frame start from (FB-46)
         inspector::preview::publish_target(&ctx, st);
         appbar::resize_edges(&ctx);

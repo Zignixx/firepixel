@@ -25,6 +25,13 @@ pub struct Playback {
     due: Option<f64>,
 }
 
+impl Playback {
+    /// Document the playback runs on (`None`: not started yet or stopped).
+    pub fn doc(&self) -> Option<DocId> {
+        self.doc
+    }
+}
+
 /// Delay of state `i` of the active document in seconds (stored per state in 1/100 s).
 fn delay_secs(st: &AppState, i: usize) -> f64 {
     let d = st
@@ -57,7 +64,7 @@ fn state_list(st: &AppState) -> Vec<Option<String>> {
 
 /// Which of the `n` states of the active document's page are part of the animation (shown when
 /// exporting, [`fp_model::FrameInfo::visible`]); states without stored properties count as included.
-fn included_states(st: &AppState, n: usize) -> Vec<bool> {
+pub(crate) fn included_states(st: &AppState, n: usize) -> Vec<bool> {
     let frames = st
         .session
         .active()
@@ -78,6 +85,26 @@ pub fn next_included_state(cur: usize, included: &[bool]) -> Option<usize> {
         return None;
     }
     (1..=n).map(|k| (cur + k) % n).find(|i| included[*i])
+}
+
+/// F146 (FB-129, TW-281): the next `count` states the playback of the active document shows
+/// after `cur`, in play order (excluded states skipped, no repeats); empty when nothing plays.
+/// The canvas pre-renders them so that a state is on screen in the frame it becomes due.
+pub(crate) fn states_ahead(st: &AppState, cur: usize, count: usize) -> Vec<usize> {
+    let n = st.session.active().map_or(0, |d| d.frame_count());
+    let included = included_states(st, n);
+    let mut out = Vec::new();
+    let mut at = cur;
+    while out.len() < count {
+        match next_included_state(at, &included) {
+            Some(i) if i != cur && !out.contains(&i) => {
+                out.push(i);
+                at = i;
+            }
+            _ => break,
+        }
+    }
+    out
 }
 
 /// Longest lag behind the schedule that playback catches up on (seconds); a longer hold-up (a slow

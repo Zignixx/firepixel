@@ -15,6 +15,7 @@ use fp_geom::IRect;
 use fp_model::{Document, Element};
 use fp_raster::RgbaImage;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 
 /// fp-render als Renderer der Sitzung (Pipette, Speichern mit flachem Bild).
@@ -261,12 +262,27 @@ pub struct CanvasCache {
     /// Genauer Dokument-Mittelpunkt beim letzten Ansichtswechsel (ohne die Pixel-Ausrichtung):
     /// mehrfaches Umschalten ohne Bewegung wandert so nicht um halbe Pixel weiter.
     pub switch_center: Option<(f64, f64)>,
+    /// F146 (FB-129): pre-rendered coming states of the playback (key = the shown image's key
+    /// with another `frame`), shown at once when their state becomes current; at most
+    /// [`MAX_PREFETCH`] together with `prefetching`, dropped when stale.
+    pub prefetched: Vec<RenderResult>,
+    /// F146: prefetch jobs on the way (key, worker token at the request).
+    pub prefetching: Vec<(RenderKey, u64)>,
 }
 
 impl CanvasCache {
     /// Inhalt hat sich geändert: neu rendern.
     pub fn invalidate(&mut self) {
         self.epoch = self.epoch.wrapping_add(1);
+    }
+
+    /// F146: drops the prefetched states and the requests on the way; true when a request was
+    /// on the way (the caller then drops it at the worker, [`RenderWorker::drop_prefetches`]).
+    pub fn clear_prefetch(&mut self) -> bool {
+        self.prefetched.clear();
+        let on_the_way = !self.prefetching.is_empty();
+        self.prefetching.clear();
+        on_the_way
     }
 }
 
@@ -379,6 +395,9 @@ pub struct RenderJob {
     pub hidden: Vec<super::stack::Atom>,
     /// Schichten über den Vorschauen (N34): je Schicht die auszublendenden Teile, `None` = leer.
     pub layers: Vec<Option<Vec<super::stack::Atom>>>,
+    /// F146 (FB-129): pre-render of a coming playback state, with the worker's prefetch token at
+    /// the request ([`RenderWorker::prefetch_token`]); `None` = a normal job.
+    pub prefetch: Option<u64>,
 }
 
 /// Ergebnis.
@@ -387,6 +406,37 @@ pub struct RenderResult {
     pub image: RgbaImage,
     /// Durchsichtige Schichten über den Vorschauen (gleicher Ausschnitt und Zoom wie `image`).
     pub layers: Vec<Option<RgbaImage>>,
+    /// F146: result of a prefetch job (kept in [`CanvasCache::prefetched`] until its state is due).
+    pub prefetch: bool,
+}
+
+/// F146 (FB-129): at most this many prefetched or requested states per canvas (each one an image
+/// of the size of the canvas image).
+pub const MAX_PREFETCH: usize = 2;
+
+/// F146: the order in which the render thread takes the queued jobs. Normal jobs first, only the
+/// newest one per pane of the split view (FB-97); then the prefetch jobs in request order, each
+/// key once. A prefetch job never replaces a normal job nor the other way round; prefetch jobs
+/// whose token is not `token` any more (dropped by the UI) are skipped.
+pub fn order_jobs(queue: Vec<RenderJob>, token: u64) -> Vec<RenderJob> {
+    let mut normal: Vec<RenderJob> = Vec::new();
+    let mut prefetch: Vec<RenderJob> = Vec::new();
+    for job in queue {
+        match job.prefetch {
+            None => {
+                normal.retain(|j| j.key.pane != job.key.pane);
+                normal.push(job);
+            }
+            Some(t) if t == token => {
+                if !prefetch.iter().any(|j| j.key == job.key) {
+                    prefetch.push(job);
+                }
+            }
+            Some(_) => {}
+        }
+    }
+    normal.extend(prefetch);
+    normal
 }
 
 /// Hintergrund-Thread für die Leinwand.
@@ -394,6 +444,9 @@ pub struct RenderWorker {
     tx: Option<Sender<RenderJob>>,
     rx: Option<Receiver<RenderResult>>,
     renderer: Arc<fp_render::Renderer>,
+    /// F146: prefetch jobs carry this token; [`RenderWorker::drop_prefetches`] changes it, the
+    /// thread then skips the queued ones.
+    token: Arc<AtomicU64>,
 }
 
 impl RenderWorker {
@@ -402,31 +455,42 @@ impl RenderWorker {
         let (job_tx, job_rx) = channel::<RenderJob>();
         let (res_tx, res_rx) = channel::<RenderResult>();
         let r = Arc::clone(&renderer);
+        let token = Arc::new(AtomicU64::new(1));
+        let tok = Arc::clone(&token);
         let spawned = std::thread::Builder::new()
             .name("fp-canvas-render".into())
             .spawn(move || {
-                'jobs: while let Ok(first) = job_rx.recv() {
-                    // nur der neueste Auftrag zählt – je Bereich der geteilten Ansicht (FB-97)
-                    let mut jobs = vec![first];
-                    while let Ok(newer) = job_rx.try_recv() {
-                        jobs.retain(|j| j.key.pane != newer.key.pane);
-                        jobs.push(newer);
+                // nur der neueste Auftrag zählt – je Bereich der geteilten Ansicht (FB-97); the
+                // queue is ordered again before every job, so a normal job arriving while
+                // prefetches wait goes first (F146, [`order_jobs`])
+                let mut queue: Vec<RenderJob> = Vec::new();
+                loop {
+                    if queue.is_empty() {
+                        match job_rx.recv() {
+                            Ok(j) => queue.push(j),
+                            Err(_) => break,
+                        }
                     }
-                    for job in jobs {
-                        let (image, layers) = render_job(&r, &job);
-                        if res_tx
-                            .send(RenderResult {
-                                key: job.key,
-                                image,
-                                layers,
-                            })
-                            .is_err()
-                        {
-                            break 'jobs;
-                        }
-                        if let Some(c) = &ctx {
-                            c.request_repaint();
-                        }
+                    queue.extend(job_rx.try_iter());
+                    queue = order_jobs(queue, tok.load(Ordering::Acquire));
+                    if queue.is_empty() {
+                        continue;
+                    }
+                    let job = queue.remove(0);
+                    let (image, layers) = render_job(&r, &job);
+                    if res_tx
+                        .send(RenderResult {
+                            key: job.key,
+                            image,
+                            layers,
+                            prefetch: job.prefetch.is_some(),
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                    if let Some(c) = &ctx {
+                        c.request_repaint();
                     }
                 }
             });
@@ -435,13 +499,26 @@ impl RenderWorker {
                 tx: Some(job_tx),
                 rx: Some(res_rx),
                 renderer,
+                token,
             },
             Err(_) => RenderWorker {
                 tx: None,
                 rx: None,
                 renderer,
+                token,
             },
         }
+    }
+
+    /// F146: token for new prefetch jobs ([`RenderJob::prefetch`]).
+    pub fn prefetch_token(&self) -> u64 {
+        self.token.load(Ordering::Acquire)
+    }
+
+    /// F146: the queued prefetch jobs are skipped (playback stopped, the view or the document
+    /// changed); requests made before keep their old token and count as gone.
+    pub fn drop_prefetches(&self) {
+        self.token.fetch_add(1, Ordering::AcqRel);
     }
 
     /// Auftrag senden; ohne Thread (oder `sync`) sofort rendern und das Ergebnis zurückgeben.
@@ -455,6 +532,7 @@ impl RenderWorker {
             key: job.key,
             image,
             layers,
+            prefetch: job.prefetch.is_some(),
         })
     }
 
@@ -783,6 +861,73 @@ mod tests {
         assert_eq!(changed_rect(&a, &b), Some((2, 5, 38, 16)));
         // andere Größe: ganzes Bild
         assert_eq!(changed_rect(&img(10, 10), &b), Some((0, 0, 40, 30)));
+    }
+
+    fn job(pane: u64, frame: usize, prefetch: Option<u64>) -> RenderJob {
+        RenderJob {
+            key: RenderKey {
+                doc: DocId(1),
+                generation: 1,
+                epoch: 0,
+                page: 0,
+                frame,
+                region: IRect::new(0, 0, 10, 10),
+                page_rect: IRect::new(0, 0, 10, 10),
+                dev: IRect::new(0, 0, 10, 10),
+                zoom: 1.0,
+                variant: 0,
+                gamma: false,
+                preview: 0,
+                mask_edit: 0,
+                pane,
+            },
+            doc: Arc::new(Document::new(10.0, 10.0, fp_color::Argb(0))),
+            hidden: Vec::new(),
+            layers: Vec::new(),
+            prefetch,
+        }
+    }
+
+    fn order(q: Vec<RenderJob>, token: u64) -> Vec<(u64, usize, bool)> {
+        order_jobs(q, token)
+            .iter()
+            .map(|j| (j.key.pane, j.key.frame, j.prefetch.is_some()))
+            .collect()
+    }
+
+    #[test]
+    fn worker_takes_normal_jobs_first_and_keeps_prefetches_f146() {
+        // prefetches queued before a normal job: the normal job goes first, nothing dropped
+        let q = vec![job(0, 1, Some(5)), job(0, 2, Some(5)), job(0, 0, None)];
+        assert_eq!(order(q, 5), [(0, 0, false), (0, 1, true), (0, 2, true)]);
+        // newest normal job per pane (FB-97); a prefetch neither replaces nor is replaced
+        let q = vec![
+            job(0, 0, None),
+            job(0, 1, Some(5)),
+            job(7, 0, None),
+            job(0, 3, None),
+        ];
+        assert_eq!(order(q, 5), [(7, 0, false), (0, 3, false), (0, 1, true)]);
+        // the same prefetch key once; stale tokens skipped
+        let q = vec![job(0, 1, Some(5)), job(0, 1, Some(5)), job(0, 2, Some(4))];
+        assert_eq!(order(q, 5), [(0, 1, true)]);
+        assert!(order(vec![job(0, 1, Some(4))], 5).is_empty());
+    }
+
+    #[test]
+    fn dropped_prefetches_get_a_new_token_f146() {
+        let w = RenderWorker::new(
+            Arc::new(fp_render::Renderer::new(fp_render::RenderOptions::default())),
+            None,
+        );
+        let t = w.prefetch_token();
+        w.drop_prefetches();
+        assert_ne!(w.prefetch_token(), t);
+        let mut cc = CanvasCache::default();
+        assert!(!cc.clear_prefetch(), "nothing on the way");
+        cc.prefetching.push((job(0, 1, None).key, t));
+        assert!(cc.clear_prefetch());
+        assert!(cc.prefetching.is_empty() && cc.prefetched.is_empty());
     }
 
     #[test]
