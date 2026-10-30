@@ -268,6 +268,16 @@ pub struct CanvasCache {
     pub prefetched: Vec<RenderResult>,
     /// F146: prefetch jobs on the way (key, worker token at the request).
     pub prefetching: Vec<(RenderKey, u64)>,
+    /// F147: when `requested` was sent to the render thread; a live move drag sends its next
+    /// step only once the previous one is back (one render in flight).
+    pub requested_at: Option<std::time::Instant>,
+    /// F147: live move steps in a row over the budget ([`LIVE_MOVE_BUDGET_MS`]).
+    pub live_slow: u8,
+    /// F147: the running move drag fell back to the sprite preview (PERF-3); cleared when the
+    /// drag ends.
+    pub live_fallback: bool,
+    /// F147: budget override (ms) for tests; `None` = [`LIVE_MOVE_BUDGET_MS`].
+    pub live_budget_ms: Option<f64>,
 }
 
 impl CanvasCache {
@@ -398,6 +408,10 @@ pub struct RenderJob {
     /// F146 (FB-129): pre-render of a coming playback state, with the worker's prefetch token at
     /// the request ([`RenderWorker::prefetch_token`]); `None` = a normal job.
     pub prefetch: Option<u64>,
+    /// F147 (FB-131 … FB-135): a live move drag step; the moved elements take the looks of their
+    /// sources shifted by the whole-pixel offset (`fp_render::MovedLooks`, no new effect chains).
+    /// `Some` also marks the job as a live move step for the budget ([`LIVE_MOVE_BUDGET_MS`]).
+    pub moved: Option<Arc<fp_render::MovedLooks>>,
 }
 
 /// Ergebnis.
@@ -408,7 +422,34 @@ pub struct RenderResult {
     pub layers: Vec<Option<RgbaImage>>,
     /// F146: result of a prefetch job (kept in [`CanvasCache::prefetched`] until its state is due).
     pub prefetch: bool,
+    /// F147: result of a live move drag step ([`RenderJob::moved`]).
+    pub live_move: bool,
+    /// F147: time the render took (ms).
+    pub render_ms: f64,
 }
+
+/// F147 (FB-131 … FB-135): budget of one live move drag step (render plus showing the result, ms).
+/// Two steps in a row over it switch the drag to the sprite preview of PERF-3 (BA-097) until the
+/// button is released ([`CanvasCache::live_fallback`]); RE spec 76 §5: the reference shows a step
+/// within one frame (< ~60 ms).
+pub const LIVE_MOVE_BUDGET_MS: f64 = 40.0;
+
+/// F147: the step budget of this build: [`LIVE_MOVE_BUDGET_MS`], 25 times that in a debug build
+/// (unoptimised renders are that much slower; tests run them).
+pub fn live_move_budget_ms() -> f64 {
+    if cfg!(debug_assertions) {
+        LIVE_MOVE_BUDGET_MS * 25.0
+    } else {
+        LIVE_MOVE_BUDGET_MS
+    }
+}
+
+/// F147: steps in a row over [`LIVE_MOVE_BUDGET_MS`] that switch to the sprite preview.
+pub const LIVE_MOVE_SLOW_STEPS: u8 = 2;
+
+/// F147: a job still on its way after this long (s) no longer holds back the next live move step
+/// (safety net; a job is always answered).
+pub const LIVE_MOVE_WAIT_MAX_S: f64 = 2.0;
 
 /// F146 (FB-129): at most this many prefetched or requested states per canvas (each one an image
 /// of the size of the canvas image).
@@ -477,6 +518,7 @@ impl RenderWorker {
                         continue;
                     }
                     let job = queue.remove(0);
+                    let t = std::time::Instant::now();
                     let (image, layers) = render_job(&r, &job);
                     if res_tx
                         .send(RenderResult {
@@ -484,6 +526,8 @@ impl RenderWorker {
                             image,
                             layers,
                             prefetch: job.prefetch.is_some(),
+                            live_move: job.moved.is_some(),
+                            render_ms: t.elapsed().as_secs_f64() * 1000.0,
                         })
                         .is_err()
                     {
@@ -527,12 +571,15 @@ impl RenderWorker {
             let _ = tx.send(job);
             return None;
         }
+        let t = std::time::Instant::now();
         let (image, layers) = render_job(&self.renderer, &job);
         Some(RenderResult {
             key: job.key,
             image,
             layers,
             prefetch: job.prefetch.is_some(),
+            live_move: job.moved.is_some(),
+            render_ms: t.elapsed().as_secs_f64() * 1000.0,
         })
     }
 
@@ -547,6 +594,13 @@ impl RenderWorker {
 
 /// Hintergrundbild und Schichten eines Auftrags.
 fn render_job(r: &fp_render::Renderer, job: &RenderJob) -> (RgbaImage, Vec<Option<RgbaImage>>) {
+    match &job.moved {
+        Some(m) => r.with_moved_looks(m, |r| render_job_now(r, job)),
+        None => render_job_now(r, job),
+    }
+}
+
+fn render_job_now(r: &fp_render::Renderer, job: &RenderJob) -> (RgbaImage, Vec<Option<RgbaImage>>) {
     let image = render_now(r, &job.doc, &job.key, &job.hidden, false);
     let layers = job
         .layers
@@ -647,6 +701,24 @@ pub fn to_color_image(img: &RgbaImage) -> egui::ColorImage {
 /// je Rollen oder Zoomen (BA-098). Darum wird nur hochgeladen, was neu ist: Kacheln, die schon zu
 /// sehen waren, bleiben stehen (Rollen) bzw. bekommen nur ihr geändertes Rechteck (Bearbeitung).
 pub fn show_result(ctx: &egui::Context, cc: &mut CanvasCache, res: RenderResult) {
+    let t = std::time::Instant::now();
+    let (live, render_ms) = (res.live_move, res.render_ms);
+    show_result_now(ctx, cc, res);
+    if live {
+        // F147: render plus showing (texture upload) against the step budget
+        let cost = render_ms + t.elapsed().as_secs_f64() * 1000.0;
+        if cost > cc.live_budget_ms.unwrap_or_else(live_move_budget_ms) {
+            cc.live_slow = cc.live_slow.saturating_add(1);
+            if cc.live_slow >= LIVE_MOVE_SLOW_STEPS {
+                cc.live_fallback = true;
+            }
+        } else {
+            cc.live_slow = 0;
+        }
+    }
+}
+
+fn show_result_now(ctx: &egui::Context, cc: &mut CanvasCache, res: RenderResult) {
     let k = res.key;
     let same_grid = cc.shown.is_some_and(|s| {
         s.doc == k.doc && s.page_rect == k.page_rect && (s.zoom - k.zoom).abs() < 1e-12
@@ -885,6 +957,7 @@ mod tests {
             hidden: Vec::new(),
             layers: Vec::new(),
             prefetch,
+            moved: None,
         }
     }
 

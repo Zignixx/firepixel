@@ -534,14 +534,40 @@ pub fn live_move_key(generation: u64, page: usize, lm: &LiveMove) -> u64 {
 }
 
 /// `doc` with the live move applied like `edit.move` on release (a copy; the session's
-/// document is not touched).
-pub fn apply_live_move(doc: &Arc<Document>, page: usize, lm: &LiveMove) -> Arc<Document> {
+/// document is not touched; only the moved elements and their parents are new allocations), and
+/// the moved elements paired with their sources (F147): at a whole-pixel offset the render takes
+/// their looks from the cached looks of the sources, shifted, so live effects are not computed
+/// again per drag step (`fp_render::MovedLooks`; empty for a fractional offset).
+pub fn apply_live_move(
+    doc: &Arc<Document>,
+    page: usize,
+    lm: &LiveMove,
+) -> (Arc<Document>, Arc<fp_render::MovedLooks>) {
     let mut out = (**doc).clone();
-    if fp_engine::commands::preview_move(&mut out, page, &lm.ids, (lm.dx, lm.dy), lm.copy) {
-        Arc::new(out)
-    } else {
-        Arc::clone(doc)
+    let pairs =
+        fp_engine::commands::preview_move_pairs(&mut out, page, &lm.ids, (lm.dx, lm.dy), lm.copy);
+    if pairs.is_empty() {
+        return (Arc::clone(doc), Arc::default());
     }
+    let whole = |v: f32| v.fract() == 0.0 && v.abs() < 1.0e7;
+    let looks = if whole(lm.dx) && whole(lm.dy) {
+        let (src, dst): (Vec<ElementId>, Vec<ElementId>) = pairs.into_iter().unzip();
+        let src = fp_engine::docops::find_many_on_page(doc, page, &src);
+        let dst = fp_engine::docops::find_many_on_page(&out, page, &dst);
+        let top: Vec<(Arc<Element>, Arc<Element>)> = src
+            .iter()
+            .zip(&dst)
+            .filter_map(|(s, d)| {
+                let s = doc.element_at(s.as_ref()?)?;
+                let d = out.element_at(d.as_ref()?)?;
+                Some((Arc::clone(d), Arc::clone(s)))
+            })
+            .collect();
+        fp_render::MovedLooks::new(&out, &top, (lm.dx as i32, lm.dy as i32))
+    } else {
+        fp_render::MovedLooks::default()
+    };
+    (Arc::new(out), Arc::new(looks))
 }
 
 /// Teil einer Vorschau (Dokumentpixel vor dem Ziehen), der im Sichtbereich `visible`

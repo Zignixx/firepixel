@@ -7,6 +7,10 @@
 //! Caches sich nicht geändert hat. Die Generation erhöht der Aufrufer bei Änderungen außerhalb
 //! eines Elements, die dessen Aussehen beeinflussen (Symboldefinition in verschachtelten
 //! Instanzen, Schriften, Voreinstellungen): [`RenderCache::bump_generation`].
+//!
+//! **Moved elements** (F147): while a render runs with [`crate::MovedLooks`], a moved element
+//! (new allocation) takes the look of its source element shifted by the whole-pixel offset
+//! ([`RenderCache::moved_source`], rule in [`crate::moved`]).
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -38,6 +42,9 @@ struct Entry {
     pixels: usize,
 }
 
+/// F147: (moved element, source element, offset in document pixels).
+type MovedEntry = (Arc<Element>, Arc<Element>, (i32, i32));
+
 /// Cache der Element-Ansichten (siehe Moduldoku).
 #[derive(Debug, Default)]
 pub struct RenderCache {
@@ -46,6 +53,9 @@ pub struct RenderCache {
     pixels: usize,
     hits: u64,
     misses: u64,
+    /// F147: moved element (pointer) → (moved element, source element, offset).
+    moved: HashMap<usize, MovedEntry>,
+    moved_hits: u64,
 }
 
 /// Kennzahlen des Caches.
@@ -56,6 +66,8 @@ pub struct CacheStats {
     pub generation: u64,
     pub hits: u64,
     pub misses: u64,
+    /// F147: looks of moved elements taken from their source (shifted, no new effect chain).
+    pub moved_hits: u64,
 }
 
 impl RenderCache {
@@ -87,7 +99,39 @@ impl RenderCache {
             generation: self.generation,
             hits: self.hits,
             misses: self.misses,
+            moved_hits: self.moved_hits,
         }
+    }
+
+    /// F147: from now on, the moved elements of `m` take the looks of their sources
+    /// ([`crate::moved`]); replaces earlier pairs.
+    pub fn set_moved(&mut self, m: &crate::MovedLooks) {
+        self.moved.clear();
+        for (moved, src) in &m.pairs {
+            self.moved.insert(
+                Arc::as_ptr(moved) as usize,
+                (Arc::clone(moved), Arc::clone(src), m.offset),
+            );
+        }
+    }
+
+    /// F147: drops the pairs of [`Self::set_moved`].
+    pub fn clear_moved(&mut self) {
+        self.moved.clear();
+    }
+
+    /// F147: the source element and offset whose look `e` shows, when `e` is a registered moved
+    /// element (same allocation); counted as a moved hit.
+    pub(crate) fn moved_source(&mut self, e: &Arc<Element>) -> Option<(Arc<Element>, (i32, i32))> {
+        if self.moved.is_empty() {
+            return None;
+        }
+        let (m, src, off) = self.moved.get(&(Arc::as_ptr(e) as usize))?;
+        if !Arc::ptr_eq(m, e) {
+            return None;
+        }
+        self.moved_hits += 1;
+        Some((Arc::clone(src), *off))
     }
 
     pub(crate) fn get(

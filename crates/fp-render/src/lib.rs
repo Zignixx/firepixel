@@ -15,6 +15,7 @@
 //! | [`convert`] | Adapter Modell → `fp-vector`/`fp-text`/`fp-effects`/`fp-raster` |
 //! | [`text_edge`] | Feather and Dither fill edges of text objects (the path edge filters on the text coverage) |
 //! | [`cache`] | Element-Cache mit Invalidierung über `Arc`-Zeiger und Änderungs-Generation |
+//! | [`moved`] | Looks of elements moved by whole pixels taken from their sources (live move drag, F147) |
 //! | [`hit`] | Treffertest (oberstes Element an einem Punkt) |
 //! | [`options`] | [`RenderOptions`], [`CachePolicy`], [`BackgroundMode`], [`RenderReport`] |
 //! | [`flatten`] | `fp_fwpng::Flattener` für `IDAT` und `prVW` |
@@ -57,6 +58,7 @@ pub mod compose;
 pub mod convert;
 pub mod flatten;
 pub mod hit;
+pub mod moved;
 pub mod nine;
 pub mod options;
 pub mod text_edge;
@@ -67,6 +69,7 @@ pub use compose::{
     PixelOverride, RenderOutput, Renderer, find_bitmap, has_visible_effects, kind_tag, placement,
 };
 pub use hit::{Hit, HitOptions};
+pub use moved::{MovedLooks, look_moves_along};
 pub use nine::{AxisMap, PointMap, Stage};
 pub use options::{BackgroundMode, CachePolicy, RenderOptions, RenderReport};
 pub use tiles::{TileCache, TileStats};

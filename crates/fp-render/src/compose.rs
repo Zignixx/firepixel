@@ -220,6 +220,18 @@ impl Renderer {
             .get_or_init(|| Arc::new(fp_text::FontDb::system()))
     }
 
+    /// F147: runs `f` (renders) with the moved elements of `m` taking the looks of their sources,
+    /// shifted by the whole-pixel offset ([`crate::moved`]); the pairs are dropped afterwards.
+    pub fn with_moved_looks<R>(&self, m: &crate::MovedLooks, f: impl FnOnce(&Self) -> R) -> R {
+        if m.is_empty() {
+            return f(self);
+        }
+        self.with_cache(|c| c.set_moved(m));
+        let out = f(self);
+        self.with_cache(|c| c.clear_moved());
+        out
+    }
+
     /// Zugriff auf den Element-Cache (Generation erhöhen, leeren, Kennzahlen).
     pub fn with_cache<R>(&self, f: impl FnOnce(&mut RenderCache) -> R) -> R {
         match self.cache.lock() {
@@ -855,6 +867,16 @@ impl Renderer {
         } else {
             self.options.cache_budget_pixels
         };
+        // F147: a moved element shows the look of its source, shifted by whole pixels
+        if budget > 0
+            && st.map.is_identity()
+            && let Some((src, (dx, dy))) = self.with_cache(|c| c.moved_source(e))
+        {
+            return self.look(doc, &src, st, rep).map(|l| Look {
+                image: Arc::new(l.image.translated(dx, dy)),
+                extra_opacity: l.extra_opacity,
+            });
+        }
         if budget > 0
             && let Some((look, r)) = self.with_cache(|c| c.get(e, frame, &st.map, symbol.as_ref()))
         {

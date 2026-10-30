@@ -35,7 +35,7 @@ mod tooling;
 pub mod trace;
 mod view;
 
-pub use edit::preview_move;
+pub use edit::{preview_move, preview_move_pairs};
 pub use export::PageSetup;
 pub use file::{load_document, save_document};
 pub use filters::{FILTERS, whole_numbers_as_ints};

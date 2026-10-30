@@ -342,6 +342,19 @@ fn insert_duplicates(
     els: &[(fp_model::traverse::ElementPath, Arc<Element>)],
     offset: (f32, f32),
 ) -> Vec<ElementId> {
+    insert_duplicate_pairs(doc, page, els, offset)
+        .into_iter()
+        .map(|(_, d)| d)
+        .collect()
+}
+
+/// [`insert_duplicates`] returning (original id, duplicate id) per inserted duplicate.
+fn insert_duplicate_pairs(
+    doc: &mut fp_model::Document,
+    page: usize,
+    els: &[(fp_model::traverse::ElementPath, Arc<Element>)],
+    offset: (f32, f32),
+) -> Vec<(ElementId, ElementId)> {
     let mut new_ids = Vec::new();
     // je Element direkt darüber einfügen, unten beginnen, damit Indizes gültig bleiben
     for (_, e) in els.iter().rev() {
@@ -353,7 +366,7 @@ fn insert_duplicates(
             && let Some((list, idx)) = docops::parent_list_mut(doc, &cur)
         {
             list.insert(idx, Arc::new(c));
-            new_ids.push(id);
+            new_ids.push((e.id, id));
         }
     }
     new_ids.reverse();
@@ -391,15 +404,40 @@ pub fn preview_move(
     (dx, dy): (f32, f32),
     copy: bool,
 ) -> bool {
+    !preview_move_pairs(doc, page, ids, (dx, dy), copy).is_empty()
+}
+
+/// [`preview_move`] returning what it changed as pairs (source id, moved id): with `copy` each
+/// original and its moved duplicate, otherwise each moved element twice. F147: the canvas takes
+/// the looks of the moved elements from their sources (`fp_render::MovedLooks`).
+pub fn preview_move_pairs(
+    doc: &mut fp_model::Document,
+    page: usize,
+    ids: &[ElementId],
+    (dx, dy): (f32, f32),
+    copy: bool,
+) -> Vec<(ElementId, ElementId)> {
     if copy {
         let els: Vec<_> = docops::paths_sorted(doc, page, ids)
             .into_iter()
             .filter(|p| !docops::is_locked(doc, page, p))
             .filter_map(|p| doc.element_at(&p).cloned().map(|e| (p, e)))
             .collect();
-        !insert_duplicates(doc, page, &els, (dx, dy)).is_empty()
+        insert_duplicate_pairs(doc, page, &els, (dx, dy))
     } else {
-        move_ids(doc, page, ids, dx, dy)
+        if dx == 0.0 && dy == 0.0 {
+            return Vec::new();
+        }
+        let paths = docops::find_many_on_page(doc, page, ids);
+        let mut out = Vec::new();
+        for (id, path) in ids.iter().zip(&paths) {
+            if let Some(p) = path
+                && docops::move_at(doc, p, dx, dy).is_some()
+            {
+                out.push((*id, *id));
+            }
+        }
+        out
     }
 }
 

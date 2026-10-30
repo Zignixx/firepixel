@@ -1114,9 +1114,30 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 .and_then(|d| ghost::live_pixels(&feedback, &d.doc, d.page))
         })
         .flatten();
+    // F147 (FB-131 … FB-135): a move drag whose steps stay over the budget falls back to the
+    // sprite preview for the rest of the drag (`render::LIVE_MOVE_BUDGET_MS`); a new drag starts
+    // on the live path again
+    let move_drag = feedback.iter().any(|o| {
+        matches!(
+            o,
+            Overlay::Ghost {
+                pixels: false,
+                moved_by: Some(_),
+                ..
+            }
+        )
+    });
+    let live_fallback = {
+        let cc = st.canvases.entry(id).or_default();
+        if !move_drag {
+            cc.live_fallback = false;
+            cc.live_slow = 0;
+        }
+        cc.live_fallback
+    };
     // F141 (RE spec 76 §7.1): a whole-object move drag renders the document with the objects
     // moved (normal composition, render-only copy), no sprite; huge selections keep the sprites
-    let live_mv = preview_drag
+    let live_mv = (preview_drag && !live_fallback)
         .then(|| {
             st.session
                 .active()
@@ -1337,7 +1358,17 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             .shown
             .as_ref()
             .is_some_and(|k| !holds(k, around(0.25)) && k.dev != cap(around(0.5)));
-    if !visible_dev.is_empty() && ((!covered && !pending_ok) || margin_due) {
+    // F147: one render in flight per pane during a live move drag: a new offset waits until the
+    // previous step is back (the pointer positions in between only replace the offset; no
+    // document copy and no job for them), so every step that is rendered is also shown
+    let now = std::time::Instant::now();
+    let live_wait = live_mv.is_some()
+        && cc.requested.is_some_and(|k| k.pane == pane)
+        && cc.requested != cc.shown
+        && cc
+            .requested_at
+            .is_some_and(|t| now.duration_since(t).as_secs_f64() < render::LIVE_MOVE_WAIT_MAX_S);
+    if !visible_dev.is_empty() && !live_wait && ((!covered && !pending_ok) || margin_due) {
         // a live move drag renders only the visible tiles per step (RE spec 76 §7.6); the margin
         // follows once the pointer rests (`margin_due`)
         let dev = cap(if (same_zoom && live_mv.is_none()) || margin_due {
@@ -1362,6 +1393,8 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             pane,
         };
         cc.requested = Some(key);
+        cc.requested_at = Some(now);
+        let mut moved = None;
         let docarc = if preview != 0 {
             let base = crate::inspector::preview::preview_doc(st, id, generation, page, &docarc)
                 .unwrap_or(docarc);
@@ -1379,7 +1412,11 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 _ => base,
             };
             match &live_mv {
-                Some(lm) => ghost::apply_live_move(&base, page, lm),
+                Some(lm) => {
+                    let (d, m) = ghost::apply_live_move(&base, page, lm);
+                    moved = Some(m);
+                    d
+                }
                 None => base,
             }
         } else {
@@ -1392,6 +1429,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 hidden: hidden.clone(),
                 layers: layers.clone(),
                 prefetch: None,
+                moved,
             },
             st.sync_render,
         ) {
@@ -1446,6 +1484,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                     hidden: hidden.clone(),
                     layers: layers.clone(),
                     prefetch: Some(token),
+                    moved: None,
                 };
                 match st.worker.request(job, st.sync_render) {
                     Some(res) => cc.prefetched.push(res),
@@ -3833,7 +3872,10 @@ fn preview_stack(
                 }
                 // F141: a whole-object move is drawn by the canvas image itself (objects moved in
                 // a render-only copy, normal composition): no sprite, nothing to linger
-                if !*pixels && preview_drag && ghost::live_move(feedback, &d.doc, page_i).is_some()
+                if !*pixels
+                    && preview_drag
+                    && !cc.live_fallback
+                    && ghost::live_move(feedback, &d.doc, page_i).is_some()
                 {
                     cc.ghosts.linger = None;
                     cc.ghosts.drag.clear();
