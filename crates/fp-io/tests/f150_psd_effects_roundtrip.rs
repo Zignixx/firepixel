@@ -6,7 +6,7 @@
 //! names empty, gradient names with `_`, no trailing comma).
 //!
 //! The current exporter writes only the stroke (`FrFX`, F138); the nine other effects follow with F149
-//! and are ignored until then ("needs F149").
+//! (F149 landed: the nine effects, the gradient/pattern stroke and all ten at once run).
 
 use std::sync::Arc;
 
@@ -223,61 +223,51 @@ fn round_trip_stroke() {
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_drop_shadow() {
     round_trip(&["dropShadow"]);
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_inner_shadow() {
     round_trip(&["innerShadow"]);
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_outer_glow() {
     round_trip(&["outerGlow"]);
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_inner_glow() {
     round_trip(&["innerGlow"]);
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_bevel_emboss() {
     round_trip(&["bevelEmboss"]);
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_satin() {
     round_trip(&["satin"]);
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_solid_fill() {
     round_trip(&["solidFill"]);
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_gradient_fill() {
     round_trip(&["gradientFill"]);
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_pattern_fill() {
     round_trip(&["patternFill"]);
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_stroke_gradient_and_pattern() {
     for (paint, sub) in [
         (
@@ -302,7 +292,6 @@ fn round_trip_stroke_gradient_and_pattern() {
 }
 
 #[test]
-#[ignore = "needs F149"]
 fn round_trip_all_ten_at_once() {
     let names: Vec<&str> = records().iter().map(|(n, _)| *n).collect();
     round_trip(&names);
