@@ -375,6 +375,7 @@ cmdtext-abstand-der-abdruecke-in-des-durchmessers = Spacing of the dabs in % of 
 cmdtext-intensitaet-belichtung-druck-in = Intensity/exposure/pressure in %
 cmdtext-farbe-ersetzen-in-farbe = Replace Color: change to
 cmdtext-verlauf-mit-dither = Gradient with dither
+cmdtext-web-dither-farben-zwei-oder-vier = Web Dither colors (two or four)
 cmdtext-kante-0-hart-1-anti-alias-2-weiche-kante = Edge: 0 hard, 1 anti-alias, 2 feather
 cmdtext-breite-der-weichen-kante = Feather width
 cmdtext-deckkraftstopps-position-ffffffaa = Opacity stops [[position, "#ffffffaa"], …]

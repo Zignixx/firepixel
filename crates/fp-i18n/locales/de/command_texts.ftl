@@ -375,6 +375,7 @@ cmdtext-abstand-der-abdruecke-in-des-durchmessers = Abstand der Abdrücke in % d
 cmdtext-intensitaet-belichtung-druck-in = Intensität/Belichtung/Druck in %
 cmdtext-farbe-ersetzen-in-farbe = Farbe ersetzen: In-Farbe
 cmdtext-verlauf-mit-dither = Verlauf mit Dither
+cmdtext-web-dither-farben-zwei-oder-vier = Web-Dither-Farben (zwei oder vier)
 cmdtext-kante-0-hart-1-anti-alias-2-weiche-kante = Kante: 0 hart, 1 Anti-Alias, 2 weiche Kante
 cmdtext-breite-der-weichen-kante = Breite der weichen Kante
 cmdtext-deckkraftstopps-position-ffffffaa = Deckkraftstopps [[Position, "#ffffffaa"], …]

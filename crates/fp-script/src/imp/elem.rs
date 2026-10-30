@@ -123,7 +123,10 @@ fn fill_json(f: &fp_model::Fill) -> Value {
         "fc_Folds" => "folds",
         "fc_ContourGradient" | "fc_ContourGrad" => "contour",
         "fc_Pattern" => "pattern",
-        "fc_WebDither" => "web dither",
+        "fc_WebDither" | "fc_Web Dither" => "web dither",
+        // by the shape id when the category is unknown (files, older Firepixel versions)
+        _ if f.shape == 16 => "web dither",
+        _ if f.shape == 15 => "pattern",
         _ => "solid",
     };
     // wie das Original: eine weiche Kante meldet „antialiased“ mit `feather` > 0 (PAR 18/11);

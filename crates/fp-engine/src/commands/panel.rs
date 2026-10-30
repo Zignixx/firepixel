@@ -3259,6 +3259,11 @@ pub fn register(r: &mut CommandRegistry) {
             .opt("textureTransparent", ParamKind::Bool, "transparente Textur")
             .opt("dither", ParamKind::Bool, "Verlauf mit Dither")
             .opt(
+                "ditherColors",
+                ParamKind::Json,
+                "Web-Dither-Farben (zwei oder vier)",
+            )
+            .opt(
                 "pattern",
                 ParamKind::String,
                 "Musterfüllung nach Name (Datei aus den Musterordnern)",
@@ -3326,6 +3331,20 @@ pub fn register(r: &mut CommandRegistry) {
                 let tex_amount = p.opt_i64("textureAmount")?.map(|v| v as i32);
                 let tex_tr = p.opt_bool("textureTransparent")?;
                 let dither = p.opt_bool("dither")?;
+                // Web Dither colours (TW-285): two colours = checkerboard [c1, c2 / c2, c1], four =
+                // FD1..FD4 (row by row); other lengths are ignored
+                let web_colors: Option<[u32; 4]> = p
+                    .get("ditherColors")
+                    .and_then(|v| v.as_array())
+                    .and_then(|a| {
+                        let c: Option<Vec<u32>> =
+                            a.iter().map(|x| parse_color(x).map(|c| c.0)).collect();
+                        match c?.as_slice() {
+                            [a, b] => Some([*a, *b, *b, *a]),
+                            [a, b, c, d] => Some([*a, *b, *c, *d]),
+                            _ => None,
+                        }
+                    });
                 let lock = p.opt_bool("lockPattern")?;
                 let fallback_fill = s.tools.fill_color;
                 let mut out = edit_each_changed(s, p, |e, bounds| {
@@ -3370,10 +3389,14 @@ pub fn register(r: &mut CommandRegistry) {
                                 let mut f = a.fill.clone().unwrap_or_else(Fill::solid);
                                 f.shape = 16;
                                 f.gradient = None;
-                                f.category = "fc_Web Dither".into();
+                                f.shape_ext = 0;
+                                f.pattern = None;
+                                // category as scripts report it (`fc_WebDither`, RE spec 78)
+                                f.category = "fc_WebDither".into();
                                 f.name = "Web Dither".into();
-                                let c = a.fill_color.0;
-                                f.dither_colors = Some([c, c, c, c]);
+                                f.user_name = Some("Web Dither".into());
+                                let c = color.unwrap_or(a.fill_color).0;
+                                f.dither_colors = Some(web_colors.unwrap_or([c, c, c, c]));
                                 a.fill = Some(f);
                             }
                             Some("gradient") => {
@@ -3431,6 +3454,11 @@ pub fn register(r: &mut CommandRegistry) {
                         }
                         let Some(f) = a.fill.as_mut() else { return };
                         f.dither_density = density.unwrap_or(kept_density);
+                        if let Some(wc) = web_colors
+                            && f.shape == 16
+                        {
+                            f.dither_colors = Some(wc);
+                        }
                         if let Some(sh) = shape
                             && f.gradient.is_some()
                         {

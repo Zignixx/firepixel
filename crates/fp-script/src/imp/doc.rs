@@ -296,32 +296,94 @@ pub(super) fn fill_edge_code(mode: &str) -> Option<i32> {
 /// solid fill; `lockToDocument` (Firepixel extension, FB-44) sets "Lock pattern to document",
 /// `ditherDensity` (Firepixel extension, FB-38) the uniform dither density (% empty pixels, 0 = off,
 /// 100 = empty, FB-109) of the whole fill.
+///
+/// Like the reference (TW-285, RE spec 78) the object's other fields apply too: a Web Dither fill
+/// (`category` "fc_WebDither" or `shape` "web dither") with its colours `ditherColors` (two =
+/// checkerboard, four = FD1..FD4) and `webDitherTransparent`; the edge from `edgeType` with the
+/// width `feather` (a feather edge reads back as "antialiased" with `feather` > 0, so that pair sets
+/// the feather edge, as does a `feather` > 0 without `edgeType`); `gradient.dither`; and the fill
+/// colour of a pattern fill.
 fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
+    let text = |k: &str| fill.get(k).and_then(|v| v.as_str());
     let pattern = fill
         .get("pattern")
         .and_then(|p| p.get("name"))
         .and_then(|n| n.as_str())
         .filter(|n| !n.is_empty())
-        .filter(|_| {
-            fill.get("category").and_then(|c| c.as_str()) == Some("fc_Pattern")
-                || fill.get("shape").and_then(|c| c.as_str()) == Some("pattern")
-        });
+        .filter(|_| text("category") == Some("fc_Pattern") || text("shape") == Some("pattern"));
+    let web_dither = matches!(text("category"), Some("fc_WebDither" | "fc_Web Dither"))
+        || text("shape").is_some_and(|s| s.eq_ignore_ascii_case("web dither"));
+    let has_sel = !selection(doc)?.is_empty();
+    // the fill colour also becomes the tools panel's, as for a solid fill
+    let tool_color = |c: &Option<String>| -> FwResult<()> {
+        if let Some(a) = c.as_deref().and_then(argb_of) {
+            edit_tool_style(|st| st.fill_color = a)?;
+        }
+        Ok(())
+    };
     match pattern {
-        Some(name) if !selection(doc)?.is_empty() => {
-            on_selection(doc, "pi.fill", json!({"pattern": name}))?;
+        Some(name) if has_sel => {
+            let mut p = json!({"pattern": name});
+            if let Some(c) = &color {
+                p["color"] = json!(c);
+            }
+            on_selection(doc, "pi.fill", p)?;
+            tool_color(&color)?;
+        }
+        _ if web_dither && has_sel => {
+            let mut p = json!({"category": "webDither"});
+            if let Some(c) = &color {
+                p["color"] = json!(c);
+            }
+            let colors: Vec<String> = fill
+                .get("ditherColors")
+                .and_then(|v| v.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|c| c.as_str().and_then(conv::norm_color))
+                        .collect()
+                })
+                .unwrap_or_default();
+            if colors.len() == 2 || colors.len() == 4 {
+                p["ditherColors"] = json!(colors);
+            }
+            if let Some(t) = fill.get("webDitherTransparent").and_then(|v| v.as_bool()) {
+                p["textureTransparent"] = json!(t);
+            }
+            on_selection(doc, "pi.fill", p)?;
+            tool_color(&color)?;
         }
         _ => apply_fill_colors(doc, fill, color)?,
     }
     let mut ext = serde_json::Map::new();
-    if fill
-        .get("edgeType")
-        .and_then(|v| v.as_str())
-        .and_then(fill_edge_code)
-        == Some(fp_model::Fill::EDGE_DITHER)
+    let feather = fill
+        .get("feather")
+        .and_then(|v| {
+            v.as_f64()
+                .or_else(|| v.as_str().and_then(|s| s.trim().parse().ok()))
+        })
+        .map(|f| (f.round() as i64).clamp(0, 100));
+    let edge = match text("edgeType").and_then(fill_edge_code) {
+        Some(fp_model::Fill::EDGE_ANTIALIAS) if feather.unwrap_or(0) > 0 => {
+            Some(fp_model::Fill::EDGE_FEATHER)
+        }
+        None if text("edgeType").is_none() && feather.unwrap_or(0) > 0 => {
+            Some(fp_model::Fill::EDGE_FEATHER)
+        }
+        e => e,
+    };
+    if let Some(e) = edge {
+        ext.insert("edge".into(), json!(e));
+        if fp_model::Fill::edge_uses_amount(e) {
+            ext.insert("feather".into(), json!(feather.unwrap_or(0)));
+        }
+    }
+    if let Some(d) = fill
+        .get("gradient")
+        .and_then(|g| g.get("dither"))
+        .and_then(|v| v.as_bool())
     {
-        let amount = fill.get("feather").and_then(|v| v.as_i64()).unwrap_or(0);
-        ext.insert("edge".into(), json!(fp_model::Fill::EDGE_DITHER));
-        ext.insert("feather".into(), json!(amount.clamp(0, 100)));
+        ext.insert("dither".into(), json!(d));
     }
     if let Some(d) = fill.get("ditherDensity").and_then(|v| {
         v.as_f64()
@@ -336,7 +398,7 @@ fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
         on_selection(doc, "pi.fill", Value::Object(ext))?;
     }
     if let Some(lock) = fill.get("lockToDocument").and_then(|v| v.as_bool())
-        && !selection(doc)?.is_empty()
+        && has_sel
     {
         on_selection(doc, "pi.fill", json!({"lockPattern": lock}))?;
     }

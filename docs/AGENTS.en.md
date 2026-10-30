@@ -168,6 +168,15 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     to an ordered 8 × 8 on/off half tone on document pixels (50 = checkerboard, 0 = off, 100 = solid), applied before
     the edge; one *Fill* history row, kept when the category changes. Scripts: `pathAttributes.fill.ditherDensity`,
     `setFill` with `ditherDensity`. FW-PNG: only in the Firepixel marker `fpDi` (when not 0)
+  * Web Dither and the script fill object (TW-285): `pi.fill {category: "webDither", color?, ditherColors?,
+    textureTransparent?}`; `ditherColors` is an array of two colours (checkerboard c1 c2 / c2 c1) or four (FD1..FD4,
+    row by row), without it all four take the fill colour; `textureTransparent` is the transparency checkerboard
+    (`FDTb`, scripts: `webDitherTransparent`). Category `fc_WebDither`. Scripts: `setFill`, `setFillNColor` and
+    `setFillNColorNTexture` take, like the reference, a Web Dither object (`category: "fc_WebDither"` or
+    `shape: "web dither"`, `ditherColors`, `webDitherTransparent`), the edge from `edgeType` with `feather` (a feather
+    edge reads back as `"antialiased"` with `feather` > 0, so that pair, `"feather"` and a bare `feather` > 0 set
+    edge 2), `gradient.dither` and, for a pattern object, the colour argument as the fill colour;
+    `pathAttributes.fill` reads all of them back (an object without `edgeType` and `feather` keeps the edge)
   * Screentone live filter (Firepixel extension): `element.addEffect {effect: "screentone", params?}` (EffectMoaID
     `{firepixel-screentone}`) with the text parameters `screentone_type` 0 dots / 1 lines / 2 cross-hatch,
     `screentone_size` 2..32 (default 8), `screentone_angle` 0..180 (45), `screentone_density` 0..100 (50, used

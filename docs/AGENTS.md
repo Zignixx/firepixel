@@ -172,6 +172,15 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     100 = deckend), vor dem Rand angewendet; ein Protokollschritt *Füllen*, bleibt beim Wechsel der Füllart.
     Skripte: `pathAttributes.fill.ditherDensity`, `setFill` mit `ditherDensity`. FW-PNG: nur in der
     Firepixel-Markierung `fpDi` (wenn nicht 0)
+  * Web-Dither und das Füllungsobjekt der Skripte (TW-285): `pi.fill {category: "webDither", color?, ditherColors?,
+    textureTransparent?}`; `ditherColors` ist eine Liste aus zwei Farben (Schachbrett c1 c2 / c2 c1) oder vier
+    (FD1..FD4, zeilenweise), ohne sie nehmen alle vier die Füllfarbe; `textureTransparent` ist das
+    Transparenz-Schachbrett (`FDTb`, in Skripten `webDitherTransparent`). Kategorie `fc_WebDither`. Skripte: `setFill`,
+    `setFillNColor` und `setFillNColorNTexture` übernehmen wie das Original ein Web-Dither-Objekt
+    (`category: "fc_WebDither"` oder `shape: "web dither"`, `ditherColors`, `webDitherTransparent`), den Rand aus
+    `edgeType` mit `feather` (eine weiche Kante liest sich als `"antialiased"` mit `feather` > 0, daher setzen dieses
+    Paar, `"feather"` und ein bloßes `feather` > 0 Rand 2), `gradient.dither` und bei einem Musterobjekt die Farbe als
+    Füllfarbe; `pathAttributes.fill` liest alles zurück (ein Objekt ohne `edgeType` und `feather` lässt den Rand)
   * Live-Filter Rasterfolie (Firepixel-Erweiterung): `element.addEffect {effect: "screentone", params?}` (EffectMoaID
     `{firepixel-screentone}`) mit den Textparametern `screentone_type` 0 Punkte / 1 Linien / 2 Kreuzschraffur,
     `screentone_size` 2..32 (Vorgabe 8), `screentone_angle` 0..180 (45), `screentone_density` 0..100 (50, gilt bei
