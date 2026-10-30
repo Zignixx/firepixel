@@ -3,9 +3,9 @@
 //! Every layer of the document becomes a PSD group (`lsct`) with its objects as PSD layers
 //! (bottom to top). Each object is rendered on its own: a copy of the document holds only that
 //! object in its layer. With the export options:
-//! - **Effects editable:** live effects that PSD has natively go into the layer effects block
-//!   (`lfx2`, including the solid-colour PSD-style stroke as `FrFX`) and are left out of the
-//!   pixels; all others stay baked in.
+//! - **Effects editable:** live effects that PSD has natively and all records of a PSD live
+//!   effect container (spec 79, F149) go into the layer effects block (`lfx2`) and are left out
+//!   of the pixels; all others stay baked in.
 //! - **Text editable:** text objects become type layers (`TySh`) with their rendered pixels.
 //! - **Vector editable:** paths with a plain solid fill (no stroke, texture, feather or baked
 //!   effect) become solid colour fill layers (`SoCo`) with a vector mask (`vmsk`).
@@ -201,8 +201,21 @@ pub fn psd_layers(
     rect: IRect,
     ed: PsdEditable,
 ) -> Result<Vec<PsdLayer>> {
+    psd_layers_with_light(doc, r, page, rect, ed).map(|(l, _)| l)
+}
+
+/// [`psd_layers`] plus the global light (angle, altitude) of the first written layer effect that
+/// uses the global angle (image resources 1037/1049, spec 79 §5.4).
+pub fn psd_layers_with_light(
+    doc: &Document,
+    r: &dyn PageRenderer,
+    page: usize,
+    rect: IRect,
+    ed: PsdEditable,
+) -> Result<(Vec<PsdLayer>, Option<crate::psd_fx::GlobalLight>)> {
+    let mut light = None;
     let Some(p) = doc.pages.get(page) else {
-        return Ok(Vec::new());
+        return Ok((Vec::new(), light));
     };
     let fonts = fp_text::FontDb::shared();
     let mut out = Vec::new();
@@ -234,9 +247,10 @@ pub fn psd_layers(
                 .is_some_and(|fx| fx.has_visible());
             if ed.effects
                 && let Some(fx) = el.common.effects.as_mut()
-                && let Some(data) = pb::effects_block(&mut fx.effects)
+                && let Some((data, gl)) = pb::effects_block_with_light(&mut fx.effects)
             {
                 blocks.push((*b"lfx2", data));
+                light = light.or(gl);
                 baked_left = fx.has_visible();
             }
             match &e.kind {
@@ -278,5 +292,5 @@ pub fn psd_layers(
             blocks: vec![(*b"lsct", pb::section_block(1))],
         });
     }
-    Ok(out)
+    Ok((out, light))
 }

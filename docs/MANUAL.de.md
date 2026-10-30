@@ -883,7 +883,7 @@ und eingeklappte Höhe her.
   ändert nur die Kontur. Skripte nutzen `fp.run("effect.stroke", {size, position, blendMode, opacity, color})`
   (`index` ändert einen vorhandenen Effekt); der Stapelschritt *Kontur* (`effect.stroke`) wendet sie auf Bilder an.
   Verlaufs- und Musterkonturen importierter Dateien behalten ihre Einstellungen, werden aber in ihrer Farbe
-  gezeichnet.
+  gezeichnet (der PSD-Export schreibt sie mit ihrem Verlauf bzw. Muster).
 
 - **Rasterfolie (Live-Filter, Firepixel-Erweiterung):** *Andere* ▸ *Rasterfolie* wandelt die Pixel des Objekts in
   ein Halbtonraster wie die gedruckten Rasterfolien in Schwarzweiß-Illustrationen und Manga-Seiten. Einstellungen:
@@ -1015,9 +1015,14 @@ PDF 1.5; mit „PDF 1.3“ oder „PDF 1.4“ wird die Datei daher als PDF 1.5 g
   sichtbar.
 - PSD, „In PSD-Ebenen konvertieren“: Jedes Objekt wird zu einer eigenen PSD-Ebene, gruppiert nach
   Dokumentebene. Mit „Bearbeitbarkeit beibehalten“ werden bei Text die Textobjekte zu bearbeitbaren
-  Textebenen, bei Effekten Schlagschatten, innerer Schatten, Leuchten, Abgeflachte Kante/Relief,
-  Farbfüllung und die Kontur (PSD-Live-Effekt, Vollton) zu Ebeneneffekten (eine wieder geöffnete PSD-Datei bringt
-  die Kontur als denselben Live-Effekt zurück), bei Vektor Pfade mit einfacher Füllung zu Füllebenen mit Vektormaske.
+  Textebenen, bei Effekten Schlagschatten, innerer Schatten, Leuchten, Abgeflachte Kante/Relief und
+  Farbfüllung zu Ebeneneffekten, ebenso alle zehn Effekte eines PSD-Live-Effekts (Schlagschatten, innerer
+  Schatten, Schein nach außen und innen, Abgeflachte Kante/Relief, Glanz, Farb-, Verlaufs- und
+  Musterüberlagerung, Kontur), auch abgeschaltete, mit allen Einstellungen (eine wieder geöffnete PSD-Datei bringt
+  sie als denselben Live-Effekt zurück). Hat ein Objekt einen PSD-Live-Effekt und einen Firepixel-Effekt derselben
+  Art, wird der PSD-Live-Effekt zum Ebeneneffekt und der andere bleibt in den Pixeln. Musterpixel werden nicht
+  gespeichert: Die PSD-Anwendung nimmt ihr eigenes Muster gleichen Namens. Bei Vektor werden Pfade mit einfacher
+  Füllung zu Füllebenen mit Vektormaske.
   Die anderen Einstellungen rechnen Text, Effekte und Vektoren in die Pixel ein.
 
 **Web-Funktionen:**

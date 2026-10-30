@@ -98,6 +98,21 @@ pub fn write_psd(
     dpi: f32,
     guides: &[PsdGuide],
 ) -> Result<Vec<u8>> {
+    write_psd_with_light(width, height, layers, composite, dpi, guides, None)
+}
+
+/// [`write_psd`] with the global light of the layer effects: `Some((angle, altitude))` writes
+/// the image resources 1037 (global angle) and 1049 (global altitude), both `i32` degrees
+/// (spec 79 §5.4, F149); `None` writes neither.
+pub fn write_psd_with_light(
+    width: usize,
+    height: usize,
+    layers: &[PsdLayer],
+    composite: &RgbaImage,
+    dpi: f32,
+    guides: &[PsdGuide],
+    global_light: Option<crate::psd_fx::GlobalLight>,
+) -> Result<Vec<u8>> {
     if width == 0 || height == 0 || width > 30000 || height > 30000 {
         return Err(ExportError::BadSize(width, height));
     }
@@ -137,6 +152,10 @@ pub fn write_psd(
         r1005.extend_from_slice(&1u16.to_be_bytes());
     }
     add_res(1005, &r1005);
+    if let Some((angle, altitude)) = global_light {
+        add_res(1037, &angle.to_be_bytes());
+        add_res(1049, &altitude.to_be_bytes());
+    }
     if !guides.is_empty() {
         let mut g = Vec::new();
         g.extend_from_slice(&1u32.to_be_bytes());

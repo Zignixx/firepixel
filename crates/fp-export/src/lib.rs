@@ -56,6 +56,7 @@ pub mod popup;
 pub mod popup_images;
 pub mod preview;
 pub mod psd_blocks; // BA-102: PSD descriptors, layer effects, type layers, vector masks
+pub mod psd_fx; // F149: PSD live effect container -> lfx2 layer effects (spec 79)
 pub mod psd_objects; // BA-102: one PSD layer per object
 pub mod psd_out;
 pub mod px;

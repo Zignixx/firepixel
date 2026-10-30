@@ -783,10 +783,10 @@ fn psd_bytes(
     })?;
     let ctx = page_context(doc, page);
     let rect = page_rect(doc, page).unwrap_or_default();
-    let mut layers = if flatten {
-        Vec::new()
+    let (mut layers, light) = if flatten {
+        (Vec::new(), None)
     } else {
-        crate::psd_objects::psd_layers(doc, r, page, rect, editable)?
+        crate::psd_objects::psd_layers_with_light(doc, r, page, rect, editable)?
     };
     let comp = r
         .render(
@@ -828,13 +828,14 @@ fn psd_bytes(
                 .collect()
         })
         .unwrap_or_default();
-    crate::psd_out::write_psd(
+    crate::psd_out::write_psd_with_light(
         rect.width() as usize,
         rect.height() as usize,
         &layers,
         &comp,
         ctx.resolution_dpi,
         &guides,
+        if flatten { None } else { light },
     )
 }
 

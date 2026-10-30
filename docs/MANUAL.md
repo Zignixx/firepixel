@@ -805,7 +805,8 @@ visible); the diamond on the tab and a double-click on the tab return to the ful
   for both programs. A PSD live effect imported from a PSD file with more effects shows as *PSD Live Effects*; its
   dialog edits only the stroke. Scripts use `fp.run("effect.stroke", {size, position, blendMode, opacity, color})`
   (`index` changes an existing effect); the batch step *Stroke* (`effect.stroke`) applies it to images. Gradient and
-  pattern strokes of imported files keep their settings but are drawn in their colour.
+  pattern strokes of imported files keep their settings but are drawn in their colour (the PSD export writes them
+  with their gradient or pattern).
 
 - **Screentone (Live Filter, Firepixel extension):** *Other* ▸ *Screentone* turns the object's pixels into a
   halftone screen like the printed tones of black and white illustrations and manga pages. Settings: *Pattern*
@@ -928,8 +929,12 @@ Transparency goes into a separate soft mask, as with JPEG. JPEG 2000 exists from
   image.
 - PSD, "Convert to PSD layers": every object becomes its own PSD layer, grouped by document layer. With
   "Maintain editability" for Text, text objects become editable type layers; for Effects, drop shadow,
-  inner shadow, glows, bevel/emboss, colour fill and the Stroke (PSD live effect, solid colour) become layer
-  effects (a PSD file opened again brings the stroke back as the same live effect); for Vector, paths with a plain
+  inner shadow, glows, bevel/emboss and colour fill become layer effects, and so do all ten effects of a PSD live
+  effect (drop shadow, inner shadow, outer and inner glow, bevel/emboss, satin, colour, gradient and pattern
+  overlay, stroke), switched-off ones included, with all their settings (a PSD file opened again brings them back
+  as the same live effect). If an object has a PSD live effect and a Firepixel effect of the same kind, the PSD
+  live effect becomes the layer effect and the other stays in the pixels. Pattern pixels are not stored: the PSD
+  application uses its own pattern of the same name. For Vector, paths with a plain
   fill become fill layers with a vector mask. The other choices render text, effects and vectors into
   the pixels.
 
