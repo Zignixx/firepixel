@@ -512,6 +512,7 @@ msg-import-warn-psd-adjustment = Einstellungsebene „{ $name }“ ({ $kind }) w
 msg-import-warn-psd-text = Text „{ $name }“: Absatz-/Zeichenformate nur vereinfacht übernommen (A)
 msg-import-warn-psd-lab = Lab-Farbmodus: Werte werden ohne Umrechnung übernommen
 msg-import-warn-psd-cmyk = CMYK-PSD: naive Umrechnung (das Original rechnet über die PSL-Bibliothek mit Profil, 12 §7a T7)
+msg-import-warn-psd-multi-fx = Ebene „{ $name }“: von mehreren Ebeneneffekten „{ $effect }“ wird nur einer übernommen
 msg-import-warn-svg-pattern = SVG-Muster werden nicht übernommen
 msg-import-warn-svg-gradient-stroke = SVG-Verlaufsstriche werden durch ihre erste Farbe ersetzt (A)
 msg-import-warn-svg-gradient-repeat = SVG-Verläufe mit Wiederholung werden ohne Wiederholung übernommen

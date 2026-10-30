@@ -163,12 +163,22 @@ impl PsdLayer {
     }
 }
 
+/// `layerEffects` descriptor of an `lfx2`/`lmfx` block (object effects version, descriptor version,
+/// descriptor; spec 79 §3.1).
+pub fn effects_descriptor(d: &[u8]) -> Option<Descriptor> {
+    let mut br = Reader::new(d);
+    let _ = (br.u32()?, br.u32()?);
+    descriptor(&mut br)
+}
+
 /// Bildressourcen-Auswertung.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct ResourceInfo {
     pub dpi: Option<f32>,
     /// Globaler Lichtwinkel (1037).
     pub global_angle: Option<f64>,
+    /// Globale Lichthöhe (1049, spec 79 §6.4).
+    pub global_altitude: Option<f64>,
     /// Hilfslinien (Position px, vertikal?).
     pub guides: Vec<(f32, bool)>,
 }
@@ -363,6 +373,7 @@ fn parse_resources(r: &mut Reader, end: usize) -> ResourceInfo {
                 }
             }
             1037 => info.global_angle = d.i32().map(|v| v as f64),
+            1049 => info.global_altitude = d.i32().map(|v| v as f64),
             1032 => {
                 let _ = (d.u32(), d.u32(), d.u32());
                 if let Some(cnt) = d.u32() {
@@ -620,9 +631,7 @@ pub fn read(b: &[u8]) -> Result<PsdFile> {
                             }
                         }
                         "lfx2" | "lmfx" => {
-                            let mut br = Reader::new(d);
-                            let _ = (br.u32(), br.u32());
-                            if let Some(desc) = descriptor(&mut br)
+                            if let Some(desc) = effects_descriptor(d)
                                 && (l.effects.is_none() || k == "lfx2")
                             {
                                 l.effects = Some(desc);

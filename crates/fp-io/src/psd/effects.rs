@@ -53,7 +53,8 @@ pub fn ps_color(d: &Descriptor, ckey: &str, okey: &str) -> fp_color::Argb {
 
 fn enabled(fx: &Descriptor, k: &str) -> Option<Descriptor> {
     let d = fx.obj(k)?;
-    (d.bool("enabled") == Some(true)).then(|| d.clone())
+    // spec 79 §3.6: a missing `enab` counts as enabled
+    (d.bool("enabled") != Some(false)).then(|| d.clone())
 }
 
 /// Native Original-Effekte aus einem `layerEffects`-Deskriptor.
@@ -260,19 +261,92 @@ const BEVEL_DEFAULTS: [(&str, &str); 16] = [
 ];
 
 // ---------------------------------------------------------------- Photoshop-Live-Effekt (05 §9)
+//
+// F150 (spec 79 §4, §6): every `lfx2` layer effect becomes a record of the PSD live effect container.
+// Missing or unreadable values take the defaults of spec 79 §4 (the values of the PSD application's own
+// default layer style); a missing `enab` in a present effect counts as enabled (§3.6).
+
 fn f6(v: f64) -> String {
     format!("{v:.6}")
 }
-fn b01(v: Option<bool>) -> &'static str {
-    if v == Some(true) { "1" } else { "0" }
+
+/// Linear contour (default of every contour key except the satin's, spec 79 §3.5).
+const CONTOUR_LINEAR: &str = "2$$0.000000;0.000000;1$255.000000;255.000000;1";
+/// Gaussian contour (default of the satin's `MpgS`, spec 79 §3.5).
+const CONTOUR_GAUSSIAN: &str = "9$$0.000000;0.000000;1$32.000000;7.000000;1$64.000000;38.000000;1\
+$96.000000;101.000000;1$128.000000;166.000000;1$159.000000;209.000000;1$191.000000;235.000000;1\
+$223.000000;248.000000;1$255.000000;255.000000;1";
+const RGB_BLACK: &str = "RGBColor;0.000000;0.000000;0.000000";
+const RGB_WHITE: &str = "RGBColor;255.000000;255.000000;255.000000";
+const RGB_RED: &str = "RGBColor;255.000000;0.000000;0.000000";
+/// Glow colour 255/255/189.99610894941634 (spec 79 §4.3, value of the default file).
+const RGB_GLOW: &str = "RGBColor;255.000000;255.000000;189.996109";
+/// Gradient "Two Color" black → white (default of `GrFl` and of a gradient `FrFX`, spec 79 §4.8).
+const GRADIENT_TWO_COLOR: &str = "Two_Color,customStops,4096.000000$2$2,\
+0$50$userStop$RGBColor;0.000000;0.000000;0.000000,\
+4096$50$userStop$RGBColor;255.000000;255.000000;255.000000,100.000000$0$50,100.000000$4096$50";
+/// Default pattern (spec 79 §4.9).
+const PATTERN_NAME: &str = "Bubbles";
+const PATTERN_ID: &str = "b7334da0-122f-11d4-8bb5-e27e45023b5f";
+
+/// The ten layer effects (descriptor string IDs) in the order of spec 79 §3.2.
+pub const LAYER_EFFECTS: [&str; 10] = [
+    "dropShadow",
+    "innerShadow",
+    "outerGlow",
+    "solidFill",
+    "gradientFill",
+    "patternFill",
+    "frameFX",
+    "innerGlow",
+    "bevelEmboss",
+    "chromeFX",
+];
+
+/// Multi-instance lists of newer PSD versions → single effect (spec 79 §6.6).
+const MULTI_FX: [(&str, &str); 5] = [
+    ("dropShadowMulti", "dropShadow"),
+    ("innerShadowMulti", "innerShadow"),
+    ("solidFillMulti", "solidFill"),
+    ("gradientFillMulti", "gradientFill"),
+    ("frameFXMulti", "frameFX"),
+];
+
+/// Global light of the file: image resources 1037 (angle) and 1049 (altitude), spec 79 §6.4.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct GlobalLight {
+    pub angle: Option<f64>,
+    pub altitude: Option<f64>,
 }
 
-/// Farbe `RGBColor;r;g;b` (bzw. `HSBColorClass`, `CMYKColorClass`, `labColor`, `grayscale`).
+fn num(d: &Descriptor, k: &str, def: f64) -> String {
+    f6(d.num(k).filter(|v| v.is_finite()).unwrap_or(def))
+}
+fn flag(d: &Descriptor, k: &str, def: bool) -> &'static str {
+    if d.bool(k).unwrap_or(def) { "1" } else { "0" }
+}
+fn text<'a>(d: &'a Descriptor, k: &str, def: &'a str) -> &'a str {
+    d.str(k).unwrap_or(def)
+}
+/// Coordinate of a point object (`Ofst`, `phase`).
+fn point(d: &Descriptor, obj: &str, k: &str) -> String {
+    f6(d.obj(obj)
+        .and_then(|x| x.num(k))
+        .filter(|v| v.is_finite())
+        .unwrap_or(0.0))
+}
+/// Name or ID of the pattern object (`Ptrn`).
+fn pattern<'a>(d: &'a Descriptor, k: &str, def: &'a str) -> &'a str {
+    d.obj("pattern").and_then(|p| p.str(k)).unwrap_or(def)
+}
+
+/// Farbe `RGBColor;r;g;b` (bzw. `HSBColorClass`, `CMYKColorClass`, `labColor`, `grayscale`); `none`, wenn
+/// der Schlüssel fehlt.
 fn color_str(d: &Descriptor, key: &str, none: &str) -> String {
     let Some(c) = d.obj(key) else {
         return none.to_string();
     };
-    let n = |k: &str| f6(c.num(k).unwrap_or(0.0));
+    let n = |k: &str| f6(c.num(k).filter(|v| v.is_finite()).unwrap_or(0.0));
     match c.class.as_str() {
         "HSBColorClass" | "HSBC" => format!(
             "HSBColorClass;{};{};{}",
@@ -293,13 +367,14 @@ fn color_str(d: &Descriptor, key: &str, none: &str) -> String {
     }
 }
 
-/// Kontur `N$name$h;v;c$…` (linear, wenn keine Kurve angegeben ist). Das Original schreibt den Namen leer
-/// (Laufzeit 12 T5: `2$$…` auch für „Linear“, `9$$…` für „Gaussian“).
-fn contour_str(d: &Descriptor, key: &str) -> String {
-    let lin = "2$$0.000000;0.000000;1$255.000000;255.000000;1".to_string();
-    let Some(c) = d.obj(key) else { return lin };
+/// Kontur `N$name$h;v;c$…` (`def`, wenn keine Kurve angegeben ist). Das Original schreibt den Namen leer
+/// (Laufzeit 12 T5: `2$$…` auch für „Linear“, `9$$…` für „Gaussian“). `Cnty` fehlt = Kurvenpunkt (1).
+fn contour_str(d: &Descriptor, key: &str, def: &str) -> String {
+    let Some(c) = d.obj(key) else {
+        return def.to_string();
+    };
     let Some(Value::List(pts)) = c.get("curve") else {
-        return lin;
+        return def.to_string();
     };
     let mut s = format!("{}$", pts.len());
     for p in pts {
@@ -318,13 +393,57 @@ fn contour_str(d: &Descriptor, key: &str) -> String {
     s
 }
 
-/// Verlauf `name,form,interp$nC$nT,` + Stopps (05 §9.3; Farbstopps `location$midpoint$type[$farbe]`).
-fn gradient_str(d: &Descriptor, key: &str) -> String {
+/// Gradient name as the reference reads it: every non-alphanumeric ASCII character → `_`
+/// (spec 79 §6.2).
+pub fn gradient_name(name: &str) -> String {
+    name.chars()
+        .map(|c| {
+            if c.is_ascii() && !c.is_ascii_alphanumeric() {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect()
+}
+
+/// Verlauf `name,form,interp$nC$nT,` + Stopps (05 §9.3; Farbstopps `location$midpoint$type[$farbe]`);
+/// Rauschverlauf `name,colorNoise,ShTr,VctC,RndS,Smth,mn×4,mx×4,ClrS` (spec 79 §3.5). `none`, wenn der
+/// Schlüssel fehlt.
+fn gradient_str(d: &Descriptor, key: &str, none: &str) -> String {
     let Some(g) = d.obj(key) else {
-        return "nogradient".to_string();
+        return none.to_string();
     };
-    let name = g.str("name").unwrap_or("");
+    let name = gradient_name(g.str("name").unwrap_or(""));
     let form = g.str("gradientForm").unwrap_or("customStops");
+    if form == "colorNoise" {
+        let int = |v: Option<f64>, def: i64| {
+            v.filter(|v| v.is_finite())
+                .map(|v| v.trunc() as i64)
+                .unwrap_or(def)
+        };
+        let four = |k: &str, def: i64| -> Vec<String> {
+            let vals: Vec<Option<f64>> = match g.get(k) {
+                Some(Value::List(v)) => v.iter().map(Value::num).collect(),
+                _ => Vec::new(),
+            };
+            (0..4)
+                .map(|i| int(vals.get(i).copied().flatten(), def).to_string())
+                .collect()
+        };
+        let mut parts = vec![
+            name,
+            "colorNoise".to_string(),
+            flag(g, "showTransparency", false).to_string(),
+            flag(g, "vectorColor", true).to_string(),
+            int(g.num("randomSeed"), 0).to_string(),
+            int(g.num("smoothness"), 2048).to_string(),
+        ];
+        parts.extend(four("minimum", 0));
+        parts.extend(four("maximum", 100));
+        parts.push(text(g, "colorSpace", "RGBColor").to_string());
+        return parts.join(",");
+    }
     let colors = match g.get("colors") {
         Some(Value::List(v)) => v.clone(),
         _ => vec![],
@@ -333,9 +452,9 @@ fn gradient_str(d: &Descriptor, key: &str) -> String {
         Some(Value::List(v)) => v.clone(),
         _ => vec![],
     };
-    // Laufzeit 12 T5: Leerzeichen im Namen als `_`, Teile durch Kommas getrennt (ohne Schlusskomma).
+    // Teile durch Kommas getrennt (ohne Schlusskomma).
     let mut parts = vec![
-        name.replace(' ', "_"),
+        name,
         form.to_string(),
         format!(
             "{}${}${}",
@@ -369,212 +488,213 @@ fn gradient_str(d: &Descriptor, key: &str) -> String {
     }
     parts.join(",")
 }
-/// `&`-Datensatz eines Teil-Effekts (Feldtabellen 05 §9.2); `None` für unbekannte Effekte.
+
+/// `&`-Datensatz eines Teil-Effekts (Feldtabellen 05 §9.2, Vorgaben spec 79 §4); `None` für unbekannte
+/// Effekte.
 pub fn ps_record(name: &str, d: &Descriptor) -> Option<String> {
-    let n = |k: &str, def: f64| f6(d.num(k).unwrap_or(def));
-    let mode = d.str("mode").unwrap_or("normal");
+    let en = flag(d, "enabled", true);
+    let contour = |k: &str| contour_str(d, k, CONTOUR_LINEAR);
     Some(match name {
         "dropShadow" | "innerShadow" => {
-            let mut dist = d.num("distance").unwrap_or(0.0);
-            if name == "dropShadow" {
+            let drop = name == "dropShadow";
+            let mut dist = d.num("distance").filter(|v| v.is_finite()).unwrap_or(5.0);
+            if drop {
                 dist = dist.min(250.0);
             }
-            format!(
-                "{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}",
-                b01(d.bool("enabled")),
-                n("opacity", 75.0),
-                b01(d.bool("useGlobalAngle")),
-                n("localLightingAngle", 120.0),
-                n("noise", 0.0),
+            [
+                en.to_string(),
+                num(d, "opacity", 75.0),
+                flag(d, "useGlobalAngle", false).to_string(),
+                num(d, "localLightingAngle", if drop { 120.0 } else { -135.0 }),
+                num(d, "noise", 0.0),
                 f6(dist),
-                n("blur", 5.0),
-                n("chokeMatte", 0.0),
-                b01(d.bool("antiAlias")),
-                if name == "dropShadow" {
-                    b01(d.bool("layerConceals"))
+                num(d, "blur", 5.0),
+                num(d, "chokeMatte", 0.0),
+                flag(d, "antiAlias", false).to_string(),
+                if drop {
+                    flag(d, "layerConceals", true)
                 } else {
                     "0"
-                },
-                mode,
-                color_str(d, "color", "nocolor"),
-                contour_str(d, "transparencyShape")
-            )
+                }
+                .to_string(),
+                text(d, "mode", "multiply").to_string(),
+                color_str(d, "color", RGB_BLACK),
+                contour("transparencyShape"),
+            ]
+            .join("&")
         }
-        "outerGlow" | "innerGlow" => format!(
-            "{}&{}&{}&{}:{}:{}:{}:{}:{}&{}&{}&{}&{}&{}",
-            b01(d.bool("enabled")),
-            b01(d.bool("antiAlias")),
-            mode,
-            n("opacity", 75.0),
-            n("chokeMatte", 0.0),
-            n("blur", 5.0),
-            n("noise", 0.0),
-            n("shadingNoise", 0.0),
-            n("inputRange", 50.0),
-            d.str("glowTechnique").unwrap_or("softMatte"),
-            color_str(d, "color", "nocolor"),
-            gradient_str(d, "gradient"),
-            contour_str(d, "transparencyShape"),
-            if name == "innerGlow" {
-                d.str("innerGlowSource").unwrap_or("edgeGlow")
+        "outerGlow" | "innerGlow" => {
+            // A glow with a gradient and no colour keeps `nocolor` (the export leaves `Clr ` out for it).
+            let color = if d.get("color").is_none() && d.get("gradient").is_some() {
+                "nocolor".to_string()
             } else {
-                ""
-            }
-        ),
-        "bevelEmboss" => format!(
-            "{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}",
-            b01(d.bool("enabled")),
-            b01(d.bool("useGlobalAngle")),
-            b01(d.bool("useShape")),
-            b01(d.bool("useTexture")),
-            b01(d.bool("antialiasGloss")),
-            n("highlightOpacity", 75.0),
-            n("shadowOpacity", 75.0),
-            n("localLightingAngle", 120.0),
-            n("localLightingAltitude", 30.0),
-            n("strengthRatio", 100.0),
-            n("blur", 5.0),
-            n("softness", 0.0),
-            d.str("highlightMode").unwrap_or("screen"),
-            color_str(d, "highlightColor", "nohighlightColor"),
-            d.str("shadowMode").unwrap_or("multiply"),
-            color_str(d, "shadowColor", "noshadowColor"),
-            d.str("bevelTechnique").unwrap_or("softMatte"),
-            d.str("bevelStyle").unwrap_or("innerBevel"),
-            d.str("bevelDirection").unwrap_or("stampIn"),
-            contour_str(d, "transparencyShape"),
-            if d.bool("useShape") == Some(true) {
+                color_str(d, "color", RGB_GLOW)
+            };
+            [
+                en.to_string(),
+                flag(d, "antiAlias", false).to_string(),
+                text(d, "mode", "screen").to_string(),
+                [
+                    num(d, "opacity", 75.0),
+                    num(d, "chokeMatte", 0.0),
+                    num(d, "blur", 5.0),
+                    num(d, "noise", 0.0),
+                    num(d, "shadingNoise", 0.0),
+                    num(d, "inputRange", 50.0),
+                ]
+                .join(":"),
+                text(d, "glowTechnique", "softMatte").to_string(),
+                color,
+                gradient_str(d, "gradient", "nogradient"),
+                contour("transparencyShape"),
+                if name == "innerGlow" {
+                    text(d, "innerGlowSource", "edgeGlow")
+                } else {
+                    ""
+                }
+                .to_string(),
+            ]
+            .join("&")
+        }
+        "bevelEmboss" => {
+            let use_shape = d.bool("useShape") == Some(true);
+            let use_texture = d.bool("useTexture") == Some(true);
+            // The shape and texture blocks are kept whenever their keys are present (spec 79 §4.5).
+            let shape = if use_shape || d.get("mappingShape").is_some() {
                 format!(
                     "{},{},{}",
-                    b01(d.bool("antiAlias")),
-                    n("inputRange", 50.0),
-                    contour_str(d, "mappingShape")
+                    flag(d, "antiAlias", false),
+                    num(d, "inputRange", 50.0),
+                    contour("mappingShape")
                 )
             } else {
                 "noshape".into()
-            },
-            if d.bool("useTexture") == Some(true) {
-                let p = d.obj("pattern");
+            };
+            let texture = if use_texture || d.get("pattern").is_some() {
                 format!(
                     "{},{},{},{},{},{},{},{}",
-                    b01(d.bool("invertTexture")),
-                    b01(d.bool("align")),
-                    n("scale", 100.0),
-                    n("textureDepth", 100.0),
-                    f6(d.obj("phase")
-                        .and_then(|x| x.num("horizontal"))
-                        .unwrap_or(0.0)),
-                    f6(d.obj("phase")
-                        .and_then(|x| x.num("vertical"))
-                        .unwrap_or(0.0)),
-                    p.and_then(|x| x.str("name")).unwrap_or(""),
-                    p.and_then(|x| x.str("ID")).unwrap_or("")
+                    flag(d, "invertTexture", false),
+                    flag(d, "align", true),
+                    num(d, "scale", 100.0),
+                    num(d, "textureDepth", 100.0),
+                    point(d, "phase", "horizontal"),
+                    point(d, "phase", "vertical"),
+                    pattern(d, "name", PATTERN_NAME),
+                    pattern(d, "ID", PATTERN_ID)
                 )
             } else {
                 "notexture".into()
-            }
-        ),
-        "chromeFX" => format!(
-            "{}&{}&{}&{}&{}&{}&{}&{}&{}&{}",
-            b01(d.bool("enabled")),
-            b01(d.bool("antiAlias")),
-            b01(d.bool("invert")),
-            n("opacity", 50.0),
-            n("localLightingAngle", 19.0),
-            n("distance", 11.0),
-            n("blur", 14.0),
-            mode,
-            color_str(d, "color", "nocolor"),
-            contour_str(d, "mappingShape")
-        ),
-        "solidFill" => format!(
-            "{}&{}&{}&{}",
-            b01(d.bool("enabled")),
-            n("opacity", 100.0),
-            mode,
-            color_str(d, "color", "nocolor")
-        ),
-        "gradientFill" => format!(
-            "{}&{}&{}&{}&{}&{}&{}&{}&{}&{}&{}",
-            b01(d.bool("enabled")),
-            b01(d.bool("reverse")),
-            b01(d.bool("align")),
-            n("opacity", 100.0),
-            n("angle", 90.0),
-            n("scale", 100.0),
-            f6(d.obj("offset")
-                .and_then(|x| x.num("horizontal"))
-                .unwrap_or(0.0)),
-            f6(d.obj("offset")
-                .and_then(|x| x.num("vertical"))
-                .unwrap_or(0.0)),
-            mode,
-            d.str("type").unwrap_or("linear"),
-            gradient_str(d, "gradient")
-        ),
-        "patternFill" => {
-            let p = d.obj("pattern");
-            format!(
-                "{}&{}&{}&{}&{}&{}&{}&{}&{}",
-                b01(d.bool("enabled")),
-                b01(d.bool("align")),
-                n("opacity", 100.0),
-                n("scale", 100.0),
-                f6(d.obj("phase")
-                    .and_then(|x| x.num("horizontal"))
-                    .unwrap_or(0.0)),
-                f6(d.obj("phase")
-                    .and_then(|x| x.num("vertical"))
-                    .unwrap_or(0.0)),
-                mode,
-                p.and_then(|x| x.str("name")).unwrap_or(""),
-                p.and_then(|x| x.str("ID")).unwrap_or("")
-            )
+            };
+            [
+                en.to_string(),
+                flag(d, "useGlobalAngle", false).to_string(),
+                flag(d, "useShape", false).to_string(),
+                flag(d, "useTexture", false).to_string(),
+                flag(d, "antialiasGloss", false).to_string(),
+                num(d, "highlightOpacity", 75.0),
+                num(d, "shadowOpacity", 75.0),
+                num(d, "localLightingAngle", 120.0),
+                num(d, "localLightingAltitude", 30.0),
+                num(d, "strengthRatio", 100.0),
+                num(d, "blur", 5.0),
+                num(d, "softness", 0.0),
+                text(d, "highlightMode", "screen").to_string(),
+                color_str(d, "highlightColor", RGB_WHITE),
+                text(d, "shadowMode", "multiply").to_string(),
+                color_str(d, "shadowColor", RGB_BLACK),
+                text(d, "bevelTechnique", "softMatte").to_string(),
+                text(d, "bevelStyle", "innerBevel").to_string(),
+                text(d, "bevelDirection", "stampIn").to_string(),
+                contour("transparencyShape"),
+                shape,
+                texture,
+            ]
+            .join("&")
         }
+        "chromeFX" => [
+            en.to_string(),
+            flag(d, "antiAlias", false).to_string(),
+            flag(d, "invert", true).to_string(),
+            num(d, "opacity", 50.0),
+            num(d, "localLightingAngle", 19.0),
+            num(d, "distance", 11.0),
+            num(d, "blur", 14.0),
+            text(d, "mode", "multiply").to_string(),
+            color_str(d, "color", RGB_BLACK),
+            contour_str(d, "mappingShape", CONTOUR_GAUSSIAN),
+        ]
+        .join("&"),
+        "solidFill" => [
+            en.to_string(),
+            num(d, "opacity", 100.0),
+            text(d, "mode", "normal").to_string(),
+            color_str(d, "color", RGB_RED),
+        ]
+        .join("&"),
+        "gradientFill" => [
+            en.to_string(),
+            flag(d, "reverse", false).to_string(),
+            flag(d, "align", true).to_string(),
+            num(d, "opacity", 100.0),
+            num(d, "angle", 90.0),
+            num(d, "scale", 100.0),
+            point(d, "offset", "horizontal"),
+            point(d, "offset", "vertical"),
+            text(d, "mode", "normal").to_string(),
+            text(d, "type", "linear").to_string(),
+            gradient_str(d, "gradient", GRADIENT_TWO_COLOR),
+        ]
+        .join("&"),
+        "patternFill" => [
+            en.to_string(),
+            flag(d, "align", true).to_string(),
+            num(d, "opacity", 100.0),
+            num(d, "scale", 100.0),
+            point(d, "phase", "horizontal"),
+            point(d, "phase", "vertical"),
+            text(d, "mode", "normal").to_string(),
+            pattern(d, "name", PATTERN_NAME).to_string(),
+            pattern(d, "ID", PATTERN_ID).to_string(),
+        ]
+        .join("&"),
         "frameFX" => {
-            let paint = d.str("paintType").unwrap_or("solidColor");
-            let mut s = format!(
-                "{}&{}&{}&{}&{}&{}&{}&",
-                b01(d.bool("enabled")),
-                n("opacity", 100.0),
-                n("size", 3.0),
-                mode,
-                color_str(d, "color", "nocolor"),
-                d.str("style").unwrap_or("outsetFrame"),
-                paint
-            );
+            let paint = text(d, "paintType", "solidColor");
+            let mut s = [
+                en.to_string(),
+                num(d, "opacity", 100.0),
+                num(d, "size", 3.0),
+                text(d, "mode", "normal").to_string(),
+                color_str(d, "color", RGB_RED),
+                text(d, "style", "outsetFrame").to_string(),
+                paint.to_string(),
+                String::new(),
+            ]
+            .join("&");
             match paint {
-                "gradientFill" => s.push_str(&format!(
-                    "{}&{}&{}&{}&{}&{}&{}&{}",
-                    b01(d.bool("reverse")),
-                    b01(d.bool("align")),
-                    n("angle", 90.0),
-                    n("scale", 100.0),
-                    f6(d.obj("offset")
-                        .and_then(|x| x.num("horizontal"))
-                        .unwrap_or(0.0)),
-                    f6(d.obj("offset")
-                        .and_then(|x| x.num("vertical"))
-                        .unwrap_or(0.0)),
-                    d.str("type").unwrap_or("linear"),
-                    gradient_str(d, "gradient")
-                )),
-                "pattern" => {
-                    let p = d.obj("pattern");
-                    s.push_str(&format!(
-                        "{}&{}&{}&{}&{}&{}",
-                        b01(d.bool("linked")),
-                        n("scale", 100.0),
-                        f6(d.obj("phase")
-                            .and_then(|x| x.num("horizontal"))
-                            .unwrap_or(0.0)),
-                        f6(d.obj("phase")
-                            .and_then(|x| x.num("vertical"))
-                            .unwrap_or(0.0)),
-                        p.and_then(|x| x.str("name")).unwrap_or(""),
-                        p.and_then(|x| x.str("ID")).unwrap_or("")
-                    ))
-                }
+                "gradientFill" => s.push_str(
+                    &[
+                        flag(d, "reverse", false).to_string(),
+                        flag(d, "align", true).to_string(),
+                        num(d, "angle", 90.0),
+                        num(d, "scale", 100.0),
+                        point(d, "offset", "horizontal"),
+                        point(d, "offset", "vertical"),
+                        text(d, "type", "linear").to_string(),
+                        gradient_str(d, "gradient", GRADIENT_TWO_COLOR),
+                    ]
+                    .join("&"),
+                ),
+                "pattern" => s.push_str(
+                    &[
+                        flag(d, "linked", true).to_string(),
+                        num(d, "scale", 100.0),
+                        point(d, "phase", "horizontal"),
+                        point(d, "phase", "vertical"),
+                        pattern(d, "name", PATTERN_NAME).to_string(),
+                        pattern(d, "ID", PATTERN_ID).to_string(),
+                    ]
+                    .join("&"),
+                ),
                 _ => {}
             }
             s
@@ -592,7 +712,112 @@ fn live_name(k: &str) -> &str {
     }
 }
 
-/// Photoshop-Live-Effekt mit allen bekannten Teil-Effekten (`only_enabled`: nur eingeschaltete).
+/// Multiplies a number value in place (unit kept).
+fn scale_value(d: &mut Descriptor, k: &str, f: f64) {
+    if let Some((_, v)) = d.items.iter_mut().find(|(n, _)| n == k) {
+        match v {
+            Value::Unit { value, .. } | Value::Double(value) => *value *= f,
+            Value::Long(l) => *v = Value::Double(*l as f64 * f),
+            _ => {}
+        }
+    }
+}
+
+/// Layer effects whose further instances (`…Multi` lists with more than one entry) are dropped by the
+/// import (spec 79 §6.6), as descriptor string IDs.
+pub fn multi_losses(fx: &Descriptor) -> Vec<&'static str> {
+    MULTI_FX
+        .iter()
+        .filter(|(m, _)| matches!(fx.get(m), Some(Value::List(v)) if v.len() > 1))
+        .map(|(_, s)| *s)
+        .collect()
+}
+
+/// Normalised `layerEffects` descriptor (spec 79 §6.3, §6.4, §6.6): a `…Multi` list gives its first
+/// enabled entry (else the first) when the single effect is missing; `Scl ` ≠ 100 % is applied to the
+/// pixel values (`Dstn`, `blur`, `Sftn`, `Sz  `) and the pattern/texture scale of `patternFill`, `ebbl`
+/// and a pattern `FrFX` (never to `Ckmt`, `Inpr`, opacities, angles or a gradient scale) and then set to
+/// 100 %; an effect with `uglg` takes the global angle 1037 (and the bevel the global altitude 1049) when
+/// the file has the resource.
+pub fn normalize(fx: &Descriptor, light: GlobalLight) -> Descriptor {
+    let mut fx = fx.clone();
+    for (m, s) in MULTI_FX {
+        if fx.get(s).is_some() {
+            continue;
+        }
+        let Some(Value::List(v)) = fx.get(m) else {
+            continue;
+        };
+        let objs: Vec<&Descriptor> = v.iter().filter_map(Value::as_obj).collect();
+        let pick = objs
+            .iter()
+            .find(|d| d.bool("enabled") != Some(false))
+            .or(objs.first())
+            .map(|d| (*d).clone());
+        if let Some(p) = pick {
+            fx.set(s, Value::Object(p));
+        }
+    }
+    let scale = fx
+        .num("scale")
+        .filter(|v| v.is_finite() && *v > 0.0)
+        .unwrap_or(100.0);
+    let f = scale / 100.0;
+    for k in LAYER_EFFECTS {
+        let Some((_, Value::Object(d))) = fx.items.iter_mut().find(|(n, _)| n == k) else {
+            continue;
+        };
+        if f != 1.0 {
+            for key in ["distance", "blur", "softness", "size"] {
+                scale_value(d, key, f);
+            }
+            let pattern_scale = match k {
+                "patternFill" | "bevelEmboss" => true,
+                "frameFX" => d.str("paintType") == Some("pattern"),
+                _ => false,
+            };
+            if pattern_scale {
+                scale_value(d, "scale", f);
+            }
+        }
+        if d.bool("useGlobalAngle") == Some(true) {
+            if let Some(a) = light.angle {
+                d.set(
+                    "localLightingAngle",
+                    Value::Unit {
+                        unit: "angleUnit".into(),
+                        value: a,
+                    },
+                );
+            }
+            if k == "bevelEmboss"
+                && let Some(h) = light.altitude
+            {
+                d.set(
+                    "localLightingAltitude",
+                    Value::Unit {
+                        unit: "angleUnit".into(),
+                        value: h,
+                    },
+                );
+            }
+        }
+    }
+    if fx.get("scale").is_some() {
+        fx.set(
+            "scale",
+            Value::Unit {
+                unit: "percentUnit".into(),
+                value: 100.0,
+            },
+        );
+    }
+    fx
+}
+
+/// Photoshop-Live-Effekt mit allen bekannten Teil-Effekten, für die `include` gilt (abgeschaltete werden
+/// mitgenommen); `None`, wenn keiner eingeschaltet ist. Erwartet einen normalisierten Deskriptor
+/// ([`normalize`]).
 pub fn photoshop_live_effect(fx: &Descriptor, include: &dyn Fn(&str) -> bool) -> Option<Effect> {
     let mut e = Effect::new(MOA_PHOTOSHOP, true);
     let mut any = false;
@@ -614,29 +839,40 @@ pub fn photoshop_live_effect(fx: &Descriptor, include: &dyn Fn(&str) -> bool) ->
         }
         if let Some(rec) = ps_record(k, d) {
             e.set(live_name(k), rec);
-            any |= d.bool("enabled") == Some(true);
+            any |= d.bool("enabled") != Some(false);
         }
     }
     any.then_some(e)
 }
 
-/// Effektliste eines Elements nach `UseFWFilters`.
-pub fn effect_list(fx: &Descriptor, native_first: bool, global_angle: f64) -> EffectList {
+/// Effektliste eines Elements nach `UseFWFilters` (spec 79 §6). `masterFXSwitch` = false: the effects are
+/// imported switched off (spec 79 §10 question 8, safe default: nothing is lost, nothing is drawn).
+pub fn effect_list(fx: &Descriptor, native_first: bool, light: GlobalLight) -> EffectList {
+    let fx = normalize(fx, light);
     let mut list = EffectList::default();
     if native_first {
-        list.effects.extend(native_effects(fx, global_angle));
+        list.effects
+            .extend(native_effects(&fx, light.angle.unwrap_or(30.0)));
         // Nativ umgesetzte Effekte werden im PS-Wörterbuch abgeschaltet; Rest als PS-Live-Effekt.
         let rest = |k: &str| {
-            PS_ONLY_FX.contains(&k) && fx.obj(k).and_then(|d| d.bool("enabled")) == Some(true)
+            PS_ONLY_FX.contains(&k) && fx.obj(k).and_then(|d| d.bool("enabled")) != Some(false)
         };
-        if let Some(e) = photoshop_live_effect(fx, &rest) {
+        if let Some(e) = photoshop_live_effect(&fx, &rest) {
             list.effects.push(e);
         }
-    } else if let Some(e) = photoshop_live_effect(fx, &|_| true) {
+    } else if let Some(e) = photoshop_live_effect(&fx, &|_| true) {
         list.effects.push(e);
+    }
+    if fx.bool("masterFXSwitch") == Some(false) {
+        for e in &mut list.effects {
+            e.set("EffectIsVisible", "false");
+        }
     }
     list
 }
+
+#[cfg(test)]
+mod lfx2_tests;
 
 #[cfg(test)]
 mod tests {

@@ -471,7 +471,7 @@ struct Ctx<'a> {
     tile: u32,
     top_adj: Option<usize>,
     warnings: Vec<String>,
-    global_angle: f64,
+    light: effects::GlobalLight,
 }
 
 impl Ctx<'_> {
@@ -615,13 +615,20 @@ impl Ctx<'_> {
         wrapped.common.visible = l.visible;
         // Effekte
         if let Some(fx) = &l.effects {
-            let master = fx.bool("masterFXSwitch").unwrap_or(true);
             let effects_editable = (editable
                 || (kind == LayerKind::Content && self.o.shape_effects_editable))
                 && kind != LayerKind::SmartObject
                 && !(l.clipping && !self.o.clipping_editable);
-            if master && effects_editable {
-                let list = effects::effect_list(fx, self.o.native_first, self.global_angle);
+            if effects_editable {
+                // F150: all ten layer effects; `masterFXSwitch` = false imports them switched off.
+                let list = effects::effect_list(fx, self.o.native_first, self.light);
+                for fxname in effects::multi_losses(fx) {
+                    self.warnings.push(fp_i18n::tr!(
+                        "msg-import-warn-psd-multi-fx",
+                        name = l.name.as_str(),
+                        effect = fxname
+                    ));
+                }
                 if !list.effects.is_empty() {
                     wrapped.common.effects = Some(list);
                 }
@@ -710,7 +717,10 @@ pub fn import(data: &[u8], opts: &ImportOptions) -> Result<ImportResult> {
             tile,
             top_adj,
             warnings: Vec::new(),
-            global_angle: f.resources.global_angle.unwrap_or(30.0),
+            light: effects::GlobalLight {
+                angle: f.resources.global_angle,
+                altitude: f.resources.global_altitude,
+            },
         };
         // Oberste Stufe: alle Objekte in **einer** Ebene „Ebene“, PS-Gruppen darin als Unterebenen (verschachtelt,
         // TW-15: `par.psd` ⇒ Ebene ▸ Ebene 2 / Ebene 1 / Background). Bleibt nur eine Gruppe übrig, wird sie selbst

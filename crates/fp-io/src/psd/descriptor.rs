@@ -102,6 +102,18 @@ pub fn charid(s: &str) -> &str {
         "Lyr " => "layer",
         "Phase" => "phase",
         "Clrt" => "colorStopType",
+        // spec 79 §6.2: contour corner points, bevel texture, Lab a/b, noise gradients
+        "Cnty" => "continuity",
+        "InvT" => "invertTexture",
+        "A   " => "a",
+        "B   " => "b",
+        "ShTr" => "showTransparency",
+        "VctC" => "vectorColor",
+        "ClrS" => "colorSpace",
+        "RndS" => "randomSeed",
+        "Smth" => "smoothness",
+        "Mnm " => "minimum",
+        "Mxm " => "maximum",
         other => other,
     }
 }
@@ -153,6 +165,10 @@ pub fn enumid(s: &str) -> &str {
         "SClr" => "solidColor",
         "GrFl" => "gradientFill",
         "Ptrn" => "pattern",
+        // spec 79 §3.4: colour space of a noise gradient (`ClrS`)
+        "RGBC" => "RGBColor",
+        "HSBl" => "HSBColorEnum",
+        "LbCl" => "labColor",
         "#Prc" => "percentUnit",
         "#Pxl" => "pixelsUnit",
         "#Ang" => "angleUnit",

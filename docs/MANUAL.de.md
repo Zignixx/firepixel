@@ -45,7 +45,12 @@ ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\F
   schlägt *Neu* deren Größe vor.
 - *Datei ▸ Öffnen* (Strg+O) liest FW-PNG und gängige Bildformate: PNG, GIF, JPEG, BMP, TIFF, TGA,
   WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. In PSD-Dateien werden Formebenen zu Pfaden
-  und Gruppen zu Unterebenen. Texte aus AI-/EPS- und SVG-Dateien kommen als bearbeitbare Textobjekte
+  und Gruppen zu Unterebenen. Ebeneneffekte (Schlagschatten, Schatten nach innen, Schein nach außen und innen,
+  Abgeflachte Kante und Relief, Glanz, Farb-, Verlaufs- und Musterüberlagerung, Kontur) kommen bearbeitbar
+  in einem Eintrag *PSD-Live-Effekte* mit den Werten der PSD-Datei an (*Effekte skalieren* und der globale
+  Lichtwinkel sind eingerechnet); die Ebenenpixel bleiben ohne die Effekte. In der PSD-Datei insgesamt
+  ausgeschaltete Effekte kommen mit ausgeschaltetem Eintrag an.
+  Texte aus AI-/EPS- und SVG-Dateien kommen als bearbeitbare Textobjekte
   (AI-Flächentext an derselben Stelle wie im Original); der Dateityp heißt im Dialog „AI (*.ai;*.art)“.
   PDF-Dateien (und AI-Dateien ab Version 9) bringen ihre Ebenen (optionale Inhaltsgruppen) als Ebenen
   mit: ausgeblendete Gruppen werden ausgeblendete Ebenen, verschachtelte heißen „Eltern / Kind“, Inhalt

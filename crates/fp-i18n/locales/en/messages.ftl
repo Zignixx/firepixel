@@ -512,6 +512,7 @@ msg-import-warn-psd-adjustment = adjustment layer “{ $name }” ({ $kind }) is
 msg-import-warn-psd-text = text “{ $name }”: paragraph/character formats only imported in simplified form (A)
 msg-import-warn-psd-lab = Lab color mode: values are imported without conversion
 msg-import-warn-psd-cmyk = CMYK PSD: naive conversion (the original converts through the PSL library with a profile, 12 §7a T7)
+msg-import-warn-psd-multi-fx = layer “{ $name }”: of several “{ $effect }” layer effects only one is imported
 msg-import-warn-svg-pattern = SVG patterns are not imported
 msg-import-warn-svg-gradient-stroke = SVG gradient strokes are replaced by their first color (A)
 msg-import-warn-svg-gradient-repeat = repeating SVG gradients are imported without repetition

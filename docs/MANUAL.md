@@ -43,7 +43,11 @@ available in German (`MANUAL.de.md`).
   before, *New* suggests their size.
 - *File ▸ Open* (Ctrl+O) reads FW-PNG and common image formats: PNG, GIF, JPEG, BMP, TIFF, TGA,
   WBMP, PSD, SVG, WebP, APNG, AVIF, HEIC, JPEG XL, QOI, ICO. In PSD files, shape layers become paths
-  and groups become sub-layers. Text from AI/EPS and SVG files comes in as editable text objects
+  and groups become sub-layers. Layer effects (drop shadow, inner shadow, outer and inner glow, bevel and emboss,
+  satin, colour, gradient and pattern overlay, stroke) arrive editable in one *PSD Live Effects* entry with the
+  values of the PSD file (*Scale Effects* and the global light angle applied); the layer pixels stay without the
+  effects. Effects switched off as a whole in the PSD file arrive with the entry switched off.
+  Text from AI/EPS and SVG files comes in as editable text objects
   (AI area text in the same place as in the original); the file type in the dialog is "AI (*.ai;*.art)".
   PDF files (and AI files from version 9) bring their layers (optional content groups) as layers:
   hidden groups arrive as hidden layers, nested groups are named "Parent / Child", and content outside
