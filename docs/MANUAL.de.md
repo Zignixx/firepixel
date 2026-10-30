@@ -324,6 +324,10 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   magentafarbene Linie (3 px Strich, 3 px Lücke), die mindestens 40 px über beide Objekte hinausreicht.
   *Modifizieren ▸ An Pixeln
   ausrichten* (Strg+K) richtet die Auswahl weiterhin einmalig aus.
+  *Ansicht ▸ Abstandsmessung* (ein eigener Schalter von Firepixel, direkt unter den intelligenten Hilfslinien, ab
+  Werk aus) zeichnet bei eingeschalteten intelligenten Hilfslinien zusätzlich Linien mit dem Abstand in Pixeln
+  (zum Beispiel „12“) vom verschobenen Objekt zu seinen nächsten Nachbarn links, rechts, oben und unten (bis
+  400 px entfernt); das Original zeigt solche Linien nicht.
   *Ansicht ▸ Live-Vorschau beim Ziehen von Punkten* (ein eigener Schalter von Firepixel, ab Werk aus) zeichnet das
   Objekt beim Ziehen von Ankern oder Griffen live mit Füllung, Strich und Effekten statt nur seines Umrisses.
   *Ansicht ▸ Zeiger bearbeitet Punkte* (ein eigener Schalter von Firepixel, ab Werk aus) lässt den Zeiger die Anker

@@ -7,7 +7,8 @@ use crate::docops;
 use crate::error::{EngineError, Result};
 use crate::session::{DocumentState, Session};
 use crate::tools::snap::{
-    LIVE_POINT_PREVIEW_PREF, SNAP_TO_PIXELS_PREF, live_point_preview, snap_to_pixels,
+    GAP_MEASUREMENTS_PREF, LIVE_POINT_PREVIEW_PREF, SNAP_TO_PIXELS_PREF, gap_measurements,
+    live_point_preview, snap_to_pixels,
 };
 use crate::view::ViewState;
 use fp_model::{Grid, Guides};
@@ -255,6 +256,22 @@ pub(super) fn register(r: &mut CommandRegistry) {
         r,
         "view.smartGuides.snapToSmartGuides",
         snap_to_smart_guides
+    );
+    // Firepixel's own switch (F148, FINDINGS TW-283, beyond the reference): gap measurement
+    // lines with a distance label to the neighbours while a moved object snaps with smart
+    // guides; default off (the reference shows no such lines).
+    r.add(
+        cmd("view.toggleGapMeasurements")
+            .label("Abstandsmessung")
+            .describe("Zeigt beim Verschieben mit intelligenten Hilfslinien Linien mit dem Abstand in Pixeln zu den benachbarten Objekten (ab Werk aus)")
+            .checked(|s| gap_measurements(&s.prefs))
+            .run(|s, _| {
+                let on = gap_measurements(&s.prefs);
+                s.prefs
+                    .set(GAP_MEASUREMENTS_PREF, crate::prefs::PrefValue::Bool(!on));
+                s.prefs_changed();
+                Ok(CommandOutput::session())
+            }),
     );
     // Firepixel's own switch (re 55 §5.5, beyond the reference): whole-pixel rounding of anchor
     // and handle drags with the Subselection tool, default off (the reference drags them at

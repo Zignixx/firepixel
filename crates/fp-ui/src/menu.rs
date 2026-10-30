@@ -812,6 +812,21 @@ pub fn build_main_menu_where(
                         .unwrap_or(nodes.len());
                     nodes.insert(pos, runtime_item("view.snapToPixels"));
                 }
+                // Firepixel's own switch "Gap Measurements" right after the Smart Guides
+                // submenu, before Snap to Pixels (F148, TW-283)
+                if st
+                    .session
+                    .registry()
+                    .get("view.toggleGapMeasurements")
+                    .is_some()
+                {
+                    let pos = nodes
+                        .iter()
+                        .position(|n| matches!(n, Node::Sub { label, .. } if *label == smart))
+                        .map(|i| i + 1)
+                        .unwrap_or(nodes.len());
+                    nodes.insert(pos, runtime_item("view.toggleGapMeasurements"));
+                }
                 // Firepixel's own switch "Live Preview While Dragging Points" right after Snap to
                 // Pixels (FB-67)
                 if st.session.registry().get("view.livePointPreview").is_some() {

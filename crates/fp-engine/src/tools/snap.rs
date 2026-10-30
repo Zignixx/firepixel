@@ -3,8 +3,9 @@
 //! intelligenten Hilfslinien (`SnapToSmartGuides`: Kanten und Mitten anderer Objekte sowie Rand und
 //! Mitte der Seite) und an ganzen Pixeln. Fangabstand `SnapDistance` Bildschirmpixel (Vorgabe 5),
 //! umgerechnet in Dokumentpixel über den Zoom, einschließlich (≤). Die Rückmeldung (magentafarbene Linien wie in CS6,
-//! Farbe `SmartGuideColor`) liefert der Fang als [`Overlay::SmartGuide`]; Abstände zu Nachbarn als
-//! [`Overlay::Label`].
+//! Farbe `SmartGuideColor`) liefert der Fang als [`Overlay::SmartGuide`]; Abstände zu Nachbarn
+//! (Firepixel's own gap measurement lines, only with View ▸ Gap Measurements, TW-283) als
+//! [`Overlay::GuideLine`] plus [`Overlay::Label`].
 
 use super::{Overlay, ToolContext, fmt_num};
 use crate::docops;
@@ -38,6 +39,19 @@ pub const LIVE_POINT_PREVIEW_DEFAULT: bool = false;
 /// State of View ▸ Live Preview While Dragging Points.
 pub fn live_point_preview(prefs: &crate::prefs::Preferences) -> bool {
     prefs.get_bool(LIVE_POINT_PREVIEW_PREF, LIVE_POINT_PREVIEW_DEFAULT)
+}
+
+/// Preference behind View ▸ Gap Measurements (Firepixel's own switch, F148, FINDINGS TW-283):
+/// while a moved object snaps with smart guides on, lines with a distance label (e.g. "12") to the
+/// nearest neighbours left/right/above/below. The reference shows no such lines, so off by default.
+pub const GAP_MEASUREMENTS_PREF: &str = "GapMeasurements";
+
+/// Default of [`GAP_MEASUREMENTS_PREF`]: off, like the reference.
+pub const GAP_MEASUREMENTS_DEFAULT: bool = false;
+
+/// State of View ▸ Gap Measurements.
+pub fn gap_measurements(prefs: &crate::prefs::Preferences) -> bool {
+    prefs.get_bool(GAP_MEASUREMENTS_PREF, GAP_MEASUREMENTS_DEFAULT)
 }
 
 /// Herkunft einer Fanglinie.
@@ -94,6 +108,8 @@ pub struct Snapper {
     page: Option<Rect>,
     smart: bool,
     show_smart: bool,
+    /// Gap measurement lines to the neighbours (View ▸ Gap Measurements, default off).
+    gaps: bool,
     pixels: bool,
 }
 
@@ -165,6 +181,7 @@ impl Snapper {
             page: page_rect,
             smart,
             show_smart: v.show_smart_guides,
+            gaps: gap_measurements(ctx.prefs),
             // whole pixels for Pointer moves, Pen points etc. (measured, re 55 §5.2, §7.4);
             // point drags choose with [`Self::with_pixels`]
             pixels: true,
@@ -525,7 +542,10 @@ impl Snapper {
                     }
                 }
             }
-            guides.extend(self.gap_labels(&m));
+            // Firepixel's own gap measurement lines, only with View ▸ Gap Measurements (TW-283)
+            if self.gaps {
+                guides.extend(self.gap_labels(&m));
+            }
         }
         (dx, dy, guides)
     }
@@ -634,6 +654,7 @@ mod tests {
             page: Some(Rect::new(0.0, 0.0, 300.0, 200.0)),
             smart: true,
             show_smart: true,
+            gaps: false,
             pixels: true,
         }
     }
@@ -810,5 +831,51 @@ mod tests {
             (0.0, 0.0),
             "beyond the snap distance on one axis: free"
         );
+    }
+
+    /// F148 (TW-283): the gap measurement lines (GuideLine + distance label to the neighbours)
+    /// only with View ▸ Gap Measurements; the smart guide lines and the snap itself are the same
+    /// either way.
+    #[test]
+    fn gap_lines_only_with_the_switch() {
+        // top 1 px below the left neighbour's top (snaps to 10, smart guide); a second
+        // neighbour 12 px below the snapped rectangle gives a gap line labelled "12"
+        let base = Snapper {
+            page: None,
+            guides_x: vec![],
+            ..snapper(vec![
+                Rect::new(10.0, 10.0, 50.0, 50.0),
+                Rect::new(52.0, 62.0, 72.0, 80.0),
+            ])
+        };
+        let moved = Rect::new(52.0, 11.0, 72.0, 51.0);
+        let off = base.rect(moved);
+        let on = Snapper {
+            gaps: true,
+            ..base.clone()
+        }
+        .rect(moved);
+        assert_eq!((off.0, off.1), (on.0, on.1), "same snap either way");
+        let gap = |g: &[Overlay]| {
+            g.iter()
+                .filter(|o| matches!(o, Overlay::GuideLine { .. } | Overlay::Label { .. }))
+                .count()
+        };
+        let smart = |g: &[Overlay]| {
+            g.iter()
+                .filter(|o| matches!(o, Overlay::SmartGuide { .. }))
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(gap(&off.2), 0, "default off: no gap lines {:?}", off.2);
+        assert!(!smart(&off.2).is_empty(), "smart guides stay: {:?}", off.2);
+        assert!(gap(&on.2) >= 2, "switch on: gap line + label {:?}", on.2);
+        assert!(
+            on.2.iter()
+                .any(|o| matches!(o, Overlay::Label { text, .. } if text == "12")),
+            "{:?}",
+            on.2
+        );
+        assert_eq!(smart(&off.2), smart(&on.2));
     }
 }

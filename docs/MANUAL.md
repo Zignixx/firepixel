@@ -300,6 +300,9 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   objects within 5 screen pixels; the guide is a dashed magenta line (3 px on, 3 px off) that reaches at least
   40 px beyond both objects. *Modify ▸ Snap to
   Pixel* (Ctrl+K) still snaps the selection once.
+  *View ▸ Gap Measurements* (Firepixel's own switch, right below Smart Guides, off by default) additionally
+  draws lines with the distance in pixels (for example "12") from the moved object to its nearest neighbours on
+  the left, right, top and bottom (up to 400 px away) while smart guides are on; the original shows no such lines.
   *View ▸ Live Preview While Dragging Points* (Firepixel's own switch, off by default) redraws the object with its
   fill, stroke and effects while you drag anchors or handles, instead of only its outline.
   *View ▸ Pointer Edits Points* (Firepixel's own switch, off by default) lets the Pointer edit the anchors of the
