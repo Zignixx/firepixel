@@ -75,3 +75,6 @@ opt-level = 3
 # vendor\egui-wgpu\README.md beschrieben.
 [patch.crates-io]
 egui-wgpu = { path = "vendor/egui-wgpu" }
+# FB-138: winit 0.30.13 with `applicationShouldTerminate:` on macOS (Dock > Quit, logout) turned into a
+# close request, so quitting asks to save like closing the window. Change in vendor\winit\README.md.
+winit = { path = "vendor/winit" }

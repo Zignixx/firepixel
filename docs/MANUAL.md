@@ -24,6 +24,7 @@ build is new and has not yet been tried on many desktops.
 zoom); Firepixel's menu bar sits directly below it. Cmd+Q quits like File ▸ Exit and asks to save
 changed documents first. The application menu in the macOS menu bar offers About Firepixel Studio,
 Services, Hide Firepixel Studio, Hide Others, Show All and Quit Firepixel Studio (Cmd+Q, also with the save prompt).
+Quitting from the Dock (right-click ▸ Quit) or logging out asks the same way; *Cancel* keeps Firepixel running.
 
 **Starting:**
 

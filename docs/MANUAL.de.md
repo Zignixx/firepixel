@@ -25,7 +25,8 @@ ausprobiert.
 Zoomen); die Menüleiste von Firepixel liegt direkt darunter. Cmd+Q beendet wie Datei ▸ Beenden und
 fragt vorher, ob geänderte Dokumente gespeichert werden sollen. Das Programmmenü in der Menüleiste von
 macOS bietet Über Firepixel Studio, Dienste, Firepixel Studio ausblenden, Andere ausblenden, Alle
-einblenden und Firepixel Studio beenden (Cmd+Q, ebenfalls mit der Rückfrage).
+einblenden und Firepixel Studio beenden (Cmd+Q, ebenfalls mit der Rückfrage). Beenden über das Dock
+(Rechtsklick ▸ Beenden) oder Abmelden fragt genauso; *Abbrechen* lässt Firepixel geöffnet.
 
 **Start:**
 

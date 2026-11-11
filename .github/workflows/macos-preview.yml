@@ -1,4 +1,4 @@
-# macOS preview: Firepixel.app as a universal binary (arm64 + x86_64) in a ZIP artifact, optionally
+# macOS preview: "Firepixel Studio.app" as a universal binary (arm64 + x86_64) in a ZIP artifact, optionally
 # plus tests of the platform-neutral, batch and export crates. No push trigger: manual only (workflow_dispatch) or from
 # the release workflow (workflow_call), because macOS minutes count ten times.
 name: macos-preview
@@ -31,7 +31,7 @@ env:
 
 jobs:
   bundle:
-    name: Firepixel.app (universal)
+    name: Firepixel Studio.app (universal)
     runs-on: macos-14
     timeout-minutes: 60
     steps:
@@ -91,7 +91,8 @@ jobs:
           VERSION=$(cargo pkgid -p firepixel | sed -E 's/.*[#@]//')
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           OUT=dist/Firepixel-macOS-universal
-          APP=$OUT/Firepixel.app
+          # bundle folder = name shown in Finder and the Dock (FB-138); executable stays firepixel
+          APP="$OUT/Firepixel Studio.app"
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
           cp target/universal/firepixel "$APP/Contents/MacOS/firepixel"
           cp target/universal/firepixel-cli "$OUT/firepixel-cli"
@@ -166,7 +167,7 @@ jobs:
         continue-on-error: true
         run: |
           set -u
-          APP=dist/Firepixel-macOS-universal/Firepixel.app
+          APP="dist/Firepixel-macOS-universal/Firepixel Studio.app"
           FP_STARTUP_TRACE=1 RUST_BACKTRACE=1 "$APP/Contents/MacOS/firepixel" > dist/start.log 2>&1 &
           PID=$!
           sleep 20

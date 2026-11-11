@@ -5,7 +5,7 @@
 | File | Trigger | Content |
 |---|---|---|
 | `windows-ci.yml` | manual only (`workflow_dispatch`) or called from `prerelease.yml` (`workflow_call`, inputs `ref` and `package`); push and PR trigger nothing | four jobs in parallel: *cargo check (warning-free)*, *Tests (without fp-ui)*, *Tests fp-ui (kittest)*, *Release build (x64)* as the artifact `Firepixel-Windows-x64`. Called with `package: true` only the release build runs and uploads the ZIP as `release-windows` |
-| `macos-preview.yml` | manual only (input `tests`, default off) or called from `prerelease.yml` (input `ref`) | job *Firepixel.app (universal)*: `Firepixel.app` as a universal binary (arm64 + x86_64, macOS 10.15+, merged with `lipo` and verified), ad-hoc signed, ZIP with universal CLI, manuals, licence (artifact `Firepixel-macOS-universal`), plus a 20 s startup probe (arm64 slice only, the runner is Apple Silicon); optional job *Tests (platform-neutral, batch and export crates)* (input `tests`, see below) |
+| `macos-preview.yml` | manual only (input `tests`, default off) or called from `prerelease.yml` (input `ref`) | job *Firepixel Studio.app (universal)*: `Firepixel Studio.app` as a universal binary (arm64 + x86_64, macOS 10.15+, merged with `lipo` and verified), ad-hoc signed, ZIP with universal CLI, manuals, licence (artifact `Firepixel-macOS-universal`), plus a 20 s startup probe (arm64 slice only, the runner is Apple Silicon); optional job *Tests (platform-neutral, batch and export crates)* (input `tests`, see below) |
 | `linux-build.yml` | manual only (input `tests`, default off) or called from `prerelease.yml` (inputs `ref` and `package`) | job *Linux x86_64 (tar.gz + AppImage)* on `ubuntu-22.04` (glibc 2.35 baseline): `Firepixel-Linux-x64-X.Y.Z.tar.gz` (`firepixel`, `firepixel-cli`, manuals, licence, `share/applications/firepixel.desktop`, hicolor icons) and `Firepixel-x86_64.AppImage` (packed with a pinned, checksum-verified `appimagetool`), artifact `Firepixel-Linux-x64`; plus a startup probe under Xvfb (software rendering) that checks that `firepixel --mcp` writes `mcp-bridge.json` (artifact `startprobe-linux`, may fail without failing the run); optional job *Tests (platform-neutral, batch and export crates)* (input `tests`, see below) |
 | `prerelease.yml` | manual only (input `version`, optional) | jobs *Set version*, *Windows x64*, *macOS universal*, *Linux x86_64*, *Tag and pre-release* |
 
@@ -54,7 +54,7 @@ Steps in the workflow:
 2. Set the version in `Cargo.toml`/`Cargo.lock`, bot commit `Version X.Y.0 [skip ci]` on `main`.
 3. In parallel: Windows x64 (`Firepixel-Windows-x64-X.Y.0.zip`: `firepixel.exe`, `firepixel-cli.exe`,
    `LICENSE`, `docs\MANUAL.md`, `docs\MANUAL.de.md`) and macOS universal
-   (`Firepixel-macOS-universal-X.Y.0.zip`: `Firepixel.app`, `firepixel-cli`, `MANUAL.md`,
+   (`Firepixel-macOS-universal-X.Y.0.zip`: `Firepixel Studio.app`, `firepixel-cli`, `MANUAL.md`,
    `MANUAL.de.md`, `LICENSE`) and Linux x86_64 (`Firepixel-Linux-x64-X.Y.0.tar.gz` and
    `Firepixel-x86_64.AppImage`).
 4. **Tag and pre-release**: tag `vX.Y.0` on the version commit, **pre-release** titled
@@ -126,7 +126,7 @@ path literals, the reference font, no font at all on Linux), fixed as described 
 ## Notes
 
 - macOS: not notarized – first launch via right-click ▸ Open, or
-  `xattr -dr com.apple.quarantine Firepixel.app`.
+  `xattr -dr com.apple.quarantine "Firepixel Studio.app"`.
 - The Windows runner has no real GPU; the kittest tests run on wgpu's software renderer.
 - Linux: built on Ubuntu 22.04, so the binaries need glibc 2.35+. No OpenSSL: the AI model
   download uses rustls on non-Windows targets (`fp-ai/Cargo.toml`; Windows keeps SChannel), and the

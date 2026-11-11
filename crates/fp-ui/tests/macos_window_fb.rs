@@ -179,3 +179,71 @@ fn app_menu_click_wakes_the_ui_and_runs_quit() {
     // nothing unsaved: Quit closes the window right away
     assert!(app.state.quit_confirmed && app.state.close_window);
 }
+
+/// FB-138: a quit request for the whole application (macOS Dock > Quit, `terminate:`, logout) reaches
+/// the app as a close request of the main window (patched winit, `vendor/winit`). It must take the
+/// same way as the window's close button: cancel the close, ask about unsaved documents, and on
+/// *Cancel* keep running with every document open; a later quit request asks again.
+#[test]
+fn app_quit_request_asks_to_save_and_cancel_keeps_running() {
+    use serde_json::json;
+    let mut s = fp_engine::Session::default();
+    s.execute("file.new", json!({"width": 40, "height": 30}))
+        .expect("doc");
+    s.execute("draw.rectangle", json!({"rect": [1, 1, 10, 10]}))
+        .expect("rect");
+    let ctx = egui::Context::default();
+    let app = fp_ui::FirepixelApp::with_session(
+        &ctx,
+        s,
+        fp_ui::app_state::UiSettings::default(),
+        false,
+    );
+    let mut h = egui_kittest::Harness::builder()
+        .with_size(egui::vec2(1000.0, 700.0))
+        .with_max_steps(8)
+        .build_ui_state(|ui, app: &mut fp_ui::FirepixelApp| app.root_ui(ui), app);
+    h.run_steps(2);
+    let quit_request = |h: &mut egui_kittest::Harness<'_, fp_ui::FirepixelApp>| {
+        h.input_mut()
+            .viewports
+            .entry(ViewportId::ROOT)
+            .or_default()
+            .events
+            .push(egui::ViewportEvent::Close);
+    };
+    quit_request(&mut h);
+    h.run_steps(1);
+    let st = &h.state().state;
+    assert!(st.dialogs.unsaved.is_some(), "save prompt open");
+    assert!(!st.quit_confirmed && !st.close_window, "not quit yet");
+    // Cancel: the app keeps running, the document stays open and modified
+    h.state_mut().state.dialogs.unsaved = None;
+    h.run_steps(2);
+    let st = &h.state().state;
+    assert!(!st.quit_confirmed && !st.close_window, "Cancel aborts the quit");
+    assert_eq!(st.session.documents().len(), 1);
+    assert!(st.session.documents()[0].is_dirty());
+    // the next quit request asks again
+    quit_request(&mut h);
+    h.run_steps(1);
+    assert!(h.state().state.dialogs.unsaved.is_some(), "asks again");
+}
+
+/// FB-138: the macOS application-terminate hook lives in the vendored winit copy; guard against a
+/// dependency update that silently drops it (the hook itself can only run on macOS).
+#[test]
+fn vendored_winit_keeps_the_terminate_hook() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let manifest = std::fs::read_to_string(root.join("Cargo.toml")).expect("Cargo.toml");
+    assert!(
+        manifest.contains("winit = { path = \"vendor/winit\" }"),
+        "[patch.crates-io] winit"
+    );
+    let delegate =
+        std::fs::read_to_string(root.join("vendor/winit/src/platform_impl/macos/app_state.rs"))
+            .expect("vendored winit");
+    assert!(delegate.contains("#[method(applicationShouldTerminate:)]"));
+    assert!(delegate.contains("NSApplicationTerminateReply::NSTerminateCancel"));
+    assert!(delegate.contains("WindowEvent::CloseRequested"));
+}

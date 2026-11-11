@@ -256,7 +256,8 @@ impl FirepixelApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
             self.last_title = title;
         }
-        // Schließen über das System (Alt+F4, Taskleiste): erst Rückfragen
+        // Schließen über das System (Alt+F4, Taskleiste): erst Rückfragen. On macOS a quit of the
+        // whole app (Dock > Quit, logout) arrives here as well (vendored winit, FB-138).
         if ctx.input(|i| i.viewport().close_requested()) && !st.quit_confirmed {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             st.push(Action::Quit);
