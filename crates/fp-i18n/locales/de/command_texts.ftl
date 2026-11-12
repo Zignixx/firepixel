@@ -724,3 +724,6 @@ cmdtext-farbe-vorgabe-ff0000 = Farbe (Vorgabe #ff0000)
 cmdtext-eingeschaltet-vorgabe-ja = eingeschaltet (Vorgabe ja)
 cmdtext-abzug-im-eigenen-strich-alt-firepixel-er-48c1f8 = Abzug im eigenen Strich (Alt, Firepixel-Erweiterung; Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter): [{"{"}at, size, round, points{"}"}, …]; die Spitze stellt wieder her, was die Punkte vor `at` geändert haben
 cmdtext-fruehere-teile-eines-strichs-dessen-eins-dfe126 = Frühere Teile eines Strichs, dessen Einstellungen während der Pause geändert wurden (Firepixel-Erweiterung): [{"{"}Parameter dieses Befehls mit points{"}"}, …], vor diesem Teil ausgeführt
+cmdtext-arrow-key-nudge-with-a-pixel-selection-l-ecf823 = Pfeiltasten-Schritt mit einer Pixelauswahl: hebt die Pixel in einen schwebenden Block (Strg+Pfeil mit einem Bitmap-Auswahlwerkzeug)
+cmdtext-move-a-copy-without-a-floating-block-the-fcc076 = Kopie verschieben: ohne schwebenden Block behält die Bitmap die Pixel, mit einem Block wird er an seiner Stelle abgelegt und schwebt weiter (Zeile Duplizieren)
+cmdtext-staerke-des-verlauf-dithers-in-100-vorga-d04749 = Stärke des Verlauf-Dithers in % (100 = Vorgabe, 0 = keiner; Firepixel-Erweiterung)
