@@ -540,3 +540,8 @@ pi-ai-need-selection = Erst eine Pixelauswahl erstellen
 
 # Firepixel extension (FB-35): inverted mask
 pi-mask-invert = Invertieren
+
+# FB-149: Werkzeugoptionen unter den Objekteigenschaften (Firepixel-Erweiterung)
+pi-current-tool = Aktuelles Werkzeug
+pi-tool-section-swap = Werkzeugoptionen und Objekteigenschaften tauschen
+pi-tip-tool-section-swap = Werkzeugoptionen über oder unter den Objekteigenschaften anzeigen (Firepixel-Erweiterung)

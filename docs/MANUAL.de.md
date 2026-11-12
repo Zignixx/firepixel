@@ -814,6 +814,20 @@ Maskengruppe, das in den Maskenzeilen des Ebenen-Bedienfelds gewählt wird, zeig
 den Deckkraft-Schieber des Eigenschaften-Inspektors ziehen, folgt ihm das Feld Deckkraft des Ebenen-Bedienfelds und
 umgekehrt.
 
+**Werkzeugoptionen unter dem Objekt (Firepixel-Erweiterung):** Ist ein Objekt ausgewählt und ein Werkzeug mit
+Optionen aktiv, zeigt der Eigenschaften-Inspektor unter einer dünnen Linie einen zweiten Teil: das Werkzeugsymbol,
+„Aktuelles Werkzeug“ mit dem Namen des Werkzeugs und seine Optionen. Beim Zeiger und bei der Unterauswahl sind das
+das Klappmenü *Auswahlrahmen* (Rechteck / Lasso) und die Kästchen der eigenen Voreinstellungen (Auswahlvorschau beim
+Darüberfahren, Alt-Ziehen hebt Auswahl auf, Pfeiltasten verschieben die gewählten Pixel, Duplizieren mit
+Strg-Ziehen, Umschalt-Auswahlrahmen fügt nur hinzu); die Auswahlwerkzeuge (Auswahlrahmen, Ovaler Auswahlrahmen,
+Lasso, Polygon-Lasso, Zauberstab) zeigen dieselben Kästchen, solange eine Auswahl besteht. Es sind dieselben
+Einstellungen wie auf der Seite „Bearbeiten“ der Voreinstellungen: Eine Änderung an der einen Stelle zeigt sich an der
+anderen und wird sofort gespeichert. Die Vektorwerkzeuge (Zeichenstift, Linie, Rechteck, Ellipse, Polygon,
+automatische Form, Hotspot-Werkzeuge) zeigen dort ihre Werkzeugoptionen für neue Objekte. Der Knopf mit zwei Kästchen
+am linken Ende der Linie tauscht die beiden Teile (bleibt im Arbeitsbereich gespeichert). In der üblichen Höhe
+erreichen Sie den zweiten Teil mit der Bildlaufleiste des Inspektors oder indem Sie ihn höher ziehen; in halber Höhe
+und ohne Auswahl bleibt der Inspektor unverändert.
+
 - **Popup-Schieber (▾):** Während Sie den Regler bewegen, zeigt die Arbeitsfläche den Wert live als Vorschau – bei
   Deckkraft (auch beim Deckkraft-Schieber im Ebenen-Bedienfeld, der wie dessen Mischmodus-Liste auf die gewählten
   Objekte wirkt und bei unterschiedlichen Werten leer ist), Strichstärke, Kantenweichheit des Strichs, weicher

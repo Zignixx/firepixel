@@ -382,7 +382,7 @@ pub fn tool_header_lines(ctx: &egui::Context) -> Vec<String> {
 
 /// Name im Werkzeugkopf: Werkzeugname; bei der automatischen Form wie im Original der Name der
 /// gewählten Form („Abgefastes Rechteck“, PARITAET_A W27).
-fn tool_q1_label(st: &AppState) -> String {
+pub(super) fn tool_q1_label(st: &AppState) -> String {
     let id = st.session.tools.active;
     if id == fp_engine::ToolId::AutoShape {
         let shape = st.session.tools.options.auto_shape.as_str();

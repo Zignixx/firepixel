@@ -25,6 +25,7 @@ pub use quads::selection_thumb_rect;
 pub use quads::tool_header_lines;
 pub mod texts;
 mod tool_quads;
+pub mod tool_section;
 
 use crate::app_state::{Action, AppState};
 use crate::docking;
@@ -52,6 +53,8 @@ impl QuadrantRegistry {
         obj_quads::register(&mut r);
         tool_quads::register(&mut r);
         ai_quads::register(&mut r);
+        // FB-149: header of the tool options section (icon, "Current tool", name)
+        r.register(tool_section::HEADER_Q1, tool_section::header);
         // Bitmap: Knopf „Nachzeichnen…“ (VT-2)
         r.register(
             crate::dialogs::trace::INSPECTOR_Q5,
@@ -367,11 +370,21 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     // FB-83 (like TW-224 for the panels): a dragged height between half and full height shows
     // both rows but has less room than they need; the inspector then scrolls vertically instead
     // of cutting off the lower rows (e.g. the mask options of Q6)
-    let content_h = content_height(&theme);
+    // FB-149 (TW-295): tool options section below (or above) the object properties
+    let section = if half {
+        None
+    } else {
+        tool_section::section_for(&st.session)
+    };
+    let sec_h = section.as_ref().map_or(0.0, |s| {
+        tool_section::SEPARATOR_H
+            + tool_section::content_height(ui, &theme, s, body.width().max(BODY_WIDTH))
+    });
+    let content_h = content_height(&theme) + sec_h;
     let need_w = body.width() + 0.5 < BODY_WIDTH;
     let need_h = !half && body.height() + 0.5 < content_h;
     if !need_w && !need_h {
-        quadrants(ui, st, body, &state, half, &theme);
+        body_contents(ui, st, body, &state, half, &theme, section.as_ref());
     } else {
         // schmales Fenster: die Quadranten behalten ihre Breite nach dem Original, der Inspektor
         // bekommt einen waagerechten Bildlauf (statt Quadrant 3/4 abzuschneiden)
@@ -401,7 +414,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
             .show(&mut child, |ui| {
                 let (r, _) = ui.allocate_exact_size(size, Sense::hover());
-                quadrants(ui, st, r, &state, half, &theme);
+                body_contents(ui, st, r, &state, half, &theme, section.as_ref());
             });
         ui.ctx()
             .data_mut(|d| d.insert_temp(Id::new(HSCROLL_ID), out.inner_rect));
@@ -455,7 +468,37 @@ const W5: f32 = 180.0;
 /// Breite, die der Inspektor ohne Bildlauf braucht.
 pub const BODY_WIDTH: f32 = 2.0 + W1 + W3 + W5 + 4.0;
 
-/// Trennlinien und Quadranten in `body` zeichnen.
+/// Object quadrants and, if any, the tool options section with its separator (FB-149): the
+/// section below the quadrants, or on top when swapped.
+fn body_contents(
+    ui: &mut Ui,
+    st: &mut AppState,
+    r: Rect,
+    state: &InspectorState,
+    half: bool,
+    theme: &Theme,
+    section: Option<&tool_section::Section>,
+) {
+    let Some(sec) = section else {
+        quadrants(ui, st, r, state, half, theme, "quad");
+        return;
+    };
+    let obj_h = content_height(theme);
+    let sec_h = tool_section::content_height(ui, theme, sec, r.width());
+    let sep = tool_section::SEPARATOR_H;
+    let (obj_top, sep_top, sec_top) = if tool_section::on_top(st) {
+        (r.top() + sec_h + sep, r.top() + sec_h, r.top())
+    } else {
+        (r.top(), r.top() + obj_h, r.top() + obj_h + sep)
+    };
+    let at = |top: f32, h: f32| Rect::from_min_size(pos2(r.left(), top), vec2(r.width(), h));
+    quadrants(ui, st, at(obj_top, obj_h), state, half, theme, "quad");
+    tool_section::separator(ui, st, at(sep_top, sep));
+    tool_section::content(ui, st, at(sec_top, sec_h), sec, theme);
+}
+
+/// Trennlinien und Quadranten in `body` zeichnen (`salt` keeps the child ids of the tool
+/// section's quadrants apart from the object quadrants).
 fn quadrants(
     ui: &mut Ui,
     st: &mut AppState,
@@ -463,6 +506,7 @@ fn quadrants(
     state: &InspectorState,
     half: bool,
     theme: &Theme,
+    salt: &'static str,
 ) {
     let c = &theme.colors;
     let rh = theme.metrics.inspector_row_height;
@@ -533,7 +577,7 @@ fn quadrants(
         if let Some(f) = reg.get(t) {
             let mut child = ui.new_child(
                 egui::UiBuilder::new()
-                    .id_salt(("quad", i, t))
+                    .id_salt((salt, i, t))
                     .max_rect(*r)
                     .layout(egui::Layout::top_down(egui::Align::Min)),
             );

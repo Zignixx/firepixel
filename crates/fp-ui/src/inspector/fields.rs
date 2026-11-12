@@ -1714,9 +1714,10 @@ pub fn list_width<'a>(ui: &Ui, items: impl IntoIterator<Item = &'a str>, min: f3
         .into_iter()
         .map(|s| crate::widgets::text_width(ui, s, &font))
         .fold(0.0_f32, f32::max);
-    let scroll = ui.spacing().scroll.bar_width
-        + ui.spacing().scroll.bar_outer_margin
-        + ui.spacing().scroll.bar_inner_margin;
+    // the popup's scroll bar follows the context style, not the (floating, thinner) bar of a
+    // scrolled Properties panel the combo may sit in (FB-149)
+    let sc = ui.ctx().global_style().spacing.scroll;
+    let scroll = sc.bar_width + sc.bar_outer_margin + sc.bar_inner_margin;
     let cap = (ui.ctx().content_rect().width() * 0.5).max(min);
     (longest + LIST_ITEM_PAD + scroll + 2.0).clamp(min, cap)
 }

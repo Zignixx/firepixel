@@ -80,6 +80,10 @@ pub struct Workspace {
     /// `0` keeps the discrete full / half / collapsed height.
     #[serde(default)]
     pub inspector_height: f32,
+    /// Properties panel: the tool options section stands above the object properties (swap
+    /// button, Firepixel extension FB-149); `false` = below.
+    #[serde(default)]
+    pub inspector_tool_section_on_top: bool,
     /// Aktiver Reiter unten (0 Eigenschaften, 1 Symboleigenschaften).
     pub bottom_active: usize,
     /// „Bedienfelder ausblenden“ (Tab/F4).
@@ -144,6 +148,7 @@ impl Workspace {
             inspector_collapsed: false,
             inspector_half: false,
             inspector_height: 0.0,
+            inspector_tool_section_on_top: false,
             bottom_active: 0,
             panels_hidden: false,
         }

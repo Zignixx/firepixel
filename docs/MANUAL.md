@@ -738,6 +738,19 @@ Filters when all objects carry the same ones (otherwise the list is empty and + 
 mask group chosen in the Layers panel's mask rows shows its own panel. While you drag the opacity slider of the
 Properties inspector the Layers panel's Opacity field follows it, and the other way round.
 
+**Tool options below the object (Firepixel extension):** with an object selected and a tool with options active,
+the Properties inspector shows a second section below a thin line: the tool icon, "Current tool" with the tool name
+and its options. For the Pointer and the Subselection these are the *Marquee* popup (Rectangle / Lasso) and the
+check boxes *Show selection preview while hovering*, *Alt-drag on empty canvas deselects*, *Arrow keys move the
+selected pixels with the selection tools*, *Duplicate with Ctrl-drag instead of Alt-drag* and *Shift-marquee only
+adds to the selection*; the selection tools (Marquee, Oval Marquee, Lasso, Polygon Lasso, Magic Wand) show the same
+check boxes while a selection exists. They are the same settings as on the Edit page of the Preferences: a change
+in one place shows in the other and is saved at once. The vector tools (Pen, Line, Rectangle, Ellipse, Polygon,
+Auto Shape, hotspot tools) show their tool options for new objects there. The button with two boxes at the left
+end of the line swaps the two sections (kept with the workspace). At the usual panel height the section is reached
+with the panel's scroll bar or by dragging the panel taller; at half height and with nothing selected the panel is
+unchanged.
+
 - **Pop-up sliders (▾):** while you move the thumb, the canvas previews the value live (preview only) for
   opacity (also the Opacity slider in the Layers panel, which like its Blend mode list acts on the selected objects
   and is blank when they have different values), stroke size, stroke edge softness, fill edge feather, fill

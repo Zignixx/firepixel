@@ -180,8 +180,10 @@ fn vector_mask_rows_fit_and_keep_their_order() {
     h.run_steps(4);
     let vp = fp_ui::inspector::hscroll_viewport(&h.ctx).expect("vertical scroll");
     assert!(vp.bottom() <= panel(&h).bottom() + 0.5, "{vp:?}");
-    // the default size needs no scroll
+    // the default size needs no scroll for the rows themselves (with the Pointer the tool
+    // options section of FB-149 lies below them and is reached by scrolling; the Hand has none)
     h.state_mut().state.settings.workspace.inspector_height = 0.0;
+    let _ = h.state_mut().state.session.set_tool(fp_engine::ToolId::Hand);
     h.run_steps(4);
     assert!(
         fp_ui::inspector::hscroll_viewport(&h.ctx).is_none(),
