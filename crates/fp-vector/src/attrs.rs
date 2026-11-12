@@ -315,6 +315,16 @@ pub struct Gradient {
     /// `t' = 0.5·t + 0.5·(3t² − 2t³)` plus ±1 noise per colour channel.
     #[cfg_attr(feature = "serde", serde(default))]
     pub dither: bool,
+    /// Strength of the gradient dither in per cent (Firepixel extension, FB-150; see
+    /// [`crate::gradient::dither_noise_strength`]): 100 = the measured dither exactly, 0 = none,
+    /// up to 400 = stronger grain. Only used while `dither` is on.
+    #[cfg_attr(feature = "serde", serde(default = "default_dither_strength"))]
+    pub dither_strength: u16,
+}
+
+#[cfg(feature = "serde")]
+fn default_dither_strength() -> u16 {
+    100
 }
 
 /// Art der Füllung.

@@ -223,3 +223,39 @@ fn plain_solid_object_leaves_the_edge_alone() {
     assert_eq!(f.edge, fp_model::Fill::EDGE_HARD);
     assert_eq!(f.shape, 0);
 }
+
+#[test]
+fn gradient_dither_strength_sets_and_reads_back() {
+    // FB-150 (Firepixel extension): `gradient.ditherStrength` in % (100 = default, 0..400)
+    let mut s = session_with_rect();
+    s.execute("pi.fill", json!({"category": "gradient"}))
+        .expect("gradient");
+    let none = run(
+        &mut s,
+        &format!("{FILL}String(f.gradient.ditherStrength === undefined)"),
+    );
+    assert_eq!(none, "true", "not reported at the default");
+    run(
+        &mut s,
+        &format!(
+            "{FILL}f.gradient.dither = true; f.gradient.ditherStrength = 250; \
+             fw.getDocumentDOM().setFill(f); 0"
+        ),
+    );
+    let f = model(&s).fill.expect("fill");
+    assert_eq!(f.gradient_dither_strength, 250);
+    assert_eq!(
+        f.gradient
+            .as_ref()
+            .and_then(|g| g.stops.as_ref())
+            .and_then(|s| s.dither),
+        Some(true)
+    );
+    let back = run(&mut s, &format!("{FILL}String(f.gradient.ditherStrength)"));
+    assert_eq!(back, "250");
+    run(
+        &mut s,
+        &format!("{FILL}f.gradient.ditherStrength = 9999; fw.getDocumentDOM().setFill(f); 0"),
+    );
+    assert_eq!(model(&s).fill.expect("fill").gradient_dither_strength, 400);
+}

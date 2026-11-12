@@ -119,6 +119,17 @@ pub struct Fill {
     /// fill; the older marker `fpDi` (share of kept pixels, 100 = off) is still read and converted.
     #[serde(default, skip_serializing_if = "is_zero_i32")]
     pub dither_density: i32,
+    /// Strength of the gradient dither in per cent (Firepixel extension, FB-150): 100 (default) =
+    /// the measured dither of the reference exactly, lower values fade it out towards 0 = no
+    /// dither, up to [`Fill::GRADIENT_DITHER_STRENGTH_MAX`] for a stronger, clearly visible grain.
+    /// Only used while the gradient dither (`FGDb`) is on. In FW-PNG it is stored only in the
+    /// Firepixel-own marker `fpSi` of the fill (written when not 100), so other readers show the
+    /// plain gradient dither.
+    #[serde(
+        default = "default_dither_strength",
+        skip_serializing_if = "is_default_dither_strength"
+    )]
+    pub gradient_dither_strength: i32,
     #[serde(default, skip_serializing_if = "Extra::is_empty")]
     pub extra: Extra,
 }
@@ -127,7 +138,20 @@ fn is_zero_i32(v: &i32) -> bool {
     *v == 0
 }
 
+fn default_dither_strength() -> i32 {
+    Fill::GRADIENT_DITHER_STRENGTH_DEFAULT
+}
+
+fn is_default_dither_strength(v: &i32) -> bool {
+    *v == Fill::GRADIENT_DITHER_STRENGTH_DEFAULT
+}
+
 impl Fill {
+    /// Default gradient dither strength in per cent (FB-150): the reference's dither.
+    pub const GRADIENT_DITHER_STRENGTH_DEFAULT: i32 = 100;
+    /// Highest gradient dither strength in per cent (FB-150).
+    pub const GRADIENT_DITHER_STRENGTH_MAX: i32 = 400;
+
     /// Bit of the Firepixel-own fill marker `fpEi` for [`Fill::lock_to_document`] (FB-44); the low
     /// bits `3` are the dither edge ([`Fill::EDGE_DITHER`]), so a marker reads `3`, `4` or `7`.
     pub const EXT_LOCK_TO_DOCUMENT: i32 = 4;
@@ -176,6 +200,7 @@ impl Fill {
             pattern: None,
             lock_to_document: false,
             dither_density: 0,
+            gradient_dither_strength: Fill::GRADIENT_DITHER_STRENGTH_DEFAULT,
             extra: Extra::default(),
         }
     }

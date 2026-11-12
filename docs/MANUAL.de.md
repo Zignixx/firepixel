@@ -843,6 +843,17 @@ und eingeklappte Höhe her.
   Firepixel-Erweiterung; eine `.fw.png`-Datei speichert sie nur in einer Firepixel-Markierung (geschrieben, wenn
   der Wert nicht 0 ist), andere Programme zeigen die normale Füllung.
 
+- **Stärke des Verlauf-Dithers:** Das Verlaufs-Popup (Klick auf das Verlaufsfeld der Verlaufsfüllung eines gewählten
+  Objekts) hat unter *Umkehren* eine Zeile mit dem Kontrollkästchen *Dither* (derselbe Schalter wie der
+  Verlauf-Dither-Knopf im Eigenschaftenbedienfeld) und *Stärke* in Prozent, 0 bis 400 (Vorgabe 100). 100 % ist der
+  Verlauf-Dither, wie das Original ihn zeichnet; kleinere Werte blenden ihn aus (0 % sieht aus wie Dither aus);
+  größere Werte behalten den Dither und machen sein feines Korn kräftiger (bei 400 % weicht ein verrauschtes Pixel
+  bis zu vier Farbstufen ab), was sichtbare Streifen in weichen Verläufen besser verdeckt. Das Feld ist grau, solange
+  der Dither aus ist. Eine Änderung ist ein Schritt *Füllen*; das Bearbeiten der Farbstopps behält den Dither und
+  seine Stärke. Die Stärke ist eine Firepixel-Erweiterung; eine `.fw.png`-Datei speichert sie nur in einer
+  Firepixel-Markierung (geschrieben, wenn sie nicht 100 ist), andere Programme zeigen den normalen Verlauf-Dither.
+  Skripte: `gradient.ditherStrength` im Füllungsobjekt.
+
 - **Verlauf und Muster in Text:** Ein Text nimmt Verlaufs- und Musterfüllungen wie ein Pfad an (`pi.fill`,
   `setFill`); die Glyphen zeigen die Füllung genau so, wie ein Pfad mit denselben Füllgriffen sie bekäme. Die Griffe
   liegen in Dokumentkoordinaten: Ein neuer linearer Verlauf läuft von der Mitte der Oberkante zur Mitte der

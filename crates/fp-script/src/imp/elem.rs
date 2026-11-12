@@ -137,11 +137,17 @@ fn fill_json(f: &fp_model::Fill) -> Value {
         _ => "antialiased",
     };
     let gradient = f.gradient.as_ref().map(|g| {
-        json!({
+        let mut gj = json!({
             "name": g.name, "dither": g.stops.as_ref().and_then(|s| s.dither).unwrap_or(false),
             "nodes": g.color_stops().iter().map(|s| json!({"color": hex(s.color), "position": r6(s.position as f64), "isOpacityNode": false})).collect::<Vec<_>>(),
             "opacityNodes": g.opacity_stops().iter().map(|s| json!({"color": hex(s.color), "position": r6(s.position as f64), "isOpacityNode": true})).collect::<Vec<_>>(),
-        })
+        });
+        // gradient dither strength in % (Firepixel extension, FB-150): only reported when it is
+        // not the default 100, so the object matches the reference's at the default
+        if f.gradient_dither_strength != fp_model::Fill::GRADIENT_DITHER_STRENGTH_DEFAULT {
+            gj["ditherStrength"] = json!(f.gradient_dither_strength);
+        }
+        gj
     });
     let mut v = json!({
         "category": f.category, "name": f.name, "shape": shape, "edgeType": edge, "feather": f.feather,

@@ -996,6 +996,11 @@ pub const MASK_INVERT_EXT: TagKey = k!(b"fpIb");
 /// readers keep / drop it and show the plain fill.
 pub const FILL_DENSITY_EXT: TagKey = k!(b"fpOi");
 
+/// Firepixel-own gradient dither strength marker in a fill `FPLv` (FB-150): `fpSi` = 0..400 per
+/// cent (model `Fill::gradient_dither_strength`), written only when it is not the default 100.
+/// Other readers keep / drop it and show the plain gradient dither.
+pub const FILL_DITHER_STRENGTH_EXT: TagKey = k!(b"fpSi");
+
 /// Older dither density marker (FB-38, files written before FB-109): `fpDi` = per cent of **kept**
 /// pixels (100 = off). Only read ([`crate::read`] converts it), never written.
 pub const FILL_DENSITY_KEPT_EXT: TagKey = k!(b"fpDi");
@@ -1048,6 +1053,13 @@ pub fn write_fill(f: &Fill, ctx: &mut WriteCtx) -> Vec<RawNode> {
     }
     if f.dither_density > 0 {
         w.i32(FILL_DENSITY_EXT, f.dither_density.min(100));
+    }
+    if f.gradient_dither_strength != Fill::GRADIENT_DITHER_STRENGTH_DEFAULT {
+        w.i32(
+            FILL_DITHER_STRENGTH_EXT,
+            f.gradient_dither_strength
+                .clamp(0, Fill::GRADIENT_DITHER_STRENGTH_MAX),
+        );
     }
     if let Some(g) = &f.gradient {
         w.list(k!(b"FGLv"), write_gradient(g));

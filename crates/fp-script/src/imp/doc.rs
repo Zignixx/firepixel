@@ -295,7 +295,8 @@ pub(super) fn fill_edge_code(mode: &str) -> Option<i32> {
 /// (`category` "fc_Pattern" or `shape` "pattern" with `pattern.name`) sets that pattern instead of a
 /// solid fill; `lockToDocument` (Firepixel extension, FB-44) sets "Lock pattern to document",
 /// `ditherDensity` (Firepixel extension, FB-38) the uniform dither density (% empty pixels, 0 = off,
-/// 100 = empty, FB-109) of the whole fill.
+/// 100 = empty, FB-109) of the whole fill, `gradient.ditherStrength` (Firepixel extension, FB-150)
+/// the strength of the gradient dither in % (100 = default, 0 = none, up to 400).
 ///
 /// Like the reference (TW-285, RE spec 78) the object's other fields apply too: a Web Dither fill
 /// (`category` "fc_WebDither" or `shape` "web dither") with its colours `ditherColors` (two =
@@ -384,6 +385,24 @@ fn apply_fill(doc: DocId, fill: &Value, color: Option<String>) -> FwResult<()> {
         .and_then(|v| v.as_bool())
     {
         ext.insert("dither".into(), json!(d));
+    }
+    // gradient dither strength in % (Firepixel extension, FB-150; 100 = default, 0..400)
+    if let Some(d) = fill
+        .get("gradient")
+        .and_then(|g| g.get("ditherStrength"))
+        .and_then(|v| {
+            v.as_f64()
+                .or_else(|| v.as_str().and_then(|s| s.trim().parse().ok()))
+        })
+    {
+        ext.insert(
+            "ditherStrength".into(),
+            json!(
+                d.round()
+                    .clamp(0.0, fp_model::Fill::GRADIENT_DITHER_STRENGTH_MAX as f64)
+                    as i64
+            ),
+        );
     }
     if let Some(d) = fill.get("ditherDensity").and_then(|v| {
         v.as_f64()

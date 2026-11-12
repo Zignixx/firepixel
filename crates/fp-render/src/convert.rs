@@ -271,6 +271,11 @@ fn paint(
                 color_stops: cst,
                 opacity_stops: ost,
                 dither,
+                // Firepixel extension (FB-150)
+                dither_strength: f
+                    .gradient_dither_strength
+                    .clamp(0, fp_model::Fill::GRADIENT_DITHER_STRENGTH_MAX)
+                    as u16,
             })
         } else if sh == 16 {
             let d = f.dither_colors.unwrap_or([0xff00_0000; 4]);

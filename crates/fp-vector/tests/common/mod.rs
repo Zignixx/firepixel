@@ -272,6 +272,7 @@ pub fn vector_path(pth: Tags, extra: &Extra, as_f32: bool) -> VectorPath {
                 color_stops: cst,
                 opacity_stops: ost,
                 dither: false,
+                dither_strength: 100,
             })
         } else if sh == 16 {
             FillKind::WebDither([

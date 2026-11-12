@@ -1235,6 +1235,11 @@ pub fn read_fill(v: &[RawNode], ctx: &mut ReadCtx) -> Fill {
             })
             .unwrap_or(0),
     };
+    // Firepixel-own gradient dither strength (see `write::FILL_DITHER_STRENGTH_EXT`, FB-150)
+    let gradient_dither_strength = r
+        .i32(crate::write::FILL_DITHER_STRENGTH_EXT)
+        .map(|v| v.clamp(0, Fill::GRADIENT_DITHER_STRENGTH_MAX))
+        .unwrap_or(Fill::GRADIENT_DITHER_STRENGTH_DEFAULT);
     let gradient = r.list(k!(b"FGLv")).map(|g| read_gradient(g, ctx));
     let pattern = r.list(k!(b"FPTv")).map(|p| {
         let mut s = Rd::new(p);
@@ -1267,6 +1272,7 @@ pub fn read_fill(v: &[RawNode], ctx: &mut ReadCtx) -> Fill {
         pattern,
         lock_to_document,
         dither_density,
+        gradient_dither_strength,
         extra: ctx.finish(r),
     }
 }

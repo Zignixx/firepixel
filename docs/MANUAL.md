@@ -766,6 +766,16 @@ visible); the diamond on the tab and a double-click on the tab return to the ful
   density is a Firepixel extension; a `.fw.png` file stores it only in a Firepixel marker (written
   when the value is not 0), other programs show the plain fill.
 
+- **Gradient dither strength:** the gradient pop-up (click the gradient swatch of a selected object's gradient
+  fill) has a row below *Reverse* with a *Dither* checkbox (the same switch as the gradient dither toggle in the
+  Properties panel) and *Strength* in per cent, 0 to 400 (default 100). 100 % is the gradient dither as the
+  reference draws it; lower values fade it out (0 % looks like dither off); higher values keep the dither but make
+  its fine grain stronger (at 400 % each noisy pixel moves up to four colour levels), which hides visible banding
+  in soft gradients better. The field is greyed out while the dither is off. A change is one *Fill* step; editing
+  the colour stops keeps the dither and its strength. Strength is a Firepixel extension; a `.fw.png` file stores it
+  only in a Firepixel marker (written when it is not 100), other programs show the normal gradient dither. Scripts:
+  `gradient.ditherStrength` in the fill object.
+
 - **Gradient and pattern fills on text:** a text takes a gradient or pattern fill like a path (`pi.fill`,
   `setFill`); the glyphs show the fill exactly as a path with the same fill handles would. The handles lie in
   document coordinates: a new linear gradient runs from the top centre to the bottom centre of the text's bounds, a

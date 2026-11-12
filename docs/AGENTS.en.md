@@ -168,6 +168,12 @@ Resources (Markdown): `firepixel://docs/agents.md` (this file), `firepixel://doc
     to an ordered 8 × 8 on/off half tone on document pixels (50 = checkerboard, 0 = off, 100 = solid), applied before
     the edge; one *Fill* history row, kept when the category changes. Scripts: `pathAttributes.fill.ditherDensity`,
     `setFill` with `ditherDensity`. FW-PNG: only in the Firepixel marker `fpDi` (when not 0)
+  * Gradient dither strength (Firepixel extension, FB-150): `pi.fill {ditherStrength}` 0..400 % (default 100 = the
+    reference's gradient dither exactly; lower fades the S curve and the noise share towards 0 = no dither; above 100
+    the ±1 noise steps grow to about strength/100 levels, ±4 at 400 %). Only active while `pi.fill {dither}` is on;
+    one *Fill* history row; kept when the stops change. Scripts: `setFill` with `gradient.ditherStrength`,
+    `pathAttributes.fill.gradient.ditherStrength` is present only when not 100. FW-PNG: only in the Firepixel
+    marker `fpSi` of the fill (when not 100)
   * Web Dither and the script fill object (TW-285): `pi.fill {category: "webDither", color?, ditherColors?,
     textureTransparent?}`; `ditherColors` is an array of two colours (checkerboard c1 c2 / c2 c1) or four (FD1..FD4,
     row by row), without it all four take the fill colour; `textureTransparent` is the transparency checkerboard

@@ -604,8 +604,13 @@ pub fn toolbar_fill_popups(ui: &mut Ui, st: &mut AppState, well: Rect) {
     } else {
         None
     };
+    // gradient dither row of the popup (FB-150): only for a gradient fill of the selection
+    let grad_dither = sel_fill
+        .as_ref()
+        .filter(|_| tgt == Target::Selection && kind == 2)
+        .map(gradient_dither_state);
     if let Some(mut p) = popups::anchored_popup(ui, gp, well, false, |ui| {
-        popups::gradient_editor(ui, id.with("grad"), &grad, st, angle)
+        popups::gradient_editor(ui, id.with("grad"), &grad, st, angle, grad_dither)
     })
     .flatten()
     {
@@ -762,7 +767,7 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
             )
         });
         let out = popups::anchored_popup(ui, grad_pid, sw, resp.clicked(), |ui| {
-            popups::gradient_editor(ui, id.with("grad"), &f, st, None)
+            popups::gradient_editor(ui, id.with("grad"), &f, st, None, None)
         })
         .flatten();
         if let Some(p) = out {
@@ -776,7 +781,14 @@ pub fn fill_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, enabled: b
         let mut out = None;
         if let Some(f) = &fill {
             out = popups::anchored_popup(ui, grad_pid, sw, resp.clicked(), |ui| {
-                popups::gradient_editor(ui, id.with("grad"), f, st, angle)
+                popups::gradient_editor(
+                    ui,
+                    id.with("grad"),
+                    f,
+                    st,
+                    angle,
+                    (tgt == Target::Selection).then(|| gradient_dither_state(f)),
+                )
             })
             .flatten();
         }
@@ -1191,6 +1203,18 @@ pub fn fill_texture_panel(ui: &mut Ui, st: &mut AppState, d: Dl, tgt: Target, en
             ),
         );
     }
+}
+
+/// Gradient dither switch and strength of a fill for the gradient popup (FB-150).
+fn gradient_dither_state(f: &fp_model::Fill) -> (bool, i32) {
+    (
+        f.gradient
+            .as_ref()
+            .and_then(|g| g.stops.as_ref())
+            .and_then(|s| s.dither)
+            .unwrap_or(false),
+        f.gradient_dither_strength,
+    )
 }
 
 /// Icon of the dither density field (FB-38): a 3 × 3 checkerboard of 3 px cells, centred in `r`.

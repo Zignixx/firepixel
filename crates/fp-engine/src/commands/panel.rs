@@ -3259,6 +3259,14 @@ pub fn register(r: &mut CommandRegistry) {
             .opt("textureTransparent", ParamKind::Bool, "transparente Textur")
             .opt("dither", ParamKind::Bool, "Verlauf mit Dither")
             .opt(
+                "ditherStrength",
+                ParamKind::Integer {
+                    min: Some(0),
+                    max: Some(400),
+                },
+                "Stärke des Verlauf-Dithers in % (100 = Vorgabe, 0 = keiner; Firepixel-Erweiterung)",
+            )
+            .opt(
                 "ditherColors",
                 ParamKind::Json,
                 "Web-Dither-Farben (zwei oder vier)",
@@ -3331,6 +3339,9 @@ pub fn register(r: &mut CommandRegistry) {
                 let tex_amount = p.opt_i64("textureAmount")?.map(|v| v as i32);
                 let tex_tr = p.opt_bool("textureTransparent")?;
                 let dither = p.opt_bool("dither")?;
+                let dither_strength = p
+                    .opt_i64("ditherStrength")?
+                    .map(|v| v.clamp(0, Fill::GRADIENT_DITHER_STRENGTH_MAX as i64) as i32);
                 // Web Dither colours (TW-285): two colours = checkerboard [c1, c2 / c2, c1], four =
                 // FD1..FD4 (row by row); other lengths are ignored
                 let web_colors: Option<[u32; 4]> = p
@@ -3473,7 +3484,16 @@ pub fn register(r: &mut CommandRegistry) {
                                 }
                             }
                         }
+                        if let Some(ds) = dither_strength {
+                            f.gradient_dither_strength = ds;
+                        }
                         if let Some(g) = &mut f.gradient {
+                            // new stops keep the dither switch of the gradient
+                            let kept_dither = g
+                                .stops
+                                .as_ref()
+                                .map(|s| (s.dither, s.dither_value))
+                                .unwrap_or((None, None));
                             if let Some(st) = &stops {
                                 let opac = ostops.clone();
                                 let ng = make_gradient(f.shape, st, opac.as_deref());
@@ -3511,6 +3531,12 @@ pub fn register(r: &mut CommandRegistry) {
                                 );
                                 g.stops = ng.stops;
                                 g.legacy_stops = None;
+                            }
+                            if let Some(st) = &mut g.stops
+                                && st.dither.is_none()
+                                && st.dither_value.is_none()
+                            {
+                                (st.dither, st.dither_value) = kept_dither;
                             }
                             if let Some(dt) = dither
                                 && let Some(st) = &mut g.stops

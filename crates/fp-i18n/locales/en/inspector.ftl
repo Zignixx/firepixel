@@ -251,6 +251,10 @@ pi-grad-label = Gradient:
 pi-pattern-label = Pattern:
 pi-edge-tip = Fill edge
 pi-stroke-cat-tip = Stroke categories
+pi-grad-dither = Dither
+pi-grad-dither-strength = Strength:
+pi-grad-dither-strength-name = Dither strength
+pi-grad-dither-strength-tip = Strength of the gradient dither in % (100 = standard, 0 = none, up to 400 = stronger grain against banding).
 pi-grad-reverse = Reverse
 pi-grad-color = Color:
 pi-grad-delete = Delete

@@ -365,6 +365,8 @@ pub struct GradientPaint {
     mirrored: bool,
     table: GradientTable,
     dither: bool,
+    /// Dither strength in per cent (FB-150); 100 = the measured dither.
+    dither_strength: u32,
 }
 
 impl GradientPaint {
@@ -378,6 +380,7 @@ impl GradientPaint {
             mirrored: g.shape.mirrored(),
             table: GradientTable::new(&g.color_stops, &g.opacity_stops),
             dither: g.dither,
+            dither_strength: u32::from(g.dither_strength).min(DITHER_STRENGTH_MAX),
         })
     }
 
@@ -388,11 +391,29 @@ impl GradientPaint {
         if self.mirrored {
             t = repeat_mirrored(t);
         }
-        if !self.dither {
+        if !self.dither || self.dither_strength == 0 {
             return self.table.lookup(t);
         }
-        let c = self.table.lookup(dither_t(t)).0;
-        Argb(dither_noise(c, x as i64, y as i64))
+        if self.dither_strength == 100 {
+            let c = self.table.lookup(dither_t(t)).0;
+            return Argb(dither_noise(c, x as i64, y as i64));
+        }
+        // Firepixel extension (FB-150): weaker dither blends the S curve towards the plain
+        // position; stronger dither keeps the full S curve and only raises the noise
+        let k = (self.dither_strength.min(100)) as f64 / 100.0;
+        let tt = if t.is_nan() {
+            t
+        } else {
+            let tc = t.clamp(0.0, 1.0);
+            tc + k * (dither_t(tc) - tc)
+        };
+        let c = self.table.lookup(tt).0;
+        Argb(dither_noise_strength(
+            c,
+            x as i64,
+            y as i64,
+            self.dither_strength,
+        ))
     }
 
     /// Die Farbtabelle.
@@ -412,6 +433,21 @@ pub fn dither_t(t: f64) -> f64 {
     0.5 * t + 0.5 * t * t * (3.0 - 2.0 * t)
 }
 
+/// Highest gradient dither strength in per cent (FB-150).
+pub const DITHER_STRENGTH_MAX: u32 = 400;
+
+/// Hash of a pixel and a colour channel for the gradient dither noise.
+#[inline]
+fn noise_hash(x: i64, y: i64, ch: usize) -> u64 {
+    let mut h = (x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        ^ (y as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
+        ^ (ch as u64 + 1).wrapping_mul(0x1656_67B1_9E37_79F9);
+    h ^= h >> 33;
+    h = h.wrapping_mul(0xFF51_AFD7_ED55_8CCD);
+    h ^= h >> 33;
+    h
+}
+
 /// ±1 noise per colour channel of a dithered gradient (RE spec 75 §1.5: about 14 % −1, 13 % +1,
 /// independent per channel). The reference's noise source is unknown (A): a deterministic hash of
 /// the pixel and the channel stands in, so renders stay reproducible; channels at 0 or 255 keep
@@ -421,13 +457,7 @@ pub fn dither_noise(argb: u32, x: i64, y: i64) -> u32 {
     let mut out = argb & 0xFF00_0000;
     for (ch, shift) in [16u32, 8, 0].into_iter().enumerate() {
         let v = (argb >> shift) & 255;
-        let mut h = (x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
-            ^ (y as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
-            ^ (ch as u64 + 1).wrapping_mul(0x1656_67B1_9E37_79F9);
-        h ^= h >> 33;
-        h = h.wrapping_mul(0xFF51_AFD7_ED55_8CCD);
-        h ^= h >> 33;
-        let r = h % 100;
+        let r = noise_hash(x, y, ch) % 100;
         let n = if v == 0 || v == 255 {
             v
         } else if r < 14 {
@@ -438,6 +468,54 @@ pub fn dither_noise(argb: u32, x: i64, y: i64) -> u32 {
             v
         };
         out |= n << shift;
+    }
+    out
+}
+
+/// Gradient dither noise at a strength in per cent (Firepixel extension, FB-150). 100 is exactly
+/// [`dither_noise`]. Below 100 the share of noisy pixels shrinks in proportion (the −1 and +1
+/// thresholds of the same hash scale with the strength), so 0 adds no noise. Above 100 the share
+/// stays the measured one (about 14 % −1, 13 % +1) and the step grows instead: on average
+/// `strength / 100` levels (the fraction picks the next level by a second part of the hash), at
+/// most ±4 at 400 %. Results are clamped to 0..255; channels at 0 or 255 keep their value like
+/// in [`dither_noise`], alpha is left alone.
+#[inline]
+pub fn dither_noise_strength(argb: u32, x: i64, y: i64, strength: u32) -> u32 {
+    let strength = strength.min(DITHER_STRENGTH_MAX);
+    if strength == 100 {
+        return dither_noise(argb, x, y);
+    }
+    if strength == 0 {
+        return argb;
+    }
+    let share = strength.min(100);
+    let mut out = argb & 0xFF00_0000;
+    for (ch, shift) in [16u32, 8, 0].into_iter().enumerate() {
+        let v = ((argb >> shift) & 255) as i32;
+        let h = noise_hash(x, y, ch);
+        // compare in 1/100 per cent: r·100 < 14·share ⇔ r < 14·share/100
+        let r = (h % 100) as u32 * 100;
+        let sign = if r < 14 * share {
+            -1
+        } else if r < 27 * share {
+            1
+        } else {
+            0
+        };
+        let n = if v == 0 || v == 255 || sign == 0 {
+            v
+        } else {
+            let step = if strength <= 100 {
+                1
+            } else {
+                let whole = strength / 100;
+                let frac = strength % 100;
+                let pick = ((h >> 40) % 100) as u32;
+                (whole + u32::from(pick < frac)) as i32
+            };
+            (v + sign * step).clamp(0, 255)
+        };
+        out |= (n as u32) << shift;
     }
     out
 }
@@ -492,6 +570,110 @@ mod tests {
             dither_noise(0xFF12_3456, 7, 9),
             dither_noise(0xFF12_3456, 7, 9)
         );
+    }
+
+    fn ramp(dither: bool, strength: u16) -> GradientPaint {
+        let g = Gradient {
+            shape: GradientShape::Linear,
+            color_stops: vec![st(0.0, 0xFF10_2030), st(1.0, 0xFFE0_C0A0)],
+            opacity_stops: Vec::new(),
+            dither,
+            dither_strength: strength,
+        };
+        let h = GradientHandles {
+            p1: Vec2::new(0.0, 0.0),
+            p2: Vec2::new(256.0, 0.0),
+            p3: Vec2::new(0.0, -256.0),
+        };
+        GradientPaint::new(&g, &h).expect("paint")
+    }
+
+    fn pixels(p: &GradientPaint) -> Vec<u32> {
+        let mut v = Vec::new();
+        for y in 0..48 {
+            for x in -8..264 {
+                v.push(p.color(x as f64 + 0.5, y as f64 + 0.5).0);
+            }
+        }
+        v
+    }
+
+    /// Mean absolute channel difference between two renders.
+    fn mean_diff(a: &[u32], b: &[u32]) -> f64 {
+        let mut sum = 0u64;
+        for (x, y) in a.iter().zip(b) {
+            for sh in [16, 8, 0] {
+                sum += (((x >> sh) & 255) as i64 - ((y >> sh) & 255) as i64).unsigned_abs();
+            }
+        }
+        sum as f64 / (a.len() * 3) as f64
+    }
+
+    #[test]
+    fn dither_strength_100_is_the_measured_dither_and_0_is_off() {
+        // FB-150: 100 % renders exactly the old path (S curve + dither_noise)
+        let p = ramp(true, 100);
+        for y in 0..20 {
+            for x in -4..260 {
+                let (fx, fy) = (x as f64 + 0.5, y as f64 + 0.5);
+                let t = p.t.eval(fx, fy);
+                let want = dither_noise(p.table.lookup(dither_t(t)).0, fx as i64, fy as i64);
+                assert_eq!(p.color(fx, fy).0, want, "({x}, {y})");
+            }
+        }
+        // 0 % is identical to the dither switched off
+        assert_eq!(pixels(&ramp(true, 0)), pixels(&ramp(false, 100)));
+        // the strength has no effect while the dither is off
+        assert_eq!(pixels(&ramp(false, 400)), pixels(&ramp(false, 100)));
+        // clamped to 400
+        assert_eq!(pixels(&ramp(true, 999)), pixels(&ramp(true, 400)));
+        assert_eq!(
+            dither_noise_strength(0xFF80_8080, 3, 5, 100),
+            dither_noise(0xFF80_8080, 3, 5)
+        );
+        assert_eq!(dither_noise_strength(0xFF80_8080, 3, 5, 0), 0xFF80_8080);
+    }
+
+    #[test]
+    fn dither_strength_amplitude_is_monotonic() {
+        // noise alone on a flat colour: the mean deviation grows with the strength
+        let flat = |s: u32| -> f64 {
+            let mut sum = 0u64;
+            let mut n = 0u64;
+            for y in 0..64 {
+                for x in 0..64 {
+                    let c = dither_noise_strength(0xFF80_8080, x, y, s);
+                    assert_eq!(c >> 24, 0xFF, "alpha unchanged");
+                    for sh in [16, 8, 0] {
+                        let d = ((c >> sh) & 255) as i64 - 128;
+                        assert!(d.unsigned_abs() as u32 <= s.div_ceil(100).max(1));
+                        sum += d.unsigned_abs();
+                        n += 1;
+                    }
+                }
+            }
+            sum as f64 / n as f64
+        };
+        let steps = [0, 10, 25, 50, 75, 100, 150, 200, 300, 400];
+        let amp: Vec<f64> = steps.iter().map(|&s| flat(s)).collect();
+        assert_eq!(amp[0], 0.0);
+        for w in amp.windows(2) {
+            assert!(w[1] > w[0], "{amp:?}");
+        }
+        assert!(amp[9] > 3.0 * amp[5], "400 % clearly stronger: {amp:?}");
+        // ends stay exact at every strength
+        for s in steps {
+            assert_eq!(dither_noise_strength(0xFFFF_0000, 7, 9, s), 0xFFFF_0000);
+        }
+        // the whole gradient: deviation from the undithered ramp grows with the strength
+        let off = pixels(&ramp(false, 100));
+        let dev: Vec<f64> = [0u16, 25, 50, 100, 200, 400]
+            .iter()
+            .map(|&s| mean_diff(&pixels(&ramp(true, s)), &off))
+            .collect();
+        for w in dev.windows(2) {
+            assert!(w[1] > w[0], "{dev:?}");
+        }
     }
 
     #[test]

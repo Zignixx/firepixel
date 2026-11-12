@@ -10,6 +10,7 @@ use super::fields::{self, Dl};
 use super::texts::{self, refs};
 use crate::app_state::AppState;
 use crate::theme::Theme;
+use crate::tips::HoverTip;
 use crate::ui_commands::{self, GRADIENT_SHAPES};
 use egui::{Align2, Color32, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use fp_color::Argb;
@@ -274,6 +275,8 @@ pub fn sample_stops(stops: &[(f32, Argb)], p: f32) -> Argb {
 
 /// Breite und Höhe des Inhalts des Verlaufs-Popups (mit Rand ≈ 210 × 155 wie im Original).
 pub const GRADIENT_POPUP: egui::Vec2 = egui::vec2(200.0, 124.0);
+/// Extra height of the gradient popup for the dither row (Firepixel extension, FB-150).
+pub const GRADIENT_DITHER_ROW: f32 = 26.0;
 
 /// Abstand, ab dem ein aus der Leiste gezogener Stopp gelöscht wird (Original: nach unten aus dem
 /// Popup ziehen, PAR 18/05).
@@ -283,12 +286,15 @@ const STOP_TEAR_OFF: f32 = 24.0;
 /// Deckkraftstopps oben und Farbstopps unten (Klick unter die Leiste = neuer Stopp, Stopp aus dem
 /// Popup ziehen = löschen, Klick auf einen Farbstopp = Farbwähler), „Umkehren“, Verschieben (grau)
 /// und Winkel (`angle`, `None` = grau). Liefert Parameter für `pi.fill` bzw. das Werkzeug.
+/// `dither` (gradient fill of the selection only) adds the row of the gradient dither switch and
+/// its strength (Firepixel extension, FB-150) below the footer: `(on, strength %)`.
 pub fn gradient_editor(
     ui: &mut Ui,
     id: Id,
     fill: &fp_model::Fill,
     st: &AppState,
     angle: Option<f64>,
+    dither: Option<(bool, i32)>,
 ) -> Option<Value> {
     let t = Theme::current(ui.ctx());
     let c = &t.colors;
@@ -323,7 +329,12 @@ pub fn gradient_editor(
         ge.sel = None;
     }
     let mut out = None;
-    let (all, _) = ui.allocate_exact_size(GRADIENT_POPUP, Sense::hover());
+    let size = if dither.is_some() {
+        GRADIENT_POPUP + vec2(0.0, GRADIENT_DITHER_ROW)
+    } else {
+        GRADIENT_POPUP
+    };
+    let (all, _) = ui.allocate_exact_size(size, Sense::hover());
     let o = all.min;
     // „Verlauf:“ + Liste der Arten (Reihenfolge und Namen wie im Original)
     fields::label(
@@ -652,6 +663,42 @@ pub fn gradient_editor(
             c.text_disabled
         },
     );
+    // gradient dither switch and strength (Firepixel extension, FB-150): one row below the footer
+    if let Some((on, strength)) = dither {
+        let ry = o.y + GRADIENT_POPUP.y + 6.0;
+        if let Some(v) = fields::checkbox(
+            ui,
+            id.with("dither"),
+            Rect::from_min_size(pos2(o.x, ry), vec2(70.0, 16.0)),
+            &texts::t("pi-grad-dither"),
+            on,
+            true,
+        ) {
+            out = Some(json!({"dither": v}));
+        }
+        let lr = Rect::from_min_size(pos2(o.x + 72.0, ry), vec2(52.0, 16.0));
+        fields::label(ui, lr, &texts::t("pi-grad-dither-strength"), on);
+        let fr = Rect::from_min_size(pos2(o.x + 126.0, ry), vec2(46.0, 16.0));
+        if let Some(v) = fields::number_unit(
+            ui,
+            id.with("dither-strength"),
+            fr,
+            Some(Rect::from_min_size(pos2(o.x + 172.0, ry), vec2(14.0, 16.0))),
+            Some(strength as f64),
+            (0.0, fp_model::Fill::GRADIENT_DITHER_STRENGTH_MAX as f64),
+            0,
+            on,
+            "%",
+        ) {
+            out = Some(json!({"ditherStrength": v.round() as i64}));
+        }
+        let _ = ui
+            .interact(lr.union(fr), id.with("dither-strength-tip"), Sense::hover())
+            .name_tip(crate::tips::named(
+                &texts::t("pi-grad-dither-strength-name"),
+                &texts::t("pi-grad-dither-strength-tip"),
+            ));
+    }
     ui.data_mut(|d| d.insert_temp(key, ge));
     out
 }

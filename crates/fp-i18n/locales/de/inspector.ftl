@@ -248,6 +248,10 @@ pi-grad-label = Verlauf:
 pi-pattern-label = Muster:
 pi-edge-tip = Füllungsrand
 pi-stroke-cat-tip = Pinselstrichkategorien
+pi-grad-dither = Dither
+pi-grad-dither-strength = Stärke:
+pi-grad-dither-strength-name = Dither-Stärke
+pi-grad-dither-strength-tip = Stärke des Verlauf-Dithers in % (100 = Standard, 0 = keiner, bis 400 = kräftigeres Korn gegen Streifen).
 pi-grad-reverse = Umkehren
 pi-grad-color = Farbe:
 pi-grad-delete = Löschen

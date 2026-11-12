@@ -187,6 +187,7 @@ fn density_applies_to_gradients_and_patterns() {
             ],
             opacity_stops: Vec::new(),
             dither: false,
+            dither_strength: 100,
         });
         f.handles = GradientHandles {
             p1: Vec2::new(20.0, 50.0),

@@ -172,6 +172,12 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     100 = deckend), vor dem Rand angewendet; ein Protokollschritt *Füllen*, bleibt beim Wechsel der Füllart.
     Skripte: `pathAttributes.fill.ditherDensity`, `setFill` mit `ditherDensity`. FW-PNG: nur in der
     Firepixel-Markierung `fpDi` (wenn nicht 0)
+  * Stärke des Verlauf-Dithers (Firepixel-Erweiterung, FB-150): `pi.fill {ditherStrength}` 0..400 % (Vorgabe 100 =
+    genau der Verlauf-Dither des Originals; weniger blendet S-Kurve und Rauschanteil bis 0 = kein Dither aus; über 100
+    wachsen die ±1-Rauschstufen auf etwa Stärke/100 Stufen, ±4 bei 400 %). Wirkt nur bei eingeschaltetem
+    `pi.fill {dither}`; ein Protokollschritt *Füllen*; bleibt beim Ändern der Stopps. Skripte: `setFill` mit
+    `gradient.ditherStrength`, `pathAttributes.fill.gradient.ditherStrength` ist nur vorhanden, wenn nicht 100.
+    FW-PNG: nur in der Firepixel-Markierung `fpSi` der Füllung (wenn nicht 100)
   * Web-Dither und das Füllungsobjekt der Skripte (TW-285): `pi.fill {category: "webDither", color?, ditherColors?,
     textureTransparent?}`; `ditherColors` ist eine Liste aus zwei Farben (Schachbrett c1 c2 / c2 c1) oder vier
     (FD1..FD4, zeilenweise), ohne sie nehmen alle vier die Füllfarbe; `textureTransparent` ist das
