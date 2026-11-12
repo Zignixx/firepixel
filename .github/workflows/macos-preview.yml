@@ -32,7 +32,7 @@ env:
 jobs:
   bundle:
     name: Firepixel Studio.app (universal)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -200,7 +200,7 @@ jobs:
 
   tests:
     name: Tests (platform-neutral, batch and export crates)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
     # Only on request (input tests). A failing test (for example a golden hash that differs on this
     # OS, BA-083) fails the run; the artifact tests-macos holds a short summary and the log tail.
