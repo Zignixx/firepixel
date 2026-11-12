@@ -1918,7 +1918,7 @@ impl Renderer {
                     && g.mask_flags.enabled
                     && let Some(me) = g.effective_mask()
                 {
-                    let show = g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs;
+                    let show = g.mask_underlay();
                     let mask = self.mask_values(doc, e, g, me, show, st, rep);
                     let invert = mask_invert(g, me);
                     let b = img.bounds();
@@ -1941,6 +1941,15 @@ impl Renderer {
                             .unwrap_or(0);
                         let m = final_mask_value(m, invert);
                         p[3] = ((p[3] as u32 * m as u32 + 127) / 255) as u8;
+                    }
+                    if show {
+                        // F164 (RE spec 81 §2.4, `gmb_pi`): a masked child with "Show fill and
+                        // stroke" covers its whole look, the drawn underlay included
+                        let (under, over) = self.mask_attr_layers(doc, me, st, rep);
+                        let mut parts = vec![img];
+                        parts.extend(under);
+                        parts.extend(over);
+                        img = union_coverage(&parts)?;
                     }
                 }
                 Some(img)

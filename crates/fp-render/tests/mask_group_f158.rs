@@ -195,3 +195,77 @@ fn d2_grayscale_group_mask_keeps_opacity_and_colour_alpha() {
         assert!(near(got, want), "({x},{y}) {got:?} != {want:?}");
     }
 }
+
+/// F164 (`gmb_*`, RE spec 81 §2.4): Y masked by the group GM {E1, E2}; E1 = blue bitmap
+/// 40..80 × 40..120 masked by the red path 40..120 × 40..120 with "Show fill and stroke", E2 the
+/// same in green at 160..240 × 60..140. `gray` = Grayscale, else path outline with or without the
+/// outer underlay.
+fn gmb(gray: bool, underlay: bool) -> Document {
+    let mut doc = Document::new(300.0, 200.0, Argb(0xffff_8000));
+    let masked = |doc: &mut Document, x: i32, y: i32, argb: u32| {
+        let px: Vec<u8> = (0..40 * 80).flat_map(|_| [32u8, 64, 192, 255]).collect();
+        let mut tiles = 1;
+        let bm = Element::new_bitmap(
+            &mut doc.ids,
+            Point::new(x as f32, y as f32),
+            40,
+            80,
+            &px,
+            &mut tiles,
+        );
+        let m = rect(doc, [x, y, x + 80, y + 80], argb);
+        let mut e = Element::new_mask_group(&mut doc.ids, Arc::new(m), vec![Arc::new(bm)], true);
+        if let ElementKind::Group(gr) = &mut e.kind {
+            gr.mask_flags.hide_attrs = false;
+        }
+        e
+    };
+    let e1 = masked(&mut doc, 40, 40, 0xffff_0000);
+    let e2 = masked(&mut doc, 160, 60, 0xff00_ff00);
+    let gm = Element::new_group(&mut doc.ids, vec![Arc::new(e2), Arc::new(e1)]);
+    let y = rect(&mut doc, [30, 30, 180, 170], 0xffff_d000);
+    let mut g = Element::new_mask_group(&mut doc.ids, Arc::new(gm), vec![Arc::new(y)], !gray);
+    if let ElementKind::Group(gr) = &mut g.kind {
+        gr.mask_flags.hide_attrs = !underlay;
+    }
+    put(&mut doc, vec![g]);
+    doc
+}
+
+#[test]
+fn f164_group_outline_takes_the_underlay_of_a_masked_child() {
+    // gmb_pi (underlay on) and gmb_pi_ns / gmb_gam (underlay off)
+    for underlay in [true, false] {
+        for policy in [CachePolicy::None, CachePolicy::default()] {
+            let img = render(&gmb(false, underlay), policy);
+            let what = format!("underlay {underlay}, {policy:?}");
+            assert_eq!(rgb(&img, 60, 80), YF, "Y over the E1 bitmap {what}");
+            assert_eq!(rgb(&img, 100, 80), YF, "Y over the E1 underlay {what}");
+            assert_eq!(rgb(&img, 119, 119), YF, "Y at the E1 corner {what}");
+            assert_eq!(rgb(&img, 140, 100), BG, "Y without mask {what}");
+            let (blue, green) = if underlay {
+                ([32, 64, 192], [0, 255, 0])
+            } else {
+                (BG, BG)
+            };
+            assert_eq!(rgb(&img, 190, 100), blue, "E2 bitmap outside Y {what}");
+            assert_eq!(rgb(&img, 220, 100), green, "E2 underlay outside Y {what}");
+        }
+    }
+}
+
+#[test]
+fn f164_grayscale_group_mask_with_masked_children_unchanged() {
+    // gmb_pi_gs: luma709 × alpha of the group's look (blue 66, red 54)
+    let img = render(&gmb(true, false), CachePolicy::None);
+    for (x, y, want) in [
+        (60, 80, [255, 149, 0]),
+        (100, 80, [255, 145, 0]),
+        (190, 100, BG),
+        (220, 100, BG),
+        (140, 100, BG),
+    ] {
+        let got = rgb(&img, x, y);
+        assert!(near(got, want), "({x},{y}) {got:?} != {want:?}");
+    }
+}
