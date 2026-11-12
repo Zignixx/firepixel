@@ -131,6 +131,21 @@ pub struct RetouchTool {
     /// FB-71: index in `points` the Shift line starts from (segment start when Shift was held at
     /// the press or resume, otherwise the point reached when Shift went down); `None` = Shift up.
     line_anchor: Option<usize>,
+    /// FB-148 c: settings of the running stroke part (`bitmap.retouch` parameters without
+    /// points), fixed at the press and at a resume after the settings were changed while paused.
+    part_params: Value,
+    /// FB-148 c: the earlier parts of the stroke with their own settings (`parts`).
+    parts: Vec<Value>,
+    /// FB-148 (Firepixel extension): Alt subtraction passes of the running part (Blur, Sharpen,
+    /// Dodge, Burn), for the command.
+    subtract: Vec<crate::paint::SubtractPass>,
+    /// FB-148: a subtraction pass is running (Alt held with the button down).
+    subtracting: bool,
+    /// FB-148: Alt was held at the press that began the stroke; it subtracts only after Alt was
+    /// released once.
+    alt_latch: bool,
+    /// The mouse button is down (FB-148 b: releasing a held P resumes painting only then).
+    button: bool,
 }
 
 /// Running retouch stroke: original image of the target bitmap and the last computed preview.
@@ -168,7 +183,13 @@ impl RetouchLive {
     /// stroke (FB-31: a break starts a new part, as in `bitmap.retouch`); `restart` (Shift: the
     /// points were replaced) starts the stroke anew. Returns the area that may have changed (with
     /// a restart also everything the old stroke changed), `None` without an engine.
-    fn feed(&mut self, pts: &[Point], breaks: &[usize], restart: bool) -> Option<fp_geom::IRect> {
+    fn feed(
+        &mut self,
+        pts: &[Point],
+        breaks: &[usize],
+        passes: &[crate::paint::SubtractPass],
+        restart: bool,
+    ) -> Option<fp_geom::IRect> {
         let (engine, prm) = self.engine.as_mut()?;
         let mut redo = fp_geom::IRect::default();
         if restart || pts.len() < engine.fed() {
@@ -177,17 +198,25 @@ impl RetouchLive {
                 prm,
                 self.sel.clone().map(std::sync::Arc::new),
                 self.page.clone(),
-            )?;
+            )?
+            .with_origin(std::sync::Arc::clone(&self.base));
             redo = self.painted;
         }
-        let dirty = engine.feed(pts, breaks);
+        // FB-148: with the Alt subtraction passes of the stroke
+        let dirty = engine.feed_subtracting(pts, breaks, passes);
         Some(dirty.union(&redo))
     }
 
     /// Incremental preview (FB-39): feeds the new points to the stroke engine and re-tiles only
     /// what they changed. `false` when there is no engine for this mode.
-    fn advance(&mut self, pts: &[Point], breaks: &[usize], restart: bool) -> bool {
-        let Some(area) = self.feed(pts, breaks, restart) else {
+    fn advance(
+        &mut self,
+        pts: &[Point],
+        breaks: &[usize],
+        passes: &[crate::paint::SubtractPass],
+        restart: bool,
+    ) -> bool {
+        let Some(area) = self.feed(pts, breaks, passes, restart) else {
             return false;
         };
         let Some((engine, _)) = self.engine.as_ref() else {
@@ -268,7 +297,127 @@ impl RetouchTool {
             paused: false,
             breaks: Vec::new(),
             line_anchor: None,
+            part_params: Value::Null,
+            parts: Vec::new(),
+            subtract: Vec::new(),
+            subtracting: false,
+            alt_latch: false,
+            button: false,
         }
+    }
+
+    /// FB-148: can the running stroke restore what it changed (Alt)? Blur, Sharpen, Dodge and
+    /// Burn (not Smudge, which carries pixels along, nor the other retouch tools).
+    fn can_subtract(&self) -> bool {
+        matches!(
+            self.id,
+            ToolId::Blur | ToolId::Sharpen | ToolId::Dodge | ToolId::Burn
+        ) && self.active
+            && self.target_ok
+            && !self.points.is_empty()
+    }
+
+    /// FB-148: one subtraction step at `pos` (Alt held): starts a pass or extends the running one.
+    fn subtract_at(&mut self, ctx: &ToolContext, pos: Point) {
+        if !self.subtracting {
+            let size = self.part_params["size"].as_f64().unwrap_or(13.0) as f32;
+            let round = self.part_params["round"].as_bool().unwrap_or(true);
+            self.subtracting = true;
+            self.line_anchor = None;
+            self.subtract.push(crate::paint::SubtractPass {
+                at: self.points.len(),
+                size,
+                round,
+                points: vec![pos],
+            });
+        } else if let Some(pass) = self.subtract.last_mut()
+            && pass.points.last() != Some(&pos)
+        {
+            pass.points.push(pos);
+        } else {
+            return;
+        }
+        self.update_live(ctx, false);
+    }
+
+    /// FB-31: resumes the paused stroke at `pos` (a new segment of the same stroke); FB-148 c:
+    /// settings changed while paused apply from here on (a new part of the stroke).
+    fn resume(&mut self, ctx: &ToolContext, pos: Point, shift: bool) {
+        self.paused = false;
+        self.subtracting = false;
+        self.new_part_if_changed(ctx);
+        if !self.points.is_empty() {
+            self.breaks.push(self.points.len());
+        }
+        self.line_anchor = shift.then_some(self.points.len());
+        self.points.push(pos);
+        self.update_live(ctx, false);
+    }
+
+    /// FB-148 c: when the tool settings differ from those of the running part, the part ends
+    /// here (its result becomes the base of the next part) and a new part with the current
+    /// settings begins. Only for the modes with an incremental stroke.
+    fn new_part_if_changed(&mut self, ctx: &ToolContext) {
+        let now = self.stroke_params(ctx);
+        if now == self.part_params || self.points.is_empty() {
+            return;
+        }
+        let Some((l, engine)) = self
+            .live
+            .as_ref()
+            .and_then(|l| l.engine.as_ref().map(|(e, _)| (l, e)))
+        else {
+            // no incremental stroke (stamp, replace colour): the new settings apply to the whole
+            // stroke as before
+            self.part_params = now;
+            return;
+        };
+        let sealed = std::sync::Arc::new(engine.finish());
+        let (sel, page, origin) = (
+            l.sel.clone().map(std::sync::Arc::new),
+            l.page.clone(),
+            std::sync::Arc::clone(&l.base),
+        );
+        let mut part = self.part_params.clone();
+        part["points"] = Value::Array(self.points.iter().map(|q| pt_json(*q)).collect());
+        if !self.breaks.is_empty() {
+            part["breaks"] = json!(self.breaks);
+        }
+        if !self.subtract.is_empty() {
+            part["subtract"] = Value::Array(self.subtract.iter().map(|p| p.to_json()).collect());
+        }
+        self.parts.push(part);
+        self.part_params = now;
+        self.points.clear();
+        self.breaks.clear();
+        self.subtract.clear();
+        self.line_anchor = None;
+        let prm = self.part_json(&[]);
+        let engine = crate::commands::retouch_live_stroke(sealed, &prm, sel, page)
+            .map(|e| (e.with_origin(origin), prm));
+        if let Some(l) = self.live.as_mut() {
+            l.engine = engine;
+        }
+    }
+
+    /// `bitmap.retouch` parameters of the running part for the points `pts` (with the breaks,
+    /// subtraction passes and earlier parts of the stroke).
+    fn part_json(&self, pts: &[Point]) -> Value {
+        let mut p = self.part_params.clone();
+        if !p.is_object() {
+            p = json!({});
+        }
+        p["points"] = Value::Array(pts.iter().map(|q| pt_json(*q)).collect());
+        if !self.breaks.is_empty() {
+            p["breaks"] = json!(self.breaks);
+        }
+        if !self.subtract.is_empty() {
+            p["subtract"] = Value::Array(self.subtract.iter().map(|s| s.to_json()).collect());
+        }
+        if !self.parts.is_empty() {
+            p["parts"] = Value::Array(self.parts.clone());
+        }
+        p
     }
 
     /// First point of the running segment (FB-31: of the part after the last resume).
@@ -291,6 +440,10 @@ impl RetouchTool {
         self.paused = false;
         self.live = None;
         self.line_anchor = None;
+        self.parts.clear();
+        self.subtract.clear();
+        self.subtracting = false;
+        self.alt_latch = false;
     }
 
     /// Applies the running stroke (`bitmap.retouch` with all points and, after a pause, the
@@ -321,14 +474,20 @@ impl RetouchTool {
         // instead of computing the stroke again (Shift replaced the points: the engine restarts)
         let restart = end.is_some_and(|(_, shift)| shift);
         if let Some(mut l) = live
-            && l.feed(&self.points, &self.breaks, restart).is_some()
+            && l.feed(&self.points, &self.breaks, &self.subtract, restart)
+                .is_some()
             && let Some((engine, _)) = l.engine.as_ref()
         {
-            engine.remember(std::sync::Arc::clone(&l.elem), &self.points);
+            engine.remember(std::sync::Arc::clone(&l.elem), &self.points, &self.subtract);
         }
-        let p = self.stroke_params(ctx, &self.points);
+        // the settings of the part (fixed at the press or the resume, FB-148 c), not those
+        // changed while paused and never painted with
+        let p = self.part_json(&self.points);
         self.points.clear();
         self.breaks.clear();
+        self.parts.clear();
+        self.subtract.clear();
+        self.subtracting = false;
         self.painted = true;
         if let Some((pos, _)) = end {
             self.target_ok = retouch_target(ctx, pos).is_some();
@@ -385,7 +544,7 @@ impl RetouchTool {
             .unwrap_or(fp_color::Argb(0xffff_ffff));
         let base = std::sync::Arc::new(base);
         // the stroke parameters without points (the engine gets the points one move at a time)
-        let prm = self.stroke_params(ctx, &[]);
+        let prm = self.part_json(&[]);
         let engine = crate::commands::retouch_live_stroke(
             std::sync::Arc::clone(&base),
             &prm,
@@ -417,13 +576,13 @@ impl RetouchTool {
         if let Some(l) = self.live.as_mut()
             && l.engine.is_some()
         {
-            if !l.advance(&self.points, &self.breaks, restart) {
+            if !l.advance(&self.points, &self.breaks, &self.subtract, restart) {
                 self.live = None;
             }
             return;
         }
         let size = params(self.id, ctx).size;
-        let stroke = self.stroke_params(ctx, &self.points);
+        let stroke = self.part_json(&self.points);
         if let Some(l) = self.live.as_mut()
             && !l.update(&self.points, &stroke, size)
         {
@@ -431,16 +590,14 @@ impl RetouchTool {
         }
     }
 
-    /// Parameters of `bitmap.retouch` for the stroke `pts` (sent on release, also the live preview).
-    fn stroke_params(&self, ctx: &ToolContext, pts: &[Point]) -> Value {
+    /// Settings part of the `bitmap.retouch` parameters (no points) from the current tool
+    /// settings; the stroke sends them with [`Self::part_json`].
+    fn stroke_params(&self, ctx: &ToolContext) -> Value {
         let prm = params(self.id, ctx);
         let mut p = json!({
-            "mode": prm.mode, "points": pts.iter().map(|q| pt_json(*q)).collect::<Vec<Value>>(), "size": prm.size,
+            "mode": prm.mode, "size": prm.size,
             "round": prm.round, "soft": prm.soft, "strength": prm.strength, "range": prm.range, "spacing": prm.spacing,
         });
-        if !self.breaks.is_empty() {
-            p["breaks"] = json!(self.breaks);
-        }
         match self.id {
             ToolId::RubberStamp => {
                 let (dx, dy) = self.offset.unwrap_or((0.0, 0.0));
@@ -574,6 +731,19 @@ impl ToolMachine for RetouchTool {
                 }
                 return ToolResponse::default();
             }
+            // FB-148 b: P released ("hold") or pressed again ("toggle") with the button still down
+            // resumes painting at the pointer
+            ToolInput::Key(ToolKey::Resume) => {
+                if self.paused
+                    && self.button
+                    && !self.subtracting
+                    && let Some(h) = self.hover
+                {
+                    self.resume(ctx, h, ev.mods.shift);
+                    return ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor());
+                }
+                return ToolResponse::default();
+            }
             ToolInput::Key(ToolKey::Enter | ToolKey::Escape) if self.paused => {
                 return self.commit(ctx, None);
             }
@@ -602,14 +772,50 @@ impl ToolMachine for RetouchTool {
                 self.id == ToolId::RedEyeRemoval || retouch_target(ctx, *pos).is_some();
         }
         match kind {
+            PointerKind::Down => self.button = true,
+            PointerKind::Up => self.button = false,
+            _ => {}
+        }
+        if !ev.mods.alt {
+            self.alt_latch = false;
+        }
+        // FB-148 (Firepixel extension): Alt while painting or while paused restores what this
+        // stroke changed under the tip (Blur, Sharpen, Dodge, Burn); releasing Alt works again
+        let alt = ev.mods.alt && !self.alt_latch && !ev.mods.space && self.can_subtract();
+        match kind {
+            PointerKind::Down if self.paused && alt => self.subtract_at(ctx, *pos),
+            PointerKind::Move if self.paused && self.subtracting => {
+                if alt {
+                    self.subtract_at(ctx, *pos);
+                } else {
+                    // Alt released with the button held: the stroke works again from here
+                    self.resume(ctx, *pos, ev.mods.shift);
+                }
+            }
+            PointerKind::Up if self.paused && self.subtracting => {
+                if alt {
+                    self.subtract_at(ctx, *pos);
+                }
+                // the stroke stays paused
+                self.subtracting = false;
+            }
+            PointerKind::Move | PointerKind::Up if self.active && !self.paused && alt => {
+                self.subtract_at(ctx, *pos);
+                if *kind == PointerKind::Up {
+                    return self.commit(ctx, None);
+                }
+            }
+            PointerKind::Move if self.active && !self.paused && self.subtracting => {
+                // Alt released: the stroke goes on from here as a new segment
+                self.resume(ctx, *pos, ev.mods.shift);
+            }
+            PointerKind::Up if self.active && !self.paused && self.subtracting => {
+                return self.commit(ctx, None);
+            }
             // FB-31: a paused stroke resumes with the next press (a new segment of the same
             // stroke, not with Space held: that pans); moves and the release only move the outline
             PointerKind::Down if self.paused && !ev.mods.space => {
-                self.paused = false;
-                self.breaks.push(self.points.len());
-                self.line_anchor = ev.mods.shift.then_some(self.points.len());
-                self.points.push(*pos);
-                self.update_live(ctx, false);
+                self.resume(ctx, *pos, ev.mods.shift);
             }
             _ if self.paused => {}
             PointerKind::Down
@@ -657,6 +863,13 @@ impl ToolMachine for RetouchTool {
                 self.points = vec![*pos];
                 self.line_anchor = ev.mods.shift.then_some(0);
                 self.active = true;
+                // FB-148: the stroke's settings, its parts and subtraction passes start here
+                self.part_params = self.stroke_params(ctx);
+                self.parts.clear();
+                self.breaks.clear();
+                self.subtract.clear();
+                self.subtracting = false;
+                self.alt_latch = ev.mods.alt;
                 if self.id != ToolId::RedEyeRemoval {
                     self.begin_live(ctx, *pos);
                     self.update_live(ctx, false);
@@ -754,6 +967,17 @@ impl ToolMachine for RetouchTool {
         }
         self.drop_stroke();
         ToolResponse::with_overlay(self.overlay_for(ctx), self.cursor())
+    }
+
+    fn stroke_subtracting(&self) -> bool {
+        self.subtracting
+    }
+
+    fn can_subtract_stroke(&self) -> bool {
+        matches!(
+            self.id,
+            ToolId::Blur | ToolId::Sharpen | ToolId::Dodge | ToolId::Burn
+        )
     }
 
     fn stroke_pause(&self) -> StrokePause {

@@ -697,6 +697,10 @@ pub struct ToolState {
     pub fill_color: Argb,
     /// Werkzeugoptionen (Eigenschaften-Inspektor).
     pub options: ToolOptions,
+    /// FB-148 b: Alt as held in the last tool event (to see Alt going down).
+    alt_held: bool,
+    /// FB-148 b ("Alt subtraction: toggle"): the running stroke is in subtraction mode.
+    alt_toggled: bool,
 }
 
 impl std::fmt::Debug for ToolState {
@@ -811,6 +815,8 @@ impl Session {
                 stroke_color: stroke,
                 fill_color: fill,
                 options,
+                alt_held: false,
+                alt_toggled: false,
             },
             ui: UiState {
                 // View ▸ Tooltips persists as the preference `Tooltips` (re 58 §4). It switches
@@ -1787,6 +1793,54 @@ impl Session {
         self.tools.machine.stroke_subtracting()
     }
 
+    /// FB-148 (Firepixel extension): is the running bitmap stroke in subtraction mode, `alt` being
+    /// the Alt key as held now? With "Alt subtraction: hold" (default) while Alt is held, with
+    /// "toggle" after Alt was pressed an odd number of times during the stroke. Only for the tools
+    /// whose strokes subtract (Brush, Pencil, Blur, Sharpen, Dodge, Burn).
+    pub fn tool_stroke_subtract_mode(&self, alt: bool) -> bool {
+        if !self.tools.machine.can_subtract_stroke()
+            || self.tools.machine.stroke_pause() == tools::StrokePause::Idle
+        {
+            return false;
+        }
+        let on = if self.stroke_alt_toggles() {
+            self.tools.alt_toggled
+        } else {
+            alt
+        };
+        on || self.tools.machine.stroke_subtracting()
+    }
+
+    /// FB-148 b: does Alt toggle the subtraction mode of a running stroke (preference
+    /// [`tools::STROKE_ALT_MODE_PREF`] = 2) instead of subtracting while held (1, default)?
+    fn stroke_alt_toggles(&self) -> bool {
+        self.prefs.get_int(tools::STROKE_ALT_MODE_PREF, 1) == 2
+    }
+
+    /// FB-148 b: with "Alt subtraction: toggle" the Alt the tool of a running stroke sees is the
+    /// toggled mode: each time Alt goes down during the stroke the mode flips (it starts off with
+    /// every stroke). Returns the event to give the tool when it differs from `ev`.
+    fn stroke_alt_event(&mut self, ev: &ToolEvent) -> Option<ToolEvent> {
+        if !matches!(ev.input, tools::ToolInput::Pointer { .. }) {
+            return None;
+        }
+        let down = ev.mods.alt && !self.tools.alt_held;
+        self.tools.alt_held = ev.mods.alt;
+        let running = self.tools.machine.stroke_pause() != tools::StrokePause::Idle;
+        if !running {
+            self.tools.alt_toggled = false;
+        }
+        if !self.stroke_alt_toggles() || !running || !self.tools.machine.can_subtract_stroke() {
+            return None;
+        }
+        if down {
+            self.tools.alt_toggled = !self.tools.alt_toggled;
+        }
+        let mut e = ev.clone();
+        e.mods.alt = self.tools.alt_toggled;
+        Some(e)
+    }
+
     /// FB-70 (Firepixel extension): does a running or paused bitmap stroke take Undo and Redo
     /// (active tool, or the tool that finishes its gesture after a tool change)?
     pub fn tool_takes_history(&self) -> bool {
@@ -2686,6 +2740,9 @@ impl Session {
                 _ => self.tools.held = None,
             }
         }
+        // FB-148 b: "Alt subtraction: toggle" turns Alt presses into the subtraction mode
+        let toggled = self.stroke_alt_event(ev);
+        let ev = toggled.as_ref().unwrap_or(ev);
         let resp = self.with_tool_ctx(|m, ctx| m.handle(ev, ctx));
         self.run_tool_response(resp)
     }

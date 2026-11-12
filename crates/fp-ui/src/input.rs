@@ -156,6 +156,15 @@ fn tool_key(key: Key) -> Option<ToolKey> {
     })
 }
 
+/// FB-148 b: is the preference "Pause stroke" set to "hold" (the stroke is paused only while P is
+/// held) instead of "toggle" (default)?
+fn pause_holds(st: &AppState) -> bool {
+    st.session
+        .prefs
+        .get_int(fp_engine::tools::STROKE_PAUSE_MODE_PREF, 2)
+        == 1
+}
+
 fn tool_mods(m: egui::Modifiers) -> Modifiers {
     Modifiers {
         shift: m.shift,
@@ -468,8 +477,10 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
                     }
                 }
                 // FB-31 (Firepixel extension): P pauses a running bitmap stroke (Brush, Pencil,
-                // Eraser, retouch tools); while paused, P does nothing. Without a running stroke P
-                // keeps its toolbox shortcut.
+                // Eraser, retouch tools). FB-148 b: with "Pause stroke: toggle" (default) P again
+                // resumes painting at the pointer while the button is still down (otherwise the
+                // next press resumes); with "hold" releasing P does that (below). Without a running
+                // stroke P keeps its toolbox shortcut.
                 if key == Key::P && !ctrl && !modifiers.alt {
                     match st.session.tool_stroke_pause() {
                         fp_engine::StrokePause::Painting => {
@@ -483,7 +494,17 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
                             }
                             continue;
                         }
-                        fp_engine::StrokePause::Paused => continue,
+                        fp_engine::StrokePause::Paused => {
+                            if !repeat && !pause_holds(st) {
+                                send(
+                                    ctx,
+                                    st,
+                                    ToolInput::Key(ToolKey::Resume),
+                                    tool_mods(modifiers),
+                                );
+                            }
+                            continue;
+                        }
                         fp_engine::StrokePause::Idle => {}
                     }
                 }
@@ -584,6 +605,24 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
                         run_clip(st, Key::V, modifiers, "edit.paste", json!({}));
                     }
                 }
+            }
+            // FB-148 b: "Pause stroke: hold": releasing P resumes painting at the pointer while
+            // the button is still down (with the button up the next press resumes)
+            Event::Key {
+                key: Key::P,
+                pressed: false,
+                modifiers,
+                ..
+            } if !editing
+                && pause_holds(st)
+                && st.session.tool_stroke_pause() == fp_engine::StrokePause::Paused =>
+            {
+                send(
+                    ctx,
+                    st,
+                    ToolInput::Key(ToolKey::Resume),
+                    tool_mods(modifiers),
+                );
             }
             Event::Text(t) if editing || st.session.tools.active == ToolId::Text => {
                 send(ctx, st, ToolInput::Text(t), Modifiers::default());

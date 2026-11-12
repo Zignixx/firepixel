@@ -76,6 +76,8 @@ pub(crate) const INTERP: &[&str] = &[
     "dlg-interp-soft",
     "dlg-interp-nearest",
 ];
+/// FB-148: entries of the "hold / toggle" options of a bitmap stroke (1 = hold, 2 = toggle).
+const HOLD_TOGGLE: &[&str] = &["dlg-pref-mode-hold", "dlg-pref-mode-toggle"];
 const LOOK: &[&str] = &[
     "dlg-pref-look-always",
     "dlg-pref-look-never",
@@ -149,6 +151,20 @@ fn page_items(cat: usize) -> &'static [Item] {
             Check("CropDocCropsImages", "dlg-pref-cropdoccropsimages", true),
             Check("DeletePaths", "dlg-pref-deletepaths", true),
             Check("UseBrushSizeCursors", "dlg-pref-usebrushsizecursors", true),
+            // own options (FB-148): Alt subtraction and the P pause of a bitmap stroke, hold or
+            // toggle; defaults = the behaviour before the options existed
+            Combo1(
+                fp_engine::tools::STROKE_ALT_MODE_PREF,
+                "dlg-pref-strokealtmode",
+                HOLD_TOGGLE,
+                1,
+            ),
+            Combo1(
+                fp_engine::tools::STROKE_PAUSE_MODE_PREF,
+                "dlg-pref-strokepausemode",
+                HOLD_TOGGLE,
+                2,
+            ),
             Check("UsePrecisionCursors", "dlg-pref-useprecisioncursors", false),
             Caption("dlg-pref-cap-pen"),
             Check("ShowPenPreview", "dlg-pref-showpenpreview", true),

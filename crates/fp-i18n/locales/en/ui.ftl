@@ -71,6 +71,16 @@ ui-stroke-pause-hint = Press P on the keyboard to pause the current brush stroke
 ui-stroke-subtract = Subtraction mode (Alt): the brush erases only what this stroke has painted. Release Alt to paint again.
 ui-stroke-subtract-paused = Stroke paused, subtraction mode (Alt): drag to erase only what this stroke has painted. Release Alt to paint again, hit Enter to apply the stroke.
 ui-stroke-paused = Stroke paused. It is safe to let go of mouse button or lift stylus. Click anywhere on the screen to resume current stroke. Hit Enter to apply paused stroke.
+# FB-148 (Firepixel extension): preference "Pause stroke: hold", "Alt subtraction: toggle" and the
+# restore mode of Blur, Sharpen, Dodge and Burn
+ui-stroke-pause-hint-hold = Hold P on the keyboard to pause the current brush stroke.
+ui-stroke-paused-hold = Stroke paused while P is held. Release P to paint on; with the mouse button up, click anywhere on the canvas to resume the stroke. Hit Enter to apply it.
+ui-stroke-subtract-toggle = Subtraction mode (Alt pressed): the brush erases only what this stroke has painted. Press Alt again to paint again.
+ui-stroke-subtract-paused-toggle = Stroke paused, subtraction mode (Alt pressed): drag to erase only what this stroke has painted. Press Alt again to paint again, hit Enter to apply the stroke.
+ui-stroke-restore = Restore mode (Alt): the tip restores what this stroke has changed. Release Alt to work again.
+ui-stroke-restore-paused = Stroke paused, restore mode (Alt): drag to restore what this stroke has changed. Release Alt to work again, hit Enter to apply the stroke.
+ui-stroke-restore-toggle = Restore mode (Alt pressed): the tip restores what this stroke has changed. Press Alt again to work again.
+ui-stroke-restore-paused-toggle = Stroke paused, restore mode (Alt pressed): drag to restore what this stroke has changed. Press Alt again to work again, hit Enter to apply the stroke.
 ui-sel-document = { $format } (Document)
 ui-sel-objects = { $n } objects
 ui-sel-object = Object

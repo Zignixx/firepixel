@@ -221,6 +221,20 @@ pub(crate) struct RetouchStroke {
     fed: usize,
     /// Index of the first point of the running part (FB-31).
     part_start: usize,
+    /// FB-148 (Firepixel extension, Alt subtraction): weight per pixel with which the pixel is
+    /// shown as it was before the stroke (`origin`): 1 where a subtraction pass ran, lowered again
+    /// where the stroke works after it. Empty = no subtraction.
+    restore: Grow<f32>,
+    /// FB-148: the pixels a subtraction restores (the bitmap before the whole stroke; for a part
+    /// after a settings change, FB-148 c, still the bitmap before the first part).
+    origin: Arc<RgbaImage>,
+    /// FB-148: tip and dab positions of the running subtraction pass.
+    sub_dab: Dab,
+    sub_walker: DabWalker,
+    /// FB-148: subtraction passes applied so far (index of the last one touched) and the number of
+    /// its points applied, for [`Self::feed_subtracting`].
+    pass_idx: usize,
+    pass_pts: usize,
 }
 
 impl RetouchStroke {
@@ -271,6 +285,7 @@ impl RetouchStroke {
         let dab = Dab::stroke(prm.size, prm.round, prm.soft * 100.0);
         Some(RetouchStroke {
             prm,
+            origin: Arc::clone(&base),
             base,
             sel,
             page,
@@ -279,7 +294,95 @@ impl RetouchStroke {
             state,
             fed: 0,
             part_start: 0,
+            restore: Grow::empty(),
+            sub_dab: Dab::stroke(1.0, true, 0.0),
+            sub_walker: DabWalker::new(1.0),
+            pass_idx: 0,
+            pass_pts: 0,
         })
+    }
+
+    /// FB-148 c: the pixels an Alt subtraction restores, when the stroke continues a stroke part
+    /// painted with other settings (`base` is then that part's result).
+    pub(crate) fn with_origin(mut self, origin: Arc<RgbaImage>) -> RetouchStroke {
+        self.origin = origin;
+        self
+    }
+
+    /// FB-148 (Firepixel extension): starts a subtraction pass (Alt held) with a hard tip of
+    /// `size` (round or square): from now on the tip restores the pixels this stroke changed.
+    pub(crate) fn start_subtract(&mut self, size: f32, round: bool) {
+        self.sub_dab = Dab::stroke(size.max(1.0), round, 0.0);
+        self.sub_walker = DabWalker::new(1.0);
+    }
+
+    /// FB-148: extends the running subtraction pass along `pts`; returns the rectangle of pixels
+    /// that may have changed.
+    pub(crate) fn push_subtract(&mut self, pts: &[Point]) -> IRect {
+        let mut stamps = Vec::new();
+        for p in pts {
+            self.sub_walker.push(*p, &mut stamps);
+        }
+        // the stroke changes nothing farther than the blur's 2 px growth from the bitmap
+        let limit = self
+            .base
+            .bounds()
+            .union(&self.origin.bounds())
+            .inflate(4, 4);
+        let need = stamps
+            .iter()
+            .fold(IRect::default(), |r, s| r.union(&self.sub_dab.bounds(*s)))
+            .intersect(&limit);
+        if need.is_empty() {
+            return need;
+        }
+        let next = grown(self.restore.r, need, limit, self.base.bounds());
+        self.restore.ensure(next, |_, _| 0.0);
+        let (dab, restore) = (&self.sub_dab, &mut self.restore);
+        for s in &stamps {
+            dab.each(*s, |x, y, w| {
+                if let Some(i) = restore.idx(x, y) {
+                    restore.v[i] = restore.v[i].max(w);
+                }
+            });
+        }
+        need
+    }
+
+    /// FB-148: feeds the points of the whole stroke `all` (breaks as in [`Self::feed`]) with its
+    /// subtraction passes (each pass restores what the points before its `at` changed); only what
+    /// was not fed or applied yet. Returns the rectangle of pixels that may have changed.
+    pub(crate) fn feed_subtracting(
+        &mut self,
+        all: &[Point],
+        breaks: &[usize],
+        passes: &[crate::paint::SubtractPass],
+    ) -> IRect {
+        let mut dirty = IRect::default();
+        for (i, pass) in passes.iter().enumerate().skip(self.pass_idx) {
+            let at = pass.at.min(all.len());
+            if self.fed < at {
+                dirty = dirty.union(&self.feed(&all[..at], breaks));
+            }
+            let done = if i == self.pass_idx { self.pass_pts } else { 0 };
+            if done == 0 {
+                self.start_subtract(pass.size, pass.round);
+            }
+            if done < pass.points.len() {
+                dirty = dirty.union(&self.push_subtract(&pass.points[done..]));
+            }
+            self.pass_idx = i;
+            self.pass_pts = pass.points.len();
+        }
+        dirty.union(&self.feed(all, breaks))
+    }
+
+    /// FB-148: the pixel at `x, y` with the subtraction applied to the stroke's pixel `v`.
+    fn restored(&self, x: i32, y: i32, v: [u8; 4]) -> [u8; 4] {
+        match self.restore.get(x, y) {
+            Some(t) if t > 0.0 => mix_px(v, self.origin.get(x, y).unwrap_or([0; 4]), t),
+            _ => v,
+        }
     }
 
     /// The bitmap the stroke started on.
@@ -347,6 +450,17 @@ impl RetouchStroke {
         for p in pts {
             self.walker.push(*p, &mut stamps);
         }
+        // FB-148: where the stroke works again after a subtraction, its effect shows again
+        if !self.restore.r.is_empty() {
+            let restore = &mut self.restore;
+            for s in &stamps {
+                self.dab.each(*s, |x, y, w| {
+                    if let Some(i) = restore.idx(x, y) {
+                        restore.v[i] *= 1.0 - w;
+                    }
+                });
+            }
+        }
         let orig = self.base.bounds();
         let sel = self.sel.as_deref();
         let prm = &self.prm;
@@ -372,8 +486,14 @@ impl RetouchStroke {
         }
     }
 
-    /// Pixel of the stroke so far (outside the bitmap and its growth transparent).
+    /// Pixel of the stroke so far (outside the bitmap and its growth transparent), with the Alt
+    /// subtraction applied (FB-148).
     pub(crate) fn pixel(&self, x: i32, y: i32) -> [u8; 4] {
+        self.restored(x, y, self.raw_pixel(x, y))
+    }
+
+    /// Pixel of the stroke so far without the subtraction.
+    fn raw_pixel(&self, x: i32, y: i32) -> [u8; 4] {
         let own = || self.base.get(x, y).unwrap_or([0; 4]);
         match &self.state {
             State::Cover(c) => c.out.get(x, y).unwrap_or_else(own),
@@ -401,8 +521,36 @@ impl RetouchStroke {
         }
     }
 
-    /// The finished bitmap (what `bitmap.retouch` stores).
+    /// The finished bitmap (what `bitmap.retouch` stores), with the Alt subtraction (FB-148).
     pub(crate) fn finish(&self) -> RgbaImage {
+        let mut img = self.finish_raw();
+        if self.restore.r.is_empty() {
+            return img;
+        }
+        let r = self.restore.r.intersect(&img.bounds());
+        for y in r.top..r.bottom {
+            for x in r.left..r.right {
+                if let Some(v) = img.get(x, y) {
+                    let p = self.restored(x, y, v);
+                    if p != v {
+                        img.set_pixel(x, y, Rgba8::new(p[0], p[1], p[2], p[3]));
+                    }
+                }
+            }
+        }
+        // a blur that grew the bitmap keeps only the grown edges that still have coverage
+        let orig = self.origin.bounds().union(&self.base.bounds());
+        if img.bounds() != orig && !orig.is_empty() {
+            let keep = orig.union(&img.alpha_bounds()).intersect(&img.bounds());
+            if keep != img.bounds() {
+                img = img.cropped(keep);
+            }
+        }
+        img
+    }
+
+    /// The finished bitmap without the subtraction.
+    fn finish_raw(&self) -> RgbaImage {
         let orig = self.base.bounds();
         match &self.state {
             State::Cover(c) => {
@@ -527,11 +675,19 @@ impl RetouchStroke {
     /// Keeps the finished stroke (points `pts`, all fed) on the bitmap element `elem` for the
     /// `bitmap.retouch` that follows the release ([`take_live_result`]). Not with "Entire
     /// document" (the command renders the page itself).
-    pub(crate) fn remember(&self, elem: Arc<fp_model::Element>, pts: &[Point]) {
+    pub(crate) fn remember(
+        &self,
+        elem: Arc<fp_model::Element>,
+        pts: &[Point],
+        passes: &[crate::paint::SubtractPass],
+    ) {
+        let mut prm = self.prm.clone();
+        // FB-148: the command names the Alt subtraction passes the live stroke applied
+        prm.subtract = passes.to_vec();
         let entry = self.page.is_none().then(|| LiveResult {
             elem,
             pts: pts.to_vec(),
-            prm: self.prm.clone(),
+            prm,
             sel: self.sel.clone(),
             image: self.finish(),
         });
@@ -550,6 +706,25 @@ pub(super) fn take_live_result(
     let e = LIVE_RESULT.with(|c| c.borrow_mut().take())?;
     (Arc::ptr_eq(&e.elem, elem) && e.pts == pts && e.prm == *prm && e.sel.as_deref() == sel)
         .then_some(e.image)
+}
+
+/// FB-148: `a` moved towards `b` by `t` (0..1), premultiplied; `t` = 1 gives `b` exactly.
+fn mix_px(a: [u8; 4], b: [u8; 4], t: f32) -> [u8; 4] {
+    if t >= 1.0 {
+        return b;
+    }
+    let t = t.clamp(0.0, 1.0);
+    let (aa, ba) = (a[3] as f32 * (1.0 - t), b[3] as f32 * t);
+    let alpha = aa + ba;
+    if alpha <= 0.0 {
+        return [0; 4];
+    }
+    let c = |k: usize| {
+        ((a[k] as f32 * aa + b[k] as f32 * ba) / alpha)
+            .round()
+            .clamp(0.0, 255.0) as u8
+    };
+    [c(0), c(1), c(2), alpha.round().clamp(0.0, 255.0) as u8]
 }
 
 fn copy_px(img: &mut RgbaImage, g: &Grow<[u8; 4]>, within: IRect) {
@@ -964,6 +1139,8 @@ mod tests {
             finger: (k % 4 == 1).then(|| Rgba8::new(10, 200, 90, 255)),
             confine: k % 6 == 2,
             breaks: Vec::new(),
+            subtract: Vec::new(),
+            parts: Vec::new(),
         }
     }
 

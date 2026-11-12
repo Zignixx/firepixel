@@ -128,6 +128,10 @@ pub struct PaintJob {
     /// while paused). Each pass erases the stroke's OWN coverage of the points before its `at`; the
     /// pixels under the stroke are never touched. Empty = no subtraction.
     pub subtract: Vec<SubtractPass>,
+    /// FB-148 c (Firepixel extension): the earlier parts of a stroke whose settings (size,
+    /// opacity, colour, tip ...) were changed while it was paused, oldest first. Each is painted
+    /// with its own settings onto the result of the one before; this job is painted last.
+    pub prior: Vec<PaintJob>,
 }
 
 /// FB-69 (Firepixel extension): one subtraction pass of a stroke: the brush tip (`size`, round or
@@ -186,6 +190,26 @@ pub fn parse_subtract(v: Option<&Value>) -> Vec<SubtractPass> {
                 points,
             })
         })
+        .collect()
+}
+
+/// FB-148 c: `parts` parameter of `bitmap.paint` and `bitmap.erase` (the earlier parts of a stroke
+/// with other settings: objects with the parameters of the command and their `points`; parts
+/// inside parts are ignored).
+fn parse_parts(tool: PaintTool, p: &Value, fallback: Argb, default_size: f32) -> Vec<PaintJob> {
+    let Some(Value::Array(a)) = p.get("parts") else {
+        return Vec::new();
+    };
+    a.iter()
+        .filter(|v| v.is_object())
+        .map(|v| {
+            let mut v = v.clone();
+            if let Some(o) = v.as_object_mut() {
+                o.remove("parts");
+            }
+            PaintJob::from_params(tool, &v, fallback, default_size)
+        })
+        .filter(|j| !j.points.is_empty())
         .collect()
 }
 
@@ -351,6 +375,7 @@ impl PaintJob {
                 velocities: Vec::new(),
                 breaks,
                 subtract: Vec::new(),
+                prior: parse_parts(tool, p, fallback_color, default_size),
             };
         }
         let mut brush = p
@@ -421,6 +446,7 @@ impl PaintJob {
             points,
             breaks,
             subtract: parse_subtract(p.get("subtract")),
+            prior: parse_parts(tool, p, fallback_color, default_size),
         }
     }
 
@@ -470,6 +496,14 @@ impl PaintJob {
 
     /// Wie weit ein Abdruck über seinen Mittelpunkt hinausreicht (Pixel, großzügig).
     pub fn margin(&self) -> i32 {
+        self.prior
+            .iter()
+            .map(|j| j.margin())
+            .fold(self.own_margin(), i32::max)
+    }
+
+    /// [`Self::margin`] of this part alone (FB-148 c).
+    fn own_margin(&self) -> i32 {
         if let Some(e) = &self.erase {
             return (e.size / 2.0).ceil() as i32 + 3;
         }
@@ -495,15 +529,43 @@ impl PaintJob {
 
     /// Bereich, den der Strich höchstens berührt.
     pub fn cover(&self) -> IRect {
-        let m = self.margin();
-        self.segments()
+        let m = self.own_margin();
+        let own = self
+            .segments()
             .into_iter()
-            .fold(IRect::default(), |r, seg| r.union(&points_cover(seg, m)))
+            .fold(IRect::default(), |r, seg| r.union(&points_cover(seg, m)));
+        self.prior.iter().fold(own, |r, j| r.union(&j.cover()))
+    }
+
+    /// FB-148 c: is the painted area limited to the bitmap `base` (preserve transparency, the
+    /// eraser, "Confine to boundaries")? For a stroke in parts only when every part is.
+    pub fn bounded_by_base(&self, has_base: bool) -> bool {
+        let own =
+            self.mix.preserve || self.tool == PaintTool::Eraser || (self.mix.confine && has_base);
+        own && self.prior.iter().all(|j| j.bounded_by_base(has_base))
     }
 
     /// Neues Bild für `region`: Ausgangspixel `base` (fehlt = transparent) mit dem Strich bzw. dem
     /// Radieren gemischt, beschnitten auf die Pixelauswahl `sel`.
     pub fn render(&self, base: Option<&RgbaImage>, sel: Option<&Mask>, region: IRect) -> RgbaImage {
+        if self.prior.is_empty() {
+            return self.render_part(base, sel, region);
+        }
+        // FB-148 c: the parts one after the other, each on the result of the one before
+        let mut acc: Option<RgbaImage> = None;
+        for j in &self.prior {
+            acc = Some(j.render_part(acc.as_ref().or(base), sel, region));
+        }
+        self.render_part(acc.as_ref().or(base), sel, region)
+    }
+
+    /// [`Self::render`] of this part alone.
+    fn render_part(
+        &self,
+        base: Option<&RgbaImage>,
+        sel: Option<&Mask>,
+        region: IRect,
+    ) -> RgbaImage {
         let mut dst =
             RgbaImage::new(region).unwrap_or_else(|_| RgbaImage::empty_at(region.left, region.top));
         if region.is_empty() {
@@ -709,7 +771,7 @@ pub fn paint_into(
     sel: Option<&Mask>,
 ) -> Option<RgbaImage> {
     let mut region = job.cover();
-    if job.mix.preserve || job.tool == PaintTool::Eraser || (job.mix.confine && base.is_some()) {
+    if job.bounded_by_base(base.is_some()) {
         region = region.intersect(&base.map(|b| b.bounds()).unwrap_or_default());
     }
     if let Some(m) = sel {
@@ -837,6 +899,9 @@ pub struct LivePaint {
     stroke: u64,
     /// Pixel, die der letzte Schritt neu gerechnet hat (Messung: nur betroffene Bereiche).
     last_area: u64,
+    /// FB-148 c: the base with the earlier parts of the stroke painted (over the base and their
+    /// cover), so a move of the running part does not paint them again.
+    prior_img: Option<Arc<RgbaImage>>,
 }
 
 impl std::fmt::Debug for LivePaint {
@@ -963,6 +1028,7 @@ impl LivePaint {
             generation: 0,
             stroke: next_stroke_id(),
             last_area: 0,
+            prior_img: None,
         };
         lp.render_rects(&[cover]);
         lp
@@ -1083,12 +1149,28 @@ impl LivePaint {
             round,
             points: vec![p],
         });
+        // FB-148 c: the earlier parts of the stroke lose their paint there too
+        for j in &mut self.job.prior {
+            j.subtract.push(SubtractPass {
+                at: j.points.len(),
+                size,
+                round,
+                points: vec![p],
+            });
+        }
         let r = points_cover(&[p], (size / 2.0).ceil() as i32 + 3);
-        self.render_rects(&[r.intersect(&self.painted)]);
+        let r = r.intersect(&self.painted);
+        self.refresh_prior(r);
+        self.render_rects(&[r]);
     }
 
     /// FB-69: extends the running subtraction pass to `p` and recomputes the area it touches.
     pub fn push_subtract(&mut self, p: Point) {
+        for j in &mut self.job.prior {
+            if let Some(pass) = j.subtract.last_mut() {
+                pass.points.push(p);
+            }
+        }
         let Some(pass) = self.job.subtract.last_mut() else {
             return;
         };
@@ -1098,7 +1180,43 @@ impl LivePaint {
             &pass.points[n.saturating_sub(2)..],
             (pass.size / 2.0).ceil() as i32 + 3,
         );
-        self.render_rects(&[r.intersect(&self.painted)]);
+        let r = r.intersect(&self.painted);
+        self.refresh_prior(r);
+        self.render_rects(&[r]);
+    }
+
+    /// FB-148 c (Firepixel extension): the settings were changed while the stroke was paused: the
+    /// stroke so far becomes an earlier part and `job` (the new settings) goes on from `p`, painted
+    /// onto the result of the earlier parts.
+    pub fn start_part(&mut self, mut job: PaintJob, p: Point, velocity: Option<f32>) {
+        let mut old = std::mem::replace(&mut self.job, PaintJob::clone(&job));
+        let mut prior = std::mem::take(&mut old.prior);
+        prior.push(old);
+        job.prior = prior;
+        job.points = vec![p];
+        job.breaks.clear();
+        job.subtract.clear();
+        job.velocities = velocity.into_iter().collect();
+        self.job = job;
+        // the earlier parts once, as the base of the new part
+        let sane = IRect::new(-1_000_000, -1_000_000, 1_000_000, 1_000_000);
+        let area = self
+            .job
+            .prior
+            .iter()
+            .fold(
+                self.base.as_ref().map(|b| b.bounds()).unwrap_or_default(),
+                |r, j| r.union(&j.cover()),
+            )
+            .intersect(&sane);
+        self.prior_img = None;
+        if !area.is_empty() {
+            self.prior_img = Some(Arc::new(self.render_prior(area)));
+        }
+        let cover = self.job.cover();
+        let all = self.painted.union(&cover);
+        self.cover = cover;
+        self.render_rects(&[all]);
     }
 
     /// FB-69: the subtraction passes of the stroke.
@@ -1121,25 +1239,60 @@ impl LivePaint {
         self.render_rects(&[all]);
     }
 
+    /// FB-148 c: the base with the earlier parts painted, over `region`.
+    fn render_prior(&self, region: IRect) -> RgbaImage {
+        let mut acc: Option<RgbaImage> = None;
+        for j in &self.job.prior {
+            acc = Some(j.render_part(
+                acc.as_ref().or(self.base.as_deref()),
+                self.sel.as_deref(),
+                region,
+            ));
+        }
+        acc.unwrap_or_else(|| {
+            let mut d = RgbaImage::new(region)
+                .unwrap_or_else(|_| RgbaImage::empty_at(region.left, region.top));
+            if let Some(b) = self.base.as_deref() {
+                d.paste(&b.cropped(region));
+            }
+            d
+        })
+    }
+
+    /// FB-148 c: an Alt subtraction changed the earlier parts within `r`: paint them again there.
+    fn refresh_prior(&mut self, r: IRect) {
+        let Some(pi) = self.prior_img.as_ref() else {
+            return;
+        };
+        let r = r.intersect(&pi.bounds());
+        if r.is_empty() {
+            return;
+        }
+        let part = self.render_prior(r);
+        if let Some(pi) = self.prior_img.as_mut() {
+            Arc::make_mut(pi).paste(&part);
+        }
+    }
+
     fn render_rects(&mut self, rects: &[IRect]) {
         self.last_area = 0;
         // weit außerhalb liegende Bereiche nicht rechnen (Schutz vor riesigen Puffern)
         let sane = IRect::new(-1_000_000, -1_000_000, 1_000_000, 1_000_000);
         for r in rects {
             let mut r = r.intersect(&sane);
-            if self.job.mix.preserve
-                || self.job.tool == PaintTool::Eraser
-                || (self.job.mix.confine && self.base.is_some())
-            {
+            if self.job.bounded_by_base(self.base.is_some()) {
                 r = r.intersect(&self.base.as_ref().map(|b| b.bounds()).unwrap_or_default());
             }
             if r.is_empty() {
                 continue;
             }
             self.last_area += r.area();
-            let img = self
-                .job
-                .render(self.base.as_deref(), self.sel.as_deref(), r);
+            let img = match self.prior_img.as_deref() {
+                Some(pi) => self.job.render_part(Some(pi), self.sel.as_deref(), r),
+                None => self
+                    .job
+                    .render(self.base.as_deref(), self.sel.as_deref(), r),
+            };
             self.store(&img);
             self.painted = self.painted.union(&r);
         }
@@ -1430,6 +1583,7 @@ mod tests {
             velocities: Vec::new(),
             breaks: Vec::new(),
             subtract: Vec::new(),
+            prior: Vec::new(),
         }
     }
 

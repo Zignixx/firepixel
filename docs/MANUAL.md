@@ -254,6 +254,19 @@ a straight line from the point reached; what was painted before stays. Without a
 `pause` to `tool_event`; the commands `bitmap.paint`, `bitmap.erase` and `bitmap.retouch` take the
 resumed parts as `breaks` (indices into `points`).
 
+**More stroke extras (Firepixel extensions):** **Alt** also works during a **Blur, Sharpen, Dodge or
+Burn** stroke (not Smudge): the tip restores what this stroke has changed, the status line says so.
+*Edit ▸ Preferences ▸ Edit* has two options: *Alt subtraction in a stroke* — *Hold* (default: subtract
+while Alt is held) or *Toggle* (each Alt press switches the running stroke between painting and
+subtracting; every new stroke starts painting) — and *Pause stroke (P)* — *Toggle* (default: P pauses
+until the next press on the canvas; with the mouse button still down, P again paints on at the pointer)
+or *Hold* (the stroke is paused only while P is held; releasing P with the button down paints on, with
+the button up the next press resumes). Settings you change while a stroke is paused (size, opacity,
+colour, tip, edge, texture; for the retouch tools size, edge, shape and strength) apply to the part you
+paint after the resume, and the brush outline shows that size; the stroke stays one History row (the
+command gets the earlier parts as `parts`). Alt after such a change erases or restores all parts of the
+stroke. Scripts and MCP send the key `resume` to `tool_event` for the resume at the pointer.
+
 **Pen:** while you draw a path, a click on its last anchor retracts that point's outgoing handle, so the next
 segment leaves it straight; dragging on it pulls the point out again as a symmetric curve point (Alt moves only the
 outgoing handle, Ctrl moves the point, Shift snaps to 45°). A click on an interior curve point turns it into a

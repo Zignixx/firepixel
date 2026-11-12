@@ -722,3 +722,5 @@ cmdtext-mischmodus-vorgabe-normal = Blending mode (default normal)
 cmdtext-deckkraft-in-prozent-vorgabe-100 = Opacity in percent (default 100)
 cmdtext-farbe-vorgabe-ff0000 = Color (default #ff0000)
 cmdtext-eingeschaltet-vorgabe-ja = switched on (default yes)
+cmdtext-abzug-im-eigenen-strich-alt-firepixel-er-48c1f8 = subtraction within the own stroke (Alt, Firepixel extension; Blur, Sharpen, Dodge, Burn): [{"{"}at, size, round, points{"}"}, …]; the tip restores what the points before `at` changed
+cmdtext-fruehere-teile-eines-strichs-dessen-eins-dfe126 = earlier parts of a stroke whose settings were changed while it was paused (Firepixel extension): [{"{"}parameters of this command with points{"}"}, …], worked before this part

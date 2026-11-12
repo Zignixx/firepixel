@@ -722,3 +722,5 @@ cmdtext-mischmodus-vorgabe-normal = Mischmodus (Vorgabe normal)
 cmdtext-deckkraft-in-prozent-vorgabe-100 = Deckkraft in Prozent (Vorgabe 100)
 cmdtext-farbe-vorgabe-ff0000 = Farbe (Vorgabe #ff0000)
 cmdtext-eingeschaltet-vorgabe-ja = eingeschaltet (Vorgabe ja)
+cmdtext-abzug-im-eigenen-strich-alt-firepixel-er-48c1f8 = Abzug im eigenen Strich (Alt, Firepixel-Erweiterung; Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter): [{"{"}at, size, round, points{"}"}, …]; die Spitze stellt wieder her, was die Punkte vor `at` geändert haben
+cmdtext-fruehere-teile-eines-strichs-dessen-eins-dfe126 = Frühere Teile eines Strichs, dessen Einstellungen während der Pause geändert wurden (Firepixel-Erweiterung): [{"{"}Parameter dieses Befehls mit points{"}"}, …], vor diesem Teil ausgeführt

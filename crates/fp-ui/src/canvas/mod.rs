@@ -2748,11 +2748,13 @@ fn input(ui: &mut Ui, st: &mut AppState, area: Rect, resp: &egui::Response) {
             }
             // FB-72: Shift/Alt/Ctrl pressed or released over the canvas without mouse motion:
             // one move at the same place re-evaluates the tool's hover cursor (selection badges,
-            // Alt-duplicate, Pen variants, ...); only on a change, never while a press is held
+            // Alt-duplicate, Pen variants, ...); only on a change, never while a press is held,
+            // except during a bitmap stroke (FB-148: Alt switches its subtraction mode at once)
             let now_mods = tm(cur, cur_space);
             let keys = |m: Modifiers| (m.shift, m.alt, m.ctrl);
+            let stroke = st.session.tool_stroke_pause() != fp_engine::StrokePause::Idle;
             if events.is_empty()
-                && !cc.pointer_down
+                && (!cc.pointer_down || stroke)
                 && free
                 && area.contains(p)
                 && cc.tool_mods.is_some_and(|m| keys(m) != keys(now_mods))
@@ -4722,21 +4724,41 @@ fn selection_info(st: &AppState) -> String {
 }
 
 /// FB-31 (Firepixel extension): status text of a pausable bitmap stroke – the hint "press P"
-/// while a stroke is painted, the instructions while it is paused; `None` without a stroke. With
-/// `alt` held a Brush or Pencil stroke announces its subtraction mode (FB-69).
+/// while a stroke is painted, the instructions while it is paused; `None` without a stroke. In
+/// subtraction mode (Alt held, or toggled with "Alt subtraction: toggle") a Brush, Pencil, Blur,
+/// Sharpen, Dodge or Burn stroke announces it (FB-69, FB-148).
 pub fn stroke_pause_status(st: &AppState, alt: bool) -> Option<String> {
-    let subtract = (alt || st.session.tool_stroke_subtracting())
-        && matches!(
-            st.session.tools.active,
-            fp_engine::tools::ToolId::Brush | fp_engine::tools::ToolId::Pencil
-        );
-    match st.session.tool_stroke_pause() {
-        fp_engine::StrokePause::Painting if subtract => Some(fp_i18n::t("ui-stroke-subtract")),
-        fp_engine::StrokePause::Paused if subtract => Some(fp_i18n::t("ui-stroke-subtract-paused")),
-        fp_engine::StrokePause::Painting => Some(fp_i18n::t("ui-stroke-pause-hint")),
-        fp_engine::StrokePause::Paused => Some(fp_i18n::t("ui-stroke-paused")),
-        fp_engine::StrokePause::Idle => None,
-    }
+    use fp_engine::StrokePause as P;
+    let subtract = st.session.tool_stroke_subtract_mode(alt);
+    let prefs = &st.session.prefs;
+    // FB-148 b: the texts follow the preferences "Alt subtraction" and "Pause stroke"
+    let toggle = prefs.get_int(fp_engine::tools::STROKE_ALT_MODE_PREF, 1) == 2;
+    let hold = prefs.get_int(fp_engine::tools::STROKE_PAUSE_MODE_PREF, 2) == 1;
+    // FB-148 a: Blur, Sharpen, Dodge and Burn restore instead of erasing
+    let restore = !matches!(
+        st.session.tools.active,
+        fp_engine::tools::ToolId::Brush | fp_engine::tools::ToolId::Pencil
+    );
+    let key = match st.session.tool_stroke_pause() {
+        P::Painting if subtract => match (restore, toggle) {
+            (false, false) => "ui-stroke-subtract",
+            (false, true) => "ui-stroke-subtract-toggle",
+            (true, false) => "ui-stroke-restore",
+            (true, true) => "ui-stroke-restore-toggle",
+        },
+        P::Paused if subtract => match (restore, toggle) {
+            (false, false) => "ui-stroke-subtract-paused",
+            (false, true) => "ui-stroke-subtract-paused-toggle",
+            (true, false) => "ui-stroke-restore-paused",
+            (true, true) => "ui-stroke-restore-paused-toggle",
+        },
+        P::Painting if hold => "ui-stroke-pause-hint-hold",
+        P::Painting => "ui-stroke-pause-hint",
+        P::Paused if hold => "ui-stroke-paused-hold",
+        P::Paused => "ui-stroke-paused",
+        P::Idle => return None,
+    };
+    Some(fp_i18n::t(key))
 }
 
 /// Text on the left of the status line at time `now` (`alt` = Alt held): the stroke pause text

@@ -576,6 +576,13 @@ pub(crate) const BREAKS_PARAM_TEXT: &str = "Fortsetzungen eines angehaltenen Str
 /// German source text of the `subtract` parameter of `bitmap.paint` (FB-69, Firepixel extension).
 pub(crate) const SUBTRACT_PARAM_TEXT: &str = "Abzug im eigenen Strich (Alt, Firepixel-Erweiterung): [{at, size, round, points}, …]; die Spitze löscht nur, was die Punkte vor `at` gemalt haben";
 
+/// German source text of the `subtract` parameter of `bitmap.retouch` (FB-148, Firepixel extension).
+pub(crate) const RETOUCH_SUBTRACT_PARAM_TEXT: &str = "Abzug im eigenen Strich (Alt, Firepixel-Erweiterung; Weichzeichner, Scharfzeichner, Abwedler, Nachbelichter): [{at, size, round, points}, …]; die Spitze stellt wieder her, was die Punkte vor `at` geändert haben";
+
+/// German source text of the `parts` parameter of `bitmap.paint`, `bitmap.erase` and
+/// `bitmap.retouch` (FB-148 c, Firepixel extension).
+pub(crate) const PARTS_PARAM_TEXT: &str = "Frühere Teile eines Strichs, dessen Einstellungen während der Pause geändert wurden (Firepixel-Erweiterung): [{Parameter dieses Befehls mit points}, …], vor diesem Teil ausgeführt";
+
 pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("bitmap.paint")
@@ -600,6 +607,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("draw", ParamKind::Json, "älterer Aufruf: Strich als Zeichenbefehl {command: tool.shape, params} – der Pinsel wird daraus gebildet")
             .opt("breaks", ParamKind::Json, BREAKS_PARAM_TEXT)
             .opt("subtract", ParamKind::Json, SUBTRACT_PARAM_TEXT)
+            .opt("parts", ParamKind::Json, PARTS_PARAM_TEXT)
             .run(|s, p| {
                 let (_pts, _size) = points_size(p, s)?;
                 let mut v = if p.value.is_object() { p.value.clone() } else { json!({}) };
@@ -625,6 +633,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
             )
             .opt_default("round", ParamKind::Bool, json!(true), "runde Spitze")
             .opt("breaks", ParamKind::Json, BREAKS_PARAM_TEXT)
+            .opt("parts", ParamKind::Json, PARTS_PARAM_TEXT)
             .opt_default(
                 "opacity",
                 ParamKind::Number {

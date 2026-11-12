@@ -91,7 +91,21 @@ pub enum ToolKey {
     /// FB-31 (Firepixel extension): pause the running bitmap stroke (the user interface sends it for
     /// the P key only while [`ToolMachine::stroke_pause`] reports [`StrokePause::Painting`]).
     Pause,
+    /// FB-148 (Firepixel extension): resume a paused stroke at the pointer while the mouse button
+    /// is still down (P released with "Pause stroke: hold", P pressed again with "toggle").
+    Resume,
 }
+
+/// FB-148 (Firepixel extension) preference "Alt subtraction" of the bitmap strokes: 1 = hold (Alt
+/// held subtracts, default), 2 = toggle (each Alt press switches the running stroke between
+/// painting and subtracting).
+pub const STROKE_ALT_MODE_PREF: &str = "Firepixel_StrokeAltMode";
+
+/// FB-148 (Firepixel extension) preference "Pause stroke" of the bitmap strokes: 1 = hold (the
+/// stroke is paused while P is held; releasing P with the button down paints on), 2 = toggle (P
+/// pauses until the next press or, with the button still down, until P is pressed again;
+/// default, the behaviour before the preference existed).
+pub const STROKE_PAUSE_MODE_PREF: &str = "Firepixel_StrokePauseMode";
 
 /// FB-31 (Firepixel extension): state of a bitmap stroke that can be paused with P.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -660,6 +674,11 @@ pub trait ToolMachine: Send {
     }
     /// FB-69 (Firepixel extension): is the running bitmap stroke subtracting its own paint (Alt)?
     fn stroke_subtracting(&self) -> bool {
+        false
+    }
+    /// FB-148 (Firepixel extension): does a stroke of this tool subtract with Alt (Brush, Pencil,
+    /// Blur, Sharpen, Dodge, Burn)? The status line then announces the subtraction mode.
+    fn can_subtract_stroke(&self) -> bool {
         false
     }
 }

@@ -684,6 +684,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt("replaceStrength", ParamKind::Integer { min: Some(0), max: Some(255) }, "Farbe ersetzen: Stärke 0..255 (Vorgabe 200)")
             .opt("fromImage", ParamKind::Bool, "Farbe ersetzen: Von-Farbe aus der Grafik unter dem Startpunkt")
             .opt("breaks", ParamKind::Json, BREAKS_PARAM_TEXT)
+            .opt("subtract", ParamKind::Json, super::bitmap::RETOUCH_SUBTRACT_PARAM_TEXT)
+            .opt("parts", ParamKind::Json, super::bitmap::PARTS_PARAM_TEXT)
             .run(|s, p| {
                 let mode = p.str("mode")?;
                 let pts = p.points("points")?;
@@ -788,7 +790,32 @@ fn retouch_params(p: &Params, mode: &str, fill: Rgba8) -> Result<Retouch> {
         },
         confine: p.bool_or("confineToBounds", false)?,
         breaks: crate::paint::parse_breaks(p.get("breaks")),
+        subtract: crate::paint::parse_subtract(p.get("subtract")),
+        parts: retouch_parts(p, mode, fill)?,
     })
+}
+
+/// FB-148 c: the `parts` parameter of `bitmap.retouch` (earlier parts of a stroke with other
+/// settings: objects with the parameters of `bitmap.retouch` and their `points`; the mode is the
+/// stroke's, parts inside parts are ignored).
+fn retouch_parts(p: &Params, mode: &str, fill: Rgba8) -> Result<Vec<(Retouch, Vec<Point>)>> {
+    let Some(serde_json::Value::Array(a)) = p.get("parts") else {
+        return Ok(Vec::new());
+    };
+    let mut out = Vec::new();
+    for v in a.iter().filter(|v| v.is_object()) {
+        let mut v = v.clone();
+        if let Some(o) = v.as_object_mut() {
+            o.remove("parts");
+        }
+        let pts = crate::paint::parse_points(v.get("points"));
+        if pts.is_empty() {
+            continue;
+        }
+        let q = Params::new(&p.command, v);
+        out.push((retouch_params(&q, mode, fill)?, pts));
+    }
+    Ok(out)
 }
 
 /// Runs one retouch stroke on `img` (the computation of `bitmap.retouch` for the brush modes):
@@ -801,20 +828,40 @@ fn retouch_dispatch(
     sel: Option<&fp_raster::Mask>,
     page: Option<&RgbaImage>,
 ) {
-    let base = Arc::new(std::mem::replace(img, RgbaImage::empty_at(0, 0)));
+    let origin = Arc::new(std::mem::replace(img, RgbaImage::empty_at(0, 0)));
+    let sel_arc = sel.cloned().map(Arc::new);
+    let page_arc = page.cloned().map(Arc::new);
+    // FB-148 c: the parts painted before a settings change, each on the result of the previous
+    // one (an Alt subtraction in any part restores the bitmap as it was before the stroke)
+    let mut base = Arc::clone(&origin);
+    for (pp, ppts) in &prm.parts {
+        if let Some(st) = super::retouch_stroke::RetouchStroke::new(
+            Arc::clone(&base),
+            pp.clone(),
+            sel_arc.clone(),
+            page_arc.clone(),
+        ) {
+            let mut st = st.with_origin(Arc::clone(&origin));
+            st.feed_subtracting(ppts, &pp.breaks, &pp.subtract);
+            base = Arc::new(st.finish());
+        }
+    }
     match super::retouch_stroke::RetouchStroke::new(
         Arc::clone(&base),
         prm.clone(),
-        sel.cloned().map(Arc::new),
-        page.cloned().map(Arc::new),
+        sel_arc,
+        page_arc,
     ) {
-        Some(mut st) => {
+        Some(st) => {
             // FB-31: the engine starts a new part at every break of a resumed stroke (dodge, burn,
-            // blur and sharpen work the whole stroke once, smudge starts afresh at each press)
-            st.feed(pts, &prm.breaks);
+            // blur and sharpen work the whole stroke once, smudge starts afresh at each press);
+            // FB-148: the Alt subtraction passes in between
+            let mut st = st.with_origin(origin);
+            st.feed_subtracting(pts, &prm.breaks, &prm.subtract);
             *img = st.finish();
         }
         None => {
+            drop(origin);
             *img = Arc::unwrap_or_clone(base);
             // FB-31: the stamp carries pixels along the path, each segment starts afresh
             for seg in crate::paint::split_segments(pts, &prm.breaks) {
@@ -1128,6 +1175,12 @@ pub(crate) struct Retouch {
     pub(crate) confine: bool,
     /// FB-31: indices into the points where a paused stroke was resumed (`breaks`).
     pub(crate) breaks: Vec<usize>,
+    /// FB-148 (Firepixel extension): Alt subtraction passes of the stroke (`subtract`; Blur,
+    /// Sharpen, Dodge, Burn): each restores what the points before its `at` changed.
+    pub(crate) subtract: Vec<crate::paint::SubtractPass>,
+    /// FB-148 c: the earlier parts of a stroke whose settings were changed while it was paused
+    /// (`parts`), each with its own settings and points, worked before this one.
+    pub(crate) parts: Vec<(Retouch, Vec<Point>)>,
 }
 
 fn rgb_to_hsv(p: [u8; 4]) -> (f32, f32, f32) {

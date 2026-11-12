@@ -71,6 +71,16 @@ ui-stroke-pause-hint = P auf der Tastatur hält den aktuellen Pinselstrich an.
 ui-stroke-subtract = Abzugsmodus (Alt): Der Pinsel löscht nur, was dieser Strich gemalt hat. Alt loslassen malt wieder.
 ui-stroke-subtract-paused = Strich angehalten, Abzugsmodus (Alt): Ziehen löscht nur, was dieser Strich gemalt hat. Alt loslassen malt wieder, Enter wendet den Strich an.
 ui-stroke-paused = Strich angehalten. Maustaste loslassen oder Stift abheben ist jetzt sicher. Klick auf die Leinwand setzt den Strich fort, Enter wendet ihn an.
+# FB-148 (Firepixel extension): preference "Pause stroke: hold", "Alt subtraction: toggle" and the
+# restore mode of Blur, Sharpen, Dodge and Burn
+ui-stroke-pause-hint-hold = P auf der Tastatur gedrückt halten hält den aktuellen Pinselstrich an.
+ui-stroke-paused-hold = Strich angehalten, solange P gedrückt ist. P loslassen malt weiter; mit losgelassener Maustaste setzt ein Klick auf die Leinwand den Strich fort, Enter wendet ihn an.
+ui-stroke-subtract-toggle = Abzugsmodus (Alt gedrückt): Der Pinsel löscht nur, was dieser Strich gemalt hat. Alt erneut drücken malt wieder.
+ui-stroke-subtract-paused-toggle = Strich angehalten, Abzugsmodus (Alt gedrückt): Ziehen löscht nur, was dieser Strich gemalt hat. Alt erneut drücken malt wieder, Enter wendet den Strich an.
+ui-stroke-restore = Wiederherstellen (Alt): Die Spitze stellt wieder her, was dieser Strich verändert hat. Alt loslassen wirkt wieder.
+ui-stroke-restore-paused = Strich angehalten, Wiederherstellen (Alt): Ziehen stellt wieder her, was dieser Strich verändert hat. Alt loslassen wirkt wieder, Enter wendet den Strich an.
+ui-stroke-restore-toggle = Wiederherstellen (Alt gedrückt): Die Spitze stellt wieder her, was dieser Strich verändert hat. Alt erneut drücken wirkt wieder.
+ui-stroke-restore-paused-toggle = Strich angehalten, Wiederherstellen (Alt gedrückt): Ziehen stellt wieder her, was dieser Strich verändert hat. Alt erneut drücken wirkt wieder, Enter wendet den Strich an.
 ui-sel-document = { $format } (Dokument)
 ui-sel-objects = { $n } Objekte
 ui-sel-object = Objekt

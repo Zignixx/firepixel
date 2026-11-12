@@ -272,6 +272,22 @@ Werkzeugkürzel. Skripte und MCP senden die Taste `pause` an `tool_event`; die B
 `bitmap.erase` und `bitmap.retouch` erhalten die fortgesetzten Teile als `breaks` (Indizes in
 `points`).
 
+**Weitere Strich-Extras (Firepixel-Erweiterungen):** **Alt** wirkt auch während eines Strichs mit
+**Weichzeichner, Scharfzeichner, Abwedler oder Nachbelichter** (nicht Verwischen): Die Spitze stellt
+wieder her, was dieser Strich verändert hat, die Statuszeile zeigt es an. Unter *Bearbeiten ▸
+Voreinstellungen ▸ Bearbeiten* gibt es zwei Optionen: *Alt-Abzug im Pinselstrich* – *Gedrückt halten*
+(Vorgabe: abziehen, solange Alt gehalten wird) oder *Ein/Aus per Tastendruck* (jeder Druck auf Alt
+schaltet den laufenden Strich zwischen Malen und Abziehen um; jeder neue Strich beginnt mit Malen) – und
+*Pinselstrich anhalten (P)* – *Ein/Aus per Tastendruck* (Vorgabe: P hält an bis zum nächsten Klick auf
+die Leinwand; bei noch gedrückter Maustaste malt ein erneutes P am Zeiger weiter) oder *Gedrückt halten*
+(der Strich ist nur angehalten, solange P gedrückt ist; P loslassen bei gedrückter Maustaste malt weiter,
+bei losgelassener setzt der nächste Klick fort). Einstellungen, die Sie während eines angehaltenen
+Strichs ändern (Größe, Deckkraft, Farbe, Spitze, Kante, Textur; bei den Retusche-Werkzeugen Größe,
+Kante, Form und Stärke), gelten für den Teil, den Sie nach dem Fortsetzen malen, und der Pinselumriss
+zeigt diese Größe; der Strich bleibt eine Verlaufszeile (der Befehl erhält die früheren Teile als
+`parts`). Alt nach einer solchen Änderung entfernt bzw. stellt alle Teile des Strichs wieder her. Skripte
+und MCP senden die Taste `resume` an `tool_event`, um am Zeiger fortzusetzen.
+
 **Stift:** Beim Zeichnen eines Pfads zieht ein Klick auf seinen letzten Ankerpunkt die ausgehende Tangente dieses
 Punkts ein, sodass das nächste Segment ihn gerade verlässt; Ziehen auf dem Punkt zieht ihn wieder als symmetrischen
 Kurvenpunkt auf (Alt bewegt nur die ausgehende Tangente, Strg verschiebt den Punkt, Umschalt rastet auf 45° ein).
