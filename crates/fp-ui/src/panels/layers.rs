@@ -12,6 +12,7 @@ use crate::inspector::glyphs::{self, Glyph};
 use crate::inspector::obj_quads::{BLEND_ITEMS, blend_index, blend_names};
 use crate::theme::Theme;
 use egui::{Align2, Color32, Id, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
+use fp_engine::docops::{DragItem, ListOwner};
 use fp_model::{Element, ElementKind, LayerId, LayerKind, LayerOrigin};
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -38,18 +39,48 @@ struct RowInfo {
     rect: Rect,
     /// Ebene im aktuellen Status gesperrt (Ziel „hinein“ verworfen, re 42 §2).
     locked: bool,
+    /// Level of a row of the group tree (0 = layer row or object row of a layer).
+    depth: usize,
+    /// Where an object dropped beside this row lands (object rows that accept drops).
+    drop: Option<DropRow>,
+}
+
+/// The drop data of an object row (RE spec 82 §1.4; rows of the group tree: Firepixel
+/// extension §1.5).
+#[derive(Clone, Debug, PartialEq)]
+struct DropRow {
+    id: fp_model::ElementId,
+    /// The list the row's object lies in and its index there (0 = top).
+    owner: ListOwner,
+    index: usize,
+    /// The layer of that list (its folder turns yellow).
+    layer: LayerId,
+    /// Left end of the drop band beside this row: the list's left edge for the objects of a
+    /// layer (never indented, as measured), the indent of the level for objects of a group.
+    band_left: f32,
+    /// An open group whose objects are listed below: the lower part of the row drops into the
+    /// group as its first object, the band indented to this x (RE spec 82 §1.5).
+    into: Option<f32>,
+    /// Bottom of the row and the rows of its tree (the gap "after this row").
+    sub_bottom: f32,
+    /// The groups the row's object lies in (parent last).
+    ancestors: Vec<fp_model::ElementId>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 enum Drag {
+    /// An object row: `block` = the objects that move (the selection when the row is selected,
+    /// RE spec 82 §1.4), `y0`/`row_h` for the vertical threshold, `sublayer`: a sublayer is part
+    /// of the block (it never goes into a group).
     Element {
         id: fp_model::ElementId,
+        y0: f32,
+        row_h: f32,
+        block: Vec<DragItem>,
+        sublayer: bool,
     },
     /// `y0` = Druckpunkt (senkrechte Zugschwelle, re 41 §3.2).
-    Layer {
-        id: LayerId,
-        y0: f32,
-    },
+    Layer { id: LayerId, y0: f32 },
 }
 
 /// Rows of master-page layers (and sublayers inside shared or master-page layers) whose disclosure
@@ -812,7 +843,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                 }
             }
             menu_rows.push(resp.clone());
-            rows.push(RowInfo { kind, rect, locked });
+            rows.push(RowInfo {
+                kind,
+                rect,
+                locked,
+                depth: 0,
+                drop: None,
+            });
             if is_collapsed {
                 continue;
             }
@@ -1017,8 +1054,13 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                 eye_drag =
                                     Some((!sub_visible, BTreeSet::from([sl.id.0]), None, editable));
                             }
-                        } else if resp2.drag_started() && editable && depth == 0 {
-                            start_drag = Some(Drag::Element { id: e.id });
+                        } else if resp2.drag_started()
+                            && editable
+                            && depth == 0
+                            && let Some(p0) = press_origin
+                        {
+                            start_drag =
+                                element_drag(&doc, page, &selected, e.id, p0.y, r2.height());
                         }
                         // TW-69: überstrichene Unterebenen erhalten denselben Zustand
                         if let Some((target, done, _, stepped)) = eye_drag.as_mut()
@@ -1038,6 +1080,17 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                 kind,
                                 rect: r2,
                                 locked: false,
+                                depth: 0,
+                                drop: (editable && !locked).then(|| DropRow {
+                                    id: e.id,
+                                    owner: ListOwner::Layer(l.id),
+                                    index: idx,
+                                    layer: l.id,
+                                    band_left: r2.left(),
+                                    into: None,
+                                    sub_bottom: r2.bottom(),
+                                    ancestors: Vec::new(),
+                                }),
                             });
                         }
                         continue;
@@ -1056,7 +1109,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     // the open group and mask toggles of this row and the rows below it
                     let mut tree: Vec<TreeItem> = Vec::new();
                     if tree_on {
-                        tree_items(e, 0, 0, None, &is_tree_open, &mut tree);
+                        tree_items(e, 0, 0, None, &is_tree_open, &mut tree, Some(&[]));
                     }
                     let tc = TreeCtx {
                         st,
@@ -1075,19 +1128,28 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                         top: e.id,
                         thumb_x: next.left() + 78.0 + THUMB_INDENT * depth as f32,
                         mods,
+                        page,
+                        selected_ids: &selected,
+                        drops: editable && !locked && depth == 0,
+                        press_origin,
                     };
+                    // the object row's drop data (RE spec 82 §1.4); an open group whose objects
+                    // are listed takes a drop on its lower part as its first object (§1.5)
+                    let top_drop = (editable && !locked && depth == 0).then(|| DropRow {
+                        id: e.id,
+                        owner: ListOwner::Layer(l.id),
+                        index: idx,
+                        layer: l.id,
+                        band_left: next.left(),
+                        into: tree
+                            .first()
+                            .filter(|t| t.place.as_ref().is_some_and(|p| p.parent == e.id))
+                            .map(|_| tc.thumb_x + TREE_INDENT - 2.0),
+                        sub_bottom: next.bottom(),
+                        ancestors: Vec::new(),
+                    });
                     if !ui.is_rect_visible(next) && !renaming_row {
                         ui.advance_cursor_after_rect(next);
-                        if !tree.is_empty() {
-                            let mut out = TreeOut {
-                                actions: &mut actions,
-                                toggles: &mut tree_toggles,
-                                click: &mut tree_click,
-                                rename_start: &mut rename_start,
-                                menu_rows: &mut menu_rows,
-                            };
-                            tree_rows(ui, &tc, &mut out, &tree);
-                        }
                         if depth == 0 {
                             rows.push(RowInfo {
                                 kind: RowKind::Element {
@@ -1098,7 +1160,21 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                                 },
                                 rect: next,
                                 locked: false,
+                                depth: 0,
+                                drop: top_drop,
                             });
+                        }
+                        if !tree.is_empty() {
+                            let mut out = TreeOut {
+                                actions: &mut actions,
+                                toggles: &mut tree_toggles,
+                                click: &mut tree_click,
+                                rename_start: &mut rename_start,
+                                menu_rows: &mut menu_rows,
+                                rows: &mut rows,
+                                start_drag: &mut start_drag,
+                            };
+                            tree_rows(ui, &tc, &mut out, &tree);
                         }
                         continue;
                     }
@@ -1338,8 +1414,12 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     {
                         rename_start = Some(kind.clone());
                     }
-                    if resp2.drag_started() && editable && depth == 0 {
-                        start_drag = Some(Drag::Element { id: e.id });
+                    if resp2.drag_started()
+                        && editable
+                        && depth == 0
+                        && let Some(p0) = press_origin
+                    {
+                        start_drag = element_drag(&doc, page, &selected, e.id, p0.y, r2.height());
                     }
                     menu_rows.push(resp2.clone());
                     // Ziehen/Ablegen nur in der obersten Ebene der Objekte (Index in der Ebene)
@@ -1348,6 +1428,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             kind,
                             rect: r2,
                             locked: false,
+                            depth: 0,
+                            drop: top_drop,
                         });
                     }
                     // FB-59 to FB-61: the objects of the open group and mask toggles below
@@ -1358,6 +1440,8 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                             click: &mut tree_click,
                             rename_start: &mut rename_start,
                             menu_rows: &mut menu_rows,
+                            rows: &mut rows,
+                            start_drag: &mut start_drag,
                         };
                         tree_rows(ui, &tc, &mut out, &tree);
                     }
@@ -1430,6 +1514,24 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         ui.data_mut(|dd| dd.insert_temp(Id::new(RENAME), k));
     }
     // Ziehen zum Umsortieren
+    // the gap "after" an object row lies below the rows of its open tree
+    for i in 0..rows.len() {
+        if rows[i].drop.is_none() {
+            continue;
+        }
+        let d0 = rows[i].depth;
+        let mut j = i + 1;
+        while j < rows.len()
+            && matches!(rows[j].kind, RowKind::Element { .. })
+            && rows[j].depth > d0
+        {
+            j += 1;
+        }
+        let bottom = rows[j - 1].rect.bottom();
+        if let Some(d) = rows[i].drop.as_mut() {
+            d.sub_bottom = bottom;
+        }
+    }
     if let Some(dg) = start_drag {
         ui.data_mut(|dd| dd.insert_temp(Id::new(DRAG), dg));
     }
@@ -1437,25 +1539,62 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     if let Some(dg) = drag {
         let pointer = ui.input(|i| i.pointer.hover_pos());
         let released = ui.input(|i| i.pointer.any_released());
-        let target = pointer
-            .filter(|p| list_rect.contains(*p) && beyond_threshold(&dg, p.y, 23.0))
-            .and_then(|p| drop_target(&rows, p, &dg));
-        if let Some((y, act)) = &target {
-            ui.painter().hline(
-                list_rect.x_range().shrink(2.0),
-                *y,
-                Stroke::new(2.0, c.focus),
-            );
-            // Ziehen auf die Mitte einer Ebene: deren Ordnersymbol gelb hervorgehoben (re 40 §2a)
-            if let Some(r) = into_highlight(&rows, act) {
-                ui.painter().rect_filled(r, 2.0, LAYER_INTO_HIGHLIGHT);
+        if let Drag::Element {
+            block, sublayer, ..
+        } = &dg
+        {
+            // RE spec 82 §1.3/§1.4: zones, no-op without line, band over the list width (indented
+            // only for groups, Firepixel extension), the target layer's folder yellow, own cursor
+            let target = pointer
+                .filter(|p| list_rect.contains(*p) && beyond_threshold(&dg, p.y, 23.0))
+                .and_then(|p| element_drop(&rows, p, block, *sublayer));
+            if let Some(t) = &target {
+                paint_drop_band(ui.painter(), list_rect, t.left, t.y, &c);
+                if let Some(r) = rows
+                    .iter()
+                    .find(|r| matches!(r.kind, RowKind::Layer { id, .. } if id == t.layer))
+                {
+                    ui.painter()
+                        .rect_filled(folder_rect(r.rect), 2.0, LAYER_INTO_HIGHLIGHT);
+                }
             }
-        }
-        if released {
-            if let Some((_, act)) = target {
-                actions.push(act);
+            if let Some(p) = pointer
+                && crate::canvas::cursors::may_paint(ui.ctx())
+            {
+                crate::canvas::cursors::hide_system_cursor(ui.ctx());
+                let painter = ui.ctx().layer_painter(egui::LayerId::new(
+                    egui::Order::Debug,
+                    Id::new("fp-layers-drag-cursor"),
+                ));
+                crate::canvas::cursors::paint_layer_drag(&painter, p, &c);
             }
-            ui.data_mut(|dd| dd.remove::<Drag>(Id::new(DRAG)));
+            if released {
+                if let Some(t) = target {
+                    actions.push(t.action(block));
+                }
+                ui.data_mut(|dd| dd.remove::<Drag>(Id::new(DRAG)));
+            }
+        } else {
+            let target = pointer
+                .filter(|p| list_rect.contains(*p) && beyond_threshold(&dg, p.y, 23.0))
+                .and_then(|p| drop_target(&rows, p, &dg));
+            if let Some((y, act)) = &target {
+                ui.painter().hline(
+                    list_rect.x_range().shrink(2.0),
+                    *y,
+                    Stroke::new(2.0, c.focus),
+                );
+                // Ziehen auf die Mitte einer Ebene: deren Ordnersymbol gelb hervorgehoben (re 40 §2a)
+                if let Some(r) = into_highlight(&rows, act) {
+                    ui.painter().rect_filled(r, 2.0, LAYER_INTO_HIGHLIGHT);
+                }
+            }
+            if released {
+                if let Some((_, act)) = target {
+                    actions.push(act);
+                }
+                ui.data_mut(|dd| dd.remove::<Drag>(Id::new(DRAG)));
+            }
         }
     }
     // Fußleiste
@@ -1784,7 +1923,8 @@ fn layer_drop_zone(row: Rect, y: f32) -> LayerDropZone {
 fn beyond_threshold(dg: &Drag, y: f32, row_h: f32) -> bool {
     match dg {
         Drag::Layer { y0, .. } => (y - y0).abs() >= (row_h * 3.0 / 4.0).floor().max(5.0),
-        Drag::Element { .. } => true,
+        // RE spec 82 §1.4: the same threshold with the height of the dragged object row
+        Drag::Element { y0, row_h, .. } => (y - y0).abs() >= (row_h * 3.0 / 4.0).floor().max(5.0),
     }
 }
 
@@ -1800,13 +1940,144 @@ fn into_highlight(rows: &[RowInfo], act: &Action) -> Option<Rect> {
     let r = rows
         .iter()
         .find(|r| matches!(r.kind, RowKind::Layer { id, .. } if id.0 == target))?;
-    Some(Rect::from_center_size(
-        pos2(r.rect.left() + 66.0, r.rect.center().y),
-        vec2(18.0, 16.0),
-    ))
+    Some(folder_rect(r.rect))
 }
 
-/// Zielposition beim Ziehen: (y der Einfügelinie, Befehl).
+/// The folder icon of a layer row (yellow while it is the target of a drag, re 40 §2a, RE spec
+/// 82 §1.3).
+fn folder_rect(row: Rect) -> Rect {
+    Rect::from_center_size(pos2(row.left() + 66.0, row.center().y), vec2(18.0, 16.0))
+}
+
+/// Starts the drag of the object row `id` (pressed at `y0`, row height `row_h`): the selected
+/// objects as a block when the row is selected, else the object alone (RE spec 82 §1.4); no
+/// drag when the object cannot be moved that way (locked, inside a mask group).
+fn element_drag(
+    doc: &fp_model::Document,
+    page: usize,
+    selected: &[fp_model::ElementId],
+    id: fp_model::ElementId,
+    y0: f32,
+    row_h: f32,
+) -> Option<Drag> {
+    let ids = if selected.contains(&id) {
+        selected.to_vec()
+    } else {
+        vec![id]
+    };
+    let block = fp_engine::docops::drag_block(doc, page, &ids);
+    if !block.iter().any(|b| b.id == id) {
+        return None;
+    }
+    let sublayer = block.iter().any(|b| {
+        doc.element_at(&b.path)
+            .is_some_and(|e| matches!(e.kind, ElementKind::SubLayer(_)))
+    });
+    Some(Drag::Element {
+        id,
+        y0,
+        row_h,
+        block,
+        sublayer,
+    })
+}
+
+/// Where a dragged block of objects lands (RE spec 82 §1.4, extension §1.5).
+#[derive(Clone, Debug, PartialEq)]
+struct ElementDrop {
+    /// y of the gap and the left end of the drop band.
+    y: f32,
+    left: f32,
+    /// The layer of the target list (its folder turns yellow; it becomes the current layer).
+    layer: LayerId,
+    target: ListOwner,
+    /// Gap in the old list, the dragged objects included (0 = top).
+    slot: usize,
+}
+
+impl ElementDrop {
+    /// The command of the drop: one History row "Layer Change".
+    fn action(&self, block: &[DragItem]) -> Action {
+        let ids: Vec<u64> = block.iter().map(|b| b.id.0).collect();
+        let mut p = json!({"ids": ids, "layer": self.layer.0, "index": self.slot});
+        if let ListOwner::Group(g) = self.target {
+            p["group"] = json!(g.0);
+        }
+        Action::Run("pi.element.moveTo".into(), p)
+    }
+}
+
+/// The drop target of a dragged block at `p` (RE spec 82 §1.4): a layer row = top of that layer;
+/// an object row: upper 6 px = before it, the rest = after it (after its open tree); the lower
+/// part of an open group row = into the group as its first object (Firepixel extension §1.5).
+/// `None` where nothing would change (no line, no command, no History row, TW-299), over a
+/// locked layer, and where a group would go into itself or a sublayer into a group.
+fn element_drop(
+    rows: &[RowInfo],
+    p: Pos2,
+    block: &[DragItem],
+    sublayer: bool,
+) -> Option<ElementDrop> {
+    let r = rows.iter().find(|r| r.rect.contains(p))?;
+    let drop = match &r.kind {
+        RowKind::Layer {
+            id,
+            editable: true,
+            web: false,
+        } if !r.locked => ElementDrop {
+            y: r.rect.bottom(),
+            left: r.rect.left(),
+            layer: *id,
+            target: ListOwner::Layer(*id),
+            slot: 0,
+        },
+        RowKind::Element { .. } => {
+            let d = r.drop.as_ref()?;
+            let (target, slot, y, left) = if p.y < r.rect.top() + 6.0 {
+                (d.owner, d.index, r.rect.top(), d.band_left)
+            } else if let Some(left) = d.into {
+                (ListOwner::Group(d.id), 0, r.rect.bottom(), left)
+            } else {
+                (d.owner, d.index + 1, d.sub_bottom, d.band_left)
+            };
+            if let ListOwner::Group(g) = target {
+                let dragged = |x: fp_model::ElementId| block.iter().any(|b| b.id == x);
+                if sublayer || dragged(g) || d.ancestors.iter().any(|a| dragged(*a)) {
+                    return None;
+                }
+            }
+            ElementDrop {
+                y,
+                left,
+                layer: d.layer,
+                target,
+                slot,
+            }
+        }
+        _ => return None,
+    };
+    (!fp_engine::docops::drop_is_noop(block, drop.target, drop.slot)).then_some(drop)
+}
+
+/// The drop band (RE spec 82 §1.3): 5 px high over the list width from `left` (the list's
+/// left edge, or the indent of a group level) at the gap `y` (rows `y − 3 … y + 1`); the
+/// reference inverts the pixels, here the text colour with the row line showing through grey.
+fn paint_drop_band(p: &egui::Painter, list: Rect, left: f32, y: f32, c: &crate::theme::Palette) {
+    let y = y.round();
+    let band = Rect::from_min_max(
+        pos2(left.max(list.left()), y - 3.0),
+        pos2(list.right(), y + 2.0),
+    );
+    let p = p.with_clip_rect(list);
+    p.rect_filled(band, 0.0, c.text);
+    p.rect_filled(
+        Rect::from_min_max(pos2(band.left(), y - 1.0), pos2(band.right(), y)),
+        0.0,
+        c.text_weak,
+    );
+}
+
+/// Zielposition beim Ziehen einer Ebene: (y der Einfügelinie, Befehl).
 fn drop_target(rows: &[RowInfo], p: egui::Pos2, dg: &Drag) -> Option<(f32, Action)> {
     let i = rows.iter().position(|r| r.rect.contains(p))?;
     let r = &rows[i];
@@ -1841,49 +2112,8 @@ fn drop_target(rows: &[RowInfo], p: egui::Pos2, dg: &Drag) -> Option<(f32, Actio
         }
         _ => upper,
     };
+    // object rows: `element_drop`
     match (dg, &r.kind) {
-        (
-            Drag::Element { id },
-            RowKind::Element {
-                layer,
-                index,
-                editable: true,
-                ..
-            },
-        ) => {
-            if r.kind
-                == (RowKind::Element {
-                    id: *id,
-                    layer: *layer,
-                    index: *index,
-                    editable: true,
-                })
-            {
-                return None;
-            }
-            let idx = if upper { *index } else { index + 1 };
-            Some((
-                if upper { r.rect.top() } else { r.rect.bottom() },
-                Action::Run(
-                    "pi.element.moveTo".into(),
-                    json!({"id": id.0, "layer": layer.0, "index": idx}),
-                ),
-            ))
-        }
-        (
-            Drag::Element { id },
-            RowKind::Layer {
-                id: lid,
-                editable: true,
-                web: false,
-            },
-        ) => Some((
-            r.rect.bottom(),
-            Action::Run(
-                "pi.element.moveTo".into(),
-                json!({"id": id.0, "layer": lid.0, "index": 0}),
-            ),
-        )),
         (
             Drag::Layer { id, .. },
             RowKind::Layer {
@@ -2002,6 +2232,16 @@ enum TreeRole {
     },
 }
 
+/// Where an object of the group tree lies for a drag (RE spec 82 §1.5): only objects of plain
+/// groups, with plain groups all the way up (no mask on the way).
+#[derive(Clone, Debug)]
+struct TreePlace {
+    parent: fp_model::ElementId,
+    index: usize,
+    /// The groups above the object, `parent` last.
+    ancestors: Vec<fp_model::ElementId>,
+}
+
 /// A row of the group tree below an object row.
 #[derive(Clone, Debug)]
 struct TreeItem {
@@ -2015,6 +2255,8 @@ struct TreeItem {
     /// (double line, FB-84) for a mask element row and the rows nested below it, clear = the
     /// single line of content and group rows.
     mask_lines: u64,
+    /// Drag place of the object (`None`: no drag source, no drop target).
+    place: Option<TreePlace>,
 }
 
 /// The group toggle "›" of a row: the objects of a group. A masked object has none; its mask
@@ -2033,6 +2275,8 @@ fn group_toggle(e: &Element) -> Option<&[Arc<Element>]> {
 /// object(s) of the masked object — also the one content of a masked single object — with the
 /// normal bracket. `inherit`: the role of the row of `e` (objects inside a mask group stay mask
 /// objects).
+/// `chain`: the plain groups above `e` when `e` itself can be dragged (an object of a layer:
+/// empty); its children then get a [`TreePlace`].
 fn tree_items(
     e: &Arc<Element>,
     level: usize,
@@ -2040,6 +2284,7 @@ fn tree_items(
     inherit: Option<TreeRole>,
     open: &dyn Fn(u64) -> bool,
     out: &mut Vec<TreeItem>,
+    chain: Option<&[fp_model::ElementId]>,
 ) {
     let mask_bit = 1u64 << level.min(63);
     let content_lines = lines & !mask_bit;
@@ -2052,24 +2297,44 @@ fn tree_items(
         },
         _ => TreeRole::Child,
     };
-    let push = |out: &mut Vec<TreeItem>, c: &Arc<Element>, role, owner, lines: u64| {
+    let push = |out: &mut Vec<TreeItem>,
+                c: &Arc<Element>,
+                role,
+                owner,
+                lines: u64,
+                place: Option<TreePlace>| {
+        let chain = place.as_ref().map(|p| p.ancestors.clone());
         out.push(TreeItem {
             level: level + 1,
             el: Arc::clone(c),
             role,
             owner,
             mask_lines: lines,
+            place,
         });
         // a "Bitmap mask" row has no rows of its own
         if !matches!(role, TreeRole::Mask { bitmap: true, .. }) {
-            tree_items(c, level + 1, lines, Some(role), open, out);
+            tree_items(c, level + 1, lines, Some(role), open, out, chain.as_deref());
         }
     };
+    // the children of a plain group reached through plain groups only can be dragged
+    let plain =
+        matches!(&e.kind, ElementKind::Group(g) if !g.kind.is_mask() && g.smart_shape.is_none());
+    let child_chain: Option<Vec<fp_model::ElementId>> = chain.filter(|_| plain).map(|c| {
+        let mut v = c.to_vec();
+        v.push(e.id);
+        v
+    });
     if let Some(cs) = group_toggle(e)
         && open(e.id.0)
     {
-        for c in cs {
-            push(out, c, content_role, None, content_lines);
+        for (i, c) in cs.iter().enumerate() {
+            let place = child_chain.as_ref().map(|v| TreePlace {
+                parent: e.id,
+                index: i,
+                ancestors: v.clone(),
+            });
+            push(out, c, content_role, None, content_lines, place);
         }
     }
     if !open(mask_key(e.id)) {
@@ -2084,21 +2349,21 @@ fn tree_items(
         let ml = lines | mask_bit;
         match m {
             fp_engine::docops::MaskMembers::Bitmap(x) => {
-                push(out, x, mask(false, true), Some(Arc::clone(e)), ml);
+                push(out, x, mask(false, true), Some(Arc::clone(e)), ml, None);
             }
             fp_engine::docops::MaskMembers::Single(x) => {
-                push(out, x, mask(false, false), None, ml);
+                push(out, x, mask(false, false), None, ml, None);
             }
             fp_engine::docops::MaskMembers::Group(cs) => {
                 for c in cs {
-                    push(out, c, mask(true, false), None, ml);
+                    push(out, c, mask(true, false), None, ml, None);
                 }
             }
         }
     }
     if let Some(cs) = fp_engine::docops::mask_content(e) {
         for c in cs {
-            push(out, c, content_role, None, content_lines);
+            push(out, c, content_role, None, content_lines, None);
         }
     }
 }
@@ -2271,6 +2536,12 @@ struct TreeCtx<'a> {
     top: fp_model::ElementId,
     thumb_x: f32,
     mods: ClickMods,
+    page: usize,
+    /// The selection in its order (a drag of a selected row moves it as a block).
+    selected_ids: &'a [fp_model::ElementId],
+    /// The rows accept drops and start drags (editable, unlocked layer of the page).
+    drops: bool,
+    press_origin: Option<Pos2>,
 }
 
 /// What the rows of the group tree hand back to the panel.
@@ -2280,19 +2551,54 @@ struct TreeOut<'a> {
     click: &'a mut Option<TreeClick>,
     rename_start: &'a mut Option<RowKind>,
     menu_rows: &'a mut Vec<egui::Response>,
+    /// The rows for the drop targets (every row, drop data where the row accepts drops).
+    rows: &'a mut Vec<RowInfo>,
+    start_drag: &'a mut Option<Drag>,
 }
 
 /// Paints the rows of the group tree `items` below an object row (FB-59 to FB-61): indented one
 /// step per level with a thin line at the left (a double line for mask elements, FB-84), eye
 /// and lock (objects of groups), thumbnail (with the mask thumbnail of a masked object, FB-78),
 /// name and the row's own toggles. Rows outside the visible part only take their place
-/// (BA-099). The rows are no drag sources and no drop targets.
+/// (BA-099). Objects of plain groups are drag sources and drop targets (RE spec 82 §1.5).
 fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[TreeItem]) {
     let c = &tc.theme.colors;
     let is_open = |k: u64| tc.open.contains(&(tc.doc_id.0, k));
-    for it in items {
+    for (n, it) in items.iter().enumerate() {
         let e = &it.el;
         let next = Rect::from_min_size(ui.cursor().min, vec2(ui.available_width(), tc.row_h));
+        // drop data: beside the object in its group, into it while it is an open group whose
+        // objects follow
+        let indent = |level: usize| tc.thumb_x + TREE_INDENT * level as f32 - 2.0;
+        let drop = it
+            .place
+            .as_ref()
+            .filter(|_| tc.drops && !e.common.locked)
+            .map(|pl| DropRow {
+                id: e.id,
+                owner: ListOwner::Group(pl.parent),
+                index: pl.index,
+                layer: tc.layer,
+                band_left: indent(it.level),
+                into: items
+                    .get(n + 1)
+                    .filter(|x| x.place.as_ref().is_some_and(|p| p.parent == e.id))
+                    .map(|_| indent(it.level + 1)),
+                sub_bottom: next.bottom(),
+                ancestors: pl.ancestors.clone(),
+            });
+        out.rows.push(RowInfo {
+            kind: RowKind::Element {
+                id: e.id,
+                layer: tc.layer,
+                index: it.place.as_ref().map_or(0, |p| p.index),
+                editable: tc.editable,
+            },
+            rect: next,
+            locked: false,
+            depth: it.level,
+            drop,
+        });
         common::want_width(
             ui,
             tc.thumb_x - next.left() + TREE_INDENT * it.level as f32 + tc.tpx + 6.0 + MIN_NAME_W,
@@ -2527,6 +2833,16 @@ fn tree_rows(ui: &mut Ui, tc: &TreeCtx<'_>, out: &mut TreeOut<'_>, items: &[Tree
                 toggle: false,
             });
         }
+        // RE spec 82 §1.5: an object of a plain group is dragged like an object row
+        if resp.drag_started()
+            && tc.drops
+            && it.place.is_some()
+            && !e.common.locked
+            && let Some(p0) = tc.press_origin.filter(|p| p.x > lock.right())
+        {
+            *out.start_drag =
+                element_drag(tc.doc, tc.page, tc.selected_ids, e.id, p0.y, r.height());
+        }
         if (resp.double_clicked() || resp.triple_clicked())
             && tc.editable
             && resp
@@ -2638,6 +2954,8 @@ mod tests {
                 },
                 rect: row,
                 locked: false,
+                depth: 0,
+                drop: None,
             },
             RowInfo {
                 kind: RowKind::Layer {
@@ -2647,6 +2965,8 @@ mod tests {
                 },
                 rect: Rect::from_min_max(pos2(0.0, 272.0), pos2(200.0, 294.0)),
                 locked: false,
+                depth: 0,
+                drop: None,
             },
             RowInfo {
                 kind: RowKind::Layer {
@@ -2656,6 +2976,8 @@ mod tests {
                 },
                 rect: Rect::from_min_max(pos2(0.0, 346.0), pos2(200.0, 368.0)),
                 locked: false,
+                depth: 0,
+                drop: None,
             },
         ];
         let dg = Drag::Layer {
@@ -2710,6 +3032,8 @@ mod tests {
                 },
                 rect: row,
                 locked: true,
+                depth: 0,
+                drop: None,
             },
             RowInfo {
                 kind: RowKind::Layer {
@@ -2719,6 +3043,8 @@ mod tests {
                 },
                 rect: Rect::from_min_max(pos2(0.0, 346.0), pos2(200.0, 368.0)),
                 locked: false,
+                depth: 0,
+                drop: None,
             },
         ];
         let dg = Drag::Layer {
@@ -2735,6 +3061,97 @@ mod tests {
         assert!(
             matches!(drop_target(&rows, pos2(100.0, 269.0), &dg), Some((_, Action::Run(n, p))) if n == "layer.move" && p == json!({"layer": 1, "index": 0}))
         );
+    }
+
+    /// RE spec 82 §1.4 (TW-299): upper 6 px of an object row = before it, the rest = after it,
+    /// the layer row = top; the old place is no target; an open group row takes the lower part
+    /// into the group (Firepixel extension §1.5), never a group into itself.
+    #[test]
+    fn f159_object_drop_zones() {
+        let l = LayerId(1);
+        let id = |n: u64| fp_model::ElementId(n);
+        let row = |n: u64, y: f32, index: usize, into: Option<f32>| RowInfo {
+            kind: RowKind::Element {
+                id: id(n),
+                layer: l,
+                index,
+                editable: true,
+            },
+            rect: Rect::from_min_max(pos2(0.0, y), pos2(250.0, y + 27.0)),
+            locked: false,
+            depth: 0,
+            drop: Some(DropRow {
+                id: id(n),
+                owner: ListOwner::Layer(l),
+                index,
+                layer: l,
+                band_left: 0.0,
+                into,
+                sub_bottom: y + 27.0,
+                ancestors: Vec::new(),
+            }),
+        };
+        // C B G A as in scene LD (rows 247, 274, 301, 328)
+        let mut rows = vec![
+            RowInfo {
+                kind: RowKind::Layer {
+                    id: l,
+                    editable: true,
+                    web: false,
+                },
+                rect: Rect::from_min_max(pos2(0.0, 223.0), pos2(250.0, 247.0)),
+                locked: false,
+                depth: 0,
+                drop: None,
+            },
+            row(10, 247.0, 0, None),
+            row(11, 274.0, 1, None),
+            row(12, 301.0, 2, None),
+            row(13, 328.0, 3, None),
+        ];
+        let item = |n: u64, index: usize| DragItem {
+            id: id(n),
+            path: fp_model::traverse::ElementPath {
+                root: fp_model::traverse::RootRef::Page(0),
+                slot: 0,
+                cel: 0,
+                steps: vec![fp_model::traverse::PathStep::Child(index)],
+            },
+            owner: ListOwner::Layer(l),
+            index,
+        };
+        let a = [item(13, 3)];
+        let at = |rows: &[RowInfo], blk: &[DragItem], y: f32| {
+            element_drop(rows, pos2(100.0, y), blk, false).map(|d| (d.target, d.slot, d.y))
+        };
+        let lay = ListOwner::Layer(l);
+        assert_eq!(at(&rows, &a, 303.0), Some((lay, 2, 301.0)), "A_Gtop");
+        assert_eq!(at(&rows, &a, 306.9), Some((lay, 2, 301.0)));
+        assert_eq!(at(&rows, &a, 307.0), None, "A_Gmid: old place");
+        assert_eq!(at(&rows, &a, 325.0), None, "A_Gbot");
+        assert_eq!(at(&rows, &a, 341.0), None, "A_self");
+        assert_eq!(at(&rows, &a, 287.0), Some((lay, 2, 301.0)), "A_Bmid");
+        assert_eq!(at(&rows, &a, 249.0), Some((lay, 0, 247.0)), "A_Ctop");
+        assert_eq!(at(&rows, &a, 235.0), Some((lay, 0, 247.0)), "A_e1mid");
+        let b = [item(11, 1)];
+        assert_eq!(at(&rows, &b, 303.0), None, "B_Gtop");
+        assert_eq!(at(&rows, &b, 314.0), Some((lay, 3, 328.0)), "B_Gmid");
+        // G open: its lower part leads into it, the band at the indent of its objects
+        rows[3] = row(12, 301.0, 2, Some(40.0));
+        let d = element_drop(&rows, pos2(100.0, 314.0), &b, false).expect("into G");
+        assert_eq!(
+            (d.target, d.slot, d.left),
+            (ListOwner::Group(id(12)), 0, 40.0)
+        );
+        let g = [item(12, 2)];
+        assert_eq!(at(&rows, &g, 314.0), None, "a group never into itself");
+        assert!(
+            element_drop(&rows, pos2(100.0, 314.0), &b, true).is_none(),
+            "no sublayer"
+        );
+        // a locked layer takes nothing
+        rows[0].locked = true;
+        assert_eq!(at(&rows, &a, 235.0), None);
     }
 
     /// Unterebenen als Ordner mit ihren Objekten eingerückt darunter; zugeklappt ohne Kinder (FIX-G5, Q-05).

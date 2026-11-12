@@ -295,14 +295,17 @@ fn arrange(s: &mut Session, how: &'static str) -> Result<CommandOutput> {
         let paths = selected_paths(d);
         let groups = by_parent(&paths);
         // Work on a copy: an object already at the bottom (top) stays put, and then the document
-        // must stay untouched (no history step, not dirty, no message; re 46 §1.3).
+        // must stay untouched (no history step, not dirty, no message; re 46 §1.3). RE spec 82 §2.3
+        // measured a step even then; Firepixel keeps the silent no-op on purpose (TW-300).
         let mut work = (*d.doc).clone();
         let doc = &mut work;
         let mut changed = false;
         for ((slot, cel, prefix), mut idx) in groups {
             let mut probe = docops::slot_path(doc, page, slot, cel, prefix.clone());
             probe.steps.push(PathStep::Child(0));
-            let Some((list, _)) = docops::parent_list_mut(doc, &probe) else {
+            // the sibling list: a layer's objects, a group's children or the objects of a mask
+            // group (FB-144, RE spec 82 §2.3); the mask itself has none and stays put
+            let Some((list, _)) = docops::sibling_list_mut(doc, &probe) else {
                 continue;
             };
             idx.sort_unstable();

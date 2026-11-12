@@ -987,12 +987,16 @@ impl PointerTool {
     }
 
     /// Cursor over a path point and while dragging one: the Subselection shows a hollow
-    /// arrowhead without shaft (re 55 §5.4), the Pointer its point cursor.
-    fn point_cursor(&self) -> Cursor {
+    /// arrowhead without shaft (re 55 §5.4, RE spec 82 §5: resource 0x0a3a, hotspot at the tip);
+    /// the Pointer keeps its black arrow over anchors (RE spec 82 §5, FB-147), only with the
+    /// point-editing option (TW-256), where it really drags the point, its point cursor.
+    fn point_cursor(&self, ctx: &ToolContext) -> Cursor {
         if self.id == ToolId::Subselection {
             Cursor::SubselectPoint
-        } else {
+        } else if self.edits_points(ctx) {
             Cursor::PointerPoint
+        } else {
+            self.idle_cursor()
         }
     }
 
@@ -1176,16 +1180,19 @@ impl PointerTool {
                 ..ToolResponse::default()
             };
         }
+        // the corners of a selected rectangle primitive count as points for the Subselection
+        // cursor too (RE spec 82 §5: hollow arrowhead over the corner of the selected rectangle);
+        // a press there still moves the whole rectangle (PAR 10/06)
         if self.id != ToolId::SelectBehind
             && point_hit(
                 ctx,
                 p,
-                self.edits_points(ctx),
+                self.edits_points(ctx) || self.id == ToolId::Subselection,
                 self.id == ToolId::Subselection,
             )
             .is_some()
         {
-            self.hover_cursor = self.point_cursor();
+            self.hover_cursor = self.point_cursor(ctx);
             return ToolResponse {
                 cursor: self.hover_cursor,
                 ..ToolResponse::default()
@@ -1330,7 +1337,7 @@ impl PointerTool {
             };
             return ToolResponse {
                 commands: cmds,
-                cursor: self.point_cursor(),
+                cursor: self.point_cursor(ctx),
                 ..ToolResponse::default()
             };
         }
@@ -1730,7 +1737,7 @@ impl PointerTool {
                     ev.mods.alt,
                 );
                 self.overlay.extend(sp.guides);
-                ToolResponse::with_overlay(self.overlay.clone(), self.point_cursor())
+                ToolResponse::with_overlay(self.overlay.clone(), self.point_cursor(ctx))
             }
             _ => ToolResponse::default(),
         }

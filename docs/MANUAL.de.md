@@ -703,7 +703,15 @@ Layoutformat des Originals austauschbar.
 
 Wichtige Bedienfelder:
 
-- **Ebenen:** Sichtbarkeit (Auge), Sperre (Schloss), Unterebenen; Ziehen ordnet um. Unterebenen
+- **Ebenen:** Sichtbarkeit (Auge), Sperre (Schloss), Unterebenen; Ziehen ordnet um. Beim Ziehen
+  einer Objektzeile legen die oberen 6 px einer Zeile vor diese Zeile ab, der Rest der Zeile dahinter,
+  eine Ebenenzeile oben in diese Ebene; ein dunkler Balken über die Listenbreite zeigt die Lücke, der
+  Ordner der Zielebene leuchtet auf. Ablegen an der alten Stelle ändert nichts. Eine gewählte Zeile
+  zieht alle gewählten Objekte gemeinsam in ihrer Reihenfolge mit; ein Protokollschritt
+  *Ebenenänderung*. Bei aufgeklappter Gruppe („›“) lassen sich ihre Objekte herausziehen; der untere
+  Teil der Gruppenzeile und der obere Rand ihres ersten Objekts legen in die Gruppe ab (Balken
+  eingerückt); Maskengruppen nehmen nichts auf. *Modifizieren ▸ Anordnen* ordnet auch ein Objekt in
+  einer Gruppe oder Maskengruppe um (in den aufgeklappten Zeilen wählen). Unterebenen
   stehen eingerückt als Ordnerzeile mit Aufklapper; Doppelklick auf die Zeile benennt sie um. Das
   Dreieck einer Ebene oder Unterebene klappt sie auf oder zu; dieser Zustand gehört zum Dokument (ein
   Schritt im Verlauf, in der Datei gespeichert), daher zeigt jedes Dokument und jede wieder geöffnete

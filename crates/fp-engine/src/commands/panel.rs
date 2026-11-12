@@ -5229,18 +5229,26 @@ pub fn register(r: &mut CommandRegistry) {
             }),
     );
 
-    // Ebenen-Bedienfeld: Element per Ziehen in eine Ebene/Position verschieben
+    // Layers panel: drag object rows to another place (RE spec 82 §1.4): the dragged object or,
+    // when its row is selected, all selected objects as a block in their order; into a layer or
+    // (Firepixel extension, §1.5) into a plain group. One History row "Layer Change"; a drop that
+    // changes nothing does nothing (no row, TW-299).
     r.add(
         cmd("pi.element.moveTo")
-            .label("Objekt verschieben")
+            .label("Ebenenänderung")
             .requires(DOC)
-            .param(
+            .opt(
                 "id",
                 ParamKind::Integer {
                     min: Some(0),
                     max: None,
                 },
-                "Element-ID",
+                "Element-ID (ein Objekt)",
+            )
+            .opt(
+                "ids",
+                ParamKind::Ids,
+                "Element-IDs (Block, Reihenfolge bleibt)",
             )
             .param(
                 "layer",
@@ -5256,31 +5264,82 @@ pub fn register(r: &mut CommandRegistry) {
                     min: Some(0),
                     max: None,
                 },
-                "Position in der Ebene (0 = oben)",
+                "Lücke in der alten Liste samt gezogenen Objekten (0 = oben)",
+            )
+            .opt(
+                "group",
+                ParamKind::Integer {
+                    min: Some(0),
+                    max: None,
+                },
+                "Ziel-Gruppen-ID: in diese Gruppe statt in die Ebene",
             )
             .run(|s, p| {
-                let id = ElementId(p.i64("id")? as u64);
+                let mut ids = p.opt_ids("ids")?.unwrap_or_default();
+                if let Some(id) = p.opt_i64("id")? {
+                    ids.insert(0, ElementId(id as u64));
+                }
+                if ids.is_empty() {
+                    return Err(bad(p, fp_i18n::t("err-sel-nothing")));
+                }
                 let layer = fp_model::LayerId(p.i64("layer")? as u64);
-                let mut index = p.usize("index")?;
+                let slot = p.usize("index")?;
+                let group = p.opt_i64("group")?.map(|g| ElementId(g as u64));
                 let d = s.doc_mut()?;
                 let (page, frame) = (d.page, d.frame);
-                let doc = Arc::make_mut(&mut d.doc);
-                let path = docops::find_on_page(doc, page, id)
-                    .ok_or(EngineError::ElementNotFound(id.0))?;
-                let target_slot = docops::layer_slot(doc, page, layer)
-                    .ok_or_else(|| EngineError::NotFound(fp_i18n::t("err-nf-layer")))?;
-                if path.steps.len() == 1
-                    && path.slot == target_slot
-                    && let Some(fp_model::PathStep::Child(old)) = path.steps.first()
-                    && *old < index
-                {
-                    index -= 1;
+                let block = docops::drag_block(&d.doc, page, &ids);
+                if block.is_empty() {
+                    return Err(EngineError::ElementNotFound(ids[0].0));
                 }
-                let e = docops::remove_at(doc, &path).ok_or(EngineError::ElementNotFound(id.0))?;
-                docops::insert_element(doc, page, frame, Some(layer), index, e)
-                    .ok_or_else(|| EngineError::Failed(fp_i18n::t("err-object-move-failed")))?;
+                let target = match group {
+                    Some(g) => docops::ListOwner::Group(g),
+                    None => docops::ListOwner::Layer(layer),
+                };
+                if !docops::drop_allowed(&d.doc, page, &block, target) {
+                    return Err(EngineError::Failed(fp_i18n::t("err-object-move-failed")));
+                }
+                if docops::drop_is_noop(&block, target, slot) {
+                    return Ok(CommandOutput::doc());
+                }
+                let index = slot
+                    - block
+                        .iter()
+                        .filter(|b| b.owner == target && b.index < slot)
+                        .count();
+                let doc = Arc::make_mut(&mut d.doc);
+                // bottom first, so the addresses of the others stay valid
+                let mut moved: Vec<Arc<Element>> = Vec::new();
+                for b in block.iter().rev() {
+                    let e = docops::remove_at(doc, &b.path)
+                        .ok_or(EngineError::ElementNotFound(b.id.0))?;
+                    moved.push(e);
+                }
+                moved.reverse();
+                let ids: Vec<ElementId> = moved.iter().map(|e| e.id).collect();
+                match group {
+                    Some(g) => {
+                        let mut probe = docops::find_on_page(doc, page, g)
+                            .ok_or(EngineError::ElementNotFound(g.0))?;
+                        probe.steps.push(fp_model::PathStep::Child(0));
+                        let (list, _) = docops::parent_list_mut(doc, &probe).ok_or_else(|| {
+                            EngineError::Failed(fp_i18n::t("err-object-move-failed"))
+                        })?;
+                        let at = index.min(list.len());
+                        for (i, e) in moved.into_iter().enumerate() {
+                            list.insert(at + i, e);
+                        }
+                    }
+                    None => {
+                        for (i, e) in moved.into_iter().enumerate() {
+                            docops::insert_element(doc, page, frame, Some(layer), index + i, e)
+                                .ok_or_else(|| {
+                                    EngineError::Failed(fp_i18n::t("err-object-move-failed"))
+                                })?;
+                        }
+                    }
+                }
                 d.layer = Some(layer);
-                d.selection.set(vec![id]);
+                d.selection.set(ids);
                 Ok(CommandOutput::doc())
             }),
     );

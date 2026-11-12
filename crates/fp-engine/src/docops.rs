@@ -379,8 +379,30 @@ fn descend_list<'a>(
     list: &'a mut Vec<Arc<Element>>,
     steps: &[PathStep],
 ) -> Option<&'a mut Vec<Arc<Element>>> {
+    descend_list_in(list, steps, false)
+}
+
+/// [`descend_list`]; `through_mask`: also down a `Mask` step into the objects of a mask group
+/// (the mask is a group; a single mask object has no list).
+fn descend_list_in<'a>(
+    list: &'a mut Vec<Arc<Element>>,
+    steps: &[PathStep],
+    through_mask: bool,
+) -> Option<&'a mut Vec<Arc<Element>>> {
     match steps {
         [] => Some(list),
+        [PathStep::Child(k), PathStep::Mask, rest @ ..] if through_mask => {
+            let e = Element::edit(list.get_mut(*k)?);
+            let ElementKind::Group(g) = &mut e.kind else {
+                return None;
+            };
+            let m = Element::edit(g.mask.as_mut()?);
+            let ElementKind::Group(mg) = &mut m.kind else {
+                return None;
+            };
+            drop_order(&mut mg.children_extra);
+            descend_list_in(&mut mg.children, rest, through_mask)
+        }
         [PathStep::Child(k), PathStep::SubLayerCel(c), rest @ ..] => {
             let e = Element::edit(list.get_mut(*k)?);
             let ElementKind::SubLayer(l) = &mut e.kind else {
@@ -388,18 +410,18 @@ fn descend_list<'a>(
             };
             let cel = Arc::make_mut(Arc::make_mut(l).cels.get_mut(*c)?);
             drop_order(&mut cel.elements_extra);
-            descend_list(&mut cel.elements, rest)
+            descend_list_in(&mut cel.elements, rest, through_mask)
         }
         [PathStep::Child(k), rest @ ..] => {
             let e = Element::edit(list.get_mut(*k)?);
             match &mut e.kind {
                 ElementKind::Group(g) => {
                     drop_order(&mut g.children_extra);
-                    descend_list(&mut g.children, rest)
+                    descend_list_in(&mut g.children, rest, through_mask)
                 }
                 ElementKind::CompoundShape(c) => {
                     drop_order(&mut c.operands_extra);
-                    descend_list(&mut c.operands, rest)
+                    descend_list_in(&mut c.operands, rest, through_mask)
                 }
                 _ => None,
             }
@@ -439,6 +461,181 @@ pub fn parent_list_mut<'a>(
     drop_order(&mut cel.elements_extra);
     let list = descend_list(&mut cel.elements, prefix)?;
     Some((list, idx))
+}
+
+/// The sibling list of the element at `path` and its index in it, like [`parent_list_mut`], but
+/// an object of a mask group (path `… Mask, Child(i)`) also has one: the objects of the mask
+/// group (FB-144, RE spec 82 §2.3). The mask itself (path ending in `Mask`) has none.
+pub fn sibling_list_mut<'a>(
+    doc: &'a mut Document,
+    path: &ElementPath,
+) -> Option<(&'a mut Vec<Arc<Element>>, usize)> {
+    let (last, prefix) = path.steps.split_last()?;
+    let PathStep::Child(idx) = *last else {
+        return None;
+    };
+    let cel = match path.root {
+        RootRef::Page(pi) => cel_mut(doc, pi, path.slot, path.cel)?,
+        RootRef::SharedLayer(i) => {
+            doc.root_copy = None;
+            let l = Arc::make_mut(doc.shared_layers.get_mut(i)?.layer.as_mut()?);
+            Arc::make_mut(l.cels.get_mut(path.cel)?)
+        }
+        _ => return None,
+    };
+    drop_order(&mut cel.elements_extra);
+    let list = descend_list_in(&mut cel.elements, prefix, true)?;
+    Some((list, idx))
+}
+
+/// The list an object can be dragged within in the Layers panel (RE spec 82 §1.4 and §1.5).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ListOwner {
+    /// The objects of a layer (or of a layer shared across pages).
+    Layer(LayerId),
+    /// The children of a plain group (Firepixel extension: expandable groups).
+    Group(ElementId),
+}
+
+/// Where the object `id` lies for a drag in the Layers panel: its list and its index there
+/// (0 = top). Only objects directly in a layer's object list or in plain groups nested there
+/// (no mask group, smart shape, compound shape or sublayer on the way) can be dragged; `None`
+/// for everything else.
+pub fn drag_place(doc: &Document, page: usize, id: ElementId) -> Option<(ListOwner, usize)> {
+    let path = find_on_page(doc, page, id)?;
+    drag_place_at(doc, page, &path)
+}
+
+/// [`drag_place`] for a known address.
+pub fn drag_place_at(
+    doc: &Document,
+    page: usize,
+    path: &ElementPath,
+) -> Option<(ListOwner, usize)> {
+    if !matches!(path.root, RootRef::Page(_) | RootRef::SharedLayer(_)) {
+        return None;
+    }
+    let mut idx = Vec::with_capacity(path.steps.len());
+    for s in &path.steps {
+        let PathStep::Child(i) = s else {
+            return None;
+        };
+        idx.push(*i);
+    }
+    let (&last, prefix) = idx.split_last()?;
+    if prefix.is_empty() {
+        let layer = own_layers(doc, page)
+            .into_iter()
+            .find(|(s, _)| *s == path.slot)
+            .map(|(_, l)| l.id)?;
+        return Some((ListOwner::Layer(layer), last));
+    }
+    // every ancestor a plain group
+    let mut parent_id = None;
+    for n in 1..=prefix.len() {
+        let mut p = path.clone();
+        p.steps.truncate(n);
+        let e = doc.element_at(&p)?;
+        let ElementKind::Group(g) = &e.kind else {
+            return None;
+        };
+        if g.kind.is_mask() || g.smart_shape.is_some() {
+            return None;
+        }
+        parent_id = Some(e.id);
+    }
+    Some((ListOwner::Group(parent_id?), last))
+}
+
+/// One object of a dragged block in the Layers panel.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DragItem {
+    pub id: ElementId,
+    pub path: ElementPath,
+    pub owner: ListOwner,
+    /// Index in the owner's list (0 = top).
+    pub index: usize,
+}
+
+/// The objects a drag in the Layers panel moves (RE spec 82 §1.4): of `ids` those that can be
+/// dragged ([`drag_place`]) and are not locked, in stacking order (top first); an object inside
+/// another object of the block goes along with it and is left out.
+pub fn drag_block(doc: &Document, page: usize, ids: &[ElementId]) -> Vec<DragItem> {
+    let mut v: Vec<(ElementId, ElementPath)> = find_many_on_page(doc, page, ids)
+        .into_iter()
+        .zip(ids.iter().copied())
+        .filter_map(|(p, id)| p.map(|p| (id, p)))
+        .filter(|(_, p)| !is_locked(doc, page, p))
+        .collect();
+    v.sort_by_key(|(_, p)| z_key(p));
+    v.dedup_by(|a, b| a.0 == b.0);
+    let inside = |p: &ElementPath, q: &ElementPath| {
+        p.root == q.root
+            && p.slot == q.slot
+            && p.cel == q.cel
+            && q.steps.len() < p.steps.len()
+            && p.steps.starts_with(&q.steps)
+    };
+    let all: Vec<ElementPath> = v.iter().map(|(_, p)| p.clone()).collect();
+    v.into_iter()
+        .filter(|(_, p)| !all.iter().any(|q| inside(p, q)))
+        .filter_map(|(id, path)| {
+            let (owner, index) = drag_place_at(doc, page, &path)?;
+            Some(DragItem {
+                id,
+                path,
+                owner,
+                index,
+            })
+        })
+        .collect()
+}
+
+/// Would dropping `block` at `slot` of `target` (slot counted in the old list, the dragged
+/// objects included) leave everything as it is? True when all objects already lie in `target`
+/// next to each other and `slot` is one of the gaps at or inside that run (RE spec 82 §1.4
+/// `no_op`; Firepixel also skips the measured "middle zone" step, TW-299).
+pub fn drop_is_noop(block: &[DragItem], target: ListOwner, slot: usize) -> bool {
+    if block.is_empty() {
+        return true;
+    }
+    if block.iter().any(|b| b.owner != target) {
+        return false;
+    }
+    let mut idx: Vec<usize> = block.iter().map(|b| b.index).collect();
+    idx.sort_unstable();
+    let contiguous = idx.windows(2).all(|w| w[1] == w[0] + 1);
+    let (lo, hi) = (idx[0], idx[idx.len() - 1]);
+    contiguous && slot >= lo && slot <= hi + 1
+}
+
+/// May `block` be dropped into `target`? A layer must be one of the page's own layers; a group
+/// must be a plain group the drag can reach ([`drag_place`] or a layer object), not one of the
+/// dragged objects or inside one, and sublayers never go into groups.
+pub fn drop_allowed(doc: &Document, page: usize, block: &[DragItem], target: ListOwner) -> bool {
+    match target {
+        ListOwner::Layer(l) => layer_slot(doc, page, l).is_some(),
+        ListOwner::Group(g) => {
+            let Some(gp) = find_on_page(doc, page, g) else {
+                return false;
+            };
+            let plain = doc.element_at(&gp).is_some_and(|e| {
+                matches!(&e.kind, ElementKind::Group(x) if !x.kind.is_mask() && x.smart_shape.is_none())
+            });
+            plain
+                && drag_place_at(doc, page, &gp).is_some()
+                && !block.iter().any(|b| {
+                    b.id == g
+                        || (b.path.root == gp.root
+                            && b.path.slot == gp.slot
+                            && b.path.cel == gp.cel
+                            && gp.steps.starts_with(&b.path.steps))
+                        || doc
+                            .element_at(&b.path)
+                            .is_some_and(|e| matches!(e.kind, ElementKind::SubLayer(_)))
+                })
+        }
+    }
 }
 
 /// Ändert ein Element (Render-Cache des Elements und der Vorfahren wird verworfen).

@@ -642,7 +642,14 @@ with the layout format of the original.
 
 Important panels:
 
-- **Layers:** visibility (eye), lock, sub-layers; drag to reorder. Sub-layers are indented folder
+- **Layers:** visibility (eye), lock, sub-layers; drag to reorder. Dragging an object row: the upper
+  6 px of a row put it before that row, the rest of the row after it, a layer row on top of that
+  layer; a dark band across the list shows the gap and the target layer's folder lights up. A drop at
+  the old place does nothing. A selected row moves all selected objects together in their order; one
+  History step *Layer Change*. With a group expanded ("›"), its objects can be dragged out, the lower
+  part of the group row and the top edge of its first object drop into the group (band indented);
+  mask groups take no drops. *Modify ▸ Arrange* also reorders an object inside a group or a mask
+  group (select it in the expanded rows). Sub-layers are indented folder
   rows with an expander; double-click a row to rename it. The triangle of a layer or sub-layer
   expands or collapses it; this state belongs to the document (one History step, saved in the file),
   so every document and every reopened file shows its own layers as they were stored. A click on an object row selects only that

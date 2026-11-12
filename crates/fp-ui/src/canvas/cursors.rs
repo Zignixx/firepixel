@@ -884,6 +884,51 @@ pub fn paint(p: &Painter, at: Pos2, c: Cursor, colors: &Palette, precise: bool) 
     }
 }
 
+/// Cursor while an object row of the Layers panel is dragged (RE spec 82 §1.3, resource 0x0a98,
+/// drawn from the measured 1-bit image): rows 5 to 19 of the 32 × 32 image, `#` black, `.`
+/// white, blank transparent; hotspot (11, 10).
+const LAYER_DRAG: [&str; 15] = [
+    "         .....",
+    "         .####.",
+    "         .#..##.",
+    "         .#..###.",
+    "         .#....#.",
+    "         .#.#..#.",
+    "         .#.##.#.",
+    "         .#.####.",
+    "         .######.",
+    "         ...#####.",
+    "           .######.",
+    "           .#######.",
+    "           .##......",
+    "           .#.",
+    "           ..",
+];
+const LAYER_DRAG_FIRST_ROW: f32 = 5.0;
+pub(crate) const LAYER_DRAG_HOTSPOT: (f32, f32) = (11.0, 10.0);
+
+/// Paints the drag cursor of the Layers panel with its hotspot at `at`.
+pub(crate) fn paint_layer_drag(p: &Painter, at: Pos2, c: &Palette) {
+    let o = pos2(
+        at.x.round() - LAYER_DRAG_HOTSPOT.0,
+        at.y.round() - LAYER_DRAG_HOTSPOT.1 + LAYER_DRAG_FIRST_ROW,
+    );
+    for (y, row) in LAYER_DRAG.iter().enumerate() {
+        for (x, ch) in row.chars().enumerate() {
+            let col = match ch {
+                '#' => c.cursor_fill,
+                '.' => c.cursor_outline,
+                _ => continue,
+            };
+            p.rect_filled(
+                egui::Rect::from_min_size(pos2(o.x + x as f32, o.y + y as f32), vec2(1.0, 1.0)),
+                0.0,
+                col,
+            );
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

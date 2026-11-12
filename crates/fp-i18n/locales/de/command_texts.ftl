@@ -451,6 +451,10 @@ cmdtext-relativ-zur-leinwand-statt-zur-auswahl = relativ zur Leinwand statt zur 
 cmdtext-element-id = Element-ID
 cmdtext-position-in-der-ebene-0-oben = Position in der Ebene (0 = oben)
 cmdtext-ziel-ebenen-id = Ziel-Ebenen-ID
+cmdtext-element-id-ein-objekt = Element-ID (ein Objekt)
+cmdtext-element-ids-block-reihenfolge-bleibt = Element-IDs (Block, Reihenfolge bleibt)
+cmdtext-luecke-in-der-alten-liste-samt-gezogenen-dc2a2f = Lücke in der alten Liste samt gezogenen Objekten (0 = oben)
+cmdtext-ziel-gruppen-id-in-diese-gruppe-statt-in-dd0e8d = Ziel-Gruppen-ID: in diese Gruppe statt in die Ebene
 cmdtext-attributgruppen-zsfi = Attributgruppen ZSFi
 cmdtext-zsoi = ZSOi
 cmdtext-stilname-leer-verknuepfung-loesen = Stilname (leer = Verknüpfung lösen)

@@ -451,6 +451,10 @@ cmdtext-relativ-zur-leinwand-statt-zur-auswahl = relative to the canvas instead 
 cmdtext-element-id = Element ID
 cmdtext-position-in-der-ebene-0-oben = Position in the layer (0 = top)
 cmdtext-ziel-ebenen-id = Target layer ID
+cmdtext-element-id-ein-objekt = Element ID (one object)
+cmdtext-element-ids-block-reihenfolge-bleibt = Element IDs (a block, the order stays)
+cmdtext-luecke-in-der-alten-liste-samt-gezogenen-dc2a2f = Gap in the old list, dragged objects included (0 = top)
+cmdtext-ziel-gruppen-id-in-diese-gruppe-statt-in-dd0e8d = Target group ID: into this group instead of the layer
 cmdtext-attributgruppen-zsfi = Attribute groups ZSFi
 cmdtext-zsoi = ZSOi
 cmdtext-stilname-leer-verknuepfung-loesen = Style name (empty = break link)
