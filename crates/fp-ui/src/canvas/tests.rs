@@ -336,20 +336,118 @@ fn pixel_drag_on_half_opaque_bitmap_previews_the_committed_result() {
         Some(fp_geom::IRect::new(120, 110, 170, 160)),
         "pixels moved by (20, 10)"
     );
+    let max_diff = |a: &fp_raster::RgbaImage, b: &fp_raster::RgbaImage| {
+        assert_eq!(a.bounds(), b.bounds());
+        a.as_bytes()
+            .iter()
+            .zip(b.as_bytes())
+            .map(|(x, y)| x.abs_diff(*y))
+            .max()
+            .unwrap_or(0)
+    };
+    // FB-137: the released pixels float (drawn from a render-only copy) ...
+    let cc = h.state().state.canvases.values().next().expect("canvas");
+    assert!(
+        cc.shown.is_some_and(|k| k.preview != 0),
+        "floating block rendered"
+    );
+    let floating = cc.shown_image.clone().expect("image");
+    let max = max_diff(&during, &floating);
+    assert!(
+        max <= 2,
+        "preview equals the floating block (max diff {max})"
+    );
+    // ... and the merge looks the same (RE spec 80 section 6.2)
+    h.state_mut()
+        .state
+        .session
+        .execute("select.none", json!({}))
+        .expect("deselect");
+    h.run_steps(4);
     let cc = h.state().state.canvases.values().next().expect("canvas");
     assert_eq!(cc.shown.map(|k| k.preview), Some(0), "committed render");
     let after = cc.shown_image.clone().expect("image");
-    assert_eq!(during.bounds(), after.bounds());
-    let max = during
-        .as_bytes()
-        .iter()
-        .zip(after.as_bytes())
-        .map(|(x, y)| x.abs_diff(*y))
-        .max()
-        .unwrap_or(0);
+    let max = max_diff(&during, &after);
     assert!(
         max <= 2,
         "preview equals the committed render (max diff {max})"
+    );
+}
+
+/// FB-137 (RE spec 80): a dragged block floats above the bitmap; dragging it away and back home
+/// shows the untouched bitmap again (the pixels it passed over are intact), at rest and after
+/// the merge.
+#[test]
+fn floating_block_dragged_away_and_back_leaves_the_image_whole() {
+    let mut h = harness();
+    h.state_mut().state.sync_render = true;
+    {
+        let s = &mut h.state_mut().state.session;
+        let mut img =
+            fp_raster::RgbaImage::new(fp_geom::IRect::from_xywh(50, 50, 200, 150)).expect("image");
+        for y in 50..200 {
+            for x in 50..250 {
+                img.set_pixel(x, y, fp_color::Rgba8::new(x as u8, y as u8, 100, 255));
+            }
+        }
+        s.clipboard.clear();
+        s.clipboard.pixels = Some(img);
+        s.execute("edit.paste", json!({})).expect("paste");
+        s.execute(
+            "select.pixels",
+            json!({"shape": "rect", "rect": [100, 100, 150, 150]}),
+        )
+        .expect("marquee");
+    }
+    set_tool(&mut h, ToolId::Pointer);
+    h.run_steps(3);
+    let before = {
+        let cc = h.state().state.canvases.values().next().expect("canvas");
+        cc.shown_image.clone().expect("image")
+    };
+    let drag = |h: &mut Harness<'static, FirepixelApp>, from: (f32, f32), to: (f32, f32)| {
+        let (a, b) = (at(h, from.0, from.1), at(h, to.0, to.1));
+        mv(h, a);
+        button(h, a, PointerButton::Primary, true, Modifiers::NONE);
+        mv(h, a + egui::vec2(5.0, 5.0));
+        mv(h, b);
+        h.run_steps(2);
+        button(h, b, PointerButton::Primary, false, Modifiers::NONE);
+        h.run_steps(3);
+    };
+    drag(&mut h, (120.0, 120.0), (180.0, 130.0));
+    let away = {
+        let d = h.state().state.session.active().expect("d");
+        assert!(d.selection.floating.is_some(), "floating");
+        let cc = h.state().state.canvases.values().next().expect("canvas");
+        cc.shown_image.clone().expect("image")
+    };
+    assert_ne!(away.as_bytes(), before.as_bytes(), "the block moved");
+    drag(&mut h, (180.0, 130.0), (120.0, 120.0));
+    let home = {
+        let d = h.state().state.session.active().expect("d");
+        assert_eq!(
+            d.selection.floating.as_ref().map(|f| (f.dx, f.dy)),
+            Some((0, 0))
+        );
+        let cc = h.state().state.canvases.values().next().expect("canvas");
+        cc.shown_image.clone().expect("image")
+    };
+    assert!(
+        home.as_bytes() == before.as_bytes(),
+        "whole again while floating"
+    );
+    h.state_mut()
+        .state
+        .session
+        .execute("select.none", json!({}))
+        .expect("deselect");
+    h.run_steps(4);
+    let cc = h.state().state.canvases.values().next().expect("canvas");
+    let merged = cc.shown_image.clone().expect("image");
+    assert!(
+        merged.as_bytes() == before.as_bytes(),
+        "whole after the merge"
     );
 }
 

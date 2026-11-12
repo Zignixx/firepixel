@@ -147,49 +147,21 @@ fn set_pixels(d: &mut DocumentState, m: Option<Mask>, mode: SelectMode, feather:
 
 /// Hebt die Pixel unter der Maske aus dem Bild und setzt sie um `(dx, dy)` versetzt wieder ein
 /// (Bild wächst bei Bedarf; das Loch wird transparent). `copy` (Subselection drag, RE spec 71
-/// section 6.2): the original pixels stay, a copy is placed at the offset.
+/// section 6.2): the original pixels stay, a copy is placed at the offset. `clip` (the canvas, RE
+/// spec 80 §6.4): moved pixels outside it are dropped. One shot: lift and merge in one go (the
+/// floating block of FB-137 is [`super::floating`]).
 pub(crate) fn move_pixels(
     img: &fp_raster::RgbaImage,
     m: &Mask,
     dx: i32,
     dy: i32,
     copy: bool,
+    clip: Option<IRect>,
 ) -> fp_raster::RgbaImage {
-    let ib = img.bounds();
-    let src = m.bounds().intersect(&ib);
-    let nb = ib.union(&src.translate(dx, dy));
     // the hole (the same cut the live drag preview shows, FB-73); a copy keeps the original
-    let base = if copy {
-        img.clone()
-    } else {
-        docops::cut_selected_pixels(img, m).0
-    };
-    let Ok(mut out) = base.extended_to(nb) else {
-        return img.clone();
-    };
-    for y in src.top..src.bottom {
-        for x in src.left..src.right {
-            let k = m.get(x, y) as u32;
-            let Some(p) = img.get(x, y).filter(|_| k > 0) else {
-                continue;
-            };
-            let sa = (p[3] as u32 * k + 127) / 255;
-            if sa == 0 {
-                continue;
-            }
-            let (tx, ty) = (x + dx, y + dy);
-            let q = out.get(tx, ty).unwrap_or([0; 4]);
-            let da = q[3] as u32 * (255 - sa) / 255;
-            let oa = sa + da;
-            let c = |i: usize| ((p[i] as u32 * sa + q[i] as u32 * da + oa / 2) / oa.max(1)) as u8;
-            out.set_pixel(
-                tx,
-                ty,
-                fp_color::Rgba8::new(c(0), c(1), c(2), oa.min(255) as u8),
-            );
-        }
-    }
-    out
+    let (hole, block) = docops::cut_selected_pixels(img, m);
+    let base = if copy { img.clone() } else { hole };
+    super::floating::composite_block(&base, &block, (dx, dy), clip)
 }
 
 /// Render-only copy edit for the live pixel-move preview (FB-87, TW-241): the pixels of the
@@ -209,7 +181,7 @@ pub fn preview_move_pixels(
         if let ElementKind::Bitmap(b) = &mut e.kind
             && let Some(img) = docops::bitmap_image(b)
         {
-            let out = move_pixels(&img, mask, dx, dy, copy);
+            let out = move_pixels(&img, mask, dx, dy, copy, None);
             docops::set_bitmap_image(b, &out);
             e.cache = None;
         }
@@ -217,10 +189,11 @@ pub fn preview_move_pixels(
     .is_some()
 }
 
-/// Moves the selected pixels of the selected bitmap by `(dx, dy)`: the hole stays transparent,
-/// the marquee moves along (PAR 06/16); row "Move". Used by `select.movePixels` (Pointer /
-/// Ctrl+marquee drag). `copy` (Subselection drag, RE spec 71 section 6.2): the original stays, the
-/// copy lands at the offset with the marquee on it; row "Duplicate".
+/// Moves the selected pixels of the selected bitmap by `(dx, dy)` in one shot: the hole stays
+/// transparent, the marquee moves along (PAR 06/16), moved pixels beyond the canvas are dropped
+/// (RE spec 80 §6.4); row "Move". Used by `select.movePixels` (scripts, CLI, MCP; the canvas tools
+/// leave the pixels floating with `select.floatPixels`, FB-137). `copy` (RE spec 71 section 6.2):
+/// the original stays, the copy lands at the offset with the marquee on it; row "Duplicate".
 pub(crate) fn move_selected_pixels(
     d: &mut DocumentState,
     dx: i32,
@@ -242,7 +215,8 @@ pub(crate) fn move_selected_pixels(
     };
     let img = docops::bitmap_image(b)
         .ok_or_else(|| EngineError::Failed(fp_i18n::t("err-bitmap-unreadable-short")))?;
-    let out = move_pixels(&img, &m, dx, dy, copy);
+    let clip = canvas_rect(&d.doc, d.page).round_out();
+    let out = move_pixels(&img, &m, dx, dy, copy, Some(clip));
     let doc = Arc::make_mut(&mut d.doc);
     docops::edit_at(doc, &path, |e| {
         if let ElementKind::Bitmap(b) = &mut e.kind {
@@ -1358,6 +1332,39 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 let (dx, dy) = (p.f64("dx")?.round() as i32, p.f64("dy")?.round() as i32);
                 let copy = p.bool_or("copy", false)?;
                 with_doc(s, |d| move_selected_pixels(d, dx, dy, copy))
+            }),
+    );
+    r.add(
+        cmd("select.floatPixels")
+            .label("Verschieben")
+            .requires(DOC)
+            .param(
+                "dx",
+                ParamKind::Number {
+                    min: None,
+                    max: None,
+                },
+                "Verschiebung x",
+            )
+            .param(
+                "dy",
+                ParamKind::Number {
+                    min: None,
+                    max: None,
+                },
+                "Verschiebung y",
+            )
+            .opt(
+                "copy",
+                ParamKind::Bool,
+                "move a copy: without a floating block the bitmap keeps the pixels, with one the block is placed where it is and floats on (row Duplicate)",
+            )
+            .run(|s, p| {
+                // FB-137 (RE spec 80): the pixels float until a merging command (deselect, a new
+                // selection, exit bitmap mode, save, any other edit); Delete discards them
+                let (dx, dy) = (p.f64("dx")?.round() as i32, p.f64("dy")?.round() as i32);
+                let copy = p.bool_or("copy", false)?;
+                with_doc(s, |d| super::floating::move_floating(d, dx, dy, copy))
             }),
     );
     r.add(

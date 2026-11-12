@@ -1275,11 +1275,30 @@ impl Session {
         if self.group_depth == 0 {
             self.tool_change_unrecorded = false;
         }
+        // FB-137 (RE spec 80 §4, §7): saving merges a floating block first, as a row of its own
+        // ("Edit Bitmap") that belongs to the saved state; the pixel selection goes with it
+        if matches!(
+            name,
+            "file.save" | "file.saveAs" | "file.saveAll" | "file.saveAsTemplate"
+        ) {
+            self.merge_floating_before_save(name == "file.saveAll");
+        }
         let doc_id = self.active_id();
         let before = self.active().map(|d| d.snapshot());
         let colors_before = (self.tools.stroke_color, self.tools.fill_color);
         let rows_before = self.history_rows();
         let mode_before = self.active().is_some_and(|d| d.bitmap_mode);
+        // FB-137 (RE spec 80 §4): every command but the few that keep it merges a floating block
+        // first, inside its own row (deselect, a new selection, exit bitmap mode, painting ...)
+        let merged = if crate::commands::floating::keeps_floating(name, &p.value) {
+            None
+        } else {
+            self.active_mut().and_then(|d| {
+                let pre = (Arc::clone(&d.doc), d.selection.clone());
+                crate::commands::floating::merge(d)
+                    .then(|| (pre, (Arc::clone(&d.doc), d.selection.clone())))
+            })
+        };
         let res = cmd.apply(self, &p);
         let mut out = match res {
             Ok(o) => o,
@@ -1292,6 +1311,16 @@ impl Session {
                 return Err(e);
             }
         };
+        // a command that then changed neither the document nor the selection (copy, export,
+        // panels ...) saw the merged pixels; the block floats on
+        if let (Some(((pre_doc, pre_sel), (mdoc, msel))), Some(id)) = (merged, doc_id)
+            && let Some(d) = self.docs.iter_mut().find(|d| d.id == id)
+            && Arc::ptr_eq(&d.doc, &mdoc)
+            && d.selection == msel
+        {
+            d.doc = pre_doc;
+            d.selection = pre_sel;
+        }
         // Werkzeuge benennen den Verlaufsschritt wie das Original (`step`: Endung eines
         // `msg-step-…`-Schlüssels, z. B. Stift-Klick auf ein Segment → „Stift“, PAR 09/05)
         if let Some(k) = p
@@ -1455,6 +1484,28 @@ impl Session {
         Ok(())
     }
 
+    /// FB-137 (RE spec 80 §7): before saving, a floating block is merged as a row of its own
+    /// "Edit Bitmap" and the pixel selection is dropped (bitmap mode and the tool stay), in the
+    /// active document or, for Save All, in every open one.
+    fn merge_floating_before_save(&mut self, all: bool) {
+        let active = self.active_id();
+        let ids: Vec<DocId> = self
+            .docs
+            .iter()
+            .filter(|d| d.selection.floating.is_some() && (all || Some(d.id) == active))
+            .map(|d| d.id)
+            .collect();
+        let key = "msg-step-edit-bitmap";
+        let label = fp_i18n::with_ui_language(|| fp_i18n::t(key));
+        for id in ids {
+            let _ = self.modify_document(id, &label, "modify.editBitmap", |d| {
+                crate::commands::floating::merge(d);
+                d.selection.pixels = None;
+                Ok(())
+            });
+        }
+    }
+
     fn finish_step(
         &mut self,
         id: DocId,
@@ -1533,11 +1584,14 @@ impl Session {
         // an undo in between starts a new row; script calls (`edit.move` without `nudge`,
         // `edit.nudge.*`) stay one row each. A nudge of the marquee alone (bitmap selection
         // tool, re 62 §1.8) changes only the pixel selection and merges the same way.
+        // FB-137 (RE spec 80 §3.2): with a pixel selection marquee, pixel and copy nudges mix in
+        // one row, named after the last press (its copy flag, like the measured script line).
+        let pixel_nudge = before.selection.has_pixels();
         if (doc_changed || sel_changed)
             && is_key_nudge(name, params)
             && let Some(top) = d.history.last_mergeable()
             && is_key_nudge(&top.command, &top.params)
-            && top.params.get("copy") == params.get("copy")
+            && (pixel_nudge || top.params.get("copy") == params.get("copy"))
             && Arc::ptr_eq(&top.after.doc, &before.doc)
             && top.after.selection == before.selection
             && top.after.page == before.page
@@ -1551,6 +1605,13 @@ impl Session {
             if let Some(o) = top.params.as_object_mut() {
                 o.insert("dx".into(), serde_json::json!(dx));
                 o.insert("dy".into(), serde_json::json!(dy));
+                if pixel_nudge && let Some(c) = params.get("copy") {
+                    o.insert("copy".into(), c.clone());
+                }
+            }
+            if pixel_nudge && top.label != label {
+                top.label = label;
+                top.key = key;
             }
             top.after = now;
             self.events.push(SessionEvent::HistoryChanged(id));

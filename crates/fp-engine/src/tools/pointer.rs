@@ -456,15 +456,40 @@ pub(crate) fn pixel_ghost(ctx: &ToolContext, dx: f32, dy: f32, copy: bool) -> Op
 }
 
 /// Does a Pointer / Subselection drag that started at `start` move the selected pixels (the
-/// press was inside the pixel selection, no Alt copy; PAR 06/16)?
-fn drags_pixels(ctx: &ToolContext, start: Point, copy: bool) -> bool {
-    !copy
-        && ctx.selection.has_pixels()
+/// press was inside the pixel selection, PAR 06/16)? An Alt drag there moves a copy of them (RE
+/// spec 80 section 2.1, FB-137), not a duplicate of the whole bitmap.
+fn drags_pixels(ctx: &ToolContext, start: Point) -> bool {
+    ctx.selection.has_pixels()
         && ctx
             .selection
             .pixels
             .as_ref()
             .is_some_and(|m| m.get(start.x.floor() as i32, start.y.floor() as i32) > 0)
+}
+
+/// RE spec 80 section 2.1 (E7): in bitmap mode with a pixel selection a Pointer drag that starts
+/// on the bitmap outside the marquee moves nothing.
+fn holds_still(ctx: &ToolContext, start: Point) -> bool {
+    ctx.bitmap_mode
+        && ctx.selection.has_pixels()
+        && !drags_pixels(ctx, start)
+        && !ctx.selection.elements.is_empty()
+        && ctx.selection.elements.iter().all(|id| {
+            docops::element_on_page(ctx.doc, ctx.page, *id)
+                .is_some_and(|e| matches!(e.kind, ElementKind::Bitmap(_)))
+        })
+}
+
+/// The selected bitmap a press inside the pixel selection picks up although nothing is hit there
+/// (a floating block beside its bitmap, a marquee reaching past it; RE spec 80 section 2.1).
+fn pixel_selection_bitmap(ctx: &ToolContext, p: Point) -> Option<ElementId> {
+    if !drags_pixels(ctx, p) {
+        return None;
+    }
+    ctx.selection.elements.iter().copied().find(|id| {
+        docops::element_on_page(ctx.doc, ctx.page, *id)
+            .is_some_and(|e| matches!(e.kind, ElementKind::Bitmap(_)))
+    })
 }
 
 // ------------------------------------------------------------------ Zeiger
@@ -1092,7 +1117,7 @@ impl PointerTool {
         // duplicates the pixels), the Pointer its plain arrow (RE spec 71 section 6.4)
         if self.id == ToolId::Subselection
             && !ev.mods.alt
-            && drags_pixels(ctx, p, false)
+            && drags_pixels(ctx, p)
             && pixel_ghost(ctx, 0.0, 0.0, true).is_some()
         {
             r.cursor = Cursor::Copy;
@@ -1332,8 +1357,9 @@ impl PointerTool {
                 target = Some(self.subselection_target(ctx, t, p, &opt));
             }
         }
-        let target_id =
-            mask_child.or_else(|| target.and_then(|t| ctx.doc.element_at(&t).map(|e| e.id)));
+        let target_id = mask_child
+            .or_else(|| target.and_then(|t| ctx.doc.element_at(&t).map(|e| e.id)))
+            .or_else(|| pixel_selection_bitmap(ctx, p));
         match target_id {
             Some(id) => {
                 let already = ctx.selection.contains(id);
@@ -1566,9 +1592,10 @@ impl PointerTool {
                 };
                 self.overlay = Vec::new();
                 // inside a pixel selection only the selected pixels move (FB-73)
-                // (the Subselection drags a copy, the original stays: RE spec 71 section 6.2)
-                let dup = self.id == ToolId::Subselection;
-                let pixel = drags_pixels(ctx, start, copy)
+                // (the Subselection drags a copy, the original stays: RE spec 71 section 6.2; an
+                // Alt drag a copy as well, RE spec 80 section 2.1)
+                let dup = self.id == ToolId::Subselection || copy;
+                let pixel = drags_pixels(ctx, start)
                     .then(|| pixel_ghost(ctx, cur.x - start.x, cur.y - start.y, dup))
                     .flatten();
                 if let Some(g) = pixel {
@@ -1576,6 +1603,8 @@ impl PointerTool {
                     self.overlay.extend(guides);
                     let c = if dup { Cursor::Copy } else { Cursor::Move };
                     return ToolResponse::with_overlay(self.overlay.clone(), c);
+                } else if holds_still(ctx, start) {
+                    return ToolResponse::with_overlay(Vec::new(), Cursor::Move);
                 } else if let Some(b) = bounds {
                     let (dx, dy) = (cur.x - start.x, cur.y - start.y);
                     self.overlay.push(move_ghost(ctx, b, dx, dy, copy));
@@ -1908,13 +1937,20 @@ impl PointerTool {
                     return ToolResponse::default();
                 }
                 // Ziehen im Auswahlrahmen einer Bitmap verschiebt die ausgewählten Pixel (PAR 06/16)
-                // (the Subselection duplicates them: row "Duplicate", RE spec 71 section 6.2)
-                if drags_pixels(ctx, start, copy) {
-                    let dup = self.id == ToolId::Subselection;
+                // (the Subselection and an Alt drag move a copy: row "Duplicate", RE spec 71
+                // section 6.2); they float until merged (RE spec 80, FB-137)
+                if drags_pixels(ctx, start) {
+                    let dup = self.id == ToolId::Subselection || copy;
+                    if dx.round() == 0.0 && dy.round() == 0.0 {
+                        return ToolResponse::default();
+                    }
                     return ToolResponse::commit(vec![Invocation::new(
-                        "select.movePixels",
+                        "select.floatPixels",
                         json!({"dx": dx.round(), "dy": dy.round(), "copy": dup}),
                     )]);
+                }
+                if holds_still(ctx, start) {
+                    return ToolResponse::default();
                 }
                 // Alt-Ziehen heißt im Original „Duplizieren“ (PAR 08/03)
                 let params = if copy {
@@ -2024,7 +2060,12 @@ impl PointerTool {
             }
             // Klick ins Leere hebt die Auswahl auf – im Original kein Verlaufsschritt (nur der
             // Menübefehl Strg+D ist einer)
-            PState::PressedEmpty { mode, .. } if !mode.keeps() && !ctx.selection.is_empty() => {
+            // (with a floating block nothing happens, RE spec 80 section 4 D9)
+            PState::PressedEmpty { mode, .. }
+                if !mode.keeps()
+                    && !ctx.selection.is_empty()
+                    && ctx.selection.floating.is_none() =>
+            {
                 ToolResponse::commit(vec![pick(
                     "select.set",
                     json!({"ids": [], "mode": "replace"}),
@@ -2288,8 +2329,10 @@ impl ToolMachine for PointerTool {
                     PointerKind::Down => {
                         let mut r = self.down(*pos, ev, ctx);
                         // re 28 L3: Zeigerklick nach einer Bearbeitung im Bitmap-Modus (außerhalb eines
-                        // Auswahlrahmens) beendet den Modus; die Bitmap wird dabei beschnitten
+                        // Auswahlrahmens) beendet den Modus; die Bitmap wird dabei beschnitten. Not
+                        // with a floating block: the click does nothing (RE spec 80 section 4 D9)
                         if ctx.bitmap_worked
+                            && ctx.selection.floating.is_none()
                             && !ctx.selection.pixels.as_ref().is_some_and(|m| {
                                 m.get(pos.x.floor() as i32, pos.y.floor() as i32) > 0
                             })

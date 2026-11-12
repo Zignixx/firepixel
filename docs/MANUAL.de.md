@@ -158,7 +158,7 @@ Umschalt+Alt schaltet beim Zeiger weiterhin um.
 Mit **Voreinstellungen ▸ Bearbeitung ▸ Mit Strg-Ziehen duplizieren statt mit Alt-Ziehen** (`Firepixel_DuplicateWithCtrlDrag`, Vorgabe aus) zieht Strg-Ziehen der Auswahl eine Kopie (Zeiger mit „+“) und Alt-Ziehen verschiebt ohne Kopie, Alt behält seine übrigen Aufgaben (Alt-Klick wählt das Kind einer Gruppe, Alt-Rahmen, Alt+Pfeiltaste dupliziert).
 Mit **Voreinstellungen ▸ Bearbeitung ▸ Umschalt-Auswahlrahmen fügt nur hinzu** (`Firepixel_ShiftMarqueeAddsOnly`, Vorgabe aus) fügt der Umschalt-Rahmen des Zeigers jedes Objekt darin hinzu statt es umzuschalten (Zeiger mit „+“), und der Alt-Rahmen von Zeiger und Teilauswahl entfernt Objekte, solange die Option an ist, auch ohne die Option zum Aufheben per Alt-Ziehen.
 Mit **Voreinstellungen ▸ Bearbeitung ▸ Umschalt + Mausrad rollt waagerecht** (`Firepixel_ShiftWheelHorizontal`, Vorgabe aus) rollt Umschalt + Mausrad die Leinwand waagerecht um den Betrag, den das Rad senkrecht rollt; unabhängig davon zeigen Listen-Bedienfelder wie Ebenen eine waagerechte Bildlaufleiste, wenn tief verschachtelte Zeilen breiter als das Bedienfeld sind, und Umschalt + Mausrad über der Liste rollt sie seitwärts.
-Mit **Voreinstellungen ▸ Bearbeitung ▸ Pfeiltasten verschieben die gewählten Pixel mit den Auswahlwerkzeugen** (`Firepixel_ArrowKeysMovePixels`, Vorgabe aus) verschieben die Pfeiltasten (Umschalt 10 px) die gewählten Pixel einer Bitmap samt Auswahlrahmen, solange Zeiger, Hintere auswählen, Teilauswahl oder Maskenelement-Auswahl aktiv ist (die frei gewordene Fläche wird transparent, aufeinanderfolgende Tastendrücke sind eine Verlaufszeile „Verschieben“, Alt+Pfeiltaste verschiebt eine Kopie), während Auswahlrahmen-Werkzeug, Lasso und Zauberstab weiterhin nur den Auswahlrahmen verschieben; aus, verschieben die Pfeiltasten mit jedem Werkzeug nur den Auswahlrahmen.
+Mit **Voreinstellungen ▸ Bearbeitung ▸ Pfeiltasten verschieben die gewählten Pixel mit den Auswahlwerkzeugen** (`Firepixel_ArrowKeysMovePixels`, Vorgabe aus) hebt schon eine einfache Pfeiltaste (Umschalt 10 px) die gewählten Pixel einer Bitmap wie Strg+Pfeiltaste beim Auswahlrahmen als schwebenden Block aus und verschiebt sie samt Auswahlrahmen, solange Zeiger, Hintere auswählen, Teilauswahl oder Maskenelement-Auswahl aktiv ist (die frei gewordene Fläche wird transparent, aufeinanderfolgende Tastendrücke sind eine Verlaufszeile „Verschieben“, Alt+Pfeiltaste verschiebt eine Kopie), während Auswahlrahmen-Werkzeug, Lasso und Zauberstab weiterhin nur den Auswahlrahmen verschieben; aus, verschieben die Pfeiltasten mit jedem Werkzeug nur den Auswahlrahmen.
 
 **Bitmap-Werkzeuge:** Der **Pinsel** malt Pixel: Ein Strich, der auf einer Bitmap beginnt, malt in
 diese Bitmap (ohne Zusatztaste, gewählt oder nicht) und wählt sie; ein Strich, der auf leerer Fläche
@@ -174,18 +174,35 @@ während Sie einen neuen Auswahlrahmen oder ein Freihand-Lasso noch aufziehen, b
 beendet ebenfalls den Bitmapmodus (auch eine ältere Pixelauswahl ist weg) und wechselt zum Zeiger; das
 Loslassen bewirkt danach nichts. Esc mitten in einem Pinselstrich wechselt sofort zum Zeiger und lässt
 die Vorschau stehen, beim Loslassen wird der Strich trotzdem ganz gemalt; das nächste Esc beendet den
-Bitmapmodus. Mit einer Pixelauswahl (Zeiger, Auswahlrahmen oder Lasso) verschieben die Pfeiltasten nur den
-Auswahlrahmen, nicht die Pixel (1 px, mit Umschalt 10 px); aufeinanderfolgende Tasten sind eine Verlaufszeile
-„Verschieben“. Solange eine Pixelauswahl besteht, zeigen Auswahlrahmen, Lasso und Zauberstab am
+Bitmapmodus. Mit einer Pixelauswahl verschieben die Pfeiltasten mit jedem Werkzeug nur den
+Auswahlrahmen, nicht die Pixel (1 px, mit Umschalt 10 px); Strg+Pfeiltaste (Auswahlrahmen, Lasso, Zauberstab)
+hebt die Pixel aus, Alt+Pfeiltaste (jedes Werkzeug) hebt eine Kopie aus; aufeinanderfolgende Tasten sind eine
+Verlaufszeile „Verschieben“. Solange eine Pixelauswahl besteht, zeigen Auswahlrahmen, Lasso und Zauberstab am
 Mauszeiger die Verknüpfung der nächsten Auswahl: Umschalt „+“ (hinzufügen), Alt „−“ (abziehen),
 Umschalt+Alt „×“ (Schnittmenge, in beiden Reihenfolgen gedrückt); ohne Pixelauswahl trägt der Zeiger kein
 Zeichen. In der Pixelauswahl wird der Zeiger zum Pfeil mit gestricheltem Rechteck – Ziehen verschiebt den
 Auswahlrahmen (auch mit Lasso und Zauberstab) – und mit Strg zum Pfeil mit Schere (Ziehen verschiebt die
 Pixel). Ziehen in einer Pixelauswahl mit dem Zeiger oder mit Strg und Auswahlrahmen, Lasso oder
 Zauberstab zeigt nur die gewählten Pixel live in Bewegung (zurück bleibt ein transparentes Loch); mit
-dem Unterauswahl-Werkzeug zieht eine Kopie und das Original bleibt (Verlaufszeile „Duplizieren“). Der
-Zeiger folgt einer geänderten Umschalttaste sofort, ohne Mausbewegung (Firepixel; das Original wartet
-auf die nächste Bewegung).
+dem Unterauswahl-Werkzeug sowie mit Alt (auch Strg+Alt) und jedem dieser Werkzeuge zieht eine Kopie und das
+Original bleibt (Verlaufszeile „Duplizieren“). Der Zeiger folgt einer geänderten Umschalttaste sofort, ohne
+Mausbewegung (Firepixel; das Original wartet auf die nächste Bewegung).
+
+**Schwebende Pixel:** Verschobene Pixel **schweben** wie im Original über ihrer Bitmap: Die Pixel darunter
+bleiben unverändert und erscheinen wieder, wenn der Block weiterzieht, und jedes weitere Ziehen und jede
+Pfeiltaste bewegt denselben Block (jedes Ziehen eine Verlaufszeile „Verschieben“, eine Folge von Pfeiltasten
+eine Zeile). Solange Pixel schweben, verschiebt Ziehen im Auswahlrahmen den Block mit dem Zeiger und mit
+Auswahlrahmen, Lasso oder Zauberstab auch ohne Strg, und die Pfeiltasten verschieben ihn mit jedem Werkzeug;
+Alt setzt eine Kopie des Blocks an seiner Stelle ab und zieht den Block weiter. Eingerechnet wird der Block,
+wenn Sie die Auswahl aufheben (Strg+D), eine neue Auswahl aufziehen, den Bitmapmodus beenden (Esc oder der
+Knopf in der Statusleiste), speichern (eigene Verlaufszeile „Bitmap bearbeiten“; die Datei enthält die
+eingerechnete Bitmap, die Pixelauswahl verschwindet) oder einen anderen Befehl ausführen, der das Dokument
+ändert (Malen, Filter, Ausschneiden, Einfügen …); Rückgängig einer solchen Zeile lässt den Block wieder
+schweben. Loslassen der Maus, ein Werkzeugwechsel, die Eingabetaste und ein Zeigerklick auf leere Fläche
+lassen ihn schweben; Entf verwirft den Block, das Loch bleibt. Beim Einrechnen gehen Pixel jenseits des
+Leinwandrands verloren, solange der Block schwebt, behält er sie. Skripte und die Befehlszeile behalten das
+einstufige `select.movePixels` (verschieben und sofort einrechnen); `select.floatPixels` verschiebt die Pixel
+wie die Werkzeuge auf der Leinwand und lässt sie schweben.
 
 **Bitmapmodus:** Wählen eines Bitmap-Werkzeugs bei gewählter Bitmap, ein Bitmap-Strich oder ein
 Doppelklick mit dem Zeiger auf eine Bitmap beginnt den Bitmapmodus (Verlaufszeile „Bitmap bearbeiten“);

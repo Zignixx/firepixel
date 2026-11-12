@@ -137,6 +137,15 @@ opacity below 100 %, another blend mode or live effects, two sprites would apply
 (`ghost::pixel_move_needs_pipeline`) the canvas instead renders a render-only copy of the document with the pixels
 moved (`ghost::apply_live_pixels`, own render key `live_pixels_key`) through the element pipeline; the preview then
 equals the committed result (FB-87, TW-241).
+FB-137 (F157, *RE spec* 80): the released pixels **float**. `Selection::floating` (`fp-engine/src/selection.rs`,
+`FloatingPixels`: bitmap, block image at the lift place, offset) holds the block, so every History snapshot carries
+it; the bitmap in the document keeps the hole. `commands/floating.rs` lifts (`select.floatPixels`, arrow-key nudges),
+moves, places (Alt) and merges; `Session::execute` merges the block before every command that is not in
+`floating::keeps_floating` (inside that command's row; a command that then changed neither document nor selection
+gets the block back), and before saving as a row of its own "Edit Bitmap". The canvas shows a floating block at rest
+and while it is dragged through the page pipeline (`ghost::apply_floating`, `apply_live_pixels` →
+`commands::preview_floating`, keys from `commands::floating_key`); a pixel drag is paced like the F147 live move
+(visible tiles per step, one render in flight per pane). `select.movePixels` stays the one-shot move for scripts.
 Since F141 this pipeline is the rule for every bitmap up to 16 Mpx; the two sprites remain the fallback for larger
 ones.
 

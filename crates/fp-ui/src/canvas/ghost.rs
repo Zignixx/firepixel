@@ -361,11 +361,14 @@ pub struct LivePixels {
 }
 
 /// The pixel move in the tool feedback that needs the element pipeline
-/// ([`pixel_move_needs_pipeline`]); `None` for none or one the sprites show exactly.
+/// ([`pixel_move_needs_pipeline`]); `None` for none or one the sprites show exactly. A drag of a
+/// floating block (`floating`, FB-137) always goes through the pipeline: the sprites cut the
+/// pixels out of the bitmap, a floating block is not part of it.
 pub fn live_pixels(
     feedback: &[fp_engine::tools::Overlay],
     doc: &Document,
     page: usize,
+    floating: bool,
 ) -> Option<LivePixels> {
     feedback.iter().find_map(|o| match o {
         fp_engine::tools::Overlay::Ghost {
@@ -378,7 +381,7 @@ pub fn live_pixels(
         } => {
             let id = ElementId(*ids.first()?);
             let e = fp_engine::docops::element_on_page(doc, page, id)?;
-            pixel_move_needs_pipeline(doc, &e).then(|| LivePixels {
+            (floating || pixel_move_needs_pipeline(doc, &e)).then(|| LivePixels {
                 id,
                 dx: (quad[0].x - rect.left).round() as i32,
                 dy: (quad[0].y - rect.top).round() as i32,
@@ -389,17 +392,20 @@ pub fn live_pixels(
     })
 }
 
-/// Non-zero render key of a live pixel move (generation, page, bitmap, offset, mask).
+/// Non-zero render key of a live pixel move (generation, page, bitmap, offset, mask, floating
+/// block).
 pub fn live_pixels_key(
     generation: u64,
     page: usize,
     lp: &LivePixels,
     mask: &fp_raster::Mask,
+    floating: u64,
 ) -> u64 {
     let mk = super::overlay::mask_key(mask);
     hash_ids(
         generation ^ 0x5049_5845_4c53,
         &[
+            floating,
             page as u64,
             lp.id.0,
             lp.dx as i64 as u64,
@@ -414,22 +420,40 @@ pub fn live_pixels_key(
     ) | 1
 }
 
-/// `doc` with the live pixel move applied (a copy; the session's document is not touched).
+/// `doc` with the live pixel move applied (a copy; the session's document is not touched): the
+/// floating block of `sel` moved by the drag, or the lift the drag makes (FB-137).
 pub fn apply_live_pixels(
     doc: &Arc<Document>,
     page: usize,
     lp: &LivePixels,
-    mask: &fp_raster::Mask,
+    sel: &fp_engine::Selection,
 ) -> Arc<Document> {
     let mut out = (**doc).clone();
-    if fp_engine::commands::preview_move_pixels(
-        &mut out,
-        page,
-        lp.id,
-        mask,
-        (lp.dx, lp.dy),
-        lp.copy,
-    ) {
+    if fp_engine::commands::preview_floating(&mut out, page, lp.id, sel, (lp.dx, lp.dy), lp.copy) {
+        Arc::new(out)
+    } else {
+        Arc::clone(doc)
+    }
+}
+
+/// Non-zero render key of a floating block at rest (FB-137, RE spec 80): the document generation
+/// and [`fp_engine::commands::floating_key`].
+pub fn floating_render_key(generation: u64, floating: u64) -> u64 {
+    hash_ids(generation ^ 0x464c_4f41_5421, &[floating]) | 1
+}
+
+/// `doc` with the floating block of `sel` composited into its bitmap (a render-only copy; RE spec
+/// 80 section 6.2: the canvas shows exactly what a merge would make).
+pub fn apply_floating(
+    doc: &Arc<Document>,
+    page: usize,
+    sel: &fp_engine::Selection,
+) -> Arc<Document> {
+    let Some(f) = &sel.floating else {
+        return Arc::clone(doc);
+    };
+    let mut out = (**doc).clone();
+    if fp_engine::commands::preview_floating(&mut out, page, f.element, sel, (0, 0), false) {
         Arc::new(out)
     } else {
         Arc::clone(doc)

@@ -1109,9 +1109,9 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     // moved bitmap as the element itself (render-only document copy), not as ghost sprites
     let live_px = preview_drag
         .then(|| {
-            st.session
-                .active()
-                .and_then(|d| ghost::live_pixels(&feedback, &d.doc, d.page))
+            st.session.active().and_then(|d| {
+                ghost::live_pixels(&feedback, &d.doc, d.page, d.selection.floating.is_some())
+            })
         })
         .flatten();
     // F147 (FB-131 … FB-135): a move drag whose steps stay over the budget falls back to the
@@ -1269,15 +1269,26 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             crate::inspector::preview::live_path_key(generation, page, t, cs)
         }),
     );
+    // FB-137 (RE spec 80): a floating block is drawn into its bitmap in a render-only copy, at
+    // rest and while it is dragged
+    let float_key = fp_engine::commands::floating_key(&d.selection);
     let live_px_mask = live_px.and_then(|lp| {
         d.selection
             .pixels
             .as_ref()
             .filter(|_| d.selection.has_pixels())
-            .map(|m| (lp, ghost::live_pixels_key(generation, page, &lp, m)))
+            .map(|m| {
+                (
+                    lp,
+                    ghost::live_pixels_key(generation, page, &lp, m, float_key),
+                )
+            })
     });
+    let float_rest = (live_px_mask.is_none() && float_key != 0)
+        .then(|| ghost::floating_render_key(generation, float_key));
     let preview =
         crate::inspector::preview::combined_key(preview, live_px_mask.map_or(0, |(_, k)| k));
+    let preview = crate::inspector::preview::combined_key(preview, float_rest.unwrap_or(0));
     let preview = crate::inspector::preview::combined_key(
         preview,
         live_mv
@@ -1365,7 +1376,9 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     // previous step is back (the pointer positions in between only replace the offset; no
     // document copy and no job for them), so every step that is rendered is also shown
     let now = std::time::Instant::now();
-    let live_wait = live_mv.is_some()
+    // FB-137: a pixel drag (lift or floating block) is paced the same way
+    let live_drag = live_mv.is_some() || live_px_mask.is_some();
+    let live_wait = live_drag
         && cc.requested.is_some_and(|k| k.pane == pane)
         && cc.requested != cc.shown
         && cc
@@ -1374,7 +1387,7 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
     if !visible_dev.is_empty() && !live_wait && ((!covered && !pending_ok) || margin_due) {
         // a live move drag renders only the visible tiles per step (RE spec 76 §7.6); the margin
         // follows once the pointer rests (`margin_due`)
-        let dev = cap(if (same_zoom && live_mv.is_none()) || margin_due {
+        let dev = cap(if (same_zoom && !live_drag) || margin_due {
             around(0.5)
         } else {
             render::snap_to_tiles(visible_dev, extent)
@@ -1430,13 +1443,13 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 Some((t, cs)) => crate::inspector::preview::apply_live_path(&base, page, t, cs),
                 None => base,
             };
-            let base = match (
-                live_px_mask,
-                st.session
-                    .active()
-                    .and_then(|d| d.selection.pixels.as_ref()),
-            ) {
-                (Some((lp, _)), Some(m)) => ghost::apply_live_pixels(&base, page, &lp, m),
+            let base = match (live_px_mask, st.session.active()) {
+                (Some((lp, _)), Some(d)) => {
+                    ghost::apply_live_pixels(&base, page, &lp, &d.selection)
+                }
+                (None, Some(d)) if float_rest.is_some() => {
+                    ghost::apply_floating(&base, page, &d.selection)
+                }
                 _ => base,
             };
             match &live_mv {
@@ -3899,7 +3912,10 @@ fn preview_stack(
             } => {
                 had_ghost = true;
                 // FB-87: drawn by the canvas image itself (moved bitmap in a render-only copy)
-                if *pixels && preview_drag && ghost::live_pixels(feedback, &d.doc, page_i).is_some()
+                if *pixels
+                    && preview_drag
+                    && ghost::live_pixels(feedback, &d.doc, page_i, d.selection.floating.is_some())
+                        .is_some()
                 {
                     cc.ghosts.linger = None;
                     continue;

@@ -1081,6 +1081,7 @@ cmd-select-magicWand = Zauberstab
 cmd-select-liveEdge = Weiche Auswahlkante
 cmd-select-moveMarquee = Verschieben
 cmd-select-movePixels = Verschieben
+cmd-select-floatPixels = Verschieben
 cmd-select-next = Nächste Auswahl
 cmd-select-previous = Vorherige Auswahl
 cmd-transform-matrix = Transformieren

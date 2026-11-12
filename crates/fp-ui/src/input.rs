@@ -520,8 +520,22 @@ pub fn handle(ctx: &egui::Context, st: &mut AppState) {
                 }
                 // Werkzeugtasten (Pfeile, Entf, Esc, Eingabe) zuerst an das Werkzeug; nur wenn es
                 // nichts tut, an die Menükürzel (z. B. Pfeil = Verschieben ohne Auswahl)
+                // FB-137 (RE spec 80 section 3): Ctrl+arrow lifts the selected pixels with the
+                // bitmap selection tools; elsewhere Ctrl+arrow stays a menu shortcut
+                let ctrl_arrow =
+                    ctrl && matches!(
+                        key,
+                        Key::ArrowLeft | Key::ArrowRight | Key::ArrowUp | Key::ArrowDown
+                    ) && matches!(
+                        st.session.tools.active,
+                        fp_engine::tools::ToolId::Marquee
+                            | fp_engine::tools::ToolId::OvalMarquee
+                            | fp_engine::tools::ToolId::Lasso
+                            | fp_engine::tools::ToolId::PolygonLasso
+                            | fp_engine::tools::ToolId::MagicWand
+                    );
                 if let Some(tk) = tool_key(key)
-                    && !ctrl
+                    && (!ctrl || ctrl_arrow)
                     && send(ctx, st, ToolInput::Key(tk), tool_mods(modifiers))
                 {
                     continue;

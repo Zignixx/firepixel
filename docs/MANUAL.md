@@ -152,7 +152,7 @@ Shift+Alt with the Pointer still toggles.
 With **Preferences ▸ Edit ▸ Duplicate with Ctrl-drag instead of Alt-drag** (`Firepixel_DuplicateWithCtrlDrag`, default off) Ctrl-dragging the selection drags a copy (cursor "+") and Alt-dragging moves it without a copy, while Alt keeps its other roles (Alt-click picks a group's child, Alt-marquee, Alt+arrow duplicates).
 With **Preferences ▸ Edit ▸ Shift-marquee only adds to the selection** (`Firepixel_ShiftMarqueeAddsOnly`, default off) the Pointer's Shift-marquee adds every object inside instead of toggling it (cursor "+"), and the Alt-marquee of the Pointer and the Subselection removes objects while the option is on, even without the Alt-drag deselect option.
 With **Preferences ▸ Edit ▸ Shift + wheel scrolls horizontally** (`Firepixel_ShiftWheelHorizontal`, default off) Shift + mouse wheel pans the canvas sideways by the amount the wheel scrolls vertically; independent of it, list panels such as Layers show a horizontal scroll bar when deeply nested rows are wider than the panel, and Shift + wheel over the list scrolls it sideways.
-With **Preferences ▸ Edit ▸ Arrow keys move the selected pixels with the selection tools** (`Firepixel_ArrowKeysMovePixels`, default off) the arrow keys (Shift 10 px) move the selected pixels of a bitmap together with the marquee while the Pointer, Select Behind, the Subselection or the Mask Element Selection is active (the vacated area becomes transparent, consecutive presses are one History row "Move", Alt+arrow moves a copy), while the Marquee, Lasso and Magic Wand keep moving only the marquee; off, the arrow keys move only the marquee with every tool.
+With **Preferences ▸ Edit ▸ Arrow keys move the selected pixels with the selection tools** (`Firepixel_ArrowKeysMovePixels`, default off) a plain arrow key (Shift 10 px) lifts the selected pixels of a bitmap into a floating block, as Ctrl+arrow does with the Marquee, while the Pointer, Select Behind, the Subselection or the Mask Element Selection is active (the vacated area becomes transparent, consecutive presses are one History row "Move", Alt+arrow moves a copy), while the Marquee, Lasso and Magic Wand keep moving only the marquee; off, the arrow keys move only the marquee with every tool until pixels float.
 
 **Bitmap tools:** the **Brush** paints pixels: a stroke that starts on a bitmap paints into that
 bitmap (no modifier key needed, selected or not) and selects it; a stroke that starts on empty space
@@ -168,7 +168,8 @@ dragging a new marquee or lasso outline cancels the drag and also exits bitmap m
 selection is removed too) and switches to the Pointer; releasing the mouse then does nothing. Esc in
 the middle of a Brush stroke switches to the Pointer at once and freezes the preview, but the whole
 stroke is still painted when you release the mouse; the next Esc exits bitmap mode. With a
-pixel selection (Pointer, Marquee or Lasso) the arrow keys move only the marquee, not the pixels (1 px, Shift 10 px);
+pixel selection the arrow keys move only the marquee, not the pixels (1 px, Shift 10 px), with every tool;
+Ctrl+arrow (Marquee, Lasso, Magic Wand) lifts the pixels and Alt+arrow (every tool) lifts a copy;
 consecutive presses are one History row "Move". While a pixel selection exists, the Marquee, Lasso and
 Magic Wand cursors show the combine mode of the next selection: Shift "+" (add), Alt "−" (subtract),
 Shift+Alt "×" (intersect, in either order of pressing); without a pixel selection the cursor has no mark.
@@ -176,9 +177,23 @@ Inside the pixel selection the cursor becomes an arrow with a dashed rectangle �
 marquee (also with the Lasso and the Magic Wand) — and with Ctrl an arrow with scissors (dragging moves
 the pixels). Dragging inside a pixel selection with the Pointer, or with Ctrl and the Marquee, Lasso
 or Magic Wand, shows only the selected pixels moving live (a transparent hole stays behind); with the
-Subselection tool the drag moves a copy and leaves the original (History row "Duplicate"). The cursor
-follows a changed modifier at once, without a mouse move (Firepixel; the original waits for the next
-move).
+Subselection tool, and with Alt (also Ctrl+Alt) and any of these tools, the drag moves a copy and leaves the
+original (History row "Duplicate"). The cursor follows a changed modifier at once, without a mouse move
+(Firepixel; the original waits for the next move).
+
+**Floating pixels:** moved pixels **float** above their bitmap, as in the original: the pixels underneath
+are not touched and show again when the block moves on, and every further drag or arrow key moves the
+same block (each drag one History row "Move", a run of arrow keys one row). While pixels float, a drag
+inside the marquee moves the block with the Pointer and with the Marquee, Lasso or Magic Wand even without
+Ctrl, and the arrow keys move the block with every tool; Alt places a copy of the block where it is and
+moves the block on. The block is merged into the bitmap when you deselect (Ctrl+D), draw a new selection,
+leave bitmap mode (Esc or the button in the status bar), save (an extra History row "Edit Bitmap"; the file
+holds the merged bitmap, the pixel selection goes) or run any other command that changes the document
+(painting, filters, Cut, Paste ...); undoing such a row lets the block float again. Releasing the mouse,
+changing tools, Enter and a Pointer click on empty canvas keep it floating; Delete throws the block away
+and leaves the hole. Merged pixels beyond the canvas edge are lost; while the block floats it keeps them.
+Scripts and the command line keep the one-step `select.movePixels` (move and merge at once);
+`select.floatPixels` moves the pixels like the canvas tools and leaves them floating.
 
 **Bitmap mode:** choosing a bitmap tool with a bitmap selected, painting a bitmap stroke or
 double-clicking a bitmap with the Pointer starts bitmap mode (History row "Edit Bitmap"); the bitmap's

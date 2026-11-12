@@ -69,6 +69,44 @@ pub struct Selection {
     pub points: Vec<PointRef>,
     /// Pixelauswahl (Auswahlrahmen), `None` = keine.
     pub pixels: Option<Mask>,
+    /// FB-137 (RE spec 80): selected pixels lifted out of their bitmap that float above it until
+    /// they are merged ([`crate::commands::floating`]); the marquee (`pixels`) moves with them.
+    pub floating: Option<FloatingPixels>,
+}
+
+/// FB-137 (RE spec 80 section 1.1): a block of pixels lifted out of a bitmap. The bitmap in the
+/// document holds the hole (or, for a copy, stays unchanged); the block is not part of it until it
+/// is merged (deselect, a new selection, leaving bitmap mode, save, any other edit). It lives in
+/// the selection, so every History snapshot carries it and undo brings a merged block back.
+#[derive(Clone, Debug)]
+pub struct FloatingPixels {
+    /// Page of the bitmap.
+    pub page: usize,
+    /// The bitmap the block came from and is merged into.
+    pub element: ElementId,
+    /// The block at the place it was lifted from (document pixels, straight alpha already
+    /// multiplied by the selection mask: `P = B * M`).
+    pub pixels: Arc<RgbaImage>,
+    /// Offset of the block from the place it was lifted from.
+    pub dx: i32,
+    pub dy: i32,
+}
+
+impl FloatingPixels {
+    /// Where the block is now (document pixels).
+    pub fn bounds(&self) -> fp_geom::IRect {
+        self.pixels.bounds().translate(self.dx, self.dy)
+    }
+}
+
+impl PartialEq for FloatingPixels {
+    fn eq(&self, o: &Self) -> bool {
+        self.page == o.page
+            && self.element == o.element
+            && self.dx == o.dx
+            && self.dy == o.dy
+            && (Arc::ptr_eq(&self.pixels, &o.pixels) || *self.pixels == *o.pixels)
+    }
 }
 
 impl Selection {
@@ -128,11 +166,13 @@ impl Selection {
         self.points.retain(|p| keep.contains(&p.element));
     }
 
-    /// Hebt die Elementauswahl und die Pixelauswahl auf.
+    /// Hebt die Elementauswahl und die Pixelauswahl auf (a floating block goes with it; the
+    /// session merges it before any command that changes the selection, RE spec 80 section 4).
     pub fn clear(&mut self) {
         self.elements.clear();
         self.points.clear();
         self.pixels = None;
+        self.floating = None;
     }
 
     /// Kombiniert eine neue Pixelmaske mit der bestehenden.

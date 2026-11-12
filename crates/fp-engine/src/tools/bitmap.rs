@@ -31,15 +31,57 @@ fn inside_pixels(ctx: &ToolContext, pos: Point) -> bool {
 }
 
 /// A press of a bitmap selection tool inside the existing pixel selection without Shift/Alt drags
-/// the marquee (Ctrl: the pixels, PAR 06/05, 06/16); returns whether the pixels go along.
+/// the marquee (Ctrl: the pixels, PAR 06/05, 06/16; with a floating block the block, RE spec 80
+/// section 2.1); returns whether the pixels go along. The hover cursor follows this (an Alt press,
+/// which drags a copy, keeps the measured badge cursor).
 fn press_moves_marquee(ev: &ToolEvent, ctx: &ToolContext, pos: Point) -> Option<bool> {
     (!ev.mods.shift && !ev.mods.alt && ctx.selection.has_pixels() && inside_pixels(ctx, pos))
-        .then_some(ev.mods.ctrl)
+        .then_some(ev.mods.ctrl || ctx.selection.floating.is_some())
 }
 
-/// Cursor while the marquee (or with Ctrl the pixels) is moved: arrow with a dashed rectangle or
-/// with scissors (RE spec 69 section 4.2).
-fn move_cursor(pixels: bool) -> Cursor {
+/// What a drag of a bitmap selection tool that starts inside the pixel selection moves (RE spec
+/// 80 section 2.1, FB-137).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MarqueeDrag {
+    /// The marquee alone (no key, no floating block).
+    Marquee,
+    /// The pixels: Ctrl lifts them, a floating block moves on.
+    Pixels,
+    /// A copy (Alt or Ctrl+Alt): lifted without a hole, a floating block is placed and floats on.
+    Copy,
+}
+
+/// The drag a press at `pos` starts inside the pixel selection; `None` outside it or with Shift
+/// (then a new selection is drawn). Alt copies only with a bitmap to take the pixels from;
+/// without one it keeps drawing a subtracting selection.
+fn press_drag(ev: &ToolEvent, ctx: &ToolContext, pos: Point) -> Option<MarqueeDrag> {
+    if ev.mods.shift || !ctx.selection.has_pixels() || !inside_pixels(ctx, pos) {
+        return None;
+    }
+    if ev.mods.alt && ctx.selection.floating.is_none() && !bitmap_target(ctx) {
+        return None;
+    }
+    Some(if ev.mods.alt {
+        MarqueeDrag::Copy
+    } else if ev.mods.ctrl || ctx.selection.floating.is_some() {
+        MarqueeDrag::Pixels
+    } else {
+        MarqueeDrag::Marquee
+    })
+}
+
+/// Cursor while the marquee (or the pixels) is moved: arrow with a dashed rectangle or with
+/// scissors (RE spec 69 section 4.2); a copy shows the copy arrow.
+fn move_cursor(kind: MarqueeDrag) -> Cursor {
+    match kind {
+        MarqueeDrag::Marquee => Cursor::MoveMarquee,
+        MarqueeDrag::Pixels => Cursor::MovePixels,
+        MarqueeDrag::Copy => Cursor::Copy,
+    }
+}
+
+/// Hover cursor for a press that would move the marquee (`pixels`: the pixels go along).
+fn hover_move_cursor(pixels: bool) -> Cursor {
     if pixels {
         Cursor::MovePixels
     } else {
@@ -82,16 +124,23 @@ pub(crate) fn selection_hover_cursor(
         return base;
     }
     if can_move && let Some(pixels) = press_moves_marquee(ev, ctx, pos) {
-        return move_cursor(pixels);
+        return hover_move_cursor(pixels);
     }
     badge_cursor(base, mode_from(ev))
 }
 
 /// Drag of the marquee inside the pixel selection: dashed outline of the moved selection bounds;
-/// with Ctrl (`pixels`) the live preview of the moved pixels like the Pointer (FB-73).
-fn marquee_move_overlay(ctx: &ToolContext, from: Point, to: Point, pixels: bool) -> Vec<Overlay> {
+/// moving the pixels (or a copy) the live preview of the moved pixels like the Pointer (FB-73).
+fn marquee_move_overlay(
+    ctx: &ToolContext,
+    from: Point,
+    to: Point,
+    kind: MarqueeDrag,
+) -> Vec<Overlay> {
     let (dx, dy) = ((to.x - from.x).round(), (to.y - from.y).round());
-    if pixels && let Some(g) = super::pointer::pixel_ghost(ctx, dx, dy, false) {
+    if kind != MarqueeDrag::Marquee
+        && let Some(g) = super::pointer::pixel_ghost(ctx, dx, dy, kind == MarqueeDrag::Copy)
+    {
         return vec![g];
     }
     ctx.selection
@@ -107,18 +156,21 @@ fn marquee_move_overlay(ctx: &ToolContext, from: Point, to: Point, pixels: bool)
         .unwrap_or_default()
 }
 
-/// Release of a marquee drag: `select.moveMarquee` (or `select.movePixels`), nothing without a move.
-fn marquee_move_release(from: Point, to: Point, pixels: bool) -> ToolResponse {
+/// Release of a marquee drag: `select.moveMarquee`, or for the pixels `select.floatPixels` (they
+/// float until merged, RE spec 80); nothing without a move.
+fn marquee_move_release(from: Point, to: Point, kind: MarqueeDrag) -> ToolResponse {
     let (dx, dy) = ((to.x - from.x).round(), (to.y - from.y).round());
     if dx == 0.0 && dy == 0.0 {
         return ToolResponse::default();
     }
-    let name = if pixels {
-        "select.movePixels"
-    } else {
-        "select.moveMarquee"
+    let inv = match kind {
+        MarqueeDrag::Marquee => Invocation::new("select.moveMarquee", json!({"dx": dx, "dy": dy})),
+        MarqueeDrag::Pixels | MarqueeDrag::Copy => Invocation::new(
+            "select.floatPixels",
+            json!({"dx": dx, "dy": dy, "copy": kind == MarqueeDrag::Copy}),
+        ),
     };
-    ToolResponse::commit(vec![Invocation::new(name, json!({"dx": dx, "dy": dy}))])
+    ToolResponse::commit(vec![inv])
 }
 
 fn edge_params(e: EdgeMode) -> (bool, u32) {
@@ -175,15 +227,16 @@ pub(crate) fn escape_in_bitmap_mode(ctx: &ToolContext) -> ToolResponse {
     }
 }
 
-/// Arrow keys in a bitmap selection tool with a pixel selection (re 62 §1.8): only the marquee
-/// moves, 1 px (Shift 10 px), as a key nudge, so consecutive presses are one history row "Move"
-/// and one undo restores the marquee. Ctrl/Alt arrows and arrows without a pixel selection are
-/// left to the menu shortcuts.
+/// Arrow keys in a bitmap selection tool with a pixel selection (re 62 section 1.8, RE spec 80
+/// section 3): 1 px (Shift 10 px) as a key nudge, so consecutive presses are one history row and
+/// one undo takes them back. Plain: the marquee alone, or a floating block; Ctrl lifts the pixels
+/// into a floating block, Alt (also Ctrl+Alt) a copy. Arrows without a pixel selection are left
+/// to the menu shortcuts.
 pub(crate) fn nudge_marquee(ev: &ToolEvent, ctx: &ToolContext) -> Option<ToolResponse> {
     let ToolInput::Key(k) = &ev.input else {
         return None;
     };
-    if ev.mods.ctrl || ev.mods.alt || !ctx.selection.has_pixels() {
+    if !ctx.selection.has_pixels() {
         return None;
     }
     let s = if ev.mods.shift { 10.0 } else { 1.0 };
@@ -194,10 +247,13 @@ pub(crate) fn nudge_marquee(ev: &ToolEvent, ctx: &ToolContext) -> Option<ToolRes
         ToolKey::Down => (0.0, s),
         _ => return None,
     };
-    Some(ToolResponse::commit(vec![Invocation::new(
-        "edit.move",
-        json!({"dx": dx, "dy": dy, "nudge": true}),
-    )]))
+    let mut p = json!({"dx": dx, "dy": dy, "nudge": true});
+    if ev.mods.alt {
+        p["copy"] = json!(true);
+    } else if ev.mods.ctrl {
+        p["lift"] = json!(true);
+    }
+    Some(ToolResponse::commit(vec![Invocation::new("edit.move", p)]))
 }
 
 /// Escape while a new marquee or (non-polygon) lasso is dragged (re 62 §1.5, measured with the real key):
@@ -279,8 +335,8 @@ pub struct MarqueeTool {
     start: Option<(Point, SelectMode)>,
     cur: Option<Point>,
     overlay: Vec<Overlay>,
-    /// Ziehen im vorhandenen Rahmen: Startpunkt und ob die Pixel mitgehen (Strg) – sonst nur der Rahmen.
-    moving: Option<(Point, bool)>,
+    /// Ziehen im vorhandenen Rahmen: Startpunkt und was mitgeht (RE spec 80 section 2.1).
+    moving: Option<(Point, MarqueeDrag)>,
 }
 
 impl MarqueeTool {
@@ -362,6 +418,12 @@ impl ToolMachine for MarqueeTool {
                 return r;
             }
             if ev.input == ToolInput::Key(ToolKey::Escape) {
+                // Esc while the marquee or the pixels are dragged ends bitmap mode like Esc
+                // without a drag (re 62 section 1.5, which merges a floating block); the drag is
+                // dropped, so the release does nothing
+                if self.moving.take().is_some() {
+                    self.overlay.clear();
+                }
                 if self.start.is_none() {
                     // Esc after dragging a marquee: "Exit bitmap mode", pixel selection gone,
                     // Pointer, the bitmap STAYS selected like Lasso and Magic Wand (re 58 §6,
@@ -382,10 +444,10 @@ impl ToolMachine for MarqueeTool {
         match kind {
             PointerKind::Down => {
                 // im vorhandenen Rahmen: Ziehen verschiebt den Rahmen, Strg+Ziehen die Pixel (PAR 06/05, 06/16)
-                if !fixed && let Some(pixels) = press_moves_marquee(ev, ctx, *pos) {
-                    self.moving = Some((p, pixels));
+                if !fixed && let Some(kind) = press_drag(ev, ctx, *pos) {
+                    self.moving = Some((p, kind));
                     return ToolResponse {
-                        cursor: move_cursor(pixels),
+                        cursor: move_cursor(kind),
                         ..ToolResponse::default()
                     };
                 }
@@ -398,14 +460,14 @@ impl ToolMachine for MarqueeTool {
                 }
             }
             PointerKind::Move if self.moving.is_some() => {
-                let (s, pixels) = self.moving.unwrap_or((p, false));
-                self.overlay = marquee_move_overlay(ctx, s, p, pixels);
-                ToolResponse::with_overlay(self.overlay.clone(), move_cursor(pixels))
+                let (s, kind) = self.moving.unwrap_or((p, MarqueeDrag::Marquee));
+                self.overlay = marquee_move_overlay(ctx, s, p, kind);
+                ToolResponse::with_overlay(self.overlay.clone(), move_cursor(kind))
             }
             PointerKind::Up if self.moving.is_some() => {
                 self.overlay.clear();
-                let (s, pixels) = self.moving.take().unwrap_or((p, false));
-                marquee_move_release(s, p, pixels)
+                let (s, kind) = self.moving.take().unwrap_or((p, MarqueeDrag::Marquee));
+                marquee_move_release(s, p, kind)
             }
             PointerKind::Move => {
                 // Leertaste beim Aufziehen: Rahmen verschieben (Startpunkt wandert mit)
@@ -472,8 +534,8 @@ pub struct LassoTool {
     mode: SelectMode,
     active: bool,
     hover: Option<Point>,
-    /// Drag inside the pixel selection: start and whether the pixels go along (Ctrl).
-    moving: Option<(Point, bool)>,
+    /// Drag inside the pixel selection: start and what goes along (RE spec 80 section 2.1).
+    moving: Option<(Point, MarqueeDrag)>,
     /// Cursor while the outline is drawn (the badge only with a pixel selection).
     draw_cursor: Cursor,
 }
@@ -523,18 +585,23 @@ impl ToolMachine for LassoTool {
             return ToolResponse::default();
         }
         let poly = self.id == ToolId::PolygonLasso;
+        if ev.input == ToolInput::Key(ToolKey::Escape) {
+            // Esc during a drag of the marquee or the pixels drops the drag (the release then
+            // does nothing) and ends bitmap mode as without a drag (re 62 section 1.5)
+            self.moving = None;
+        }
         if let ToolInput::Pointer { kind, pos } = &ev.input
-            && let Some((from, pixels)) = self.moving
+            && let Some((from, drag)) = self.moving
         {
             let p = pixel_snap(ctx, *pos);
             return match kind {
                 PointerKind::Up => {
                     self.moving = None;
-                    marquee_move_release(from, p, pixels)
+                    marquee_move_release(from, p, drag)
                 }
                 _ => ToolResponse::with_overlay(
-                    marquee_move_overlay(ctx, from, p, pixels),
-                    move_cursor(pixels),
+                    marquee_move_overlay(ctx, from, p, drag),
+                    move_cursor(drag),
                 ),
             };
         }
@@ -547,11 +614,11 @@ impl ToolMachine for LassoTool {
                 // the Polygon Lasso (not measured) keeps starting its outline there
                 if !self.active
                     && !poly
-                    && let Some(pixels) = press_moves_marquee(ev, ctx, *pos)
+                    && let Some(drag) = press_drag(ev, ctx, *pos)
                 {
-                    self.moving = Some((pixel_snap(ctx, *pos), pixels));
+                    self.moving = Some((pixel_snap(ctx, *pos), drag));
                     return ToolResponse {
-                        cursor: move_cursor(pixels),
+                        cursor: move_cursor(drag),
                         ..ToolResponse::default()
                     };
                 }
@@ -674,8 +741,8 @@ impl ToolMachine for LassoTool {
 /// Zauberstab: Klick wählt ähnliche, zusammenhängende Pixel der Bitmap (`WandToolTolerance`).
 #[derive(Clone, Debug, Default)]
 pub struct WandTool {
-    /// Drag inside the pixel selection: start and whether the pixels go along (Ctrl).
-    moving: Option<(Point, bool)>,
+    /// Drag inside the pixel selection: start and what goes along (RE spec 80 section 2.1).
+    moving: Option<(Point, MarqueeDrag)>,
 }
 
 impl ToolMachine for WandTool {
@@ -684,18 +751,23 @@ impl ToolMachine for WandTool {
     }
 
     fn handle(&mut self, ev: &ToolEvent, ctx: &ToolContext) -> ToolResponse {
+        if ev.input == ToolInput::Key(ToolKey::Escape) {
+            // Esc during a drag of the marquee or the pixels drops the drag (the release then
+            // does nothing) and ends bitmap mode as without a drag (re 62 section 1.5)
+            self.moving = None;
+        }
         if let ToolInput::Pointer { kind, pos } = &ev.input
-            && let Some((from, pixels)) = self.moving
+            && let Some((from, drag)) = self.moving
         {
             let p = pixel_snap(ctx, *pos);
             return match kind {
                 PointerKind::Up => {
                     self.moving = None;
-                    marquee_move_release(from, p, pixels)
+                    marquee_move_release(from, p, drag)
                 }
                 _ => ToolResponse::with_overlay(
-                    marquee_move_overlay(ctx, from, p, pixels),
-                    move_cursor(pixels),
+                    marquee_move_overlay(ctx, from, p, drag),
+                    move_cursor(drag),
                 ),
             };
         }
@@ -704,11 +776,11 @@ impl ToolMachine for WandTool {
             ToolInput::Pointer {
                 kind: PointerKind::Down,
                 pos,
-            } if ctx.has_document && press_moves_marquee(ev, ctx, *pos).is_some() => {
-                let pixels = ev.mods.ctrl;
-                self.moving = Some((pixel_snap(ctx, *pos), pixels));
+            } if ctx.has_document && press_drag(ev, ctx, *pos).is_some() => {
+                let drag = press_drag(ev, ctx, *pos).unwrap_or(MarqueeDrag::Marquee);
+                self.moving = Some((pixel_snap(ctx, *pos), drag));
                 ToolResponse {
-                    cursor: move_cursor(pixels),
+                    cursor: move_cursor(drag),
                     ..ToolResponse::default()
                 }
             }

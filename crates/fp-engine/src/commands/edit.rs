@@ -158,6 +158,11 @@ fn copy_to_clipboard(s: &mut Session, vectors_only: bool) -> Result<CommandOutpu
 
 /// Entfernt die Auswahl bzw. die ausgewählten Pixel.
 pub(crate) fn clear_selection(d: &mut DocumentState) -> Result<()> {
+    // FB-137 (RE spec 80 §1.2 G2): Delete with a floating block discards the block; the hole
+    // stays and the marquee stays where the block was
+    if super::floating::discard(d) {
+        return Ok(());
+    }
     let page = d.page;
     if d.selection.has_pixels() {
         let bms = selected_bitmaps(d);
@@ -441,29 +446,36 @@ pub fn preview_move_pairs(
     }
 }
 
-/// Arrow-key nudge (`edit.move` with `nudge`, `edit.nudge.*`): with a pixel selection only the
-/// marquee moves, the pixels stay, whatever tool is active (RE spec 71 section 6.3, FB-74;
-/// consecutive key presses merge into one History row "Move" in the session, TW-148). A copy
-/// duplicates, everything else is [`move_selection`]. Firepixel option (FB-94,
-/// [`crate::tools::ARROW_KEYS_MOVE_PIXELS_PREF`]): with a pointer-type tool the selected pixels
-/// move instead (a copy with Alt), see [`arrow_keys_move_pixels`].
-fn nudge_selection(s: &mut Session, dx: f32, dy: f32, copy: bool) -> Result<CommandOutput> {
-    if arrow_keys_move_pixels(s) && s.doc()?.selection.has_pixels() {
-        let (ix, iy) = (dx.round() as i32, dy.round() as i32);
-        let moved = with_doc(s, |d| super::select::move_selected_pixels(d, ix, iy, copy));
+/// Arrow-key nudge (`edit.move` with `nudge`, `edit.nudge.*`) with the rules of RE spec 80 §3
+/// (FB-137): a floating block moves with every tool (`copy`: it is placed where it is and the
+/// same pixels float on). Without a block `lift` (Ctrl with a bitmap selection tool) lifts the
+/// pixels and `copy` (Alt, every tool) lifts a copy, both then float; otherwise only the marquee
+/// moves (RE spec 71 section 6.3, FB-74). Firepixel option (FB-94,
+/// [`crate::tools::ARROW_KEYS_MOVE_PIXELS_PREF`]): with a pointer-type tool a plain arrow lifts
+/// the pixels like Ctrl. Consecutive key presses merge into one History row in the session
+/// (TW-148). Without a pixel selection the objects move ([`move_selection`]).
+fn nudge_selection(
+    s: &mut Session,
+    dx: f32,
+    dy: f32,
+    copy: bool,
+    lift: bool,
+) -> Result<CommandOutput> {
+    let (ix, iy) = (dx.round() as i32, dy.round() as i32);
+    let (floating, pixels) = {
+        let d = s.doc()?;
+        (d.selection.floating.is_some(), d.selection.has_pixels())
+    };
+    if floating || (pixels && (lift || copy || arrow_keys_move_pixels(s))) {
+        let moved = with_doc(s, |d| super::floating::move_floating(d, ix, iy, copy));
         // no bitmap to take the pixels from: the marquee moves as without the option
         if let Ok(out) = moved {
             return Ok(out);
         }
     }
-    if !copy && s.doc()?.selection.has_pixels() {
+    if pixels {
         return with_doc(s, |d| {
-            if let Some(m) = &mut d.selection.pixels {
-                let b = m.bounds().translate(dx.round() as i32, dy.round() as i32);
-                if let Ok(nm) = Mask::from_raw(b, m.data().to_vec()) {
-                    *m = nm;
-                }
-            }
+            super::floating::translate_mask(&mut d.selection, ix, iy);
             Ok(CommandOutput::doc().labeled(fp_i18n::t("msg-step-move")))
         });
     }
@@ -471,8 +483,8 @@ fn nudge_selection(s: &mut Session, dx: f32, dy: f32, copy: bool) -> Result<Comm
 }
 
 /// FB-94: the option is on and the Pointer, Select Behind, the Subselection or the Mask Element
-/// Selection is active, so arrow keys move the selected pixels (the bitmap selection tools keep
-/// moving the marquee alone).
+/// Selection is active, so a plain arrow key lifts the selected pixels (the bitmap selection tools
+/// keep moving the marquee alone; Ctrl+arrow lifts there).
 fn arrow_keys_move_pixels(s: &Session) -> bool {
     use crate::tools::ToolId as T;
     s.prefs
@@ -481,35 +493,6 @@ fn arrow_keys_move_pixels(s: &Session) -> bool {
             s.tools.active,
             T::Pointer | T::SelectBehind | T::Subselection | T::MaskElementSelect
         )
-}
-
-/// FB-94: a further Alt+arrow press right after an Alt+arrow pixel copy. Moving the copy again
-/// would cut it out of the bitmap and leave a hole in the original under it, so the press redoes
-/// the copy from the state before the first press with the summed offset (like one Subselection
-/// drag); the session merges it into the "Duplicate" row. `None` = not this case.
-fn renudge_pixel_copy(s: &mut Session, dx: f32, dy: f32) -> Option<Result<CommandOutput>> {
-    if !arrow_keys_move_pixels(s) {
-        return None;
-    }
-    let d = s.doc().ok()?;
-    if !d.selection.has_pixels() {
-        return None;
-    }
-    let steps = d.history.steps();
-    let top = steps.last()?;
-    let sum =
-        |k: &str, v: f32| top.params.get(k).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32 + v;
-    let (tx, ty) = (sum("dx", dx).round() as i32, sum("dy", dy).round() as i32);
-    let (doc0, sel0) = (top.before.doc.clone(), top.before.selection.clone());
-    Some(with_doc(s, |d| {
-        let keep = (d.doc.clone(), d.selection.clone());
-        d.doc = doc0;
-        d.selection = sel0;
-        super::select::move_selected_pixels(d, tx, ty, true).inspect_err(|_| {
-            d.doc = keep.0;
-            d.selection = keep.1;
-        })
-    }))
 }
 
 /// Verschiebt die Auswahl (Pfeiltasten, Zeiger-Ziehen; `copy` = mit Alt eine Kopie ziehen).
@@ -999,15 +982,23 @@ pub(super) fn register(r: &mut CommandRegistry) {
                 json!(false),
                 "arrow-key nudge (with copy the history row reads \"Duplicate\")",
             )
+            .opt_default(
+                "lift",
+                ParamKind::Bool,
+                json!(false),
+                "arrow-key nudge with a pixel selection: lift the pixels into a floating block (Ctrl+arrow with a bitmap selection tool)",
+            )
             .run(|s, p| {
                 let mut copy = p.bool_or("copy", false)?;
                 let nudge = p.bool_or("nudge", false)?;
-                let mut continued = false;
+                let lift = p.bool_or("lift", false)?;
                 // Alt+arrow right after an Alt+arrow of the same selection moves that copy
-                // again; the session merges the press into the "Duplicate" row (TW-148).
+                // again; the session merges the press into the "Duplicate" row (TW-148). Pixels
+                // follow RE spec 80 instead (each Alt press places the floating block, FB-137).
                 if copy && nudge && p.opt_ids("ids")?.is_none_or(|v| v.is_empty()) {
                     let d = s.doc()?;
-                    if d.history.redo_count() == 0
+                    if !d.selection.has_pixels()
+                        && d.history.redo_count() == 0
                         && d.history.steps().last().is_some_and(|top| {
                             crate::session::is_key_nudge(&top.command, &top.params)
                                 && top.params.get("copy").and_then(|v| v.as_bool()) == Some(true)
@@ -1018,17 +1009,13 @@ pub(super) fn register(r: &mut CommandRegistry) {
                         })
                     {
                         copy = false;
-                        continued = true;
                     }
                 }
                 super::with_targets(s, p, |s, p| {
                     let (dx, dy) = (p.f64("dx")? as f32, p.f64("dy")? as f32);
-                    if continued && let Some(Ok(out)) = renudge_pixel_copy(s, dx, dy) {
-                        return Ok(out);
-                    }
                     // a nudge of explicit `ids` stays an object move
                     let out = if nudge && p.opt_ids("ids")?.is_none_or(|v| v.is_empty()) {
-                        nudge_selection(s, dx, dy, copy)?
+                        nudge_selection(s, dx, dy, copy, lift)?
                     } else {
                         move_selection(s, dx, dy, copy)?
                     };
@@ -1054,7 +1041,7 @@ pub(super) fn register(r: &mut CommandRegistry) {
         r.add(
             cmd(name)
                 .requires(&[Requirement::Document, Requirement::SelectionOrPixels])
-                .run(move |s, _| nudge_selection(s, dx, dy, false)),
+                .run(move |s, _| nudge_selection(s, dx, dy, false, false)),
         );
     }
 

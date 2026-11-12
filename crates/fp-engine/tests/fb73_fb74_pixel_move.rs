@@ -160,7 +160,9 @@ fn fb73_pointer_drag_previews_the_selected_pixels() {
 }
 
 /// FB-73 (b): Marquee + Ctrl drag inside the selection shows the same live preview, the release
-/// moves the pixels (one History row); without Ctrl only the marquee moves (dashed outline).
+/// moves the pixels (one History row); without Ctrl only the marquee moves (dashed outline) -
+/// until pixels float: then a drag without Ctrl moves the floating block (FB-137, RE spec 80
+/// section 2.1).
 #[test]
 fn fb73_marquee_ctrl_drag_previews_and_moves_the_pixels() {
     let (mut s, id) = setup();
@@ -181,9 +183,28 @@ fn fb73_marquee_ctrl_drag_previews_and_moves_the_pixels() {
     events(&mut s, &[ToolEvent::up(140.0, 130.0).ctrl()]);
     assert_eq!(pixel_bounds(&s), Some(IRect::new(120, 110, 170, 160)));
     assert_eq!(alpha(&s, id, 105, 105), 0, "hole");
-    assert_eq!(alpha(&s, id, 160, 155), 255, "moved pixels");
+    assert!(
+        s.active().is_some_and(|d| d.selection.floating.is_some()),
+        "the moved pixels float"
+    );
     assert_eq!(rows(&s), before_rows + 1);
-    // without Ctrl: the marquee alone, no pixel preview
+    // without Ctrl the floating block moves on (the bitmap under it stays)
+    events(
+        &mut s,
+        &[ToolEvent::down(130.0, 130.0), ToolEvent::drag(140.0, 130.0)],
+    );
+    assert!(pixel_ghost(&mut s).is_some(), "block move: pixel preview");
+    events(&mut s, &[ToolEvent::up(140.0, 130.0)]);
+    assert_eq!(pixel_bounds(&s), Some(IRect::new(130, 110, 180, 160)));
+    assert_eq!(alpha(&s, id, 125, 125), 0, "the hole stays");
+    ex(&mut s, "select.none", json!({}));
+    assert_eq!(alpha(&s, id, 175, 155), 255, "merged at the new place");
+    // after the merge, a new marquee: a drag without Ctrl moves the marquee alone
+    ex(
+        &mut s,
+        "select.pixels",
+        json!({"shape": "rect", "rect": [100, 100, 150, 150]}),
+    );
     events(
         &mut s,
         &[ToolEvent::down(130.0, 130.0), ToolEvent::drag(140.0, 130.0)],
@@ -193,8 +214,7 @@ fn fb73_marquee_ctrl_drag_previews_and_moves_the_pixels() {
         "marquee move: no pixel preview"
     );
     events(&mut s, &[ToolEvent::up(140.0, 130.0)]);
-    assert_eq!(pixel_bounds(&s), Some(IRect::new(130, 110, 180, 160)));
-    assert_eq!(alpha(&s, id, 175, 120), 255, "pixels stay");
+    assert_eq!(pixel_bounds(&s), Some(IRect::new(110, 100, 160, 150)));
 }
 
 /// FB-73 (RE spec 71 section 6.2): a Subselection drag inside the pixel selection moves a copy of
@@ -238,18 +258,11 @@ fn fb73_subselection_drag_duplicates_the_pixels() {
     );
     assert_eq!(alpha(&s, id, 105, 105), 255, "original stays");
     assert_eq!(alpha(&s, id, 120, 120), 255, "original stays");
-    assert_eq!(alpha(&s, id, 440, 150), 255, "copy at the offset");
-    assert_eq!(
-        alpha(&s, id, 440, 170),
-        0,
-        "only the selected block was copied"
-    );
-    let img = image(&s, id);
-    assert_eq!(
-        (img.bounds().right, img.bounds().bottom),
-        (450, 300),
-        "the bitmap grows"
-    );
+    let f = s
+        .active()
+        .and_then(|d| d.selection.floating.clone())
+        .expect("the copy floats (FB-137)");
+    assert_eq!(f.bounds(), IRect::new(400, 110, 450, 160), "copy at the offset");
     assert_eq!(rows(&s), before_rows + 1, "one History row");
     let label = s
         .active()

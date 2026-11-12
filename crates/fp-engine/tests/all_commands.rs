@@ -828,7 +828,7 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
         "select.pixels" => r(json!({"shape": "rect", "rect": [0, 0, 10, 10]})),
         "select.magicWand" => rs(json!({"point": [205, 105]}), sel_ids(vec![bitmap])),
         // PAR-X-TOOLS-2: Rahmen weich machen bzw. verschieben, Auswahlpixel verschieben (B1 mit Rahmen)
-        "select.liveEdge" | "select.moveMarquee" | "select.movePixels" => {
+        "select.liveEdge" | "select.moveMarquee" | "select.movePixels" | "select.floatPixels" => {
             let p = if name == "select.liveEdge" {
                 json!({"feather": 3})
             } else {

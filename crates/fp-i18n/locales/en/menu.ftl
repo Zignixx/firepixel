@@ -1081,6 +1081,7 @@ cmd-select-magicWand = Magic Wand
 cmd-select-liveEdge = Feather Selection Edge
 cmd-select-moveMarquee = Move Marquee
 cmd-select-movePixels = Move Pixels
+cmd-select-floatPixels = Move Floating Pixels
 cmd-select-next = Next Selection
 cmd-select-previous = Previous Selection
 cmd-transform-matrix = Transform

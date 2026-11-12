@@ -415,9 +415,13 @@ fn marquee_move_frame_and_pixels() {
         } else {
             drag_mods(&mut s, (120.0, 100.0), (170.0, 100.0), |e| e.ctrl());
         }
+        // FB-137 (RE spec 80): the moved pixels float; the reference shows them merged, so
+        // deselecting (which merges, f1 = f2) gives the measured image
+        ex(&mut s, "select.none", json!({}));
         let img = render(&s);
         save_png(&format!("m16_{}.png", if pointer { "drag_post" } else { "ctrldrag" }), &img);
         assert_eq!(sha16(&img), "5c6a628e1af58f6b", "Pixel verschoben (Zeiger: {pointer})");
+        ex(&mut s, "edit.undo", json!({}));
         ex(&mut s, "edit.undo", json!({}));
         assert_eq!(sha16(&render(&s)), sha16(&base), "Rückgängig");
     }
