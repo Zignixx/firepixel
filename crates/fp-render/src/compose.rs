@@ -33,6 +33,102 @@ pub struct RenderOutput {
     pub report: RenderReport,
 }
 
+/// F153: what [`Renderer::compose_rect_ex`] returns besides the mixed page.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ListMode {
+    /// Mix only.
+    Compose,
+    /// Mix and return the display list.
+    ComposeAndList,
+    /// Record the display list without mixing.
+    ListOnly,
+}
+
+/// F153 (FB-139): the changed device pixels of a render against an earlier one
+/// ([`Renderer::render_device_patch`]).
+#[derive(Debug)]
+pub struct DevicePatch {
+    /// Pixels of `dirty` (image bounds from (0, 0)); empty when nothing changed.
+    pub output: RenderOutput,
+    /// Device pixels (in the grid of the request's `dev`) the image replaces; empty = none.
+    pub dirty: IRect,
+    /// Display list of the new render (base of the next patch).
+    pub list: Arc<crate::tiles::DisplayList>,
+}
+
+/// Zoom of the device grid (finite, 1/256 to 256).
+fn device_zoom(zoom: f64) -> f64 {
+    if zoom.is_finite() && zoom > 0.0 {
+        zoom.clamp(1.0 / 256.0, 256.0)
+    } else {
+        1.0
+    }
+}
+
+/// Document pixels sampled by the device pixels `dev` (grid at `anchor`, zoom `zoom`), within
+/// `clip`.
+fn device_region(clip: IRect, anchor: (i32, i32), zoom: f64, dev: IRect) -> IRect {
+    let w = dev.width().min(32768) as i32;
+    let h = dev.height().min(32768) as i32;
+    let sample = |a: i32, i: i32| a + (((i as f64) + 0.5) / zoom).floor() as i32;
+    if w > 0 && h > 0 {
+        IRect::new(
+            sample(anchor.0, dev.left),
+            sample(anchor.1, dev.top),
+            sample(anchor.0, dev.left + w - 1) + 1,
+            sample(anchor.1, dev.top + h - 1) + 1,
+        )
+        .intersect(&clip)
+    } else {
+        IRect::default()
+    }
+}
+
+/// Device pixels `dev` sampled from the mixed page (`grid`, or `img` without one) in `region`:
+/// device pixel (i, j) shows the document pixel `anchor + ⌊(i + ½) / zoom⌋`, transparent outside
+/// `region`.
+fn sample_device(
+    grid: Option<&crate::tiles::TileGrid>,
+    img: Option<&RgbaImage>,
+    region: IRect,
+    anchor: (i32, i32),
+    zoom: f64,
+    dev: IRect,
+) -> RgbaImage {
+    let w = dev.width().min(32768) as i32;
+    let h = dev.height().min(32768) as i32;
+    let mut out = RgbaImage::new(IRect::new(0, 0, w.max(0), h.max(0)))
+        .unwrap_or_else(|_| RgbaImage::empty_at(0, 0));
+    let ow = out.width();
+    if ow == 0 || region.is_empty() {
+        return out;
+    }
+    let sample = |a: i32, i: i32| a + (((i as f64) + 0.5) / zoom).floor() as i32;
+    let xs: Vec<i32> = (0..w).map(|i| sample(anchor.0, dev.left + i)).collect();
+    let ys: Vec<i32> = (0..h).map(|j| sample(anchor.1, dev.top + j)).collect();
+    use rayon::prelude::*;
+    out.data_mut()
+        .par_chunks_mut(ow)
+        .enumerate()
+        .for_each(|(j, row)| {
+            let y = ys[j];
+            let inside_y = y >= region.top && y < region.bottom;
+            for (i, p) in row.iter_mut().enumerate() {
+                let x = xs[i];
+                *p = if inside_y && x >= region.left && x < region.right {
+                    match (grid, img) {
+                        (Some(g), _) => g.get(x, y),
+                        (None, Some(b)) => b.get(x, y).unwrap_or([0, 0, 0, 0]),
+                        (None, None) => [0, 0, 0, 0],
+                    }
+                } else {
+                    [0, 0, 0, 0]
+                };
+            }
+        });
+    out
+}
+
 /// Ziel-Leinwand: fest (Seite, Ausschnitt) oder wachsend (isolierte Gruppen, Symbole).
 pub(crate) struct Canvas {
     pub img: RgbaImage,
@@ -312,10 +408,34 @@ impl Renderer {
         over: Option<Arc<Override>>,
         edit: Option<fp_model::ElementId>,
     ) -> (Option<crate::tiles::TileGrid>, RgbaImage, RenderReport) {
+        let (grid, img, report, _) =
+            self.compose_rect_ex(doc, page, frame, rect, over, edit, ListMode::Compose);
+        (grid, img, report)
+    }
+
+    /// [`Self::compose_rect`]; with `list` other than [`ListMode::Compose`] also the display list
+    /// of the page in `rect` (F153; `None` when the page is mixed directly: no tile cache, a
+    /// bitmap override, "Dissolve"); [`ListMode::ListOnly`] records the list without mixing.
+    #[allow(clippy::too_many_arguments, clippy::type_complexity)] // Dokument, Lage, Ausschnitt, Ersatz, Maske, Art
+    fn compose_rect_ex(
+        &self,
+        doc: &Document,
+        page: usize,
+        frame: usize,
+        rect: IRect,
+        over: Option<Arc<Override>>,
+        edit: Option<fp_model::ElementId>,
+        list: ListMode,
+    ) -> (
+        Option<crate::tiles::TileGrid>,
+        RgbaImage,
+        RenderReport,
+        Option<Arc<crate::tiles::DisplayList>>,
+    ) {
         let mut report = RenderReport::default();
         let Some(p) = doc.pages.get(page) else {
             report.miss("page");
-            return (None, RgbaImage::empty_at(rect.left, rect.top), report);
+            return (None, RgbaImage::empty_at(rect.left, rect.top), report, None);
         };
         let bg = p.root.background.to_rgba8();
         let mode = match self.options.background {
@@ -369,6 +489,19 @@ impl Renderer {
                 self.draw_layer(doc, &mut cv, &rl.layer, 0, rl.state(), &st, &mut report);
             }
             let ops = cv.rec.take().unwrap_or_default();
+            let dl = (list != ListMode::Compose
+                && !ops.iter().any(|o| o.blend == BlendMode::DISSOLVE))
+            .then(|| {
+                Arc::new(crate::tiles::DisplayList {
+                    rect,
+                    fill,
+                    underlay,
+                    ops: ops.clone(),
+                })
+            });
+            if list == ListMode::ListOnly {
+                return (None, RgbaImage::empty_at(rect.left, rect.top), report, dl);
+            }
             let budget = self.options.cache_budget_pixels / 4;
             let grid = match self.tiles.lock() {
                 Ok(mut t) => t.compose_grid(rect, fill, underlay, &ops, budget),
@@ -377,11 +510,17 @@ impl Renderer {
                     .compose_grid(rect, fill, underlay, &ops, budget),
             };
             return match grid {
-                Some(g) => (Some(g), RgbaImage::empty_at(rect.left, rect.top), report),
+                Some(g) => (
+                    Some(g),
+                    RgbaImage::empty_at(rect.left, rect.top),
+                    report,
+                    dl,
+                ),
                 None => (
                     None,
                     crate::tiles::mix_direct(rect, fill, underlay, &ops),
                     report,
+                    None,
                 ),
             };
         }
@@ -402,7 +541,7 @@ impl Renderer {
             composite(&mut base, &image, None, &opts(Opacity(255), BlendMode(0)));
             image = base;
         }
-        (None, image, report)
+        (None, image, report, None)
     }
 
     /// Ausschnitt `region` (Dokumentkoordinaten) mit Zoomfaktor `zoom` für die Leinwand der UI.
@@ -456,57 +595,141 @@ impl Renderer {
         dev: IRect,
         edit: Option<fp_model::ElementId>,
     ) -> RenderOutput {
-        let zoom = if zoom.is_finite() && zoom > 0.0 {
-            zoom.clamp(1.0 / 256.0, 256.0)
+        self.render_device_ex(doc, page, frame, clip, anchor, zoom, dev, edit, false)
+            .0
+    }
+
+    /// F153 (FB-139): [`Self::render_device`] that also returns the display list of the render
+    /// (`None` when the page was mixed directly), the base for [`Self::render_device_patch`].
+    #[allow(clippy::too_many_arguments)] // Dokument, Lage, Gitter, Ausschnitt
+    pub fn render_device_listed(
+        &self,
+        doc: &Document,
+        page: usize,
+        frame: usize,
+        clip: IRect,
+        anchor: (i32, i32),
+        zoom: f64,
+        dev: IRect,
+    ) -> (RenderOutput, Option<Arc<crate::tiles::DisplayList>>) {
+        self.render_device_ex(doc, page, frame, clip, anchor, zoom, dev, None, true)
+    }
+
+    /// F153 (FB-139): the part of [`Self::render_device`] that differs from the render whose
+    /// display list is `base` (same clip, grid, zoom and device pixels): the device pixels of the
+    /// union of the looks that differ between the two lists (the common start and end of the
+    /// draw order stay; the page is mixed pixel by pixel, so no other pixel can change). The
+    /// result is pixel-identical to the same pixels of a whole render. `None` when no patch is
+    /// possible (another region or canvas colour, no list): the caller renders the whole part.
+    #[allow(clippy::too_many_arguments)] // Dokument, Lage, Gitter, Ausschnitt, Basis
+    pub fn render_device_patch(
+        &self,
+        doc: &Document,
+        page: usize,
+        frame: usize,
+        clip: IRect,
+        anchor: (i32, i32),
+        zoom: f64,
+        dev: IRect,
+        base: &crate::tiles::DisplayList,
+    ) -> Option<DevicePatch> {
+        let zoom = device_zoom(zoom);
+        let dev = IRect::new(
+            dev.left,
+            dev.top,
+            dev.left + dev.width().min(32768) as i32,
+            dev.top + dev.height().min(32768) as i32,
+        );
+        let region = device_region(clip, anchor, zoom, dev);
+        if region.is_empty() || region != base.rect {
+            return None;
+        }
+        let (_, _, report, list) =
+            self.compose_rect_ex(doc, page, frame, region, None, None, ListMode::ListOnly);
+        let list = list?;
+        if list.fill != base.fill || list.underlay != base.underlay {
+            return None;
+        }
+        let changed = base.changed(&list).intersect(&region);
+        let dirty = if changed.is_empty() {
+            IRect::default()
         } else {
-            1.0
+            // device pixels whose sample point lies in `changed`, one more on each side against
+            // rounding (those sample the same pixels as a whole render)
+            let lo = |a: i32, e: i32| (((e - a) as f64) * zoom - 0.5).ceil() as i32 - 1;
+            IRect::new(
+                lo(anchor.0, changed.left),
+                lo(anchor.1, changed.top),
+                lo(anchor.0, changed.right) + 2,
+                lo(anchor.1, changed.bottom) + 2,
+            )
+            .intersect(&dev)
         };
+        if dirty.is_empty() {
+            return Some(DevicePatch {
+                output: RenderOutput {
+                    image: RgbaImage::empty_at(0, 0),
+                    report,
+                },
+                dirty: IRect::default(),
+                list,
+            });
+        }
+        let part = device_region(clip, anchor, zoom, dirty).intersect(&region);
+        let budget = self.options.cache_budget_pixels / 4;
+        let grid = match self.tiles.lock() {
+            Ok(mut t) => t.compose_grid(part, list.fill, list.underlay, &list.ops, budget),
+            Err(p) => {
+                p.into_inner()
+                    .compose_grid(part, list.fill, list.underlay, &list.ops, budget)
+            }
+        }?;
+        let image = sample_device(Some(&grid), None, part, anchor, zoom, dirty);
+        Some(DevicePatch {
+            output: RenderOutput { image, report },
+            dirty,
+            list,
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)] // Dokument, Lage, Gitter, Ausschnitt, Maske, Liste
+    fn render_device_ex(
+        &self,
+        doc: &Document,
+        page: usize,
+        frame: usize,
+        clip: IRect,
+        anchor: (i32, i32),
+        zoom: f64,
+        dev: IRect,
+        edit: Option<fp_model::ElementId>,
+        listed: bool,
+    ) -> (RenderOutput, Option<Arc<crate::tiles::DisplayList>>) {
+        let zoom = device_zoom(zoom);
         let w = dev.width().min(32768) as i32;
         let h = dev.height().min(32768) as i32;
-        let sample = |a: i32, i: i32| a + (((i as f64) + 0.5) / zoom).floor() as i32;
-        let region = if w > 0 && h > 0 {
-            IRect::new(
-                sample(anchor.0, dev.left),
-                sample(anchor.1, dev.top),
-                sample(anchor.0, dev.left + w - 1) + 1,
-                sample(anchor.1, dev.top + h - 1) + 1,
-            )
-            .intersect(&clip)
-        } else {
-            IRect::default()
-        };
-        let mut out = RgbaImage::new(IRect::new(0, 0, w.max(0), h.max(0)))
-            .unwrap_or_else(|_| RgbaImage::empty_at(0, 0));
-        if region.is_empty() || out.width() == 0 {
-            return RenderOutput {
-                image: out,
-                report: RenderReport::default(),
-            };
+        let dev = IRect::new(dev.left, dev.top, dev.left + w, dev.top + h);
+        let region = device_region(clip, anchor, zoom, dev);
+        if region.is_empty() || w <= 0 || h <= 0 {
+            let out = RgbaImage::new(IRect::new(0, 0, w.max(0), h.max(0)))
+                .unwrap_or_else(|_| RgbaImage::empty_at(0, 0));
+            return (
+                RenderOutput {
+                    image: out,
+                    report: RenderReport::default(),
+                },
+                None,
+            );
         }
-        let (grid, base_img, report) = self.compose_rect(doc, page, frame, region, None, edit);
-        let ow = out.width();
-        let xs: Vec<i32> = (0..w).map(|i| sample(anchor.0, dev.left + i)).collect();
-        let ys: Vec<i32> = (0..h).map(|j| sample(anchor.1, dev.top + j)).collect();
-        use rayon::prelude::*;
-        out.data_mut()
-            .par_chunks_mut(ow)
-            .enumerate()
-            .for_each(|(j, row)| {
-                let y = ys[j];
-                let inside_y = y >= region.top && y < region.bottom;
-                for (i, p) in row.iter_mut().enumerate() {
-                    let x = xs[i];
-                    *p = if inside_y && x >= region.left && x < region.right {
-                        match &grid {
-                            Some(g) => g.get(x, y),
-                            None => base_img.get(x, y).unwrap_or([0, 0, 0, 0]),
-                        }
-                    } else {
-                        [0, 0, 0, 0]
-                    };
-                }
-            });
-        RenderOutput { image: out, report }
+        let mode = if listed {
+            ListMode::ComposeAndList
+        } else {
+            ListMode::Compose
+        };
+        let (grid, base_img, report, list) =
+            self.compose_rect_ex(doc, page, frame, region, None, edit, mode);
+        let image = sample_device(grid.as_ref(), Some(&base_img), region, anchor, zoom, dev);
+        (RenderOutput { image, report }, list)
     }
 
     /// Like [`Self::render_region`], with the pixels of one bitmap replaced (live paint preview,

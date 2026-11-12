@@ -66,10 +66,11 @@ pub mod tiles;
 
 pub use cache::{CacheStats, Look, RenderCache};
 pub use compose::{
-    PixelOverride, RenderOutput, Renderer, find_bitmap, has_visible_effects, kind_tag, placement,
+    DevicePatch, PixelOverride, RenderOutput, Renderer, find_bitmap, has_visible_effects, kind_tag,
+    placement,
 };
 pub use hit::{Hit, HitOptions};
 pub use moved::{MovedLooks, look_moves_along};
 pub use nine::{AxisMap, PointMap, Stage};
 pub use options::{BackgroundMode, CachePolicy, RenderOptions, RenderReport};
-pub use tiles::{TileCache, TileStats};
+pub use tiles::{DisplayList, TileCache, TileStats};

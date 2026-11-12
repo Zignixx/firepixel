@@ -175,6 +175,13 @@ pub struct CanvasCache {
     pub shown: Option<RenderKey>,
     /// Bild der angezeigten Textur (für das Hochladen nur geänderter Bereiche, [`show_result`]).
     pub shown_image: Option<RgbaImage>,
+    /// F153 (FB-139): display list of the shown image when it is a plain page render (no hidden
+    /// parts, no layers): the base of the next render that redraws only the changed pixels
+    /// ([`RenderJob::base`]).
+    pub shown_list: Option<Arc<fp_render::DisplayList>>,
+    /// F153: measurement switch: live move steps render the whole visible part and the margin
+    /// follows while the pointer rests, as before F153 (benchmark comparison only).
+    pub legacy_live: bool,
     /// Zuletzt angeforderter Schlüssel.
     pub requested: Option<RenderKey>,
     /// Zähler für erzwungenes Neuzeichnen.
@@ -412,6 +419,12 @@ pub struct RenderJob {
     /// sources shifted by the whole-pixel offset (`fp_render::MovedLooks`, no new effect chains).
     /// `Some` also marks the job as a live move step for the budget ([`LIVE_MOVE_BUDGET_MS`]).
     pub moved: Option<Arc<fp_render::MovedLooks>>,
+    /// F153 (FB-139): the shown image (its key) and its display list: the render redraws only
+    /// the pixels whose looks differ ([`fp_render::Renderer::render_device_patch`]) and the result
+    /// patches that image ([`RenderResult::patch`]). Only for plain jobs with the key's `dev`.
+    pub base: Option<(RenderKey, Arc<fp_render::DisplayList>)>,
+    /// F153: return the display list of a plain render ([`RenderResult::list`]).
+    pub listed: bool,
 }
 
 /// Ergebnis.
@@ -426,6 +439,11 @@ pub struct RenderResult {
     pub live_move: bool,
     /// F147: time the render took (ms).
     pub render_ms: f64,
+    /// F153: `image` holds only these device pixels of the image shown with this key (the job's
+    /// [`RenderJob::base`]); empty rectangle = nothing changed.
+    pub patch: Option<(RenderKey, IRect)>,
+    /// F153: display list of the render ([`RenderJob::listed`]).
+    pub list: Option<Arc<fp_render::DisplayList>>,
 }
 
 /// F147 (FB-131 … FB-135): budget of one live move drag step (render plus showing the result, ms).
@@ -519,15 +537,17 @@ impl RenderWorker {
                     }
                     let job = queue.remove(0);
                     let t = std::time::Instant::now();
-                    let (image, layers) = render_job(&r, &job);
+                    let out = render_job(&r, &job);
                     if res_tx
                         .send(RenderResult {
                             key: job.key,
-                            image,
-                            layers,
+                            image: out.image,
+                            layers: out.layers,
                             prefetch: job.prefetch.is_some(),
                             live_move: job.moved.is_some(),
                             render_ms: t.elapsed().as_secs_f64() * 1000.0,
+                            patch: out.patch,
+                            list: out.list,
                         })
                         .is_err()
                     {
@@ -572,14 +592,16 @@ impl RenderWorker {
             return None;
         }
         let t = std::time::Instant::now();
-        let (image, layers) = render_job(&self.renderer, &job);
+        let out = render_job(&self.renderer, &job);
         Some(RenderResult {
             key: job.key,
-            image,
-            layers,
+            image: out.image,
+            layers: out.layers,
             prefetch: job.prefetch.is_some(),
             live_move: job.moved.is_some(),
             render_ms: t.elapsed().as_secs_f64() * 1000.0,
+            patch: out.patch,
+            list: out.list,
         })
     }
 
@@ -592,15 +614,80 @@ impl RenderWorker {
     }
 }
 
+/// What the render thread made of a job.
+struct Rendered {
+    image: RgbaImage,
+    layers: Vec<Option<RgbaImage>>,
+    patch: Option<(RenderKey, IRect)>,
+    list: Option<Arc<fp_render::DisplayList>>,
+}
+
 /// Hintergrundbild und Schichten eines Auftrags.
-fn render_job(r: &fp_render::Renderer, job: &RenderJob) -> (RgbaImage, Vec<Option<RgbaImage>>) {
+fn render_job(r: &fp_render::Renderer, job: &RenderJob) -> Rendered {
     match &job.moved {
         Some(m) => r.with_moved_looks(m, |r| render_job_now(r, job)),
         None => render_job_now(r, job),
     }
 }
 
-fn render_job_now(r: &fp_render::Renderer, job: &RenderJob) -> (RgbaImage, Vec<Option<RgbaImage>>) {
+/// F153: a job without hidden parts, layers and mask edit (the image is the page render itself).
+pub fn plain_job(
+    hidden: &[super::stack::Atom],
+    layers: &[Option<Vec<super::stack::Atom>>],
+    mask_edit: u64,
+) -> bool {
+    hidden.is_empty() && layers.is_empty() && mask_edit == 0
+}
+
+fn render_job_now(r: &fp_render::Renderer, job: &RenderJob) -> Rendered {
+    let k = &job.key;
+    if job.listed && plain_job(&job.hidden, &job.layers, k.mask_edit) {
+        let pr = k.page_rect;
+        // F153 (FB-139): only the pixels whose looks changed against the shown image
+        if let Some((bk, base)) = &job.base
+            && bk.dev == k.dev
+            && let Some(p) = r.render_device_patch(
+                &job.doc,
+                k.page,
+                k.frame,
+                pr,
+                (pr.left, pr.top),
+                k.zoom,
+                k.dev,
+                base,
+            )
+        {
+            let mut image = p.output.image;
+            if k.gamma {
+                apply_gamma_preview(&mut image);
+            }
+            return Rendered {
+                image,
+                layers: Vec::new(),
+                patch: Some((*bk, p.dirty)),
+                list: Some(p.list),
+            };
+        }
+        let (out, list) = r.render_device_listed(
+            &job.doc,
+            k.page,
+            k.frame,
+            pr,
+            (pr.left, pr.top),
+            k.zoom,
+            k.dev,
+        );
+        let mut image = out.image;
+        if k.gamma {
+            apply_gamma_preview(&mut image);
+        }
+        return Rendered {
+            image,
+            layers: Vec::new(),
+            patch: None,
+            list,
+        };
+    }
     let image = render_now(r, &job.doc, &job.key, &job.hidden, false);
     let layers = job
         .layers
@@ -610,7 +697,12 @@ fn render_job_now(r: &fp_render::Renderer, job: &RenderJob) -> (RgbaImage, Vec<O
                 .map(|h| render_now(r, &job.doc, &job.key, h, true))
         })
         .collect();
-    (image, layers)
+    Rendered {
+        image,
+        layers,
+        patch: None,
+        list: None,
+    }
 }
 
 fn render_now(
@@ -719,6 +811,10 @@ pub fn show_result(ctx: &egui::Context, cc: &mut CanvasCache, res: RenderResult)
 }
 
 fn show_result_now(ctx: &egui::Context, cc: &mut CanvasCache, res: RenderResult) {
+    if let Some((base, dirty)) = res.patch {
+        show_patch(ctx, cc, res, base, dirty);
+        return;
+    }
     let k = res.key;
     let same_grid = cc.shown.is_some_and(|s| {
         s.doc == k.doc && s.page_rect == k.page_rect && (s.zoom - k.zoom).abs() < 1e-12
@@ -792,6 +888,70 @@ fn show_result_now(ctx: &egui::Context, cc: &mut CanvasCache, res: RenderResult)
         .collect();
     cc.shown = Some(res.key);
     cc.shown_image = Some(res.image);
+    cc.shown_list = res.list;
+}
+
+/// F153 (FB-139): a result that redraws only `dirty` of the image shown with the key `base`:
+/// the pixels are copied into the shown image and only the changed rectangle of each canvas tile
+/// is uploaded. When the shown image is no longer that base, the result is dropped and the
+/// canvas asks again (a whole render then).
+fn show_patch(
+    ctx: &egui::Context,
+    cc: &mut CanvasCache,
+    res: RenderResult,
+    base: RenderKey,
+    dirty: IRect,
+) {
+    let k = res.key;
+    let fits = cc.shown == Some(base)
+        && base.dev == k.dev
+        && cc.layers.is_empty()
+        && cc.shown_image.as_ref().is_some_and(|i| {
+            i.width() == k.dev.width() as usize && i.height() == k.dev.height() as usize
+        })
+        && (dirty.is_empty()
+            || (k.dev.intersect(&dirty) == dirty
+                && res.image.width() == dirty.width() as usize
+                && res.image.height() == dirty.height() as usize));
+    if !fits {
+        cc.requested = None;
+        ctx.request_repaint();
+        return;
+    }
+    if let Some(img) = cc.shown_image.as_mut()
+        && !dirty.is_empty()
+    {
+        let (ox, oy) = (
+            (dirty.left - k.dev.left) as usize,
+            (dirty.top - k.dev.top) as usize,
+        );
+        let (w, stride) = (dirty.width() as usize * 4, img.width() * 4);
+        let src = res.image.as_bytes();
+        let dst = img.as_bytes_mut();
+        for y in 0..dirty.height() as usize {
+            let d = (oy + y) * stride + ox * 4;
+            dst[d..d + w].copy_from_slice(&src[y * w..(y + 1) * w]);
+        }
+        for t in &mut cc.tiles {
+            let r = t.dev.intersect(&dirty);
+            if r.is_empty() {
+                continue;
+            }
+            t.texture.set_partial(
+                [(r.left - t.dev.left) as usize, (r.top - t.dev.top) as usize],
+                sub_image(
+                    img,
+                    (r.left - k.dev.left) as usize,
+                    (r.top - k.dev.top) as usize,
+                    r.width() as usize,
+                    r.height() as usize,
+                ),
+                egui::TextureOptions::NEAREST,
+            );
+        }
+    }
+    cc.shown = Some(k);
+    cc.shown_list = res.list;
 }
 
 /// Kleinstes Rechteck (x, y, Breite, Höhe) im Teil der Größe `size` ab `at_b` von `b`, in dem er
@@ -958,6 +1118,8 @@ mod tests {
             layers: Vec::new(),
             prefetch,
             moved: None,
+            base: None,
+            listed: false,
         }
     }
 

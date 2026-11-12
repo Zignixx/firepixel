@@ -18,6 +18,7 @@ pub mod obj_quads;
 pub mod popups;
 pub mod preview;
 mod quads;
+pub use quads::live_move_offset;
 pub mod scale;
 pub use quads::export_preset_order;
 pub use quads::selection_thumb_rect;

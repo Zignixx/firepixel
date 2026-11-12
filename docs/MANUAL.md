@@ -123,7 +123,8 @@ releasing; the selection frame and the handles disappear while dragging and come
 drag starts once the pointer has moved more than 3·√zoom screen pixels (4 px at 100 %, 9 px at 800 %)
 and moves by whole document pixels. With smart guides on, a small drag snaps back to the start
 position (a dashed guide line shows it). Releasing writes one History row "Move"; Esc while the button
-is held puts the objects back without a row. **Preferences ▸ Edit ▸ Preview drag** (`PreviewDrag`,
+is held puts the objects back without a row. X and Y in the Properties panel follow the objects while
+the button is held (single objects and groups alike). **Preferences ▸ Edit ▸ Preview drag** (`PreviewDrag`,
 default on): off, the old image stays during the drag and only the outline of the objects (1 px blue)
 follows the pointer. Very large selections (more than 400 objects) are shown as a moving picture instead,
 to keep dragging smooth.

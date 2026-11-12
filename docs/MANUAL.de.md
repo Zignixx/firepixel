@@ -128,7 +128,8 @@ Ergebnis nach dem Loslassen. Auswahlrahmen und Griffe verschwinden beim Ziehen u
 zurück. Der Zug beginnt, wenn der Zeiger mehr als 3·√Zoom Bildschirmpixel weit bewegt wurde (100 %: 4 px,
 800 %: 9 px), und verschiebt in ganzen Dokumentpixeln. Mit intelligenten Hilfslinien rastet ein kleiner
 Zug auf die Ausgangslage zurück (eine gestrichelte Hilfslinie zeigt das). Das Loslassen schreibt einen
-Verlaufsschritt „Verschieben“; Esc bei gedrückter Taste setzt die Objekte ohne Schritt zurück.
+Verlaufsschritt „Verschieben“; Esc bei gedrückter Taste setzt die Objekte ohne Schritt zurück. X und Y im
+Eigenschaften-Bedienfeld folgen den Objekten schon bei gedrückter Taste (einzelne Objekte wie Gruppen).
 **Voreinstellungen ▸ Bearbeitung ▸ Vorschau beim Ziehen** (`PreviewDrag`, ab Werk an): aus, bleibt beim
 Ziehen das alte Bild stehen und nur der Umriss der Objekte (1 px blau) folgt dem Zeiger. Sehr große
 Auswahlen (mehr als 400 Objekte) werden als bewegtes Bild gezeigt, damit das Ziehen flüssig bleibt.

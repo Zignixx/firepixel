@@ -1352,7 +1352,10 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
             IRect::new(cx - w / 2, cy - h / 2, cx - w / 2 + w, cy - h / 2 + h)
         }
     };
+    // F153 (FB-139): no margin render while a live move drag runs (zoomed in, it was a render of
+    // up to four views and the upload of all its tiles between two drag steps: the drag froze)
     let margin_due = covered
+        && (live_mv.is_none() || cc.legacy_live)
         && cc.requested == cc.shown
         && cc
             .shown
@@ -1376,6 +1379,31 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
         } else {
             render::snap_to_tiles(visible_dev, extent)
         });
+        // F153 (FB-139): a plain render (no hidden parts, no layers) on the shown image's grid
+        // redraws only the pixels whose looks changed (its display list against the shown one);
+        // a live move step keeps the shown image's part when that covers the view, so zoomed in
+        // a step costs the area of the moved objects, not of the whole view
+        let listed =
+            render::plain_job(&hidden, &layers, mask_edit) && (preview == 0 || live_mv.is_some());
+        let vis_tiles = render::snap_to_tiles(visible_dev, extent);
+        let base = cc
+            .shown
+            .filter(|s| {
+                listed
+                    && !cc.legacy_live
+                    && cc.layers.is_empty()
+                    && s.doc == id
+                    && s.pane == pane
+                    && s.epoch == cc.epoch
+                    && s.page_rect == pr
+                    && (s.zoom - zoom_dev).abs() < 1e-9
+                    && s.gamma == gamma
+                    && s.mask_edit == 0
+                    && (s.dev == dev
+                        || (live_mv.is_some() && s.dev.intersect(&vis_tiles) == vis_tiles))
+            })
+            .and_then(|s| cc.shown_list.clone().map(|l| (s, l)));
+        let dev = base.as_ref().map_or(dev, |(s, _)| s.dev);
         let key = RenderKey {
             doc: id,
             generation,
@@ -1430,6 +1458,8 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                 layers: layers.clone(),
                 prefetch: None,
                 moved,
+                base,
+                listed,
             },
             st.sync_render,
         ) {
@@ -1485,6 +1515,8 @@ fn canvas_ui(ui: &mut Ui, st: &mut AppState, rect: Rect) {
                     layers: layers.clone(),
                     prefetch: Some(token),
                     moved: None,
+                    base: None,
+                    listed: false,
                 };
                 match st.worker.request(job, st.sync_render) {
                     Some(res) => cc.prefetched.push(res),

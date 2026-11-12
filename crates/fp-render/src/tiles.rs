@@ -33,6 +33,44 @@ pub struct DrawOp {
     pub blend: BlendMode,
 }
 
+/// F153 (FB-139): the display list of one page render (the looks in draw order over the canvas
+/// colour) in the document rectangle `rect`; two lists of the same rectangle tell which pixels
+/// differ ([`DisplayList::changed`]).
+#[derive(Clone, Debug)]
+pub struct DisplayList {
+    pub rect: IRect,
+    pub fill: Rgba8,
+    pub underlay: Option<Rgba8>,
+    /// The looks in draw order; holding them keeps the pointers compared by
+    /// [`DisplayList::changed`] valid.
+    pub ops: Vec<DrawOp>,
+}
+
+impl DisplayList {
+    /// Document pixels that can differ between the pages of `self` and `other` (same canvas
+    /// colours): the union of the bounds of the looks between the common start and the common
+    /// end of both draw orders (a look is the same when image, bounds, opacity and blend mode
+    /// are). The page is mixed pixel by pixel, so a pixel outside it sees the same steps in both.
+    pub fn changed(&self, other: &DisplayList) -> IRect {
+        let same = |a: &DrawOp, b: &DrawOp| {
+            Arc::ptr_eq(&a.img, &b.img)
+                && a.img.bounds() == b.img.bounds()
+                && a.opacity == b.opacity
+                && a.blend == b.blend
+        };
+        let (a, b) = (&self.ops, &other.ops);
+        let n = a.len().min(b.len());
+        let head = (0..n).take_while(|&i| same(&a[i], &b[i])).count();
+        let tail = (0..n - head)
+            .take_while(|&i| same(&a[a.len() - 1 - i], &b[b.len() - 1 - i]))
+            .count();
+        a[head..a.len() - tail]
+            .iter()
+            .chain(&b[head..b.len() - tail])
+            .fold(IRect::default(), |r, o| r.union(&o.img.bounds()))
+    }
+}
+
 fn opts(opacity: Opacity, blend: BlendMode) -> CompositeOptions {
     CompositeOptions {
         mode: blend,

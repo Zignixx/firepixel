@@ -687,6 +687,24 @@ pub fn selection_thumb_rect(ctx: &egui::Context) -> Option<Rect> {
 pub const BOX_MAX: f64 = 6000.0;
 
 /// B/H/X/Y der Auswahl mit „Proportionen beibehalten“ (14007).
+/// F153 (FB-139): offset of the running whole-object move drag of the selection (Pointer, Select
+/// Behind, Subselection; whole document pixels as the release commits them), `None` without one.
+pub fn live_move_offset(st: &AppState) -> Option<(f32, f32)> {
+    let d = st.session.active()?;
+    let sel = &d.selection.elements;
+    st.session.tool_overlay().into_iter().find_map(|o| match o {
+        fp_engine::Overlay::Ghost {
+            ids,
+            pixels: false,
+            moved_by: Some(m),
+            ..
+        } if ids.len() == sel.len() && ids.iter().zip(sel).all(|(a, b)| *a == b.0) => {
+            Some((m.x, m.y))
+        }
+        _ => None,
+    })
+}
+
 fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let theme = Theme::current(ui.ctx());
     // während der Textbearbeitung der Rahmen des Texts im Editor (mit allen ungespeicherten
@@ -732,6 +750,9 @@ fn box_q2(ui: &mut Ui, st: &mut AppState, r: Rect) {
         st.session
             .active()
             .and_then(|d| fp_engine::docops::ids_info_bounds(&d.doc, d.page, &d.selection.elements))
+            // F153 (FB-139): during a move drag X/Y follow the dragged objects (single objects
+            // and groups alike; the document itself moves on release)
+            .map(|b| live_move_offset(st).map_or(b, |(dx, dy)| b.translate(dx, dy)))
     });
     // ohne Auswahl (Rechteck, Ellipse, Auto-Form, Auswahlrahmen, Lasso, Zuschneiden, Exportbereich)
     // sind die Felder wie im Original weiß, leer und bedienbar (PARITAET_A W22); eine Eingabe ohne
