@@ -548,3 +548,8 @@ pi-mask-invert = Invert
 pi-current-tool = Current tool
 pi-tool-section-swap = Swap tool options and object properties
 pi-tip-tool-section-swap = Show the tool options above or below the object properties (Firepixel extension)
+# Firepixel extension (FB-151): mask mode "Pixel Alpha"
+pi-mask-pixel-alpha = Pixel Alpha
+pi-tip-mask-pixel-alpha = Firepixel mode: the transparency of the mask's pixels cuts the content, including colour alpha, feather and dither of its fill and stroke. The mask itself is never drawn under the content. Other programs read it as Path outline / Alpha channel.
+# Firepixel extension (FB-146): mask options of a masked object selected as a whole
+pi-tip-mask-group-options = Options of this object's mask, the same as with the mask selected (mask thumbnail in Layers).

@@ -702,6 +702,11 @@ pub fn write_element(e: &Element, ctx: &mut WriteCtx) -> RawNode {
             if g.kind.is_mask() && mf.invert {
                 w.bool(MASK_INVERT_EXT, true);
             }
+            // mask mode "Pixel Alpha" (Firepixel extension, see `MASK_PIXEL_ALPHA_EXT`); only on a
+            // path-outline mask group, whose `GRTi` other readers keep (alpha channel / outline)
+            if g.kind == GroupKind::VectorMask && mf.pixel_alpha {
+                w.bool(MASK_PIXEL_ALPHA_EXT, true);
+            }
             RawNode::list(k!(b"GRPv"), w.finish())
         }
         ElementKind::CompoundShape(cs) => {
@@ -990,6 +995,11 @@ pub const FILL_EDGE_EXT: TagKey = k!(b"fpEi");
 /// (model `MaskFlags::invert`). Written only when on; like [`FILL_EDGE_EXT`] the tag starts with a
 /// lower-case letter, so other readers ignore it and show the plain mask.
 pub const MASK_INVERT_EXT: TagKey = k!(b"fpIb");
+
+/// Firepixel-own mask mode in a mask group `GRPv` (FB-151, TW-298): `fpAb` = 1 marks the mode
+/// "Pixel Alpha" (model `MaskFlags::pixel_alpha`). Written only when on and only on a path-outline
+/// mask group (`GRTi` 0), so other readers see the mode path outline / alpha channel.
+pub const MASK_PIXEL_ALPHA_EXT: TagKey = k!(b"fpAb");
 
 /// Firepixel-own dither density marker in a fill `FPLv` (FB-38, FB-109): `fpOi` = 1..100 per cent
 /// empty pixels (model `Fill::dither_density`), written only when the density is not 0. Other

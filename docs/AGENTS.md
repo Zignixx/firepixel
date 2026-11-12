@@ -235,8 +235,12 @@ Ressourcen (Markdown): `firepixel://docs/agents.md` (diese Datei), `firepixel://
     Maske liegt, wird verborgen; die eigene Deckkraft des Maskenobjekts bestimmt die Stärke; gespeichert im
     Firepixel-eigenen FW-PNG-Tag `fpIb`), `select.pointAt {point, deep: true}` (wie die Teilauswahl: ein
     maskiertes Element liefert seinen Inhalt, FB-80) und `select.pointAt {point, deep: true, mask: true}`
-    (wie die Maskenelement-Auswahl `tool.maskElementSelect`: ein maskiertes Element liefert seine Maske). Skripte: `dom.setElementMaskInvert(bool)` (Firepixel-eigene
-    Methode neben der Referenz-API) und das Feld `invert` des `mask`-Objekts eines Elements
+    (wie die Maskenelement-Auswahl `tool.maskElementSelect`: ein maskiertes Element liefert seine Maske, bei
+    sichtbarer Unterlage der Maske den angeklickten Inhalt, RE spec 81 §3.2), `modify.mask.options {mode:
+    "pixelAlpha"}` (Firepixel-Maskenmodus Pixel-Alpha, FB-151: Alpha des Maskenaussehens, keine Unterlage;
+    FW-PNG-Tag `fpAb`). Skripte: `dom.setElementMaskInvert(bool)`, `dom.setElementMaskPixelAlpha(bool)`
+    (Firepixel-eigene Methoden neben der Referenz-API) und die Felder `invert` und `pixelAlpha` des
+    `mask`-Objekts eines Elements
   * Text und Auswahl: `text.detachFromPath` (Text wird wieder Rahmen fester Breite = Breite vor dem Anfügen,
     mittig über den Pfadgrenzen; der Pfad kommt oben in die Ebene, Auswahl danach [Pfad, Text]),
     `select.similar {tolerance?}` (gleiche Füllung, gleicher Strich, gleiche Deckkraft und gleicher Mischmodus),

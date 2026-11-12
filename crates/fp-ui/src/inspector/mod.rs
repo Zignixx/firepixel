@@ -381,7 +381,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
             + tool_section::content_height(ui, &theme, s, body.width().max(BODY_WIDTH))
     });
     let content_h = content_height(&theme) + sec_h;
-    let need_w = body.width() + 0.5 < BODY_WIDTH;
+    let need_w = body.width() + 0.5 < body_width(st, &state);
     let need_h = !half && body.height() + 0.5 < content_h;
     if !need_w && !need_h {
         body_contents(ui, st, body, &state, half, &theme, section.as_ref());
@@ -401,7 +401,11 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
         child.spacing_mut().scroll = hscroll_style();
         child.style_mut().always_scroll_the_only_direction = true;
         let size = vec2(
-            if need_w { BODY_WIDTH } else { body.width() },
+            if need_w {
+                body_width(st, &state)
+            } else {
+                body.width()
+            },
             if need_h { content_h } else { body.height() },
         );
         let out = egui::ScrollArea::new([need_w, need_h])
@@ -468,6 +472,22 @@ const W5: f32 = 180.0;
 /// Breite, die der Inspektor ohne Bildlauf braucht.
 pub const BODY_WIDTH: f32 = 2.0 + W1 + W3 + W5 + 4.0;
 
+/// Firepixel extension (FB-146, TW-297): does the inspector show the column with the mask options
+/// of a mask group selected as a whole? Only under an object layout (selection header Q1 14101),
+/// not under a tool layout.
+fn mask_group_column_shown(st: &AppState, state: &InspectorState) -> bool {
+    state.quads[0] == 14101 && obj_quads::whole_mask_group(st).is_some()
+}
+
+/// Width the inspector needs without a scroll bar: [`BODY_WIDTH`], plus the mask group column.
+fn body_width(st: &AppState, state: &InspectorState) -> f32 {
+    if mask_group_column_shown(st, state) {
+        BODY_WIDTH + obj_quads::MASK_GROUP_COLUMN_W
+    } else {
+        BODY_WIDTH
+    }
+}
+
 /// Object quadrants and, if any, the tool options section with its separator (FB-149): the
 /// section below the quadrants, or on top when swapped.
 fn body_contents(
@@ -515,7 +535,13 @@ fn quadrants(
     let w5 = W5;
     let x0 = body.left() + 2.0;
     let x1 = x0 + w1;
-    let x3 = (body.right() - 4.0 - w5).max(x1 + 200.0);
+    let column = mask_group_column_shown(st, state);
+    let wc = if column {
+        obj_quads::MASK_GROUP_COLUMN_W
+    } else {
+        0.0
+    };
+    let x3 = (body.right() - 4.0 - w5 - wc).max(x1 + 200.0);
     let x2 = (x1 + W3).min(x3);
     let rects = [
         Rect::from_min_max(pos2(x0, top), pos2(x1, top + rh)),
@@ -598,6 +624,34 @@ fn quadrants(
                 );
             }
         }
+    }
+    // Firepixel extension (FB-146, TW-297): the mask options of a mask group selected as a whole
+    // in a column of their own right of Q5/Q6, behind a separator; the measured quads stay as
+    // they are
+    if column {
+        let xc = x2 + w5;
+        let top_r = Rect::from_min_max(pos2(xc, top), pos2(xc + wc, top + rh));
+        let bottom_r = Rect::from_min_max(pos2(xc, top + rh), pos2(xc + wc, top + 2.0 * rh));
+        let p = ui.painter();
+        let y_end = if half { mid_y } else { top + 2.0 * rh };
+        p.vline(xc + 3.5, (top + 3.0)..=(y_end - 3.0), line);
+        p.vline(xc + 4.5, (top + 3.0)..=(y_end - 3.0), light);
+        let area = Rect::from_min_max(top_r.min + vec2(6.0, 0.0), pos2(xc + wc, y_end));
+        let mut child = ui.new_child(
+            egui::UiBuilder::new()
+                .id_salt("mask-group-column")
+                .max_rect(area)
+                .layout(egui::Layout::top_down(egui::Align::Min)),
+        );
+        child.set_clip_rect(area.intersect(ui.clip_rect()));
+        fields::set_fit(ui.ctx(), true);
+        obj_quads::mask_group_column(
+            &mut child,
+            st,
+            top_r.translate(vec2(6.0, 0.0)),
+            (!half).then(|| bottom_r.translate(vec2(6.0, 0.0))),
+        );
+        fields::set_fit(ui.ctx(), false);
     }
 }
 

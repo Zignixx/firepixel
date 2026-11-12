@@ -1701,7 +1701,8 @@ impl Renderer {
             // Pfadumriss mit „Füllung und Pinselstrich anzeigen“ (Flags 0x01 und 0x10, re 26 §3.1);
             // the underlay also stays while a bitmap mask is edited and while it is painted (live,
             // RE spec 73 §0.5 and §7, FB-90; supersedes RE spec 68 §4.2 rule 5 and §4.1 `e9`/`e10`)
-            let show = g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs;
+            // (the Firepixel mode "Pixel Alpha" never draws it, FB-151)
+            let show = g.mask_underlay();
             let mask = self.mask_values(doc, e, g, me, show, st, rep);
             let invert = mask_invert(g, me);
             let b = img.bounds();
@@ -1788,6 +1789,9 @@ impl Renderer {
     /// - path outline / alpha channel ("mask to path"): a path gives the fill coverage of its
     ///   geometry (colour, colour alpha and stroke do not count; the feather only without `show`),
     ///   a bitmap its alpha, anything else the alpha of its look;
+    /// - Firepixel mode "Pixel Alpha" (FB-151, on a path-outline group): the alpha of the mask
+    ///   object's rendered look (fill and stroke with colour alpha, feather, dither); a bitmap its
+    ///   alpha as in alpha channel mode;
     /// - grayscale ("mask to image"): Rec. 709 luma × alpha of the mask object's rendered look
     ///   (fill colour, gradient, pattern, feather and stroke count; red → 21 %), a bitmap in display
     ///   form (white = visible). The bitmap's live paint pixels (BA-039 override) count during a
@@ -1811,7 +1815,13 @@ impl Renderer {
             }
             i
         };
+        // Firepixel mode "Pixel Alpha" (FB-151): the alpha of the mask object's look (a bitmap
+        // keeps the alpha channel branch below, so its live paint pixels count)
+        let pixel_alpha = g.kind == GroupKind::VectorMask && g.mask_flags.pixel_alpha;
         let img: Option<RgbaImage> = match &me.kind {
+            _ if pixel_alpha && !matches!(me.kind, ElementKind::Bitmap(_)) => {
+                self.look(doc, me, st, rep).map(|l| (*l.image).clone())
+            }
             ElementKind::Bitmap(b) => {
                 let painted = st.over.as_ref().filter(|o| o.id == me.id.0);
                 let src = match painted {

@@ -371,6 +371,9 @@ pub struct ElementMask<'a> {
     pub single: bool,
     /// Firepixel extension (FB-35): inverted mask (what lies inside the mask is hidden).
     pub invert: bool,
+    /// Firepixel extension (FB-151): mode "Pixel Alpha" (see [`MaskFlags::pixel_alpha`]); only
+    /// together with `to_path`.
+    pub pixel_alpha: bool,
 }
 
 /// Maskenflags einer Maskengruppe.
@@ -390,6 +393,15 @@ pub struct MaskFlags {
     /// default off, files of the reference format are unchanged.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub invert: bool,
+    /// Firepixel extension (FB-151, TW-298): mask mode "Pixel Alpha", a third mode next to path
+    /// outline / alpha channel and grayscale. The mask value is the alpha of the mask object's
+    /// rendered look (a bitmap's pixel alpha; for a path its fill and stroke with colour alpha,
+    /// feather and dither), and the mask object itself is never drawn (no underlay, whatever "Show
+    /// fill and stroke" says). Only meaningful with `GroupKind::VectorMask` ("mask to path"), so
+    /// readers that do not know it fall back to path outline / alpha channel. FW-PNG: the
+    /// Firepixel-own tag `fpAb` in `GRPv`; default off.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub pixel_alpha: bool,
 }
 
 impl Default for MaskFlags {
@@ -400,6 +412,7 @@ impl Default for MaskFlags {
             hide_attrs: false,
             auto_expand: false,
             invert: false,
+            pixel_alpha: false,
         }
     }
 }
@@ -429,6 +442,15 @@ impl GroupElem {
             b |= 0x20;
         }
         Some(b)
+    }
+
+    /// Is the mask object drawn under the content ("Show fill and stroke", the underlay; RE spec
+    /// 26 §3.1, RE spec 81 §2.1)? Only in path outline / alpha channel mode with the attributes
+    /// shown, never in grayscale and never in the Firepixel mode "Pixel Alpha" (FB-151).
+    pub fn mask_underlay(&self) -> bool {
+        self.kind == GroupKind::VectorMask
+            && !self.mask_flags.hide_attrs
+            && !self.mask_flags.pixel_alpha
     }
 
     /// Grayscale mask ("mask to image", `GRTi` 1) whose mask object is a bitmap: its pixels are
@@ -914,6 +936,7 @@ impl Element {
             auto_expand: g.mask_flags.auto_expand,
             single: self.masked_single().is_some(),
             invert: g.mask_flags.invert,
+            pixel_alpha: g.kind == GroupKind::VectorMask && g.mask_flags.pixel_alpha,
         })
     }
 

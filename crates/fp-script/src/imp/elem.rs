@@ -975,6 +975,15 @@ fn element_get(
                         ("autoExpandImages", JsValue::from(g.mask_flags.auto_expand)),
                         // Firepixel extension (FB-35): inverted mask
                         ("invert", JsValue::from(g.mask_flags.invert)),
+                        // Firepixel extension (FB-151): mode "Pixel Alpha" (then `mode` reads
+                        // "mask to path", the fallback of other readers)
+                        (
+                            "pixelAlpha",
+                            JsValue::from(
+                                g.kind == fp_model::element::GroupKind::VectorMask
+                                    && g.mask_flags.pixel_alpha,
+                            ),
+                        ),
                     ],
                     ctx,
                 )
@@ -1891,8 +1900,25 @@ fn element_set(
                     match mode.as_deref() {
                         // "alpha" (alpha channel) is the bitmap-mask name of "mask to path" (RE spec 68 §4.2)
                         Some("mask to path") | Some("alpha") => g.kind = fp_model::element::GroupKind::VectorMask,
-                        Some("mask to image") | Some("grayscale") => g.kind = fp_model::element::GroupKind::BitmapMask,
+                        Some("mask to image") | Some("grayscale") => {
+                            g.kind = fp_model::element::GroupKind::BitmapMask;
+                            g.mask_flags.pixel_alpha = false;
+                        }
+                        // Firepixel mode (FB-151)
+                        Some("pixel alpha") => {
+                            g.kind = fp_model::element::GroupKind::VectorMask;
+                            g.mask_flags.pixel_alpha = true;
+                        }
                         _ => {}
+                    }
+                    // Firepixel extension (FB-151): after `mode`, so a read-modify-write keeps it;
+                    // an explicit grayscale mode wins
+                    let gray = matches!(mode.as_deref(), Some("mask to image") | Some("grayscale"));
+                    if let Some(v) = b("pixelAlpha").filter(|_| !gray) {
+                        if v {
+                            g.kind = fp_model::element::GroupKind::VectorMask;
+                        }
+                        g.mask_flags.pixel_alpha = v;
                     }
                     e.cache = None;
                 }

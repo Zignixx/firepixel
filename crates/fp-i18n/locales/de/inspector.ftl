@@ -545,3 +545,8 @@ pi-mask-invert = Invertieren
 pi-current-tool = Aktuelles Werkzeug
 pi-tool-section-swap = Werkzeugoptionen und Objekteigenschaften tauschen
 pi-tip-tool-section-swap = Werkzeugoptionen über oder unter den Objekteigenschaften anzeigen (Firepixel-Erweiterung)
+# Firepixel-Erweiterung (FB-151): Maskenmodus „Pixel-Alpha“
+pi-mask-pixel-alpha = Pixel-Alpha
+pi-tip-mask-pixel-alpha = Firepixel-Modus: Die Transparenz der Maskenpixel schneidet den Inhalt zu, auch Farbalpha, weiche Kante und Dithering von Füllung und Strich. Die Maske selbst wird nie unter dem Inhalt gezeichnet. Andere Programme lesen sie als Pfadumriss bzw. Alphakanal.
+# Firepixel-Erweiterung (FB-146): Maskenoptionen eines als Ganzes gewählten maskierten Objekts
+pi-tip-mask-group-options = Optionen der Maske dieses Objekts, dieselben wie bei gewählter Maske (Maskenminiatur in Ebenen).

@@ -135,6 +135,19 @@ pub static EXT_METHODS: &[(&str, MethodSpec)] = &[
             ret: TypeCode::Void,
         },
     ),
+    // mask mode "Pixel Alpha" of the selected masked elements (FB-151, TW-298)
+    (
+        "Document",
+        MethodSpec {
+            name: "setElementMaskPixelAlpha",
+            params: &[ParamSpec {
+                name: "pixelAlpha",
+                code: TypeCode::Bool,
+                default: DefaultArg::Req,
+            }],
+            ret: TypeCode::Void,
+        },
+    ),
 ];
 
 /// Index einer Klasse zum JS-Namen.

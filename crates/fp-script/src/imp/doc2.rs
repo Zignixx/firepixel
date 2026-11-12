@@ -1822,6 +1822,20 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             edit_mask_groups(doc, |g| g.mask_flags.invert = on)?;
             u()
         }
+        // Firepixel extension (FB-151): mask mode "Pixel Alpha" (`bindings::EXT_METHODS`); on
+        // switches the mask to path outline / alpha channel with the pixel alpha flag
+        "setElementMaskPixelAlpha" => {
+            let on = a(0).bool();
+            edit_mask_groups(doc, |g| {
+                if g.kind.is_mask() {
+                    if on {
+                        g.kind = fp_model::element::GroupKind::VectorMask;
+                    }
+                    g.mask_flags.pixel_alpha = on;
+                }
+            })?;
+            u()
+        }
         "setElementMaskShowAttrs" => {
             let on = a(0).bool();
             edit_mask_groups(doc, |g| g.mask_flags.hide_attrs = !on)?;
@@ -1831,7 +1845,11 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             // "mask to image" = grayscale (`GRTi` 1), "mask to path" = path outline / alpha channel
             // (`GRTi` 2), as the original records them (RE spec 68 §2.2, §4.1)
             let mode = arg_str(args, 0).to_lowercase();
-            let kind = if mode.contains("image") || mode.contains("gray") || mode.contains("grey") {
+            // Firepixel mode "Pixel Alpha" (FB-151): also accepted here
+            let pixel = mode.replace([' ', '_', '-'], "") == "pixelalpha";
+            let kind = if pixel {
+                Some(fp_model::element::GroupKind::VectorMask)
+            } else if mode.contains("image") || mode.contains("gray") || mode.contains("grey") {
                 Some(fp_model::element::GroupKind::BitmapMask)
             } else if mode.contains("path") || mode.contains("alpha") {
                 Some(fp_model::element::GroupKind::VectorMask)
@@ -1842,6 +1860,7 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
                 edit_mask_groups(doc, |g| {
                     if g.kind.is_mask() {
                         g.kind = kind;
+                        g.mask_flags.pixel_alpha = pixel;
                     }
                 })?;
             }

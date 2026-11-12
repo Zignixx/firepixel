@@ -1,5 +1,6 @@
 //! K-4: inspector of a mask group (re 29b §1 b, CT-B observation): it looks like a normal group,
-//! "Gruppieren (2)" for three selected objects, no mask options.
+//! "Gruppieren (2)" for three selected objects, no mask options in the measured quads. Since FB-146
+//! (TW-297, Firepixel extension) the mask options sit in an extra column right of Q5/Q6.
 
 use egui::epaint::Shape;
 use egui::vec2;
@@ -44,5 +45,19 @@ fn k4_mask_group_inspector_like_a_group() {
     let texts = painted_texts(&h);
     assert!(texts.iter().any(|t| t == "Gruppieren (2)"), "Kopfzeile: {texts:?}");
     let mask = fp_i18n::t("pi-mask");
-    assert!(!texts.iter().any(|t| *t == mask || t == "Pfadumriss" || t == "Graustufendarstellung"), "keine Maskenoptionen: {texts:?}");
+    // the measured quads end at 2 + 126 + 590 + 180 px; the Firepixel column (FB-146) lies right of it
+    let mut placed = Vec::new();
+    fn walk(s: &Shape, out: &mut Vec<(String, f32)>) {
+        match s {
+            Shape::Text(t) => out.push((t.galley.text().to_string(), t.pos.x)),
+            Shape::Vec(v) => v.iter().for_each(|x| walk(x, out)),
+            _ => {}
+        }
+    }
+    for cs in &h.output().shapes {
+        walk(&cs.shape, &mut placed);
+    }
+    let opts: Vec<&(String, f32)> = placed.iter().filter(|(t, _)| *t == mask || t == "Pfadumriss" || t == "Graustufendarstellung").collect();
+    assert!(!opts.is_empty(), "FB-146 column: {texts:?}");
+    assert!(opts.iter().all(|(_, x)| *x >= 2.0 + 126.0 + 590.0 + 180.0), "keine Maskenoptionen in den gemessenen Quadranten: {opts:?}");
 }

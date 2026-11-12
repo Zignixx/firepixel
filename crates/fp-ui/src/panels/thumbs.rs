@@ -191,13 +191,9 @@ pub fn element_thumb(
 /// content alone, unmasked. Any other element is shown as it is. Mask editing changes nothing (the
 /// reference's stretched content while a bitmap mask is edited is not copied).
 pub fn thumb_subject(e: &Arc<Element>) -> Arc<Element> {
-    use fp_model::{ElementKind, GroupKind};
+    use fp_model::ElementKind;
     match &e.kind {
-        ElementKind::Group(g)
-            if g.kind.is_mask()
-                && g.mask_flags.enabled
-                && !(g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs) =>
-        {
+        ElementKind::Group(g) if g.kind.is_mask() && g.mask_flags.enabled && !g.mask_underlay() => {
             let mut c = (**e).clone();
             if let ElementKind::Group(g) = &mut c.kind {
                 g.mask_flags.enabled = false;

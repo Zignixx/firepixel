@@ -122,6 +122,17 @@ pub fn mask_owner(doc: &Document, page: usize, id: ElementId) -> Option<Arc<Elem
     doc.element_at(&p).cloned()
 }
 
+/// Like [`mask_owner`], but also for an object **inside** a mask object (a child of a group mask,
+/// RE spec 81 §3.2): the masked element of the innermost mask the address of `id` passes through.
+/// A selected child of a group mask gets the mask inspector of its own kind with the options of
+/// that mask (RE spec 81 §6 D5). `None` for objects outside every mask (also content children).
+pub fn mask_owner_of(doc: &Document, page: usize, id: ElementId) -> Option<Arc<Element>> {
+    let mut p = find_on_page(doc, page, id)?;
+    let k = p.steps.iter().rposition(|s| *s == PathStep::Mask)?;
+    p.steps.truncate(k);
+    doc.element_at(&p).cloned()
+}
+
 /// RE spec 75 §2.4: the element whose opacity and blend mode the Layers panel and the Properties
 /// show and change for the selected `id`. A selected mask (the mask thumbnail) stands for the
 /// masked element: its owner (a masked single element or a mask group), never the mask object,
@@ -1405,6 +1416,19 @@ pub fn element_bounds(doc: &Document, e: &Element) -> Option<Rect> {
     bounds_depth(doc, e, 0)
 }
 
+/// Area in which `e` can be hit: [`element_bounds`], for a mask group whose underlay ("Show fill
+/// and stroke") is drawn also the bounds of its mask, which shows there (RE spec 81 §3.2: the
+/// underlay is clickable; the bounds themselves stay those of the content, §3.1 a).
+pub fn hit_bounds(doc: &Document, e: &Element) -> Option<Rect> {
+    let b = element_bounds(doc, e);
+    match &e.kind {
+        ElementKind::Group(g) if g.kind.is_mask() && g.mask_flags.enabled && g.mask_underlay() => {
+            union_opt(b, g.effective_mask().and_then(|m| element_bounds(doc, m)))
+        }
+        _ => b,
+    }
+}
+
 fn bounds_depth(doc: &Document, e: &Element, depth: u32) -> Option<Rect> {
     if depth > 24 {
         return None;
@@ -2613,9 +2637,8 @@ fn hit_depth(
                 return false;
             }
             // „Füllung und Pinselstrich anzeigen“: auch die sichtbare Maske trifft (re 26 §3.1)
-            if g.kind == fp_model::element::GroupKind::VectorMask
+            if g.mask_underlay()
                 && g.mask_flags.enabled
-                && !g.mask_flags.hide_attrs
                 && g.effective_mask()
                     .is_some_and(|m| hit_depth(doc, m, p, geo, opt, depth + 1))
             {
@@ -2710,10 +2733,19 @@ pub fn deep_hit(
     cur
 }
 
-/// Subselection target (RE spec 68 §3.2 rule 1, M-7): descends into groups like [`deep_hit`], but
-/// a masked element (mask group) gives its **mask** (path step `Mask`) instead of its content —
-/// the Subselection "enters" the element and the child it reaches is the mask. Pointer + Alt-click
-/// uses the same target; Select Behind never does (whole objects only).
+/// Subselection target (RE spec 68 §3.2 rule 1, M-7; RE spec 81 §3.2): descends into groups like
+/// [`deep_hit`]; at a masked element (mask group) the rule depends on the underlay ("Show fill and
+/// stroke" in path outline / alpha channel mode, [`fp_model::GroupElem::mask_underlay`]):
+/// - underlay **off** (also grayscale): the **mask** (path step `Mask`, as a whole also for a
+///   group mask, RE spec 81 §3.2 rule 1, measured `t_darken`, `tgs_darken`, `nest`);
+/// - underlay **on** (rule 2): (i) a child of a group mask with own pixels at `p` (`gmb_pi`),
+///   (ii) a content child of a mask group with several contents (`ts_darken`, `tpi_darken`),
+///   (iii) for a masked single element the masked element itself (`pin1`), (iv) otherwise (only
+///   the underlay is hit) the mask. The order of (i) before (ii) with several contents is
+///   derived, not measured (RE spec 81 §7.2).
+///
+/// Used by the Mask Element Selection (the measured Subselection target), Pointer + Alt-click
+/// (RE spec 81 §3.2 rule 4) and `select.pointAt {deep, mask}`; Select Behind never uses it.
 pub fn subselect_hit(
     doc: &Document,
     path: &ElementPath,
@@ -2728,7 +2760,10 @@ pub fn subselect_hit(
             break;
         };
         if g.kind.is_mask() && g.mask.is_some() {
-            cur.steps.push(PathStep::Mask);
+            match underlay_target(doc, e, g, p, geo, opt) {
+                Some(steps) => cur.steps.extend(steps),
+                None => cur.steps.push(PathStep::Mask),
+            }
             break;
         }
         let Some(i) = g
@@ -2741,6 +2776,94 @@ pub fn subselect_hit(
         cur.steps.push(PathStep::Child(i));
     }
     cur
+}
+
+/// Rule 2 of [`subselect_hit`] at the mask group `e`: the path steps below `e` to the target, or
+/// `None` for the mask (underlay off, or only the underlay hit).
+fn underlay_target(
+    doc: &Document,
+    e: &Element,
+    g: &fp_model::GroupElem,
+    p: Point,
+    geo: &dyn GeometryOps,
+    opt: &HitOptions,
+) -> Option<Vec<PathStep>> {
+    if !(g.mask_flags.enabled && g.mask_underlay()) {
+        return None;
+    }
+    let m = g.mask.as_ref()?;
+    // (i) a child of a group mask (a plain group as the mask object) with own pixels at `p`
+    if let ElementKind::Group(mg) = &m.kind
+        && mg.kind == fp_model::GroupKind::Normal
+        && mg.smart_shape.is_none()
+        && let Some(i) = mg
+            .children
+            .iter()
+            .position(|c| own_pixels_hit(doc, c, p, geo, opt))
+    {
+        return Some(vec![PathStep::Mask, PathStep::Child(i)]);
+    }
+    // the content shows only where the mask lets it through
+    let covered = g.mask_flags.invert || hit_element(doc, m, p, geo, opt);
+    if !covered {
+        return None;
+    }
+    // (iii) a masked single element: the element itself; (ii) a content child
+    if let Some((c, _)) = e.masked_single() {
+        return own_pixels_hit(doc, c, p, geo, opt).then(Vec::new);
+    }
+    g.children
+        .iter()
+        .position(|c| own_pixels_hit(doc, c, p, geo, opt))
+        .map(|i| vec![PathStep::Child(i)])
+}
+
+/// Does `e` show pixels of its own at `p`? A masked element only with its content where its mask
+/// covers `p` (its underlay does not count, RE spec 81 §3.2 `gmb_pi` at (220,100)).
+fn own_pixels_hit(
+    doc: &Document,
+    e: &Element,
+    p: Point,
+    geo: &dyn GeometryOps,
+    opt: &HitOptions,
+) -> bool {
+    match &e.kind {
+        ElementKind::Group(g) if g.kind.is_mask() && g.mask_flags.enabled => {
+            let covered = g.mask_flags.invert
+                || g.effective_mask()
+                    .is_none_or(|m| hit_element(doc, m, p, geo, opt));
+            covered
+                && g.children
+                    .iter()
+                    .any(|c| own_pixels_hit(doc, c, p, geo, opt))
+        }
+        _ => hit_element(doc, e, p, geo, opt),
+    }
+}
+
+/// RE spec 81 §3.2 rule 3: a content child of a mask group with the underlay on, reached by the
+/// Subselection rule of [`subselect_hit`]; a further click on it selects the mask group. Returns
+/// the mask group's id when `id` is such a child (a direct child, not the mask).
+pub fn underlay_content_parent(doc: &Document, page: usize, id: ElementId) -> Option<ElementId> {
+    let path = find_on_page(doc, page, id)?;
+    let (last, parent_steps) = path.steps.split_last()?;
+    if !matches!(last, PathStep::Child(_)) {
+        return None;
+    }
+    let mut parent = path.clone();
+    parent.steps = parent_steps.to_vec();
+    let pe = doc.element_at(&parent)?;
+    match &pe.kind {
+        ElementKind::Group(g)
+            if g.kind.is_mask()
+                && g.mask.is_some()
+                && g.mask_flags.enabled
+                && g.mask_underlay() =>
+        {
+            Some(pe.id)
+        }
+        _ => None,
+    }
 }
 
 /// Firepixel extension (FB-35, E-1): with a **group mask** (or one of its descendants) selected,

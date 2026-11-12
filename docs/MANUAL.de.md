@@ -442,10 +442,14 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   **Inhalt** (auch einen einzelnen maskierten Pfad oder eine Bitmap), der sich dann verschieben,
   skalieren, punktweise bearbeiten oder bemalen lässt, während die Maske bleibt (Firepixel-Erweiterung).
   Die **Maskenelement-Auswahl** im Flyout der Teilauswahl (A / 1 schaltet zwischen beiden um; Symbol und
-  Zeiger zeigen den Teilauswahl-Pfeil mit einem Maskenzeichen) wählt stattdessen die **Maske** des
-  angeklickten maskierten Objekts, ebenso ein Klick mit dem *Zeiger* bei gedrückter Alt-Taste (auf einer normalen Gruppe wählt Zeiger +
-  Alt-Klick das getroffene Kind; Alt-Ziehen dupliziert weiterhin); *Hintere auswählen* wählt nie eine
-  Maske. Ein Klick auf die Maskenminiatur im Ebenen-Bedienfeld wirkt wie *Maske bearbeiten* im
+  Zeiger zeigen den Teilauswahl-Pfeil mit einem Maskenzeichen) wählt wie die Teilauswahl des Originals,
+  ebenso ein Klick mit dem *Zeiger* bei gedrückter Alt-Taste (auf einer normalen Gruppe wählt Zeiger +
+  Alt-Klick das getroffene Kind; Alt-Ziehen dupliziert weiterhin): Bei ausgeschaltetem *Füllung und
+  Pinselstrich anzeigen*, in *Graustufen* und in *Pixel-Alpha* wählt sie die **Maske** des angeklickten
+  maskierten Objekts; bei sichtbarer Unterlage das Angeklickte: ein Kind einer Gruppenmaske mit Pixeln an der
+  Stelle, sonst ein Inhaltsobjekt einer Maskengruppe (ein zweiter Klick darauf wählt die Maskengruppe), sonst
+  ein einzelnes maskiertes Objekt selbst, und die **Maske**, wo nur die Unterlage zu sehen ist; *Hintere
+  auswählen* wählt nie eine Maske. Ein Klick auf die Maskenminiatur im Ebenen-Bedienfeld wirkt wie *Maske bearbeiten* im
   Kontextmenü: Die Maske wird gewählt, ihre Miniatur bekommt einen hellgrünen Rahmen, die Zeile bleibt
   hervorgehoben und zeigt ein Maskensymbol in der zweiten Spalte; eine Bitmapmaske geht in die
   Bitmap-Bearbeitung. Ein Klick auf den Namen der Zeile wählt wieder das Objekt und rahmt dessen eigene
@@ -465,6 +469,18 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   außerhalb zeigt (die eigene Deckkraft des Maskenobjekts bzw. ein Grauwert im Graustufenmodus bestimmt,
   wie stark). Invertierte Masken stehen in einem Firepixel-eigenen Tag der FW-PNG-Datei; andere Programme
   zeigen die normale Maske.
+  Ein dritter Maskenmodus **Pixel-Alpha** (Firepixel-Erweiterung) steht neben *Pfadumriss* / *Alphakanal* und
+  *Graustufen* (Vektormaske: direkt über *Pfadumriss*; Bitmapmaske: rechts neben *Alphakanal*): Die
+  Transparenz der Maskenpixel schneidet den Inhalt zu, auch Farbalpha, weiche Kante und Dithering von Füllung
+  und Strich eines Pfads, und das Maskenobjekt wird nie unter dem Inhalt gezeichnet, egal was *Füllung und
+  Pinselstrich anzeigen* sagt. Er steht in einem Firepixel-eigenen Tag; andere Programme lesen *Pfadumriss* /
+  *Alphakanal*. Skripte: `mask.pixelAlpha`, `dom.setElementMaskPixelAlpha(bool)`.
+  Ist ein maskiertes Objekt als Ganzes gewählt (Klick auf der Leinwand, auf seinen Namen oder seine
+  Objektminiatur in Ebenen), zeigt das Eigenschaften-Bedienfeld seinen normalen Inspektor und in einer
+  zusätzlichen Spalte am rechten Ende die Optionen seiner Maske (*Maske:*-Modi, *Füllung und Pinselstrich
+  anzeigen* bei Vektormasken, *Invertieren*); sie wirken wie die des Masken-Inspektors. Eine Zeile der
+  Ebenen-Gruppenansicht für ein Objekt einer Gruppenmaske zeigt den Masken-Inspektor der Art dieses Objekts
+  (eine Bitmap: *Bitmap-Maske*) mit den Optionen der Maske.
 - **Maskenmodi.** *Als Maske gruppieren* legt immer eine Graustufenmaske an, *Füllung und Pinselstrich
   anzeigen* aus; das maskierte Element bleibt gewählt (Verlaufszeile *Gruppieren*). *Als Maske einfügen* gibt
   bei einer Vektormaske den Modus *Pfadumriss*, bei einer Bitmapmaske *Graustufen* und wählt die Maske;

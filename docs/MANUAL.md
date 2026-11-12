@@ -404,10 +404,14 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
 - **Working with masks:** a *Subselection* click on a masked object selects its **content** (also a
   single masked path or bitmap), which can then be moved, scaled, point-edited or painted into while the
   mask stays (Firepixel extension). The **Mask Element Selection** in the Subselection flyout (A / 1
-  switches between the two; icon and cursor show the Subselection arrow with a mask badge) selects the
-  **mask** of the clicked masked object instead, and so does a
+  switches between the two; icon and cursor show the Subselection arrow with a mask badge) picks like the
+  original's Subselection, and so does a
   *Pointer* click with Alt held (on a normal group, Pointer + Alt-click selects the clicked child;
-  Alt-drag still duplicates); *Select Behind* never picks a mask. A click on the mask thumbnail in the
+  Alt-drag still duplicates): with *Show fill and stroke* off, in *Grayscale* and in *Pixel Alpha* it selects
+  the **mask** of the clicked masked object; with the underlay shown it selects what was clicked: a child
+  of a group mask with pixels there, else a content object of a mask group (a second click on it
+  selects the mask group), else a single masked object itself, and the **mask** where only the underlay
+  shows; *Select Behind* never picks a mask. A click on the mask thumbnail in the
   Layers panel works like the context menu's *Edit Mask*: the mask is selected, its thumbnail gets a
   bright green frame, the row stays highlighted and shows a mask icon in its second column; a bitmap
   mask goes into bitmap editing. A click on the row's name selects the object again and frames its own
@@ -424,6 +428,17 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   right of *Alpha channel*) that hides what lies inside the mask and keeps everything outside (the mask object's own
   opacity, or a grey value in grayscale mode, sets how strongly). Inverted masks are stored in a
   Firepixel-own tag of the FW-PNG file; other programs show the plain mask.
+  A third mask mode **Pixel Alpha** (Firepixel extension) sits beside *Path outline* / *Alpha channel* and
+  *Grayscale* (vector mask: right above *Path outline*; bitmap mask: right of *Alpha channel*): the
+  transparency of the mask's pixels cuts the content, including the colour alpha, feather and dither of a
+  path's fill and stroke, and the mask object itself is never drawn under the content, whatever *Show fill
+  and stroke* says. It is stored in a Firepixel-own tag; other programs read *Path outline* / *Alpha
+  channel*. Scripts: `mask.pixelAlpha`, `dom.setElementMaskPixelAlpha(bool)`.
+  When a masked object is selected as a whole (canvas click, its name or object thumbnail in Layers), the
+  Properties panel shows its normal inspector and, in an extra column at the right end, the options of its
+  mask (*Mask:* modes, *Show fill and stroke* for vector masks, *Invert*); they act like those of the mask
+  inspector. A row of the Layers group tree for an object of a group mask shows the mask inspector of that
+  object's kind (a bitmap: *Bitmap mask*) with the options of the mask.
 - **Mask modes.** *Group as Mask* always makes a grayscale mask with *Show fill and stroke* off; the masked
   element stays selected (History row *Group*). *Paste as Mask* gives a vector mask in *Path outline* mode
   and a bitmap mask in *Grayscale* mode and selects the mask; *Paste Inside* uses *Path outline* with

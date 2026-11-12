@@ -497,10 +497,15 @@ fn selection_q1(ui: &mut Ui, st: &mut AppState, r: Rect) {
     if st
         .session
         .active()
-        .and_then(|ds| fp_engine::docops::mask_owner(&ds.doc, ds.page, e.id))
+        .and_then(|ds| fp_engine::docops::mask_owner_of(&ds.doc, ds.page, e.id))
         .is_some()
     {
-        let head = if matches!(e.kind, fp_model::ElementKind::Bitmap(_)) {
+        // (a child of a group mask: by its own kind, a masked bitmap by its content, RE spec 81
+        // §3.2)
+        let head = if matches!(
+            super::layouts::insp_elem(&e).kind,
+            fp_model::ElementKind::Bitmap(_)
+        ) {
             t("pi-mask-head-bitmap")
         } else {
             t("pi-mask-head-vector")

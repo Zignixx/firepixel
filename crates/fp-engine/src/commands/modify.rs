@@ -2148,9 +2148,9 @@ pub(super) fn register(r: &mut CommandRegistry) {
             .opt(
                 "mode",
                 ParamKind::Enum {
-                    values: vec!["path".into(), "image".into()],
+                    values: vec!["path".into(), "image".into(), "pixelAlpha".into()],
                 },
-                "path = Pfadumriss, image = Graustufendarstellung",
+                "path = Pfadumriss/Alphakanal, image = Graustufendarstellung, pixelAlpha = Pixel-Alpha (Firepixel-Erweiterung FB-151)",
             )
             .opt(
                 "invert",
@@ -2183,9 +2183,21 @@ pub(super) fn register(r: &mut CommandRegistry) {
                                 }
                                 // the mode is a switch on the mask group (`GRTi`), never the
                                 // kind of the mask object (RE spec 68 §2.4 rule 2)
+                                // (FB-151: "Pixel Alpha" is a Firepixel flag on a path-outline
+                                // group, so other readers fall back to path outline / alpha)
                                 match mode.as_deref() {
-                                    Some("path") => g.kind = fp_model::GroupKind::VectorMask,
-                                    Some("image") => g.kind = fp_model::GroupKind::BitmapMask,
+                                    Some("path") => {
+                                        g.kind = fp_model::GroupKind::VectorMask;
+                                        g.mask_flags.pixel_alpha = false;
+                                    }
+                                    Some("image") => {
+                                        g.kind = fp_model::GroupKind::BitmapMask;
+                                        g.mask_flags.pixel_alpha = false;
+                                    }
+                                    Some("pixelAlpha") => {
+                                        g.kind = fp_model::GroupKind::VectorMask;
+                                        g.mask_flags.pixel_alpha = true;
+                                    }
                                     _ => {}
                                 }
                                 e.cache = None;

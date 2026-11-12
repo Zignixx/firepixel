@@ -246,8 +246,7 @@ pub(crate) fn top_hit(ctx: &ToolContext, p: Point, opt: &HitOptions) -> Option<E
                 continue;
             }
             let m = stroke_margin(e) + opt.tolerance as f32;
-            let near =
-                docops::element_bounds(ctx.doc, e).is_none_or(|b| b.inflate(m, m).contains(p));
+            let near = docops::hit_bounds(ctx.doc, e).is_none_or(|b| b.inflate(m, m).contains(p));
             if near && docops::hit_element(ctx.doc, e, p, ctx.geometry, opt) {
                 // geteilte Ebenen haben eine eigene Wurzel (`RootRef::SharedLayer`)
                 return Some(docops::slot_path(
@@ -1967,6 +1966,20 @@ impl PointerTool {
                 };
                 ToolResponse::commit(vec![Invocation::new("edit.move", params)])
             }
+            // RE spec 81 §3.2 rule 3 (Mask Element Selection = the measured Subselection target):
+            // a further click without a drag on the selected content child of a mask group with
+            // the underlay on selects the mask group
+            PState::PressedObject {
+                fresh: false,
+                toggle: None,
+                shift: false,
+                ..
+            } if self.mask_reach && underlay_rule3_target(ctx).is_some() => {
+                match underlay_rule3_target(ctx) {
+                    Some(gid) => ToolResponse::commit(select_cmds(ctx, gid)),
+                    None => ToolResponse::default(),
+                }
+            }
             PState::PressedObject {
                 toggle: Some(id), ..
             } => ToolResponse::commit(vec![pick(
@@ -2215,6 +2228,15 @@ impl PointerTool {
             }
             _ => ToolResponse::default(),
         }
+    }
+}
+
+/// RE spec 81 §3.2 rule 3: the mask group to select on a further click on the selected content
+/// child (one element selected, see [`docops::underlay_content_parent`]).
+fn underlay_rule3_target(ctx: &ToolContext) -> Option<ElementId> {
+    match ctx.selection.elements.as_slice() {
+        [sel] => docops::underlay_content_parent(ctx.doc, ctx.page, *sel),
+        _ => None,
     }
 }
 

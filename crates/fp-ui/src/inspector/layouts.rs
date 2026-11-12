@@ -563,11 +563,19 @@ pub fn matches(pred: &Pred, s: &Session) -> bool {
         NoDocument => d.is_none(),
         Tool(t) => d.is_some() && s.tools.active == *t,
         Never => false,
-        // by the kind of the mask OBJECT (bitmap or anything else, groups of bitmaps included),
-        // never by the mode: a vector mask keeps its inspector in grayscale mode (RE spec 68 §2.4)
+        // by the kind of the selected mask OBJECT (bitmap or anything else, groups of bitmaps
+        // included), never by the mode: a vector mask keeps its inspector in grayscale mode (RE
+        // spec 68 §2.4); a selected child of a group mask gets the mask inspector of its own kind
+        // (a bitmap or masked bitmap: "Bitmap mask", RE spec 81 §3.2, D5)
         MaskSel(vector) => d.is_some_and(|d| {
-            d.selection.elements.len() == 1
-                && fp_engine::docops::mask_owner(&d.doc, d.page, d.selection.elements[0]).is_some_and(|o| matches!(&o.kind, fp_model::ElementKind::Group(g) if g.mask.as_ref().is_some_and(|m| !matches!(m.kind, fp_model::ElementKind::Bitmap(_)) == *vector)))
+            let [id] = d.selection.elements.as_slice() else {
+                return false;
+            };
+            fp_engine::docops::mask_owner_of(&d.doc, d.page, *id)
+                .is_some_and(|o| o.element_mask().is_some())
+                && fp_engine::docops::element_on_page(&d.doc, d.page, *id).is_some_and(|e| {
+                    !matches!(insp_elem(&e).kind, fp_model::ElementKind::Bitmap(_)) == *vector
+                })
         }),
         MixedMulti(with_paths) => {
             let Some(d) = d else { return false };
@@ -581,7 +589,11 @@ pub fn matches(pred: &Pred, s: &Session) -> bool {
                         .iter()
                         .any(|e| fp_engine::docops::path_attrs_of(insp_elem(e)).is_some()))
         }
-        AiSubjectResult => d.is_some_and(|d| d.selection.has_pixels()) && TUNE_TOOLS.contains(&s.tools.active) && subject_result(s),
+        AiSubjectResult => {
+            d.is_some_and(|d| d.selection.has_pixels())
+                && TUNE_TOOLS.contains(&s.tools.active)
+                && subject_result(s)
+        }
         Sel(k) | Multi(k) => {
             let Some(d) = d else { return false };
             let ids = &d.selection.elements;
@@ -590,10 +602,18 @@ pub fn matches(pred: &Pred, s: &Session) -> bool {
             }
             // erst das erste Objekt (schnelle Absage), dann alle in einem Durchlauf statt einer
             // Suche je ID (PERF-1: Tausende gewählte Objekte)
-            if !fp_engine::docops::element_on_page(&d.doc, d.page, ids[0]).is_some_and(|e| element_is(insp_elem(&e), *k, &d.doc)) {
+            if !fp_engine::docops::element_on_page(&d.doc, d.page, ids[0])
+                .is_some_and(|e| element_is(insp_elem(&e), *k, &d.doc))
+            {
                 return false;
             }
-            fp_engine::docops::find_many_on_page(&d.doc, d.page, ids).iter().all(|p| p.as_ref().and_then(|p| d.doc.element_at(p)).is_some_and(|e| element_is(insp_elem(e), *k, &d.doc)))
+            fp_engine::docops::find_many_on_page(&d.doc, d.page, ids)
+                .iter()
+                .all(|p| {
+                    p.as_ref()
+                        .and_then(|p| d.doc.element_at(p))
+                        .is_some_and(|e| element_is(insp_elem(e), *k, &d.doc))
+                })
         }
     }
 }
