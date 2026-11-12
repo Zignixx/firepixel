@@ -13,6 +13,8 @@ use serde_json::json;
 use std::collections::BTreeSet;
 
 const SEL: &str = "history-sel";
+/// Last seen (document, step count, undo position); a change scrolls the current step into view.
+const SCROLL_KEY: &str = "history-scroll-key";
 
 /// Tooltip of the red × of a row that cannot be replayed (FB-92): a row bound to the step before
 /// it (`attached`) has no undo step of its own either.
@@ -46,12 +48,28 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     sel.retain(|i| *i < steps.len());
     let mut goto = None;
     let mods = ui.input(|i| i.modifiers);
+    // FB-153: keep the current step visible when steps are added, undone or redone elsewhere
+    // (the row with the slider; the first row when everything is undone)
+    // (rows dropped at the History limit count too: a full list keeps its length)
+    let key = (
+        st.session.active_id(),
+        steps.len() + d.history.dropped(),
+        pos,
+    );
+    let scroll_to_current = ui
+        .data(|dd| dd.get_temp::<(Option<fp_engine::DocId>, usize, usize)>(Id::new(SCROLL_KEY)))
+        != Some(key);
+    ui.data_mut(|dd| dd.insert_temp(Id::new(SCROLL_KEY), key));
+    let current_row = pos.saturating_sub(1);
     common::list_frame(ui, "history-list", common::FOOTER_H, |ui| {
         // Anfangszustand (Position 0)
         for (i, (label, rec)) in steps.iter().enumerate() {
             let done = i < pos;
             let selected = sel.contains(&i);
             let (rect, mut resp) = common::row(ui, 21.0, selected);
+            if scroll_to_current && i == current_row {
+                ui.scroll_to_rect(rect, None);
+            }
             // Schieberspalte
             let slider = Rect::from_min_size(rect.min, vec2(16.0, rect.height()));
             ui.painter().vline(

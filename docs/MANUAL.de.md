@@ -65,7 +65,7 @@ ohne Neustart. Weitere Sprachen sind einfache `.ftl`-Textdateien in `%APPDATA%\F
   (`Document Presets`, `Grids`, `Mobile`, `Web`, `Wireframes`), z. B. Web-Banner 728 × 90 oder Smartphone
   390 × 844. Jede Vorlage bringt eine passende Exportvorgabe mit (PNG 32 bzw. JPEG). Gelöschte Vorlagen
   kommen nicht wieder.
-- *Bearbeiten ▸ Rückgängig/Wiederholen* (Strg+Z / Strg+Y); das Verlauf-Bedienfeld zeigt alle Schritte.
+- *Bearbeiten ▸ Rückgängig/Wiederholen* (Strg+Z / Strg+Y); das Verlauf-Bedienfeld zeigt alle Schritte und hält den aktuellen im Blick.
   Kopieren und Ausschneiden erhalten eine eigene Zeile („Kopie“, „Ausschneiden“); Kopieren markiert das
   Dokument nicht als geändert. Aufeinanderfolgende Verschiebungen derselben Auswahl mit den Pfeiltasten
   bilden eine gemeinsame Zeile mit dem summierten Versatz; eine andere Auswahl, ein anderer Befehl oder

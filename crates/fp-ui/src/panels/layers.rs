@@ -294,6 +294,19 @@ fn row_click(
     }
 }
 
+/// The single content of a mask group that [`Element::masked_single`] leaves out only because
+/// the content carries live filters (the row label still names the content).
+fn single_mask_content(e: &Element) -> Option<&Element> {
+    let ElementKind::Group(g) = &e.kind else {
+        return None;
+    };
+    if !g.kind.is_mask() || g.mask.is_none() || g.smart_shape.is_some() || g.children.len() != 1 {
+        return None;
+    }
+    let child = &g.children[0];
+    (!matches!(&child.kind, ElementKind::Group(c) if c.kind.is_mask())).then_some(&**child)
+}
+
 fn element_label(e: &Element) -> String {
     if let Some(n) = &e.common.name
         && !n.is_empty()
@@ -302,6 +315,11 @@ fn element_label(e: &Element) -> String {
     }
     // maskiertes Einzelelement (Bitmap/Pfad mit Maske): wie im Original Zeile des Inhalts (FIX-G5, Q-02)
     if let Some((child, _)) = e.masked_single() {
+        return element_label(child);
+    }
+    // FB-153: a filter on the single content keeps the row named after the content (RE spec 68
+    // §1.1: the row carries the content's name); before it switched to "Group"
+    if let Some(child) = single_mask_content(e) {
         return element_label(child);
     }
     let t = common::t;
@@ -2537,6 +2555,58 @@ pub fn own_objects(elements: &[std::sync::Arc<fp_model::Element>]) -> Vec<fp_mod
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// FB-153: a live filter on the single content of a mask group keeps the row named after the
+    /// content ("Bitmap"), it no longer switches to "Group" (RE spec 68 §1.1).
+    #[test]
+    fn fb153_masked_content_with_filter_keeps_content_label() {
+        fp_i18n::set_language("en");
+        let mut s = fp_engine::Session::default();
+        let ex = |s: &mut fp_engine::Session, c: &str, p: serde_json::Value| {
+            s.execute(c, p).unwrap_or_else(|e| panic!("{c}: {e}")).value
+        };
+        ex(&mut s, "file.new", json!({"width": 300, "height": 200}));
+        let img = fp_raster::RgbaImage::filled(
+            fp_geom::IRect::from_xywh(20, 20, 60, 60),
+            fp_color::Rgba8::new(255, 0, 0, 255),
+        )
+        .expect("image");
+        s.clipboard.clear();
+        s.clipboard.pixels = Some(img);
+        let b = ex(&mut s, "edit.paste", json!({}))["ids"][0]
+            .as_u64()
+            .expect("bitmap");
+        let square = |s: &mut fp_engine::Session, x: f64| {
+            s.execute(
+                "draw.path",
+                json!({"contours": [{"closed": true, "nodes": [[x, 30], [x + 30.0, 30], [x + 30.0, 60], [x, 60]]}]}),
+            )
+            .expect("path")
+            .value["id"]
+                .as_u64()
+                .expect("id")
+        };
+        let m = square(&mut s, 30.0);
+        let r = square(&mut s, 200.0);
+        ex(&mut s, "select.set", json!({"ids": [r]}));
+        ex(&mut s, "element.addEffect", json!({"effect": "dropShadow"}));
+        ex(&mut s, "select.set", json!({"ids": [m, b]}));
+        ex(&mut s, "modify.mask.groupAsMask", json!({}));
+        let d = s.active().expect("doc");
+        let effects = fp_engine::docops::find_on_page(&d.doc, d.page, fp_model::ElementId(r as _))
+            .and_then(|p| d.doc.element_at(&p).cloned())
+            .and_then(|e| e.common.effects.clone())
+            .expect("effects");
+        let owner = fp_engine::docops::mask_owner(&d.doc, d.page, fp_model::ElementId(m as _))
+            .expect("mask group");
+        assert_eq!(element_label(&owner), common::t("panel-layers-kind-bitmap"));
+        let mut g = (*owner).clone();
+        if let ElementKind::Group(gr) = &mut g.kind {
+            Arc::make_mut(&mut gr.children[0]).common.effects = Some(effects);
+        }
+        assert!(g.masked_single().is_none(), "the content carries a filter");
+        assert_eq!(element_label(&g), common::t("panel-layers-kind-bitmap"));
+    }
 
     fn sub(ids: &mut fp_model::IdGen, name: &str, children: Vec<Arc<Element>>) -> Arc<Element> {
         let mut l = fp_model::Layer::new(ids, name, LayerKind::Normal, 1);

@@ -62,7 +62,7 @@ available in German (`MANUAL.de.md`).
   in five folders (`Document Presets`, `Grids`, `Mobile`, `Web`, `Wireframes`), e.g. Web Banner
   728 × 90 or Smartphone 390 × 844. Each template brings a fitting export setting (PNG 32 or JPEG).
   Templates you delete do not come back.
-- *Edit ▸ Undo/Redo* (Ctrl+Z / Ctrl+Y); the History panel shows all steps. Copy and Cut get a row of
+- *Edit ▸ Undo/Redo* (Ctrl+Z / Ctrl+Y); the History panel shows all steps and keeps the current one in view. Copy and Cut get a row of
   their own ("Copy", "Cut"); Copy does not mark the document as changed. Consecutive arrow-key nudges
   of the same selection form one Move row with the summed offset; selecting something else, another
   command or an undo starts a new row. Redo (Ctrl+Y, Ctrl+Shift+Z) first redoes an undone step (*Redo: ‹step›*).

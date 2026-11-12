@@ -821,6 +821,9 @@ VER-10.28.
 - [ ] **A4-149** (TW-290 / FB-147, F155; needs: real window, real mouse)
   **Steps:** New document with a rectangle and a Pen path. Choose the Pointer and move over empty canvas and over the rectangle; choose the Subselection (A) and move over empty canvas, the rectangle, a path segment and an anchor of the selected path; drag the anchor. Open the Subselection flyout and read the rows; press A and 1 a few times.
   **Expected:** Pointer: black arrow. Subselection: white arrow with black outline over empty canvas, objects and segments; over an anchor and while dragging it the hollow arrowhead without shaft. The flyout rows read "Subselection (A, 1)" and "Mask Element Selection (A, 1)"; A and 1 switch between the two tools in turn. Note differences, quoting TW-290.
+- [ ] **A4-152** (TW-293 / FB-153, F160; needs: real window, real mouse)
+  **Steps:** (a) New document, History panel at its normal height. Draw 30 rectangles one after another (or paint 30 Brush strokes), then press Ctrl+Z three times and Ctrl+Y once; jump to an early row by clicking its slider column, then draw one more rectangle. (b) Paste a bitmap, draw a path over it, select both, *Modify ▸ Mask ▸ Group as Mask*; in the Layers panel select the content thumbnail of the row and add a live filter (*Filters* + in Properties, e.g. Glow). (c) Select the mask (mask thumbnail), set *Path outline*, click *Show fill and stroke* several times and keep the pointer still on it.
+  **Expected:** (a) The current row (with the slider triangle) is always visible after every step, undo, redo and the new rectangle; scrolling the list by hand is not pulled back while nothing changes. (b) The Layers row of the masked element keeps the name "Bitmap" with the filter, before and after. (c) Only the "Show fill and stroke" box is highlighted while the pointer rests on it; "Invert" never lights up. Note differences, quoting TW-293.
 ---
 
 # Part B – Full catalogue
