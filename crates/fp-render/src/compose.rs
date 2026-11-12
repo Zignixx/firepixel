@@ -986,6 +986,18 @@ impl Renderer {
         if !e.common.visible {
             return;
         }
+        // RE spec 81 §1.2 (D1, `tgg3_darken`): inside a mask group with several contents a plain
+        // group passes no blend modes through: its children (and theirs) go in Normal with their
+        // own opacity, only the plain group's opacity and filters still count
+        if place == Place::NormalBlend
+            && let ElementKind::Group(g) = &e.kind
+            && g.kind == GroupKind::Normal
+            && g.smart_shape.is_none()
+            && blends_inside(g)
+        {
+            self.draw_plain_group_normal(doc, cv, e, g, depth, st, rep);
+            return;
+        }
         match &e.kind {
             ElementKind::WebObject(_) => return,
             ElementKind::Raw(_) => {
@@ -1025,6 +1037,64 @@ impl Renderer {
             cv.draw_look(&look.image, op, blend);
             rep.drawn += 1;
         }
+    }
+
+    /// A plain group inside a mask group with several contents whose subtree carries blend modes
+    /// (RE spec 81 §1.2, D1): every child goes in Normal with its own opacity, recursively through
+    /// plain subgroups. Without own opacity and filters the children go straight onto `cv`;
+    /// otherwise they form an isolated surface that gets the group's filters and is put on `cv`
+    /// with the group's opacity (Normal).
+    #[allow(clippy::too_many_arguments)]
+    fn draw_plain_group_normal(
+        &self,
+        doc: &Document,
+        cv: &mut Canvas,
+        e: &Element,
+        g: &fp_model::GroupElem,
+        depth: u32,
+        st: &State,
+        rep: &mut RenderReport,
+    ) {
+        let fx = has_visible_effects(e);
+        if !fx && e.common.opacity.0 == 255 {
+            for c in g.children.iter().rev() {
+                self.draw_element_as(doc, cv, c, depth, st, rep, Place::NormalBlend);
+            }
+            return;
+        }
+        let mut sub = Canvas::growable();
+        for c in g.children.iter().rev() {
+            self.draw_element_as(doc, &mut sub, c, 0, st, rep, Place::NormalBlend);
+        }
+        let mut img = sub.img;
+        if img.is_empty() {
+            return;
+        }
+        if fx {
+            if self.options.effects {
+                let effects: Vec<EffectEntry> = e
+                    .common
+                    .effects
+                    .as_ref()
+                    .map(convert::effect_entries)
+                    .unwrap_or_default();
+                for p in img.data_mut() {
+                    if p[3] == 0 {
+                        *p = [0, 0, 0, 0];
+                    }
+                }
+                let res = apply_chain(&img, &effects, &self.options.effect_context);
+                for i in &res.issues {
+                    rep.miss(format!("effect:{i}"));
+                }
+                rep.effect_chains += 1;
+                img = res.image;
+            } else {
+                rep.miss("effects");
+            }
+        }
+        cv.draw_look(&Arc::new(img), e.common.opacity, BlendMode(0));
+        rep.drawn += 1;
     }
 
     /// Kinder einer Gruppe direkt auf die Leinwand (keine Isolation)?
@@ -1781,6 +1851,11 @@ impl Renderer {
             _ if gray => self
                 .look(doc, me, st, rep)
                 .map(|l| to_gray((*l.image).clone())),
+            // RE spec 81 §2.4 (D2, `gz_gam`): the path outline of a group is the union of the
+            // shapes of its children, without their opacity, colour alpha and filters
+            ElementKind::Group(_) if self.options.rasterize => {
+                self.shape_coverage(doc, me, st, rep)
+            }
             _ => {
                 rep.approx("mask-generic");
                 self.look(doc, me, st, rep).map(|l| (*l.image).clone())
@@ -1789,6 +1864,80 @@ impl Renderer {
         let img = img?;
         let b = img.bounds();
         Some((b, img.width(), img.data().iter().map(|p| p[3]).collect()))
+    }
+
+    /// Shape of an element as a group mask value in path outline mode (RE spec 81 §2.4, D2):
+    /// the alpha of the result is the coverage. A path (or a compound shape's path) gives its fill
+    /// geometry ([`shape_outline`]), a bitmap its alpha, a plain group the union (maximum) of its
+    /// visible children, a mask group the union of its contents times its own mask value; opacity,
+    /// colour alpha, colour, stroke and filters do not count. Other kinds (text, instances) give
+    /// the alpha of their look.
+    fn shape_coverage(
+        &self,
+        doc: &Document,
+        e: &Arc<Element>,
+        st: &State,
+        rep: &mut RenderReport,
+    ) -> Option<RgbaImage> {
+        if !e.common.visible {
+            return None;
+        }
+        match &e.kind {
+            ElementKind::Path(p) if p.compat_proxy => None,
+            ElementKind::Path(p) => shape_outline(p, &st.map),
+            ElementKind::CompoundShape(c) => match c.result.as_ref().map(|r| &r.kind) {
+                Some(ElementKind::Path(p)) => shape_outline(p, &st.map),
+                _ => None,
+            },
+            ElementKind::Bitmap(b) => {
+                let painted = st.over.as_ref().filter(|o| o.id == e.id.0);
+                match painted {
+                    Some(o) => self.place_bitmap(&o.image, &st.map, rep),
+                    None => convert::image_of(&b.image)
+                        .and_then(|i| self.place_bitmap(&i, &st.map, rep)),
+                }
+            }
+            ElementKind::Group(g) if g.smart_shape.is_none() => {
+                let parts: Vec<RgbaImage> = g
+                    .children
+                    .iter()
+                    .filter_map(|c| self.shape_coverage(doc, c, st, rep))
+                    .collect();
+                let mut img = union_coverage(&parts)?;
+                if g.kind.is_mask()
+                    && g.mask_flags.enabled
+                    && let Some(me) = g.effective_mask()
+                {
+                    let show = g.kind == GroupKind::VectorMask && !g.mask_flags.hide_attrs;
+                    let mask = self.mask_values(doc, e, g, me, show, st, rep);
+                    let invert = mask_invert(g, me);
+                    let b = img.bounds();
+                    let w = img.width().max(1);
+                    for (i, p) in img.data_mut().iter_mut().enumerate() {
+                        if p[3] == 0 {
+                            continue;
+                        }
+                        let x = b.left + (i % w) as i32;
+                        let y = b.top + (i / w) as i32;
+                        let m = mask
+                            .as_ref()
+                            .map(|(mb, mw, data)| {
+                                if mb.contains(x, y) {
+                                    data[(y - mb.top) as usize * mw + (x - mb.left) as usize]
+                                } else {
+                                    0
+                                }
+                            })
+                            .unwrap_or(0);
+                        let m = final_mask_value(m, invert);
+                        p[3] = ((p[3] as u32 * m as u32 + 127) / 255) as u8;
+                    }
+                }
+                Some(img)
+            }
+            ElementKind::WebObject(_) | ElementKind::SubLayer(_) | ElementKind::Raw(_) => None,
+            _ => self.look(doc, e, st, rep).map(|l| (*l.image).clone()),
+        }
     }
 
     fn instance_layer(
@@ -1978,6 +2127,66 @@ fn outline_mask(p: &fp_model::PathElem, map: &PointMap, show: bool) -> Option<Rg
         }
     }
     fp_vector::render_path_layer(&vp).map(|l| l.image)
+}
+
+/// Does a plain group carry a blend mode other than Normal on a visible child, or on a child of a
+/// visible plain subgroup (RE spec 81 §1.2)?
+fn blends_inside(g: &fp_model::GroupElem) -> bool {
+    g.children.iter().any(|c| {
+        c.common.visible
+            && (c.placement().1.0 != 0
+                || matches!(&c.kind, ElementKind::Group(cg)
+                    if cg.kind == GroupKind::Normal && cg.smart_shape.is_none() && blends_inside(cg)))
+    })
+}
+
+/// Fill geometry of a path inside a group mask in path outline mode (RE spec 81 §2.4, D2):
+/// opaque, without stroke, colour alpha, gradient, pattern and texture; antialiased (the edge
+/// *Hard* is ignored like in a single path outline, RE spec 75 §1.1), the feather and Firepixel's
+/// dither edge and dither density stay (they counted in the group's look before, tester wish).
+fn shape_outline(p: &fp_model::PathElem, map: &PointMap) -> Option<RgbaImage> {
+    let vp = convert::vector_path(p, map);
+    let density = vp.fill.as_ref().map(|f| f.dither_density).unwrap_or(0);
+    let mut vp = convert::fill_only(vp);
+    if let Some(f) = &mut vp.fill {
+        f.dither_density = density;
+        if f.edge == fp_vector::FillEdge::Hard {
+            f.edge = fp_vector::FillEdge::AntiAliased;
+        }
+    }
+    fp_vector::render_path_layer(&vp)
+        .map(|l| l.image)
+        .filter(|i| !i.is_empty())
+}
+
+/// Union (per-pixel maximum of alpha) of coverage images; `None` when there is none.
+fn union_coverage(parts: &[RgbaImage]) -> Option<RgbaImage> {
+    let mut b: Option<IRect> = None;
+    for p in parts.iter().filter(|p| !p.is_empty()) {
+        b = Some(match b {
+            Some(u) => u.union(&p.bounds()),
+            None => p.bounds(),
+        });
+    }
+    let b = b?;
+    let mut out = RgbaImage::new(b).ok()?;
+    let w = out.width().max(1);
+    for p in parts.iter().filter(|p| !p.is_empty()) {
+        let pb = p.bounds();
+        let pw = p.width().max(1);
+        for (i, px) in p.data().iter().enumerate() {
+            if px[3] == 0 {
+                continue;
+            }
+            let x = (pb.left + (i % pw) as i32 - b.left) as usize;
+            let y = (pb.top + (i / pw) as i32 - b.top) as usize;
+            let o = &mut out.data_mut()[y * w + x];
+            if px[3] > o[3] {
+                *o = [255, 255, 255, px[3]];
+            }
+        }
+    }
+    Some(out)
 }
 
 /// How a child is put into its parent's surface (RE spec 75 §2.3).

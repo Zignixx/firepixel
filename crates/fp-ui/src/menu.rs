@@ -912,6 +912,20 @@ pub fn build_main_menu_where(
                 if st.session.registry().get("modify.traceBitmap").is_some() {
                     nodes.insert(pos, runtime_item("modify.traceBitmap"));
                 }
+                // FB-152 (Firepixel extension): "Ungroup Mask Completely" right after Ungroup
+                if st
+                    .session
+                    .registry()
+                    .get("modify.ungroupMaskCompletely")
+                    .is_some()
+                {
+                    let pos = nodes
+                        .iter()
+                        .position(|n| matches!(n, Node::Item { action: ItemAction::Command(c), .. } if c == "modify.ungroup"))
+                        .map(|i| i + 1)
+                        .unwrap_or(nodes.len());
+                    nodes.insert(pos, runtime_item("modify.ungroupMaskCompletely"));
+                }
             }
             "menu-filter" => nodes.extend(filter_submenus(st)),
             "menu-window" => {

@@ -1360,6 +1360,8 @@ pub(super) fn method(doc: DocId, name: &str, args: &[Arg], ctx: &mut Context) ->
             }
         }
         "ungroup" => on_selection(doc, "modify.ungroup", json!({})),
+        // Firepixel extension (FB-152, `bindings::EXT_METHODS`)
+        "ungroupMaskCompletely" => on_selection(doc, "modify.ungroupMaskCompletely", json!({})),
         "arrange" => {
             let c = match arg_str(args, 0).as_str() {
                 "front" => "modify.arrange.bringToFront",

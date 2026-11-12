@@ -478,6 +478,16 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   tooltip says so), with a child of a mask group selected its own values. *Ungroup* puts the mask object
   back on top with its old values; a single content keeps its values (also those changed while it was
   masked); a mask group becomes a normal group with its values, and a second *Ungroup* dissolves it.
+  Inside a mask group with several contents a plain group inside it passes no blend modes through either:
+  everything in it is drawn Normal with its own opacity. A single content with filters stays the masked
+  element itself (*Group as Mask* makes no group, *Ungroup* gives the mask object and the content with all
+  filters in one list); *Paste Inside* puts such a content (or several) into a wrapper group, which gets a
+  copy of the target's filters while the mask keeps them, and *Ungroup* leaves that wrapper as a normal group.
+  A group used as mask cuts in *Path outline* with the shapes of its children; their opacity and colour
+  alpha do not count (in *Grayscale* they do). Firepixel extension: *Modify ▸ Ungroup Mask Completely* (also
+  in the canvas context menu, enabled when *Ungroup* would leave a group) does both steps at once: the mask
+  object on top, the contents below as loose objects with their own values (the dissolved group's opacity,
+  blend mode and filters go, as with a second *Ungroup*); one History row.
 - *Select ▸ Select Inverse* inverts a pixel selection only; without one it shows a warning and leaves
   the selected objects alone.
 - *Text ▸ Size ▸ Larger / Smaller* change the size by exactly 1 pt (24 → 25 → 24), on selected texts

@@ -414,6 +414,8 @@ cmd-modify-group = &Group
     .description = Groups the selected objects
 cmd-modify-ungroup = Ung&roup
     .description = Ungroups the selection
+cmd-modify-ungroupMaskCompletely = Ungroup Mas&k Completely
+    .description = Removes the mask and dissolves the remaining group in the same step: the mask object on top, the contents below as loose objects (Firepixel extension)
 
 ## Hauptmenü Text
 

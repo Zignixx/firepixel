@@ -154,7 +154,7 @@ fn target_effect_moves_to_result() {
     assert_eq!(rgb_at(&s, &[(60, 150), (200, 150)]), vec![[0x66, 0x66, 0x66], [0xff, 0x00, 0xff]]);
 }
 
-/// Fall J: Inhalt mit eigenem Effekt → Gruppe mit Maske (ausgewählt), Effekt bleibt am Inhalt.
+/// Fall J: Inhalt mit eigenem Effekt → Hüllgruppe mit Maske (ausgewählt), Effekt bleibt am Inhalt.
 #[test]
 fn content_with_effect_gives_group() {
     let (mut s, big, green) = scene(280.0);
@@ -162,7 +162,9 @@ fn content_with_effect_gives_group() {
     ex(&mut s, "element.addEffect", json!({"effect": INVERT}));
     let g = paste_inside(&mut s, big, green);
     let e = el(&s, g);
-    assert!(e.masked_single().is_none());
+    // F158 (RE spec 81 §4 rule 3): the wrapper group is the masked element
+    let (wrapper, _) = e.masked_single().expect("wrapper as masked element");
+    assert!(matches!(&wrapper.kind, ElementKind::Group(w) if w.children.len() == 1 && matches!(w.children[0].kind, ElementKind::Path(_))));
     assert_eq!(s.active().map(|d| d.selection.elements.clone()), Some(vec![g]));
     assert_eq!(rgb_at(&s, &[(60, 150), (200, 150)]), vec![GRAY, [0xff, 0x00, 0xff]]);
 }

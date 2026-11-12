@@ -414,6 +414,8 @@ cmd-modify-group = &Gruppieren
     .description = Gruppiert die ausgewählten Objekte
 cmd-modify-ungroup = Gruppierung auf&heben
     .description = Hebt die Gruppierung der Auswahl auf
+cmd-modify-ungroupMaskCompletely = Maskengruppierung &vollständig aufheben
+    .description = Hebt die Maske auf und löst die verbleibende Gruppe im selben Schritt auf: Maskenobjekt oben, darunter die Inhalte als einzelne Objekte (Firepixel-Erweiterung)
 
 ## Hauptmenü Text
 

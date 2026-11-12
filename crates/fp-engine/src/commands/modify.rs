@@ -412,6 +412,94 @@ fn group(d: &mut DocumentState, as_mask: bool) -> Result<ElementId> {
     Ok(gid)
 }
 
+/// Would the plain Ungroup of this mask group leave a group behind (the mask group with several
+/// contents, or a masked group, RE spec 81 §4 rule 1)? Then "Ungroup Mask Completely" (FB-152) has
+/// something more to dissolve.
+pub(crate) fn ungroup_leaves_group(e: &Element) -> bool {
+    let ElementKind::Group(g) = &e.kind else {
+        return false;
+    };
+    if !g.kind.is_mask() {
+        return false;
+    }
+    match e.masked_single() {
+        Some((c, _)) => {
+            matches!(&c.kind, ElementKind::Group(cg) if !cg.kind.is_mask() && cg.smart_shape.is_none())
+        }
+        None => g.children.len() >= 2,
+    }
+}
+
+/// Content of a mask group with exactly one content that is not a masked single element (the
+/// content has filters of its own, RE spec 81 D3): it comes out as one object with the values the
+/// masked element showed. Opacity multiplies (content inside, group outside), the group's blend
+/// mode wins over the content's, the content's filters come first, then the group's (one list).
+fn single_content_out(e: &Element, c: &Element) -> Element {
+    let mut c = c.clone();
+    c.common.opacity = fp_model::Opacity(fp_color::round::mul255(
+        c.common.opacity.0 as u32,
+        e.common.opacity.0 as u32,
+    ) as u8);
+    if e.common.blend.0 != 0 {
+        c.common.blend = e.common.blend;
+    }
+    if let Some(gl) = e.common.effects.as_ref().filter(|l| !l.effects.is_empty()) {
+        match &mut c.common.effects {
+            Some(cl) => cl.effects.extend(gl.effects.iter().cloned()),
+            None => c.common.effects = Some(gl.clone()),
+        }
+    }
+    c.cache = None;
+    c
+}
+
+/// "Ungroup Mask Completely" (Firepixel extension, FB-152): like Ungroup, but a selected mask
+/// group whose Ungroup would leave a normal group (several contents, or a masked group) also
+/// dissolves that group in the same step: the mask object comes back on top, then the contents as
+/// loose objects with their own values. The dissolved group's opacity, blend mode and filters go
+/// away, as with the second Ungroup. Other selected objects stay as they are.
+fn ungroup_mask_completely(d: &mut DocumentState) -> Result<Vec<ElementId>> {
+    let page = d.page;
+    let mut new_sel = Vec::new();
+    let paths = selected_paths(d);
+    let doc = Arc::make_mut(&mut d.doc);
+    for p in paths.iter().rev() {
+        let Some(e) = doc.element_at(p).cloned() else {
+            continue;
+        };
+        let ElementKind::Group(g) = &e.kind else {
+            new_sel.push(e.id);
+            continue;
+        };
+        if !ungroup_leaves_group(&e) {
+            new_sel.push(e.id);
+            continue;
+        }
+        let mut items: Vec<Arc<Element>> = g.mask.iter().cloned().collect();
+        match e.masked_single() {
+            Some((c, _)) => {
+                if let ElementKind::Group(cg) = &c.kind {
+                    items.extend(cg.children.iter().cloned());
+                }
+            }
+            None => items.extend(g.children.iter().cloned()),
+        }
+        let Some(cur) = docops::find_on_page(doc, page, e.id) else {
+            continue;
+        };
+        let Some((list, idx)) = docops::parent_list_mut(doc, &cur) else {
+            continue;
+        };
+        list.remove(idx);
+        for (k, it) in items.iter().enumerate() {
+            list.insert(idx + k, Arc::clone(it));
+            new_sel.push(it.id);
+        }
+    }
+    d.selection.set(new_sel.clone());
+    Ok(new_sel)
+}
+
 fn ungroup(d: &mut DocumentState, only_masks: bool) -> Result<Vec<ElementId>> {
     let page = d.page;
     let mut new_sel = Vec::new();
@@ -449,6 +537,10 @@ fn ungroup(d: &mut DocumentState, only_masks: bool) -> Result<Vec<ElementId>> {
             }
             c.cache = None;
             items.push(Arc::new(c));
+        } else if g.kind.is_mask() && g.children.len() == 1 {
+            // RE spec 81 §4 rule 2 (D3, `u2`): Group as Mask never makes a wrapper; a single
+            // content with filters of its own comes out as itself, no group stays
+            items.push(Arc::new(single_content_out(&e, &g.children[0])));
         } else if g.kind.is_mask() && !only_masks {
             // a mask group becomes a normal group with its values; a second Ungroup dissolves it
             let mut ng = (*e).clone();
@@ -3105,6 +3197,20 @@ pub(super) fn register(r: &mut CommandRegistry) {
             Ok(CommandOutput::doc_with(json!({"ids": ids_json(&ids)})))
         })
     }));
+    // FB-152 (Firepixel extension): Ungroup a mask group straight to loose objects
+    r.add(
+        cmd("modify.ungroupMaskCompletely")
+            .label("Maskengruppierung vollständig aufheben")
+            .describe("Hebt die Maske auf und löst die verbleibende Gruppe im selben Schritt auf: Maskenobjekt oben, darunter die Inhalte als einzelne Objekte")
+            .requires(SEL)
+            .available(|s| s.active().is_some_and(|d| any_selected(d, ungroup_leaves_group)))
+            .run(|s, _| {
+                with_doc(s, |d| {
+                    let ids = ungroup_mask_completely(d)?;
+                    Ok(CommandOutput::doc_with(json!({"ids": ids_json(&ids)})))
+                })
+            }),
+    );
     r.add(
         cmd("modify.editBitmap")
             .requires(&[

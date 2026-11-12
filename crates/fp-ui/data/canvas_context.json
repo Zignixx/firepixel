@@ -1631,6 +1631,10 @@
       "id": 35062
      },
      {
+      "text": "Maskengruppierung vollständig aufheben",
+      "key": "cmd-modify-ungroupMaskCompletely"
+     },
+     {
       "text": "Als Maske gruppieren",
       "key": "cmd-modify-mask-groupAsMask",
       "id": 35128

@@ -1085,6 +1085,16 @@ fn overrides(name: &str, ids: &Ids) -> Option<(Value, Option<Setup>)> {
                 Value::Null
             }),
         ),
+        // F158 (FB-152): a mask group with two contents
+        "modify.ungroupMaskCompletely" => rs(
+            json!({}),
+            Box::new(move |s: &mut Session| {
+                let x = rect_quick(s);
+                select(s, &[x, rect, ellipse]);
+                ex(s, "modify.mask.groupAsMask", json!({}));
+                Value::Null
+            }),
+        ),
         "modify.align.distributeWidths" | "modify.align.distributeHeights" => rs(
             json!({}),
             Box::new(move |s: &mut Session| {

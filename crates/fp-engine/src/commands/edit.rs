@@ -73,7 +73,21 @@ pub(crate) fn paste_inside_result(
         return g;
     }
     let mut mask = (**target).clone();
-    let fx = mask.common.effects.take();
+    // RE spec 81 §4 rule 3 (D4): a single content with filters of its own gets a wrapper group
+    // (100 % / Normal) that is the masked element; several contents form the masked group. The
+    // target's filters go to the masked element: moved for a single content without a wrapper,
+    // copied to a wrapper (the mask keeps them, `u7`, `u8`)
+    let wrapped = paste_inside_wraps(&content);
+    let fx = if wrapped {
+        mask.common.effects.clone()
+    } else {
+        mask.common.effects.take()
+    };
+    let content = if content.len() == 1 && wrapped {
+        vec![Arc::new(Element::new_group(idg, content))]
+    } else {
+        content
+    };
     // RE spec 75 §2.1: one content keeps its values and they are the element's (the group gets
     // the same copy in `new_mask_group`); several contents get a new group at 100 % / Normal
     let mut g = Element::new_mask_group(idg, Arc::new(mask), content, true);
@@ -86,6 +100,19 @@ pub(crate) fn paste_inside_result(
         gr.mask_flags.auto_expand = false;
     }
     g
+}
+
+/// Does Paste Inside put these contents into a wrapper (several contents, or one with filters of
+/// its own, RE spec 81 §4 rule 3)? The wrapper is selected afterwards like a group.
+pub(crate) fn paste_inside_wraps(content: &[Arc<Element>]) -> bool {
+    match content {
+        [one] => one
+            .common
+            .effects
+            .as_ref()
+            .is_some_and(|l| !l.effects.is_empty()),
+        _ => true,
+    }
 }
 
 /// Löscht die Pixel unter der Maske (Alpha · (255 − Maske)).
@@ -881,11 +908,12 @@ pub(super) fn register(r: &mut CommandRegistry) {
                     let (list, idx) = docops::parent_list_mut(doc, &path)
                         .ok_or_else(|| EngineError::Failed(fp_i18n::t("err-parent-list")))?;
                     let target_el = list.remove(idx);
+                    let wrapped = paste_inside_wraps(&children);
                     let mut idg = std::mem::take(&mut doc.ids);
                     let g = paste_inside_result(&mut idg, &target_el, &mut children);
                     doc.ids = idg;
                     let gid = g.id;
-                    let single = g.masked_single().is_some();
+                    let single = g.masked_single().is_some() && !wrapped;
                     if let Some((list, _)) = docops::parent_list_mut(doc, &path) {
                         list.insert(idx.min(list.len()), Arc::new(g));
                     }

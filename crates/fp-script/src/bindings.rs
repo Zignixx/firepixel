@@ -126,6 +126,15 @@ pub static EXT_METHODS: &[(&str, MethodSpec)] = &[
             ret: TypeCode::Void,
         },
     ),
+    // Ungroup Mask Completely: mask object + loose contents in one step (FB-152)
+    (
+        "Document",
+        MethodSpec {
+            name: "ungroupMaskCompletely",
+            params: &[],
+            ret: TypeCode::Void,
+        },
+    ),
 ];
 
 /// Index einer Klasse zum JS-Namen.

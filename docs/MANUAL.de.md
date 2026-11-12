@@ -526,6 +526,18 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Maskenobjekt mit seinen alten Werten wieder oben hin; ein einzelner Inhalt behält seine Werte (auch die
   während der Maskierung geänderten); eine Maskengruppe wird zu einer normalen Gruppe mit ihren Werten, ein
   zweites *Gruppierung aufheben* löst sie auf.
+  In einer Maskengruppe mit mehreren Inhalten reicht auch eine normale Gruppe darin keine Mischmodi durch:
+  alles darin wird Normal mit eigener Deckkraft gezeichnet. Ein einzelner Inhalt mit Filtern bleibt selbst
+  das maskierte Element (*Als Maske gruppieren* bildet keine Gruppe, *Gruppierung aufheben* ergibt
+  Maskenobjekt und Inhalt mit allen Filtern in einer Liste); *Innen einfügen* legt einen solchen Inhalt (oder
+  mehrere) in eine Hüllgruppe, die eine Kopie der Filter des Ziels bekommt, während die Maske sie behält, und
+  *Gruppierung aufheben* lässt diese Hülle als normale Gruppe stehen. Eine Gruppe als Maske schneidet im
+  *Pfadumriss* mit den Formen ihrer Kinder; deren Deckkraft und Farbalpha zählen nicht (in *Graustufen*
+  schon). Firepixel-Erweiterung: *Modifizieren ▸ Maskengruppierung vollständig aufheben* (auch im
+  Kontextmenü der Arbeitsfläche, aktiv, wenn *Gruppierung aufheben* eine Gruppe übrig ließe) erledigt beide
+  Schritte auf einmal: Maskenobjekt oben, darunter die Inhalte als einzelne Objekte mit ihren eigenen Werten
+  (Deckkraft, Mischmodus und Filter der aufgelösten Gruppe entfallen wie beim zweiten Aufheben); ein
+  Protokollschritt.
 - *Auswählen ▸ Auswahl umkehren* kehrt nur eine Pixelauswahl um; ohne sie erscheint eine Warnung, und
   die gewählten Objekte bleiben unverändert.
 - *Text ▸ Größe ▸ Größer / Kleiner* ändern die Größe um genau 1 pt (24 → 25 → 24), bei gewählten Texten
