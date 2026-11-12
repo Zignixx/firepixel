@@ -1140,7 +1140,8 @@ pub fn intercept_delete_all_pages(st: &mut AppState, name: &str, params: &Value)
         .doc
         .pages
         .iter()
-        .map(|p| p.display_name().to_string())
+        .enumerate()
+        .map(|(i, p)| crate::panels::pages::page_label(p, i))
         .collect();
     let items: Vec<&str> = names.iter().map(String::as_str).collect();
     let values = (0..n).map(|i| json!(i)).collect();

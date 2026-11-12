@@ -682,7 +682,7 @@ Important panels:
   step, *Duplicate Page* copies each selected page directly after itself; *Rename Page* and *Set as
   Master Page* are grey while several pages are selected. Dragging one of the selected pages moves
   all selected pages as a block in their order (one step "Move Pages", the pointer shows the count);
-  dragging an unselected page moves only that page. Deleting the only page leaves an empty "Page 1". When every page is selected, Firepixel asks
+  dragging an unselected page moves only that page. Deleting the only page first asks whether it may be replaced with a brand new page; OK leaves an empty "Page 1" (scripts do not ask). When every page is selected, Firepixel asks
   "Delete all pages?" and lets you choose the page that stays (scripts keep the first page, or the
   page given as `keep`).
 - **Optimize:** export format and colors.

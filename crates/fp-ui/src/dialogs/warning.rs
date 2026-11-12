@@ -235,6 +235,38 @@ pub fn intercept_insert_web(st: &mut AppState, name: &str, params: &serde_json::
     true
 }
 
+/// Key of the question "Attempting to delete the only page in the file …" (FB-145, TW-289).
+pub const DELETE_ONLY_PAGE: &str = "deleteOnlyPage";
+
+/// Delete Page on the only page of the document (Pages panel footer, context and panel menu,
+/// Delete key) first asks whether the page may be replaced with a brand new one: OK runs
+/// `page.delete`, Cancel keeps the page. Scripts, CLI and batch never see the question (they
+/// do not run through the UI actions). `true`: the question is open, the command waits.
+pub fn intercept_delete_only_page(
+    st: &mut AppState,
+    name: &str,
+    params: &serde_json::Value,
+) -> bool {
+    if !matches!(name, "page.delete" | "panel.pages.delete") || params.get("keep").is_some() {
+        return false;
+    }
+    if st.session.active().is_none_or(|d| d.doc.pages.len() != 1) {
+        return false;
+    }
+    st.dialogs.warning = Some(WarningDialog::new(TargetWarning {
+        key: DELETE_ONLY_PAGE.into(),
+        command: "page.delete".into(),
+        text: t("msg-confirm-delete-only-page"),
+        pref: None,
+        choices: vec![fp_engine::warnings::WarningChoice {
+            label: t("btn-ok"),
+            command: "page.delete".into(),
+        }],
+        suppressed: false,
+    }));
+    true
+}
+
 /// Zugriffstaste ohne Alt (Meldungsfenster wie im Original).
 fn access(ui: &egui::Ui, label: &str) -> bool {
     let Some(k) = super::access_key(label) else {
@@ -378,6 +410,13 @@ pub fn show(ctx: &egui::Context, st: &mut AppState) {
     if d.warning.key == ANIMATE_STATES {
         // die Animation steht schon (TW-53); OK hängt die fehlenden Status an, Abbrechen/Esc nicht
         answer_animate_states(st, matches!(outcome, Outcome::Choice(_)));
+        return;
+    }
+    if d.warning.key == DELETE_ONLY_PAGE {
+        // OK: the only page is replaced with an empty "Page 1"; Cancel/Esc keep it
+        if matches!(outcome, Outcome::Choice(_)) {
+            st.push(Action::Run("page.delete".into(), json!({ "keep": 0 })));
+        }
         return;
     }
     if question && matches!(outcome, Outcome::Close) {

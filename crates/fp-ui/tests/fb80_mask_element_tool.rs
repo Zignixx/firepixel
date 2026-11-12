@@ -159,7 +159,7 @@ fn flyout_entry_cursor_and_clicks() {
     assert_eq!(sel(&h), vec![ElementId(c)], "the content");
     assert_eq!(
         hover(&mut h, 40.0, 40.0),
-        Cursor::Arrow,
-        "Subselection keeps its plain arrow"
+        Cursor::Subselect,
+        "Subselection keeps its own hollow arrow (F155)"
     );
 }

@@ -650,6 +650,7 @@ msg-warn-filter-vectors = This operation converts vectors to bitmaps.
 msg-warn-path-tools-primitive = The path scrubber tools can only be used on paths. Select a path if you want to use the path scrubber tools.
 # Animate selection beyond the last state (Q-20): question with OK/Cancel/Don't show again
 msg-confirm-animate-add-states = The animation of this symbol extends beyond the last state in the document. Automatically add new states?
+msg-confirm-delete-only-page = Attempting to delete the only page in the file will have it replaced with a brand new page instead. Proceed?
 msg-insert-web-multi-slice = Multiple objects are selected. Create one slice or multiple slices?
 msg-insert-web-multi-hotspot = Multiple objects are selected. Create one hotspot or multiple hotspots?
 btn-insert-web-single = Single

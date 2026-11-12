@@ -906,6 +906,17 @@ pub struct PointerTool {
     mask_reach: bool,
 }
 
+/// Cursor of the tool over fill, segment and empty space: the Pointer the black arrow, the
+/// Subselection the hollow (white) arrow with black outline (RE spec 69 section 4.2, resource
+/// measurement; FB-147, TW-290), Select Behind its own arrow.
+fn idle_cursor_of(id: ToolId) -> Cursor {
+    match id {
+        ToolId::SelectBehind => Cursor::SelectBehind,
+        ToolId::Subselection => Cursor::Subselect,
+        _ => Cursor::Arrow,
+    }
+}
+
 impl PointerTool {
     /// Neues Werkzeug (Pointer, SelectBehind oder Subselection).
     pub fn new(id: ToolId) -> PointerTool {
@@ -914,7 +925,7 @@ impl PointerTool {
             state: PState::Idle,
             overlay: Vec::new(),
             hover: None,
-            hover_cursor: Cursor::Arrow,
+            hover_cursor: idle_cursor_of(id),
             click_pos: None,
             mask_reach: false,
         }
@@ -947,11 +958,7 @@ impl PointerTool {
     }
 
     fn idle_cursor(&self) -> Cursor {
-        match self.id {
-            // Subselection: plain black arrow over fill, segment and empty space (re 55 §5.4)
-            ToolId::SelectBehind => Cursor::SelectBehind,
-            _ => Cursor::Arrow,
-        }
+        idle_cursor_of(self.id)
     }
 
     /// Cursor over a path point and while dragging one: the Subselection shows a hollow

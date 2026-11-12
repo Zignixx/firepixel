@@ -55,6 +55,15 @@ pub fn valid_page_name(s: &str) -> bool {
     !s.trim().is_empty() && !s.chars().any(|c| INVALID_CHARS.contains(&c))
 }
 
+/// Name of page `index` as the panel lists it: its own name, or the default "Page N" for a page
+/// without one (a flat image opened as a document, FB-145: the row showed only "01").
+pub fn page_label(page: &fp_model::Page, index: usize) -> String {
+    match page.name.as_deref() {
+        Some(n) if !n.is_empty() => n.to_string(),
+        _ => fp_i18n::tr!("msg-default-page", n = (index + 1).to_string()),
+    }
+}
+
 /// Zeichnet das Bedienfeld.
 pub fn show(ui: &mut Ui, st: &mut AppState) {
     let theme = Theme::current(ui.ctx());
@@ -160,7 +169,7 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
                     StrokeKind::Inside,
                 );
             }
-            let name = pg.display_name().to_string();
+            let name = page_label(pg, i);
             let nr = Rect::from_min_max(
                 pos2(thumb.right() + 10.0, rect.center().y - 10.0),
                 pos2(rect.right() - 6.0, rect.center().y + 10.0),

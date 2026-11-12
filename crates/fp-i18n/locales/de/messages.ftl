@@ -650,6 +650,7 @@ msg-warn-filter-vectors = Dieser Vorgang konvertiert Vektoren in Bitmaps.
 msg-warn-path-tools-primitive = Die Pfadausbesserungs-Werkzeuge können nur für Pfade verwendet werden. Wählen Sie einen Pfad aus, wenn Sie die Pfadausbesserungs-Werkzeuge verwenden möchten.
 # Auswahl animieren über den letzten Status hinaus (Q-20): Rückfrage mit OK/Abbrechen/Nicht mehr anzeigen
 msg-confirm-animate-add-states = Die Animation dieses Symbols reicht über den letzten Status im Dokument hinaus. Automatisch neue Status hinzufügen?
+msg-confirm-delete-only-page = Wenn Sie die einzige Seite der Datei löschen, wird sie stattdessen durch eine neue, leere Seite ersetzt. Fortfahren?
 msg-insert-web-multi-slice = Es sind mehrere Elemente ausgewählt. Ein Segment oder mehrere Segmente erstellen?
 msg-insert-web-multi-hotspot = Es sind mehrere Elemente ausgewählt. Einen Hotspot oder mehrere Hotspots erstellen?
 btn-insert-web-single = Einzeln

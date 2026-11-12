@@ -583,6 +583,10 @@ fn run_command(st: &mut AppState, ctx: &egui::Context, name: &str, params: Value
     if crate::dialogs::warning::intercept_insert_web(st, name, &params) {
         return;
     }
+    // Delete Page on the only page: "… replaced with a brand new page instead. Proceed?" (FB-145)
+    if crate::dialogs::warning::intercept_delete_only_page(st, name, &params) {
+        return;
+    }
     // Delete Page with every page selected: "Delete all pages?" with the page that stays (FB-68)
     if crate::dialogs::panel_menus::intercept_delete_all_pages(st, name, &params) {
         return;

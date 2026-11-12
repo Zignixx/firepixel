@@ -749,7 +749,8 @@ Wichtige Bedienfelder:
   Mehrfachauswahl grau. Wer eine der ausgewählten Seiten zieht, verschiebt alle ausgewählten Seiten
   als Block in ihrer Reihenfolge (ein Schritt „Seiten verschieben“, am Zeiger steht die Anzahl); eine
   nicht ausgewählte Seite wird allein verschoben. Wird die einzige Seite gelöscht,
-  bleibt eine leere „Seite 1“. Sind alle Seiten ausgewählt, fragt Firepixel „Alle Seiten löschen?“ und
+  fragt Firepixel erst, ob sie durch eine neue Seite ersetzt werden darf; OK hinterlässt eine leere „Seite 1“
+  (Skripte fragen nicht). Sind alle Seiten ausgewählt, fragt Firepixel „Alle Seiten löschen?“ und
   lässt die Seite wählen, die bleibt (Skripte behalten die erste Seite oder die mit `keep` genannte).
 - **Optimieren:** Exportformat und Farben.
 - **Verlauf:** Schritte zurückspulen, wiederholen oder als Befehl speichern. Ein rotes × kennzeichnet einen Schritt,
