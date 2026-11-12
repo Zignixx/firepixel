@@ -731,3 +731,4 @@ cmdtext-fruehere-teile-eines-strichs-dessen-eins-dfe126 = Frühere Teile eines S
 cmdtext-arrow-key-nudge-with-a-pixel-selection-l-ecf823 = Pfeiltasten-Schritt mit einer Pixelauswahl: hebt die Pixel in einen schwebenden Block (Strg+Pfeil mit einem Bitmap-Auswahlwerkzeug)
 cmdtext-move-a-copy-without-a-floating-block-the-fcc076 = Kopie verschieben: ohne schwebenden Block behält die Bitmap die Pixel, mit einem Block wird er an seiner Stelle abgelegt und schwebt weiter (Zeile Duplizieren)
 cmdtext-staerke-des-verlauf-dithers-in-100-vorga-d04749 = Stärke des Verlauf-Dithers in % (100 = Vorgabe, 0 = keiner; Firepixel-Erweiterung)
+cmdtext-path-pfadumriss-alphakanal-image-graustu-9152a7 = path = Pfadumriss/Alphakanal, image = Graustufendarstellung, pixelAlpha = Pixel-Alpha (Firepixel-Erweiterung FB-151)

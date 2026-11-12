@@ -731,3 +731,4 @@ cmdtext-fruehere-teile-eines-strichs-dessen-eins-dfe126 = earlier parts of a str
 cmdtext-arrow-key-nudge-with-a-pixel-selection-l-ecf823 = arrow-key nudge with a pixel selection: lift the pixels into a floating block (Ctrl+arrow with a bitmap selection tool)
 cmdtext-move-a-copy-without-a-floating-block-the-fcc076 = move a copy: without a floating block the bitmap keeps the pixels, with one the block is placed where it is and floats on (row Duplicate)
 cmdtext-staerke-des-verlauf-dithers-in-100-vorga-d04749 = strength of the gradient dither in % (100 = default, 0 = none; Firepixel extension)
+cmdtext-path-pfadumriss-alphakanal-image-graustu-9152a7 = path = path outline/alpha channel, image = grayscale appearance, pixelAlpha = Pixel Alpha (Firepixel extension FB-151)
