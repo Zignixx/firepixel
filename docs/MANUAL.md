@@ -731,6 +731,12 @@ The **Properties inspector** at the bottom shows, depending on the selection, fi
 opacity, blending mode, Live Filters (+/−) and text or symbol settings. Drag the line above it to make it taller
 or lower (Firepixel extension; it snaps to the full and half height, and at least 120 pixels of the document stay
 visible); the diamond on the tab and a double-click on the tab return to the full, half and collapsed sizes.
+With several objects selected it shows "2 objects" (the count) with width, height and position of the
+whole selection, also for a mix such as a path and a bitmap: fill and stroke of the topmost object that has them,
+opacity and blending mode (blank when the objects differ; a value you set applies to all of them) and the Live
+Filters when all objects carry the same ones (otherwise the list is empty and + adds a filter to all). An object of a
+mask group chosen in the Layers panel's mask rows shows its own panel. While you drag the opacity slider of the
+Properties inspector the Layers panel's Opacity field follows it, and the other way round.
 
 - **Pop-up sliders (▾):** while you move the thumb, the canvas previews the value live (preview only) for
   opacity (also the Opacity slider in the Layers panel, which like its Blend mode list acts on the selected objects

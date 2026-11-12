@@ -83,6 +83,21 @@ fn first(st: &AppState) -> Option<Arc<Element>> {
     selection_stacked(st).into_iter().next()
 }
 
+/// Element whose filter list the inspector shows and edits by index: the topmost selected one,
+/// with several objects selected only when all of them carry the same filters (FB-140; an empty
+/// list otherwise, so that Delete and the visibility boxes never hit a different filter of
+/// another object). Adding a filter still works for all of them.
+pub fn effects_shown(st: &AppState) -> Option<Arc<Element>> {
+    let sel = selection_stacked(st);
+    let top = sel.first()?;
+    let fx = |e: &Element| e.common.effects.clone().filter(|l| !l.effects.is_empty());
+    let want = fx(top);
+    sel.iter()
+        .skip(1)
+        .all(|e| fx(e) == want)
+        .then(|| Arc::clone(top))
+}
+
 fn first_attrs(st: &AppState) -> Option<Arc<PathAttrs>> {
     shown_attrs(st)
 }
@@ -1992,12 +2007,15 @@ pub fn opacity_panel(ui: &mut Ui, st: &mut AppState, d: Dl) {
         &theme,
         en,
     );
-    if let Some(v) = fields::opacity_number(
+    // FB-140: while the Layers opacity slider is dragged the field shows its value live
+    if let Some(v) = fields::opacity_number_mirrored(
         ui,
         "pi-opacity",
         d.r(11.0, 0.0, 19.0, 13.0),
         d.r(31.0, 0.0, 9.0, 13.0),
         (en && !mixed_op).then_some(op),
+        en.then(|| fields::slider_live(ui.ctx(), "layers-opacity"))
+            .flatten(),
         en,
     ) {
         st.run("element.setOpacity", json!({"opacity": v}));
@@ -2112,7 +2130,7 @@ pub fn effect_header(ui: &mut Ui, st: &mut AppState, d: Dl) {
     if en {
         crate::dialogs::effects::add_menu(ui, &resp, st);
     }
-    let n = f
+    let n = effects_shown(st)
         .as_ref()
         .and_then(|e| e.common.effects.as_ref())
         .map(|l| l.effects.len())
@@ -2140,7 +2158,7 @@ pub fn effect_list(ui: &mut Ui, st: &mut AppState, r: Rect) {
     let t = Theme::current(ui.ctx());
     let c = &t.colors;
     let inner = fields::list_box(ui, r);
-    let Some(e) = first(st) else { return };
+    let Some(e) = effects_shown(st) else { return };
     let Some(list) = e.common.effects.as_ref() else {
         return;
     };

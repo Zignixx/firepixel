@@ -806,6 +806,13 @@ Mischmodus, Filter (+/−) und Text- bzw. Symbol-Einstellungen. Die Linie darüb
 oder niedriger zu machen (Firepixel-Erweiterung; er rastet bei voller und halber Höhe ein, und mindestens 120 Pixel
 des Dokuments bleiben sichtbar); die Raute im Reiter und ein Doppelklick auf den Reiter stellen wieder volle, halbe
 und eingeklappte Höhe her.
+Bei mehreren gewählten Objekten zeigt er „2 Objekte“ (die Anzahl) mit Breite, Höhe und Lage der ganzen Auswahl,
+auch bei einer Mischung wie Pfad und Bitmap: Füllung und Strich des obersten Objekts, das welche hat, Deckkraft und
+Mischmodus (leer, wenn die Objekte verschiedene Werte haben; ein eingestellter Wert gilt für alle) und die Filter,
+wenn alle Objekte dieselben tragen (sonst bleibt die Liste leer und + fügt allen einen Filter hinzu). Ein Objekt einer
+Maskengruppe, das in den Maskenzeilen des Ebenen-Bedienfelds gewählt wird, zeigt sein eigenes Bedienfeld. Während Sie
+den Deckkraft-Schieber des Eigenschaften-Inspektors ziehen, folgt ihm das Feld Deckkraft des Ebenen-Bedienfelds und
+umgekehrt.
 
 - **Popup-Schieber (▾):** Während Sie den Regler bewegen, zeigt die Arbeitsfläche den Wert live als Vorschau – bei
   Deckkraft (auch beim Deckkraft-Schieber im Ebenen-Bedienfeld, der wie dessen Mischmodus-Liste auf die gewählten

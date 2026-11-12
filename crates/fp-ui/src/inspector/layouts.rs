@@ -28,6 +28,11 @@ pub enum Pred {
     /// Genau eine Maske gewählt (Maskenbearbeitung, re 31 §5.3 / RT-3 S5): `true` = vector mask
     /// (mask object is not a bitmap), `false` = bitmap mask; independent of the mode (RE spec 68).
     MaskSel(bool),
+    /// More than one element selected that no typed multi-selection row matched (FB-140, mixed
+    /// kinds such as Path + Bitmap): `true` = at least one of them has fill and stroke (row 20
+    /// "mixed multi-selection with paths", 11 §2.3.2), `false` = any mixed multi-selection
+    /// (Firepixel default: opacity, blend mode and filters only).
+    MixedMulti(bool),
     /// Zustände, die fp-engine noch nicht meldet (Vektormaske/Bitmapmaske/Text bearbeiten,
     /// gemischte Mehrfachauswahl): trifft vorerst nie zu.
     Never,
@@ -279,7 +284,6 @@ pub const LAYOUTS: &[PiLayout] = &[
         [14101, 14007, 14140, 14098, MASK_INVERT_Q5, 15105],
         441,
     ),
-    row(20, Never, [14102, 14007, 14129, 14130, 14132, 15101], 438),
     row(
         21,
         MaskSel(false),
@@ -448,6 +452,22 @@ pub const LAYOUTS: &[PiLayout] = &[
         [14101, 14007, 14037, 15009, 14083, 15102],
         441,
     ),
+    // FB-140: a mixed multi-selection (e.g. Path + Bitmap, also after Ungroup of a mask) shows the
+    // multi-selection panel "n objects" instead of falling through to the document. Row 20 of the
+    // original ("mixed multi-selection with paths"); it stands here after all typed rows, since
+    // its predicate only matches what none of them took
+    row(
+        20,
+        MixedMulti(true),
+        [14102, 14007, 14129, 14130, 14132, 15101],
+        438,
+    ),
+    row(
+        20,
+        MixedMulti(false),
+        [14102, 14007, 14037, 15009, 14083, 15103],
+        441,
+    ),
     row(30, Tool(ToolId::Pointer), POINTER_DOC_Q, 73),
     row(31, Tool(ToolId::Subselection), POINTER_DOC_Q, 73),
     // FB-80: the Mask Element Selection shows the Subselection's layout
@@ -549,6 +569,18 @@ pub fn matches(pred: &Pred, s: &Session) -> bool {
             d.selection.elements.len() == 1
                 && fp_engine::docops::mask_owner(&d.doc, d.page, d.selection.elements[0]).is_some_and(|o| matches!(&o.kind, fp_model::ElementKind::Group(g) if g.mask.as_ref().is_some_and(|m| !matches!(m.kind, fp_model::ElementKind::Bitmap(_)) == *vector)))
         }),
+        MixedMulti(with_paths) => {
+            let Some(d) = d else { return false };
+            if d.selection.elements.len() < 2 {
+                return false;
+            }
+            let els = fp_engine::docops::elements_on_page(&d.doc, d.page, &d.selection.elements);
+            els.len() >= 2
+                && (!*with_paths
+                    || els
+                        .iter()
+                        .any(|e| fp_engine::docops::path_attrs_of(insp_elem(e)).is_some()))
+        }
         AiSubjectResult => d.is_some_and(|d| d.selection.has_pixels()) && TUNE_TOOLS.contains(&s.tools.active) && subject_result(s),
         Sel(k) | Multi(k) => {
             let Some(d) = d else { return false };

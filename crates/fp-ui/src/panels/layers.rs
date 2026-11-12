@@ -463,12 +463,15 @@ pub fn show(ui: &mut Ui, st: &mut AppState) {
     );
     let op = shown.and_then(|v| v.0).map(|o| o.to_percent().round());
     // whole per cents at 2 px each like the reference's opacity pop-up (R-32, RE spec 61 §4.1)
-    if let Some(v) = fields::opacity_number(
+    // FB-140: while the Properties opacity slider is dragged the field shows its value live
+    if let Some(v) = fields::opacity_number_mirrored(
         ui,
         "layers-opacity",
         dl.r(120.0, 2.0, 21.0, 12.0),
         dl.r(142.0, 2.0, 9.0, 12.0),
         if mixed_op { None } else { op.or(Some(100.0)) },
+        en.then(|| fields::slider_live(ui.ctx(), "pi-opacity"))
+            .flatten(),
         en,
     ) {
         st.run("element.setOpacity", json!({"opacity": v}));

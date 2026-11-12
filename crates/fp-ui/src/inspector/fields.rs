@@ -814,6 +814,7 @@ pub fn number_unit(
         enabled,
         unit,
         VTrack::DEFAULT,
+        None,
     )
 }
 
@@ -828,6 +829,21 @@ pub fn opacity_number(
     value: Option<f64>,
     enabled: bool,
 ) -> Option<f64> {
+    opacity_number_mirrored(ui, id, edit, arrow, value, None, enabled)
+}
+
+/// [`opacity_number`] that also shows `mirror`, the value being dragged in another opacity
+/// slider for the same objects (FB-140: the Layers field follows the Properties slider live and
+/// the other way round). Only the display follows; the commit compares with `value` as usual.
+pub fn opacity_number_mirrored(
+    ui: &mut Ui,
+    id: impl Hash + std::fmt::Debug,
+    edit: Rect,
+    arrow: Rect,
+    value: Option<f64>,
+    mirror: Option<f64>,
+    enabled: bool,
+) -> Option<f64> {
     number_on(
         ui,
         Id::new(id),
@@ -839,6 +855,7 @@ pub fn opacity_number(
         enabled,
         "",
         VTrack::PERCENT,
+        mirror,
     )
 }
 
@@ -854,9 +871,12 @@ fn number_on(
     enabled: bool,
     unit: &str,
     track: VTrack,
+    mirror: Option<f64>,
 ) -> Option<f64> {
     // beim Ziehen im Popup-Schieber zeigt das Feld den Wert schon mit (übernommen wird beim Loslassen)
-    let live = arrow.and_then(|_| ui.data(|d| d.get_temp::<f64>(id.with("arrow").with("val"))));
+    let live = arrow
+        .and_then(|_| ui.data(|d| d.get_temp::<f64>(id.with("arrow").with("val"))))
+        .or(mirror);
     let cur = live
         .or(value)
         .map(|v| format!("{}{unit}", fmt_num(v, decimals)))

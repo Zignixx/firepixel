@@ -384,6 +384,9 @@ fn mask_member_rows_select_the_mask_for_editing() {
     assert!(find(&h, "M1").is_some() && find(&h, "M2").is_some(), "{:?}", panel_texts(&h));
     click(&mut h, "M2", Modifiers::NONE);
     assert_eq!(selection(&h), vec![ids.m2], "member of the group mask subselected");
+    // FB-140: the Properties panel shows the member's own panel, not the document
+    let l = fp_ui::inspector::layouts::select_layout(&h.state().state.session).map(|l| l.number);
+    assert!(matches!(l, Some(58 | 26)), "the mask member's own panel, got {l:?}");
     click(&mut h, "M1", Modifiers::SHIFT);
     let mut want = vec![ids.m1, ids.m2];
     want.sort();
