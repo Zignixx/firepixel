@@ -479,13 +479,25 @@ fn mask_group_column_shown(st: &AppState, state: &InspectorState) -> bool {
     state.quads[0] == 14101 && obj_quads::whole_mask_group(st).is_some()
 }
 
-/// Width the inspector needs without a scroll bar: [`BODY_WIDTH`], plus the mask group column.
-fn body_width(st: &AppState, state: &InspectorState) -> f32 {
-    if mask_group_column_shown(st, state) {
-        BODY_WIDTH + obj_quads::MASK_GROUP_COLUMN_W
+/// Firepixel (F165): extra width of the right quads Q5/Q6 of the vector mask inspector, whose
+/// German "Show fill and stroke" is wider than the measured 180 px; 0 under every other layout.
+fn right_quads_extra(state: &InspectorState) -> f32 {
+    if state.quads[4] == layouts::MASK_MODES_Q5 {
+        obj_quads::MASK_QUADS_EXTRA_W
     } else {
-        BODY_WIDTH
+        0.0
     }
+}
+
+/// Width the inspector needs without a scroll bar: [`BODY_WIDTH`], plus the mask group column or
+/// the wider right quads of the vector mask inspector.
+fn body_width(st: &AppState, state: &InspectorState) -> f32 {
+    let extra = if mask_group_column_shown(st, state) {
+        obj_quads::MASK_GROUP_COLUMN_W
+    } else {
+        0.0
+    };
+    BODY_WIDTH + extra + right_quads_extra(state)
 }
 
 /// Object quadrants and, if any, the tool options section with its separator (FB-149): the
@@ -532,7 +544,7 @@ fn quadrants(
     let rh = theme.metrics.inspector_row_height;
     let top = body.top() + 2.0;
     let w1 = W1;
-    let w5 = W5;
+    let w5 = W5 + right_quads_extra(state);
     let x0 = body.left() + 2.0;
     let x1 = x0 + w1;
     let column = mask_group_column_shown(st, state);

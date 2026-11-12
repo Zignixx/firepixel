@@ -265,13 +265,21 @@ pub struct CommandInfo {
     pub checkable: bool,
     /// Hinweis (z. B. „braucht Renderer“).
     pub note: Option<String>,
+    /// `msg-step-…` key naming the History row in every language instead of the command's own
+    /// name, e.g. the plain move row of the marquee and pixel moves (RE spec 80 §5, F165).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub step_key: Option<String>,
 }
 
 impl CommandInfo {
-    /// Name des Verlaufsschritts in der aktuellen Sprache. In der Ausgangssprache (Deutsch) genau
+    /// Name des Verlaufsschritts in der aktuellen Sprache: the text of [`CommandInfo::step_key`]
+    /// if set. In der Ausgangssprache (Deutsch) sonst genau
     /// [`CommandInfo::label`]; sonst das Attribut `cmd-….step` (falls vorhanden), der Menütext
     /// `cmd-…` ohne Zugriffstaste und „…“, bei Filtern `filter-…`, zuletzt `label`.
     pub fn step_label(&self) -> String {
+        if let Some(k) = self.step_key.as_deref().filter(|k| fp_i18n::has(k)) {
+            return fp_i18n::t(k);
+        }
         if fp_i18n::current_language() == fp_i18n::SOURCE_LANG {
             return self.label.clone();
         }
@@ -536,6 +544,7 @@ pub fn cmd(name: &str) -> CommandBuilder {
             implemented: true,
             checkable: false,
             note: None,
+            step_key: None,
         },
         checked: None,
         avail: None,
@@ -547,6 +556,12 @@ impl CommandBuilder {
     /// Deutsche Beschriftung (für Befehle außerhalb des Katalogs).
     pub fn label(mut self, l: &str) -> Self {
         self.info.label = l.into();
+        self
+    }
+    /// History row named by the `msg-step-…` key `k` in every language (see
+    /// [`CommandInfo::step_key`]).
+    pub fn step(mut self, k: &str) -> Self {
+        self.info.step_key = Some(k.into());
         self
     }
     /// Statuszeilentext.

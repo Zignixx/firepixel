@@ -464,13 +464,15 @@ mit der Strichart *Einfach ▸ Präzise abger.* (1 px); eine eigene Wahl im Insp
   Firepixel-Erweiterungen über das Original hinaus: Ist eine **Gruppenmaske** gewählt, wählt ein weiterer
   Klick mit der Maskenelement-Auswahl oder der Teilauswahl (oder ein Doppelklick mit dem Zeiger) das Kind unter dem Zeiger, sodass sich
   seine Punkte einzeln bearbeiten lassen und die Maske folgt; der Masken-Inspektor hat ein Kästchen
-  **Invertieren** (Vektor- und Bitmapmasken; bei einer Vektormaske rechts in der oberen Zeile direkt über den
-  Zeilen *Maske:*, bei einer Bitmapmaske rechts neben *Alphakanal*), das verbirgt, was innerhalb der Maske liegt, und alles
+  **Invertieren** (Vektor- und Bitmapmasken; bei einer Vektormaske rechts in der unteren Zeile unter
+  *Füllung und Pinselstrich anzeigen*, bei einer Bitmapmaske rechts neben *Alphakanal*), das verbirgt, was innerhalb der Maske liegt, und alles
   außerhalb zeigt (die eigene Deckkraft des Maskenobjekts bzw. ein Grauwert im Graustufenmodus bestimmt,
   wie stark). Invertierte Masken stehen in einem Firepixel-eigenen Tag der FW-PNG-Datei; andere Programme
   zeigen die normale Maske.
   Ein dritter Maskenmodus **Pixel-Alpha** (Firepixel-Erweiterung) steht neben *Pfadumriss* / *Alphakanal* und
-  *Graustufen* (Vektormaske: direkt über *Pfadumriss*; Bitmapmaske: rechts neben *Alphakanal*): Die
+  *Graustufen* (Vektormaske: unter *Graustufendarstellung*, rechts steht also oben *Maske:* Pfadumriss,
+  Graustufendarstellung, Pixel-Alpha und unten *Füllung und Pinselstrich anzeigen*, *Invertieren*, wie in der
+  Spalte einer ganzen Maskengruppe; Bitmapmaske: rechts neben *Alphakanal*): Die
   Transparenz der Maskenpixel schneidet den Inhalt zu, auch Farbalpha, weiche Kante und Dithering von Füllung
   und Strich eines Pfads, und das Maskenobjekt wird nie unter dem Inhalt gezeichnet, egal was *Füllung und
   Pinselstrich anzeigen* sagt. Er steht in einem Firepixel-eigenen Tag; andere Programme lesen *Pfadumriss* /

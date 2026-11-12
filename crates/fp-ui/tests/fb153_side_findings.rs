@@ -226,7 +226,7 @@ fn show_attrs(h: &H) -> Option<bool> {
 }
 
 /// FB-153 (5): clicking "Show fill and stroke" (off, on, off) keeps the highlight on that box;
-/// the "Invert" box above it is never highlighted while the pointer rests on "Show".
+/// the "Invert" box next to it (below it since F165) is never highlighted while the pointer rests on "Show".
 #[test]
 fn fb153_show_fill_click_keeps_highlight_off_invert() {
     let mut h = vector_mask_harness();

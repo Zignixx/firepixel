@@ -46,7 +46,7 @@ pub(super) fn register(r: &mut QuadrantRegistry) {
     r.register(14009, text_tool_q3);
     r.register(14128, mask_q3);
     r.register(15105, mask_options_q6);
-    r.register(super::layouts::MASK_INVERT_Q5, mask_invert_q5);
+    r.register(super::layouts::MASK_MODES_Q5, mask_modes_q5);
     r.register(14140, path_q3);
     r.register(14098, path_q4);
     r.register(14147, text_q3);
@@ -4351,57 +4351,108 @@ fn show_attrs_box(ui: &mut Ui, st: &mut AppState, id: &str, r: Rect, m: MaskStat
     }
 }
 
-/// Q6 bei gewählter Vektormaske (re 31 §5.3): „Maske:“ Pfadumriss / Graustufendarstellung und
-/// „Füllung und Pinselstrich anzeigen“ des maskierten Elements.
-fn mask_options_q6(ui: &mut Ui, st: &mut AppState, r: Rect) {
-    let d = Dl::at(r.min + vec2(4.0, 0.0));
-    let Some(m) = selected_mask_state(st) else {
-        return;
+// ------------------------------------------- mask option rows (vector mask, whole mask group)
+//
+// FB-146/FB-151 follow-up (F165): the vector mask inspector and the column of a whole mask group
+// share one arrangement, read top to bottom: "Mask:" with Path outline (Alpha channel for a bitmap
+// mask) in the first row, Grayscale, Pixel Alpha (upper quad, 3 rows of 9.5 DLU = 48 px), then
+// Show fill and stroke (not for a bitmap mask) and Invert (lower quad).
+
+/// Left edge of the mode radios right of "Mask:" (DLU from the quad's left edge + 4 px): the
+/// German "Maske:" plus a gap of [`MASK_LABEL_GAP`] fits before it.
+const MASK_RADIO_X: f32 = 32.0;
+/// Gap between "Mask:" and the first radio (DLU).
+const MASK_LABEL_GAP: f32 = 3.0;
+/// The upper quad of the mask rows: "Mask:" and the three mode radios one below the other. `w`:
+/// width in DLU from the inset origin `d`.
+fn mask_mode_rows(ui: &mut Ui, st: &mut AppState, d: Dl, w: f32, id: &str, m: MaskState) {
+    let head = d.r(2.0, 1.0, MASK_RADIO_X - 2.0 - MASK_LABEL_GAP, 8.0);
+    fields::label(ui, head, &t("pi-mask"), true);
+    if id == "pi-mgroup" {
+        fields::named_tip(
+            ui,
+            "pi-mgroup-tip",
+            head,
+            &crate::tips::named(&t("pi-mask"), &t("pi-tip-mask-group-options")),
+        );
+    }
+    let (path_label, gray_label) = if m.bitmap {
+        (t("pi-mask-alpha"), t("pi-mask-gray"))
+    } else {
+        (t("pi-mask-path-outline"), t("pi-mask-grayscale"))
     };
-    // FB-83: the rows of the reference in their order (Mask: Path outline / Grayscale, then Show
-    // fill and stroke) at a pitch of 9.5 DLU (15 px), so all three end inside the quad (29.5 DLU =
-    // 48 px); before, Show sat at 24..36 DLU (39..58 px) and was cut off at the panel's bottom
-    fields::label(ui, d.r(2.0, 1.0, 24.0, 8.0), &t("pi-mask"), true);
+    let w = w - MASK_RADIO_X;
     mode_radio(
         ui,
         st,
-        egui::Id::new("pi-mask-path"),
-        d.r(26.0, 0.0, 90.0, 9.5),
-        &t("pi-mask-path-outline"),
+        egui::Id::new((id, "path")),
+        d.r(MASK_RADIO_X, 0.0, w, 9.5),
+        &path_label,
         MaskModeUi::Path,
         m,
     );
     mode_radio(
         ui,
         st,
-        egui::Id::new("pi-mask-image"),
-        d.r(26.0, 9.5, 90.0, 9.5),
-        &t("pi-mask-grayscale"),
+        egui::Id::new((id, "gray")),
+        d.r(MASK_RADIO_X, 9.5, w, 9.5),
+        &gray_label,
         MaskModeUi::Gray,
         m,
     );
-    show_attrs_box(ui, st, "pi-mask-show", d.r(2.0, 19.5, 114.0, 9.5), m);
-    // FB-83: the Firepixel "Invert" checkbox no longer sits in a fourth row here (it reached the
-    // quad's bottom edge and was cut off); it is in Q5 right above ([`mask_invert_q5`])
+    pixel_alpha_radio(ui, st, id, d.r(MASK_RADIO_X, 19.5, w, 9.5), m);
 }
 
-/// Q5 of a selected vector mask (Firepixel extensions, FB-35/FB-83, FB-151): the "Invert"
-/// checkbox and, right above the mask rows of Q6 in the column of their radios, the third mode
-/// radio "Pixel Alpha". The reference leaves this quad empty; its own mask rows in Q6 keep their
-/// measured order.
-fn mask_invert_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
-    let d = Dl::at(r.min + vec2(4.0, 0.0));
-    mask_invert_box(ui, st, d.r(2.0, 9.5, 114.0, 9.5));
-    if let Some(m) = selected_mask_state(st) {
-        pixel_alpha_radio(ui, st, "pi-mask", d.r(26.0, 19.5, 90.0, 9.5), m);
+/// The lower quad of the mask rows: Show fill and stroke (not for a bitmap mask, like the
+/// reference's bitmap mask inspector, RE spec 68 §4.2) and Invert. `w`: width in DLU.
+fn mask_box_rows(ui: &mut Ui, st: &mut AppState, d: Dl, w: f32, id: &str, m: MaskState) {
+    let mut y = 0.5;
+    if !m.bitmap {
+        show_attrs_box(ui, st, &format!("{id}-show"), d.r(2.0, y, w - 2.0, 9.5), m);
+        y += 9.5;
     }
+    invert_box(
+        ui,
+        st,
+        &format!("{id}-invert"),
+        d.r(2.0, y, w - 2.0, 9.5),
+        m,
+    );
+}
+
+/// Extra width (px) of the right quads Q5/Q6 of the vector mask inspector (Firepixel, F165):
+/// "Füllung und Pinselstrich anzeigen" is wider than the 180 px quad; the quads grow to the right
+/// (nothing lies there) and the inspector's width without a scroll bar grows with them.
+pub const MASK_QUADS_EXTRA_W: f32 = 24.0;
+
+/// Q6 of a selected vector mask (re 31 §5.3, dialog 15105): Show fill and stroke and the
+/// Firepixel "Invert" below the mode rows of Q5 ([`mask_modes_q5`]).
+fn mask_options_q6(ui: &mut Ui, st: &mut AppState, r: Rect) {
+    let Some(m) = selected_mask_state(st) else {
+        return;
+    };
+    let d = Dl::at(r.min + vec2(4.0, 0.0));
+    mask_box_rows(ui, st, d, (r.width() - 4.0) / fields::DLU_X, "pi-mask", m);
+}
+
+/// Q5 of a selected vector mask: "Mask:" Path outline / Grayscale of the reference's dialog 15105
+/// and the Firepixel mode "Pixel Alpha" (FB-151) one below the other. F165: before, Q5 held
+/// Invert and Pixel Alpha above the reference's rows in Q6, so the third mode looked detached;
+/// now the rows read in the order of the mask group column, the check boxes follow in Q6 (at half
+/// panel height only the mode rows show).
+fn mask_modes_q5(ui: &mut Ui, st: &mut AppState, r: Rect) {
+    let Some(m) = selected_mask_state(st) else {
+        return;
+    };
+    let w = (r.width() - 4.0) / fields::DLU_X;
+    mask_mode_rows(ui, st, Dl::at(r.min + vec2(4.0, 0.0)), w, "pi-mask", m);
 }
 
 // ------------------------------------------------- mask options of a whole mask group (FB-146)
 
 /// Width of the Firepixel column with the mask options of a mask group selected as a whole
-/// (FB-146, TW-297), right of Q5/Q6.
-pub const MASK_GROUP_COLUMN_W: f32 = 190.0;
+/// (FB-146, TW-297), right of Q5/Q6 (F165: wide enough for "Füllung und Pinselstrich anzeigen").
+pub const MASK_GROUP_COLUMN_W: f32 = 210.0;
 
 /// Firepixel extension (FB-146, TW-297): the masked object selected as a whole (canvas click, the
 /// object thumbnail or the name of its Layers row), whose mask options the Properties panel offers
@@ -4420,62 +4471,27 @@ pub fn whole_mask_group(st: &AppState) -> Option<Arc<Element>> {
     Some(e)
 }
 
-/// The column of [`whole_mask_group`]: in the first row "Mask:" with the three mode radios (Path
-/// outline or, for a bitmap mask, Alpha channel / Grayscale / Pixel Alpha) like the mask
-/// inspectors, in the second row "Show fill and stroke" (not for a bitmap mask, like the
-/// reference's bitmap mask inspector) and "Invert". The controls run the same command as the mask
-/// inspectors (`modify.mask.options`, one History row "Modify Mask"); with the group selected the
-/// command acts on it.
+/// The column of [`whole_mask_group`]: the rows of the vector mask inspector ([`mask_mode_rows`]
+/// in the upper, [`mask_box_rows`] in the lower row; Alpha channel / Grayscale for a bitmap mask,
+/// then no Show fill and stroke). The controls run the same command as the mask inspectors
+/// (`modify.mask.options`, one History row "Modify Mask"); with the group selected the command
+/// acts on it.
 pub fn mask_group_column(ui: &mut Ui, st: &mut AppState, top: Rect, bottom: Option<Rect>) {
     let Some(m) = whole_mask_group(st).and_then(|e| MaskState::of(&e)) else {
         return;
     };
-    let d = Dl::at(top.min + vec2(4.0, 0.0));
-    let head = d.r(2.0, 1.0, 24.0, 8.0);
-    fields::label(ui, head, &t("pi-mask"), true);
-    fields::named_tip(
-        ui,
-        "pi-mgroup-tip",
-        head,
-        &crate::tips::named(&t("pi-mask"), &t("pi-tip-mask-group-options")),
-    );
-    let path_label = if m.bitmap {
-        t("pi-mask-alpha")
-    } else {
-        t("pi-mask-path-outline")
-    };
-    mode_radio(
-        ui,
-        st,
-        egui::Id::new("pi-mgroup-path"),
-        d.r(26.0, 0.0, 90.0, 9.5),
-        &path_label,
-        MaskModeUi::Path,
-        m,
-    );
-    let gray_label = if m.bitmap {
-        t("pi-mask-gray")
-    } else {
-        t("pi-mask-grayscale")
-    };
-    mode_radio(
-        ui,
-        st,
-        egui::Id::new("pi-mgroup-gray"),
-        d.r(26.0, 9.5, 90.0, 9.5),
-        &gray_label,
-        MaskModeUi::Gray,
-        m,
-    );
-    pixel_alpha_radio(ui, st, "pi-mgroup", d.r(26.0, 19.5, 90.0, 9.5), m);
+    // `top`/`bottom` begin 6 px right of the column's separator and end with the column
+    let w = (MASK_GROUP_COLUMN_W - 6.0 - 4.0) / fields::DLU_X;
+    mask_mode_rows(ui, st, Dl::at(top.min + vec2(4.0, 0.0)), w, "pi-mgroup", m);
     let Some(bottom) = bottom else { return };
-    let d = Dl::at(bottom.min + vec2(4.0, 0.0));
-    let mut y = 0.5;
-    if !m.bitmap {
-        show_attrs_box(ui, st, "pi-mgroup-show", d.r(2.0, y, 114.0, 9.5), m);
-        y += 9.5;
-    }
-    invert_box(ui, st, "pi-mgroup-invert", d.r(2.0, y, 114.0, 9.5), m);
+    mask_box_rows(
+        ui,
+        st,
+        Dl::at(bottom.min + vec2(4.0, 0.0)),
+        w,
+        "pi-mgroup",
+        m,
+    );
 }
 
 /// Für Tests: Text einer Elementart im Inspektor (Q1).

@@ -163,17 +163,20 @@ fn vector_mask_rows_fit_and_keep_their_order() {
         path.top() < gray.top() && gray.top() < show.top(),
         "{path:?} {gray:?} {show:?}"
     );
-    // Invert (Firepixel) right above the mask rows in the same column
+    // F165: Invert (Firepixel) below Show fill and stroke in the same column (the order of the
+    // mask group column; FB-83 had put it above the mask rows)
     assert!(
-        inv.bottom() <= path.top() + 0.5 && (inv.left() - show.left()).abs() < 0.5,
+        show.bottom() <= inv.top() + 0.5 && (inv.left() - show.left()).abs() < 0.5,
         "{inv:?} {show:?}"
     );
-    // half height: the first row stays, Invert remains reachable
+    // half height: the first row with the mode radios stays
     h.state_mut().state.settings.workspace.inspector_half = true;
     h.run_steps(4);
     let half = rows_bottom(&h, 1.0);
-    let inv = control(&h, Role::CheckBox, "pi-mask-invert").expect("Invert at half height");
-    assert_fits(&h, "invert half", inv, half);
+    for key in ["pi-mask-path-outline", "pi-mask-grayscale", "pi-mask-pixel-alpha"] {
+        let r = control(&h, Role::RadioButton, key).expect("mode radio at half height");
+        assert_fits(&h, key, r, half);
+    }
     // a dragged height between half and full height scrolls instead of cutting the rows off
     h.state_mut().state.settings.workspace.inspector_half = false;
     h.state_mut().state.settings.workspace.inspector_height = 18.0 + 48.0 + 30.0;

@@ -205,15 +205,16 @@ fn masked_bitmap_column_has_alpha_channel_and_no_show_box() {
 
 #[test]
 fn mask_inspectors_offer_pixel_alpha() {
-    // vector mask selected (mask thumbnail way): Q5 holds the radio right above Path outline
+    // vector mask selected (mask thumbnail way): the radio below Grayscale in the column of the
+    // mode radios (F165; FB-151 had put it above Path outline)
     let (mut s, _g) = paste_inside_scene();
     ex(&mut s, "panel.layers.editMask", json!({}));
     let mut h = build(s);
     let t = fp_i18n::t;
     assert_eq!(layout(&h).0, 19, "vector mask inspector");
     let (pixel, _) = control(&h, Role::RadioButton, &t("pi-mask-pixel-alpha")).expect("Pixel Alpha");
-    let (path, _) = control(&h, Role::RadioButton, &t("pi-mask-path-outline")).expect("Path outline");
-    assert!(pixel.bottom() <= path.top() + 0.5 && (pixel.left() - path.left()).abs() < 0.5, "{pixel:?} {path:?}");
+    let (gray, _) = control(&h, Role::RadioButton, &t("pi-mask-grayscale")).expect("Grayscale");
+    assert!(gray.bottom() <= pixel.top() + 0.5 && (pixel.left() - gray.left()).abs() < 0.5, "{pixel:?} {gray:?}");
     click_control(&mut h, Role::RadioButton, &t("pi-mask-pixel-alpha"));
     assert_eq!(
         fp_ui::inspector::obj_quads::selected_mask_mode_ui(&h.state().state),
@@ -351,4 +352,116 @@ fn mask_rows_of_the_group_tree_show_the_matching_inspector() {
     assert_eq!(ys.len(), 2);
     click_at(&mut h, ys[1].center(), Modifiers::NONE);
     assert_eq!(layout(&h).1, 14101, "content row Y: object inspector");
+}
+
+// ------------------------------------------------------------ F165: layout of the mask rows
+
+/// Audit entries of one frame (label, check box and radio texts of the inspector).
+fn audit(h: &mut H) -> Vec<fp_ui::inspector::fields::TextAudit> {
+    fp_ui::inspector::fields::set_audit(&h.ctx, true);
+    h.run_steps(2);
+    let v = fp_ui::inspector::fields::take_audit(&h.ctx);
+    fp_ui::inspector::fields::set_audit(&h.ctx, false);
+    v
+}
+
+fn text_entry<'a>(a: &'a [fp_ui::inspector::fields::TextAudit], text: &str) -> &'a fp_ui::inspector::fields::TextAudit {
+    a.iter().rfind(|e| e.text == text).unwrap_or_else(|| panic!("{text:?} not drawn"))
+}
+
+/// The text is drawn whole (not shrunk or cut) and inside its quad / column.
+fn assert_whole(a: &[fp_ui::inspector::fields::TextAudit], text: &str) {
+    let e = text_entry(a, text);
+    assert_eq!(e.fit, 0, "{text:?} shown whole");
+    assert!(e.drawn.right() <= e.clip.right() + 0.5 && e.drawn.left() >= e.clip.left() - 0.5, "{text:?}: {:?} inside {:?}", e.drawn, e.clip);
+    assert!(e.drawn.bottom() <= e.clip.bottom() + 0.5 && e.drawn.top() >= e.clip.top() - 0.5, "{text:?}: {:?} inside {:?}", e.drawn, e.clip);
+}
+
+/// "Mask:" first, then Path outline, Grayscale, Pixel Alpha, Show fill and stroke, Invert, one
+/// below the other in one column, without overlap; the label ends with a gap before the radios.
+fn assert_mask_rows(h: &mut H, what: &str) {
+    let t = fp_i18n::t;
+    let a = audit(h);
+    let label = text_entry(&a, &t("pi-mask")).drawn;
+    let (path, _) = control(h, Role::RadioButton, &t("pi-mask-path-outline")).expect("Path outline");
+    let (gray, _) = control(h, Role::RadioButton, &t("pi-mask-grayscale")).expect("Grayscale");
+    let (pixel, _) = control(h, Role::RadioButton, &t("pi-mask-pixel-alpha")).expect("Pixel Alpha");
+    let (show, _) = control(h, Role::CheckBox, &t("pi-mask-show-attrs")).expect("Show fill and stroke");
+    let (inv, _) = control(h, Role::CheckBox, &t("pi-mask-invert")).expect("Invert");
+    assert!((label.center().y - path.center().y).abs() < 2.0, "{what}: Mask: in the row of Path outline");
+    assert!(label.right() + 4.0 <= path.left(), "{what}: gap between {label:?} and {path:?}");
+    let rows = [path, gray, pixel, show, inv];
+    for w in rows.windows(2) {
+        assert!(w[0].bottom() <= w[1].top() + 0.5, "{what}: order and no overlap {:?} {:?}", w[0], w[1]);
+    }
+    assert!((path.left() - gray.left()).abs() < 0.5 && (gray.left() - pixel.left()).abs() < 0.5, "{what}: radios in one column");
+    assert!((show.left() - inv.left()).abs() < 0.5 && show.left() < path.left(), "{what}: check boxes below");
+    for key in ["pi-mask", "pi-mask-path-outline", "pi-mask-grayscale", "pi-mask-pixel-alpha", "pi-mask-show-attrs", "pi-mask-invert"] {
+        assert_whole(&a, &t(key));
+    }
+}
+
+#[test]
+fn f165_mask_rows_read_in_order_and_german_texts_fit() {
+    // whole mask group: the column right of Q5/Q6
+    let (s, _g) = paste_inside_scene();
+    let mut h = build(s);
+    assert_mask_rows(&mut h, "column");
+    // vector mask selected: Q5 / Q6 of layout 19, same arrangement
+    let (mut s, _g) = paste_inside_scene();
+    ex(&mut s, "panel.layers.editMask", json!({}));
+    let mut h = build(s);
+    assert_eq!(layout(&h).0, 19, "vector mask inspector");
+    assert_mask_rows(&mut h, "layout 19");
+    // the measured quads Q3/Q4 stay where they are: Q5 begins 2 + 126 + 590 px right of the panel
+    let (path, _) = control(&h, Role::RadioButton, &fp_i18n::t("pi-mask-path-outline")).expect("Path outline");
+    let panel = fp_ui::inspector::fields::panel_rect(&h.ctx).expect("panel");
+    assert!(path.left() >= panel.left() + 2.0 + 126.0 + 590.0, "{path:?}");
+}
+
+#[test]
+fn f165_bitmap_mask_label_keeps_a_gap() {
+    fp_engine::shell::disable();
+    fp_i18n::set_language("de");
+    let t = fp_i18n::t;
+    let mut s = fp_engine::Session::default();
+    ex(&mut s, "file.new", json!({"width": 300, "height": 200, "background": "#ffffff"}));
+    let b = bitmap(&mut s, 40, 40, 60, 60, "B");
+    ex(&mut s, "select.set", json!({"ids": [b]}));
+    ex(&mut s, "modify.mask.revealAll", json!({}));
+    s.set_tool(ToolId::Pointer).expect("pointer");
+    let mut h = build(s);
+    assert_eq!(layout(&h).0, 21, "bitmap mask inspector");
+    let a = audit(&mut h);
+    let label = text_entry(&a, &t("pi-mask")).drawn;
+    let (alpha, _) = control(&h, Role::RadioButton, &t("pi-mask-alpha")).expect("Alpha channel");
+    assert!(label.right() + 4.0 <= alpha.left(), "gap between {label:?} and {alpha:?}");
+    assert_whole(&a, &t("pi-mask"));
+    // the column of a masked bitmap selected as a whole (Paste Inside onto a bitmap): Alpha
+    // channel, Grayscale, Pixel Alpha below "Maske:" with a gap, then Invert
+    let mut s = fp_engine::Session::default();
+    ex(&mut s, "file.new", json!({"width": 300, "height": 200, "background": "#ffffff"}));
+    let c = filled(&mut s, [20, 20, 120, 120], "#ff0000", "C");
+    let b = bitmap(&mut s, 40, 40, 60, 60, "B");
+    ex(&mut s, "select.set", json!({"ids": [c]}));
+    ex(&mut s, "edit.cut", json!({}));
+    ex(&mut s, "select.set", json!({"ids": [b]}));
+    let g = id_of(&ex(&mut s, "edit.pasteInside", json!({})));
+    ex(&mut s, "select.set", json!({"ids": [g]}));
+    s.set_tool(ToolId::Pointer).expect("pointer");
+    let mut h = build(s);
+    assert_eq!(layout(&h).1, 14101);
+    let a = audit(&mut h);
+    let label = text_entry(&a, &t("pi-mask")).drawn;
+    let (alpha, _) = control(&h, Role::RadioButton, &t("pi-mask-alpha")).expect("Alpha channel");
+    let (gray, _) = control(&h, Role::RadioButton, &t("pi-mask-gray")).expect("Grayscale");
+    let (pixel, _) = control(&h, Role::RadioButton, &t("pi-mask-pixel-alpha")).expect("Pixel Alpha");
+    let (inv, _) = control(&h, Role::CheckBox, &t("pi-mask-invert")).expect("Invert");
+    assert!(label.right() + 4.0 <= alpha.left(), "column: gap between {label:?} and {alpha:?}");
+    for w in [alpha, gray, pixel, inv].windows(2) {
+        assert!(w[0].bottom() <= w[1].top() + 0.5, "column: order {:?} {:?}", w[0], w[1]);
+    }
+    for key in ["pi-mask", "pi-mask-alpha", "pi-mask-gray", "pi-mask-pixel-alpha", "pi-mask-invert"] {
+        assert_whole(&a, &t(key));
+    }
 }

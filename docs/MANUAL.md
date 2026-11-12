@@ -424,12 +424,14 @@ with it is free (not rounded to whole pixels) and snaps only to the grid, guides
   Firepixel extensions beyond the original: with a **group mask** selected, a further click with the
   Mask Element Selection or the Subselection (or a Pointer double-click) selects the child under the pointer, so its anchors can be edited
   one by one and the mask follows; the mask inspector has an **Invert** checkbox (vector and bitmap
-  masks; for a vector mask at the right end of the upper row, right above the *Mask:* rows; for a bitmap mask
+  masks; for a vector mask at the right end of the lower row, below *Show fill and stroke*; for a bitmap mask
   right of *Alpha channel*) that hides what lies inside the mask and keeps everything outside (the mask object's own
   opacity, or a grey value in grayscale mode, sets how strongly). Inverted masks are stored in a
   Firepixel-own tag of the FW-PNG file; other programs show the plain mask.
   A third mask mode **Pixel Alpha** (Firepixel extension) sits beside *Path outline* / *Alpha channel* and
-  *Grayscale* (vector mask: right above *Path outline*; bitmap mask: right of *Alpha channel*): the
+  *Grayscale* (vector mask: below *Grayscale*, so the right end reads *Mask:* Path outline, Grayscale, Pixel
+  Alpha in the upper row and *Show fill and stroke*, *Invert* in the lower one, like the column of a whole
+  mask group; bitmap mask: right of *Alpha channel*): the
   transparency of the mask's pixels cuts the content, including the colour alpha, feather and dither of a
   path's fill and stroke, and the mask object itself is never drawn under the content, whatever *Show fill
   and stroke* says. It is stored in a Firepixel-own tag; other programs read *Path outline* / *Alpha

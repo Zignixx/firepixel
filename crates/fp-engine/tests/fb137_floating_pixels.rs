@@ -541,3 +541,40 @@ fn fb137_escape_during_a_floating_drag() {
     assert_eq!(floating(&s), None, "the release does nothing");
     assert_eq!(px(&s, id, 190, 100), orig(&img, 130, 100), "merged where it was");
 }
+
+/// RE spec 80 §5: a drag of the selected pixels (lift and further drags of the floating block) is
+/// the plain move row ("Verschieben" / "Move"), an Alt drag "Duplicate", in either language, also
+/// when the History panel shows the row in the other language (F165: in English the row of a
+/// drag made in German read "Move Floating Pixels").
+#[test]
+fn fb137_floating_drag_rows_have_the_plain_move_name() {
+    // the History panel's name of the last row in both languages
+    fn shown(s: &Session) -> (String, String) {
+        let d = s.active().expect("document");
+        let step = d.history.top().expect("row");
+        let lang = fp_i18n::current_language();
+        fp_i18n::set_language("de");
+        let de = s.step_label(step);
+        fp_i18n::set_language("en");
+        let en = s.step_label(step);
+        fp_i18n::set_language(&lang);
+        (de, en)
+    }
+    let mv = ("Verschieben".to_string(), "Move".to_string());
+    let dup = ("Duplizieren".to_string(), "Duplicate".to_string());
+    for lang in ["en", "de"] {
+        fp_i18n::set_language(lang);
+        let (mut s, _id, _img) = setup();
+        marquee(&mut s, [120, 95, 160, 135]);
+        s.set_tool(ToolId::Pointer).expect("tool");
+        drag(&mut s, (130.0, 100.0), (200.0, 100.0), false, false);
+        assert_eq!(shown(&s), mv, "{lang}: lift");
+        drag(&mut s, (200.0, 110.0), (170.0, 110.0), false, false);
+        assert_eq!(shown(&s), mv, "{lang}: block dragged on");
+        ex(&mut s, "select.floatPixels", json!({"dx": 5, "dy": 0}));
+        assert_eq!(shown(&s), mv, "{lang}: command");
+        ex(&mut s, "select.floatPixels", json!({"dx": 5, "dy": 0, "copy": true}));
+        assert_eq!(shown(&s), dup, "{lang}: copy");
+    }
+    fp_i18n::set_language("de");
+}

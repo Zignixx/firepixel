@@ -1271,6 +1271,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("select.moveMarquee")
             .label("Verschieben")
+            // RE spec 80 §5: the plain move row in every language (F165)
+            .step("msg-step-move")
             .requires(DOC)
             .param(
                 "dx",
@@ -1306,6 +1308,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("select.movePixels")
             .label("Verschieben")
+            // RE spec 80 §5: the plain move row in every language (F165)
+            .step("msg-step-move")
             .requires(DOC)
             .param(
                 "dx",
@@ -1337,6 +1341,8 @@ pub(super) fn register(r: &mut CommandRegistry) {
     r.add(
         cmd("select.floatPixels")
             .label("Verschieben")
+            // RE spec 80 §5: the plain move row in every language (F165)
+            .step("msg-step-move")
             .requires(DOC)
             .param(
                 "dx",
